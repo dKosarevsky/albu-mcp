@@ -398,6 +398,43 @@ class PreviewReportExport(StrictModel):
     best_candidate_run_id: str | None = None
 
 
+class PreviewFeedbackInput(StrictModel):
+    """User feedback for one concrete preview example."""
+
+    run_id: str
+    image_index: int = Field(ge=0)
+    variant_index: int = Field(ge=0)
+    feedback_tags: list[str] = Field(default_factory=list)
+    note: str = Field(default="", max_length=500)
+    accepted: bool = False
+
+
+class PreviewFeedbackRecord(StrictModel):
+    """Persisted user feedback for one preview image variant."""
+
+    feedback_id: str
+    created_at: str
+    run_id: str
+    image_index: int = Field(ge=0)
+    variant_index: int = Field(ge=0)
+    feedback_tags: list[str] = Field(default_factory=list)
+    note: str = ""
+    accepted: bool = False
+    review_target: str
+    recommended_next_tool: Literal["adjust_pipeline", "record_tuning_decision"]
+
+
+class PreviewFeedbackList(StrictModel):
+    """List response for concrete preview feedback records."""
+
+    feedback: list[PreviewFeedbackRecord] = Field(default_factory=list)
+    total_count: int
+    accepted_count: int
+    run_id: str | None = None
+    accepted_only: bool = False
+    aggregated_feedback_tags: list[str] = Field(default_factory=list)
+
+
 class RankedPreviewCandidate(StrictModel):
     """One candidate in a ranked preview tuning comparison."""
 
