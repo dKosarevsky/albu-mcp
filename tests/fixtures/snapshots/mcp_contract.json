@@ -1,0 +1,1098 @@
+{
+  "prompts": [
+    {
+      "arguments": [
+        {
+          "description": null,
+          "name": "task",
+          "required": true
+        },
+        {
+          "description": null,
+          "name": "targets",
+          "required": false
+        }
+      ],
+      "description": "Guide an assistant through preview-driven augmentation tuning.",
+      "name": "build_robustness_augmentation_session"
+    },
+    {
+      "arguments": [
+        {
+          "description": null,
+          "name": "baseline_run_id",
+          "required": true
+        },
+        {
+          "description": null,
+          "name": "candidate_run_id",
+          "required": true
+        }
+      ],
+      "description": "Guide an assistant through preview run comparison before adjustment.",
+      "name": "compare_preview_runs_for_feedback"
+    },
+    {
+      "arguments": [
+        {
+          "description": null,
+          "name": "run_id",
+          "required": true
+        },
+        {
+          "description": null,
+          "name": "output_format",
+          "required": false
+        }
+      ],
+      "description": "Guide final reproducible pipeline export after preview acceptance.",
+      "name": "export_reproducible_pipeline"
+    },
+    {
+      "arguments": [
+        {
+          "description": null,
+          "name": "task",
+          "required": true
+        },
+        {
+          "description": null,
+          "name": "run_id",
+          "required": true
+        },
+        {
+          "description": null,
+          "name": "feedback_tags",
+          "required": true
+        }
+      ],
+      "description": "Guide an assistant through structured preview feedback adjustment.",
+      "name": "tune_pipeline_from_preview_feedback"
+    }
+  ],
+  "resource_templates": [
+    {
+      "description": "Return metadata for one AlbumentationsX transform.",
+      "mime_type": "text/plain",
+      "name": "transform_resource",
+      "parameters": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "transform_resourceArguments",
+        "type": "object"
+      },
+      "uri_template": "albumentationsx://transforms/{name}"
+    }
+  ],
+  "resources": [
+    {
+      "description": "Return operational limits and safety boundaries for this MCP server.",
+      "mime_type": "text/plain",
+      "name": "capabilities_resource",
+      "uri": "albumentationsx://capabilities"
+    },
+    {
+      "description": "Return the visual report handoff host example.",
+      "mime_type": "text/plain",
+      "name": "report_handoff_example",
+      "uri": "albumentationsx://examples/report-handoff"
+    },
+    {
+      "description": "Return the concrete preview feedback host example.",
+      "mime_type": "text/plain",
+      "name": "review_loop_example",
+      "uri": "albumentationsx://examples/review-loop"
+    },
+    {
+      "description": "Return structured feedback tags accepted by adjustment tools.",
+      "mime_type": "text/plain",
+      "name": "feedback_tags_resource",
+      "uri": "albumentationsx://feedback-tags"
+    },
+    {
+      "description": "Return task-aware quality profiles accepted by comparison tools.",
+      "mime_type": "text/plain",
+      "name": "quality_profiles_resource",
+      "uri": "albumentationsx://quality-profiles"
+    },
+    {
+      "description": "Return task-aware recipe recommendations as compact JSON.",
+      "mime_type": "text/plain",
+      "name": "recipes_catalog_resource",
+      "uri": "albumentationsx://recipes/catalog"
+    },
+    {
+      "description": "Return the JSON schema for pipeline specs.",
+      "mime_type": "text/plain",
+      "name": "pipeline_schema",
+      "uri": "albumentationsx://schemas/pipeline"
+    },
+    {
+      "description": "Return the transform catalog as compact JSON.",
+      "mime_type": "text/plain",
+      "name": "transforms_catalog",
+      "uri": "albumentationsx://transforms/catalog"
+    },
+    {
+      "description": "Return the annotation-aware preview workflow guide.",
+      "mime_type": "text/plain",
+      "name": "annotation_preview_workflow",
+      "uri": "albumentationsx://workflows/annotation-preview"
+    },
+    {
+      "description": "Return built-in agent workflow guides as compact JSON.",
+      "mime_type": "text/plain",
+      "name": "workflows_catalog",
+      "uri": "albumentationsx://workflows/catalog"
+    },
+    {
+      "description": "Return the preview-driven augmentation tuning workflow guide.",
+      "mime_type": "text/plain",
+      "name": "preview_tuning_workflow",
+      "uri": "albumentationsx://workflows/preview-tuning"
+    },
+    {
+      "description": "Return task-specific workflow profiles as compact JSON.",
+      "mime_type": "text/plain",
+      "name": "task_profiles_resource",
+      "uri": "albumentationsx://workflows/task-profiles"
+    }
+  ],
+  "server": {
+    "name": "AlbumentationsX MCP"
+  },
+  "tools": [
+    {
+      "description": "Adjust a pipeline from structured preview feedback tags.",
+      "name": "adjust_pipeline",
+      "parameters": {
+        "properties": {
+          "feedback_tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Feedback Tags",
+            "type": "array"
+          },
+          "pipeline": {
+            "additionalProperties": true,
+            "title": "Pipeline",
+            "type": "object"
+          }
+        },
+        "required": [
+          "pipeline",
+          "feedback_tags"
+        ],
+        "title": "adjust_pipeline_toolArguments",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Delete older preview runs beyond a retention count.",
+      "name": "cleanup_preview_runs",
+      "parameters": {
+        "properties": {
+          "keep_last": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Keep Last"
+          }
+        },
+        "title": "cleanup_preview_runsArguments",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Compare two preview manifests to guide structured feedback and reproducible tuning.",
+      "name": "compare_preview_runs",
+      "parameters": {
+        "properties": {
+          "baseline_run_id": {
+            "title": "Baseline Run Id",
+            "type": "string"
+          },
+          "candidate_run_id": {
+            "title": "Candidate Run Id",
+            "type": "string"
+          },
+          "quality_profile": {
+            "default": "balanced",
+            "enum": [
+              "balanced",
+              "classification",
+              "detection",
+              "segmentation",
+              "ocr"
+            ],
+            "title": "Quality Profile",
+            "type": "string"
+          }
+        },
+        "required": [
+          "baseline_run_id",
+          "candidate_run_id"
+        ],
+        "title": "compare_preview_runsArguments",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Delete one preview run and its artifacts from the configured artifact root.",
+      "name": "delete_preview_run",
+      "parameters": {
+        "properties": {
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id"
+        ],
+        "title": "delete_preview_runArguments",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Explain likely pipeline effects, risks, and useful preview feedback tags.",
+      "name": "explain_pipeline",
+      "parameters": {
+        "properties": {
+          "pipeline": {
+            "additionalProperties": true,
+            "title": "Pipeline",
+            "type": "object"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Target"
+          }
+        },
+        "required": [
+          "pipeline"
+        ],
+        "title": "explain_pipeline_toolArguments",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Export a validated pipeline as Python, JSON, or YAML.",
+      "name": "export_pipeline",
+      "parameters": {
+        "properties": {
+          "output_format": {
+            "default": "python",
+            "enum": [
+              "python",
+              "json",
+              "yaml"
+            ],
+            "title": "Output Format",
+            "type": "string"
+          },
+          "pipeline": {
+            "additionalProperties": true,
+            "title": "Pipeline",
+            "type": "object"
+          }
+        },
+        "required": [
+          "pipeline"
+        ],
+        "title": "export_pipelineArguments",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Export a visual preview report with ranking, contact sheets, and decisions.",
+      "name": "export_preview_report",
+      "parameters": {
+        "properties": {
+          "accepted_candidate_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Accepted Candidate Ids"
+          },
+          "baseline_run_id": {
+            "title": "Baseline Run Id",
+            "type": "string"
+          },
+          "candidate_run_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Candidate Run Ids",
+            "type": "array"
+          },
+          "feedback_tags_by_candidate": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Feedback Tags By Candidate"
+          },
+          "include_decisions": {
+            "default": true,
+            "title": "Include Decisions",
+            "type": "boolean"
+          },
+          "output_format": {
+            "default": "markdown",
+            "enum": [
+              "markdown",
+              "html"
+            ],
+            "title": "Output Format",
+            "type": "string"
+          },
+          "quality_profile": {
+            "default": "balanced",
+            "enum": [
+              "balanced",
+              "classification",
+              "detection",
+              "segmentation",
+              "ocr"
+            ],
+            "title": "Quality Profile",
+            "type": "string"
+          }
+        },
+        "required": [
+          "baseline_run_id",
+          "candidate_run_ids"
+        ],
+        "title": "export_preview_reportArguments",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Export persisted tuning decisions as markdown or JSON.",
+      "name": "export_tuning_report",
+      "parameters": {
+        "properties": {
+          "accepted_only": {
+            "default": false,
+            "title": "Accepted Only",
+            "type": "boolean"
+          },
+          "limit": {
+            "default": 20,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "output_format": {
+            "default": "markdown",
+            "enum": [
+              "markdown",
+              "json"
+            ],
+            "title": "Output Format",
+            "type": "string"
+          },
+          "ranked": {
+            "default": true,
+            "title": "Ranked",
+            "type": "boolean"
+          }
+        },
+        "title": "export_tuning_reportArguments",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Return the manifest JSON for one recorded preview run.",
+      "name": "get_preview_manifest",
+      "parameters": {
+        "properties": {
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id"
+        ],
+        "title": "get_preview_manifestArguments",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Get parameter schema, target support, and summary for one transform.",
+      "name": "get_transform_schema",
+      "parameters": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "get_transform_schemaArguments",
+        "type": "object"
+      }
+    },
+    {
+      "description": "List structured feedback tags accepted by adjust_pipeline.",
+      "name": "list_feedback_tags",
+      "parameters": {
+        "properties": {},
+        "title": "list_feedback_tags_toolArguments",
+        "type": "object"
+      }
+    },
+    {
+      "description": "List concrete preview feedback records.",
+      "name": "list_preview_feedback",
+      "parameters": {
+        "properties": {
+          "accepted_only": {
+            "default": false,
+            "title": "Accepted Only",
+            "type": "boolean"
+          },
+          "limit": {
+            "default": 20,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Run Id"
+          }
+        },
+        "title": "list_preview_feedbackArguments",
+        "type": "object"
+      }
+    },
+    {
+      "description": "List recent preview runs recorded under the configured artifact root.",
+      "name": "list_preview_runs",
+      "parameters": {
+        "properties": {
+          "limit": {
+            "default": 20,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "list_preview_runsArguments",
+        "type": "object"
+      }
+    },
+    {
+      "description": "List task-aware quality profiles accepted by preview comparison tools.",
+      "name": "list_quality_profiles",
+      "parameters": {
+        "properties": {},
+        "title": "list_quality_profiles_toolArguments",
+        "type": "object"
+      }
+    },
+    {
+      "description": "List persisted local tuning decisions.",
+      "name": "list_tuning_decisions",
+      "parameters": {
+        "properties": {
+          "accepted_only": {
+            "default": false,
+            "title": "Accepted Only",
+            "type": "boolean"
+          },
+          "limit": {
+            "default": 20,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "ranked": {
+            "default": false,
+            "title": "Ranked",
+            "type": "boolean"
+          }
+        },
+        "title": "list_tuning_decisionsArguments",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Rank multiple candidate preview runs against one baseline.",
+      "name": "rank_preview_candidates",
+      "parameters": {
+        "properties": {
+          "accepted_candidate_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Accepted Candidate Ids"
+          },
+          "baseline_run_id": {
+            "title": "Baseline Run Id",
+            "type": "string"
+          },
+          "candidate_run_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Candidate Run Ids",
+            "type": "array"
+          },
+          "feedback_tags_by_candidate": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Feedback Tags By Candidate"
+          },
+          "quality_profile": {
+            "default": "balanced",
+            "enum": [
+              "balanced",
+              "classification",
+              "detection",
+              "segmentation",
+              "ocr"
+            ],
+            "title": "Quality Profile",
+            "type": "string"
+          }
+        },
+        "required": [
+          "baseline_run_id",
+          "candidate_run_ids"
+        ],
+        "title": "rank_preview_candidatesArguments",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Recommend a conservative starter pipeline for a CV task.",
+      "name": "recommend_pipeline",
+      "parameters": {
+        "properties": {
+          "intensity": {
+            "default": "medium",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Intensity",
+            "type": "string"
+          },
+          "targets": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Targets"
+          },
+          "task": {
+            "title": "Task",
+            "type": "string"
+          }
+        },
+        "required": [
+          "task"
+        ],
+        "title": "recommend_pipeline_toolArguments",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Recommend a task-aware starter pipeline, quality profile, and preview workflow.",
+      "name": "recommend_recipe",
+      "parameters": {
+        "properties": {
+          "intensity": {
+            "default": "medium",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Intensity",
+            "type": "string"
+          },
+          "targets": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Targets"
+          },
+          "task": {
+            "title": "Task",
+            "type": "string"
+          }
+        },
+        "required": [
+          "task"
+        ],
+        "title": "recommend_recipe_toolArguments",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Persist user feedback for one concrete preview image variant.",
+      "name": "record_preview_feedback",
+      "parameters": {
+        "properties": {
+          "accepted": {
+            "default": false,
+            "title": "Accepted",
+            "type": "boolean"
+          },
+          "feedback_tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Feedback Tags"
+          },
+          "image_index": {
+            "title": "Image Index",
+            "type": "integer"
+          },
+          "note": {
+            "default": "",
+            "title": "Note",
+            "type": "string"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "variant_index": {
+            "title": "Variant Index",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "run_id",
+          "image_index",
+          "variant_index"
+        ],
+        "title": "record_preview_feedbackArguments",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Persist a local tuning decision for one preview comparison.",
+      "name": "record_tuning_decision",
+      "parameters": {
+        "properties": {
+          "accepted": {
+            "default": false,
+            "title": "Accepted",
+            "type": "boolean"
+          },
+          "baseline_run_id": {
+            "title": "Baseline Run Id",
+            "type": "string"
+          },
+          "candidate_run_id": {
+            "title": "Candidate Run Id",
+            "type": "string"
+          },
+          "feedback_tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Feedback Tags"
+          },
+          "quality_profile": {
+            "default": "balanced",
+            "enum": [
+              "balanced",
+              "classification",
+              "detection",
+              "segmentation",
+              "ocr"
+            ],
+            "title": "Quality Profile",
+            "type": "string"
+          },
+          "reviewer_notes": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Reviewer Notes"
+          }
+        },
+        "required": [
+          "baseline_run_id",
+          "candidate_run_id"
+        ],
+        "title": "record_tuning_decisionArguments",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Render deterministic preview artifacts for local input images.",
+      "name": "render_preview",
+      "parameters": {
+        "properties": {
+          "request": {
+            "additionalProperties": true,
+            "title": "Request",
+            "type": "object"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "render_previewArguments",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Render deterministic batch preview artifacts and contact sheets for local input images.",
+      "name": "render_preview_batch",
+      "parameters": {
+        "properties": {
+          "request": {
+            "additionalProperties": true,
+            "title": "Request",
+            "type": "object"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "render_preview_batchArguments",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Score several preview candidates as one dataset-level decision set.",
+      "name": "score_dataset_preview_candidates",
+      "parameters": {
+        "properties": {
+          "accepted_candidate_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Accepted Candidate Ids"
+          },
+          "baseline_run_id": {
+            "title": "Baseline Run Id",
+            "type": "string"
+          },
+          "candidate_run_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Candidate Run Ids",
+            "type": "array"
+          },
+          "feedback_tags_by_candidate": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Feedback Tags By Candidate"
+          },
+          "quality_profile": {
+            "default": "balanced",
+            "enum": [
+              "balanced",
+              "classification",
+              "detection",
+              "segmentation",
+              "ocr"
+            ],
+            "title": "Quality Profile",
+            "type": "string"
+          }
+        },
+        "required": [
+          "baseline_run_id",
+          "candidate_run_ids"
+        ],
+        "title": "score_dataset_preview_candidatesArguments",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Search AlbumentationsX transform metadata.",
+      "name": "search_transforms",
+      "parameters": {
+        "properties": {
+          "bbox_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Bbox Type"
+          },
+          "limit": {
+            "default": 20,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "query": {
+            "default": "",
+            "title": "Query",
+            "type": "string"
+          },
+          "targets": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Targets"
+          },
+          "transform_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Transform Type"
+          }
+        },
+        "title": "search_transformsArguments",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Summarize a baseline-to-candidate preview tuning step.",
+      "name": "summarize_tuning_session",
+      "parameters": {
+        "properties": {
+          "accepted": {
+            "default": false,
+            "title": "Accepted",
+            "type": "boolean"
+          },
+          "baseline_run_id": {
+            "title": "Baseline Run Id",
+            "type": "string"
+          },
+          "candidate_run_id": {
+            "title": "Candidate Run Id",
+            "type": "string"
+          },
+          "feedback_tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Feedback Tags"
+          },
+          "quality_profile": {
+            "default": "balanced",
+            "enum": [
+              "balanced",
+              "classification",
+              "detection",
+              "segmentation",
+              "ocr"
+            ],
+            "title": "Quality Profile",
+            "type": "string"
+          }
+        },
+        "required": [
+          "baseline_run_id",
+          "candidate_run_id"
+        ],
+        "title": "summarize_tuning_sessionArguments",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Validate a pipeline spec before previewing or exporting it.",
+      "name": "validate_pipeline",
+      "parameters": {
+        "properties": {
+          "pipeline": {
+            "additionalProperties": true,
+            "title": "Pipeline",
+            "type": "object"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Target"
+          }
+        },
+        "required": [
+          "pipeline"
+        ],
+        "title": "validate_pipelineArguments",
+        "type": "object"
+      }
+    }
+  ]
+}
