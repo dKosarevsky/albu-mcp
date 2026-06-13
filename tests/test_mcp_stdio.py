@@ -46,6 +46,7 @@ def test_mcp_stdio_lists_documented_tools(tmp_path: Path) -> None:
         "list_quality_profiles",
         "record_tuning_decision",
         "list_tuning_decisions",
+        "export_tuning_report",
         "list_preview_runs",
         "get_preview_manifest",
         "delete_preview_run",

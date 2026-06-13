@@ -341,6 +341,16 @@ class TuningDecisionList(StrictModel):
     ranked: bool = False
 
 
+class TuningDecisionReport(StrictModel):
+    """Exported tuning decision report."""
+
+    format: Literal["markdown", "json"]
+    content: str
+    decision_count: int
+    accepted_count: int
+    best_candidate_run_id: str | None = None
+
+
 class RankedPreviewCandidate(StrictModel):
     """One candidate in a ranked preview tuning comparison."""
 

@@ -127,6 +127,7 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
                     "list_quality_profiles",
                     "record_tuning_decision",
                     "list_tuning_decisions",
+                    "export_tuning_report",
                     "list_preview_runs",
                     "get_preview_manifest",
                     "delete_preview_run",
@@ -346,6 +347,21 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
         return tuning_store.list_decisions(limit=limit, accepted_only=accepted_only, ranked=ranked).model_dump(
             mode="json"
         )
+
+    @mcp.tool()
+    def export_tuning_report(
+        output_format: Literal["markdown", "json"] = "markdown",
+        limit: int = 20,
+        accepted_only: bool = False,  # noqa: FBT001, FBT002
+        ranked: bool = True,  # noqa: FBT001, FBT002
+    ) -> dict[str, Any]:
+        """Export persisted tuning decisions as markdown or JSON."""
+        return tuning_store.export_report(
+            output_format=output_format,
+            limit=limit,
+            accepted_only=accepted_only,
+            ranked=ranked,
+        ).model_dump(mode="json")
 
     @mcp.tool()
     def list_preview_runs(limit: int = 20) -> dict[str, Any]:

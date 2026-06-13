@@ -14,6 +14,7 @@ from albumentationsx_mcp.models import (
     RiskLevel,
     TuningDecisionList,
     TuningDecisionRecord,
+    TuningDecisionReport,
     TuningSessionSummary,
 )
 
@@ -109,6 +110,36 @@ class TuningDecisionStore:
             ranked=ranked,
         )
 
+    def export_report(
+        self,
+        *,
+        output_format: Literal["markdown", "json"] = "markdown",
+        limit: int = 20,
+        accepted_only: bool = False,
+        ranked: bool = True,
+    ) -> TuningDecisionReport:
+        """Export persisted tuning decisions as markdown or JSON."""
+        decisions = self.list_decisions(limit=limit, accepted_only=accepted_only, ranked=ranked)
+        best_candidate_run_id = decisions.decisions[0].candidate_run_id if decisions.decisions else None
+        if output_format == "json":
+            content = json.dumps(
+                {
+                    **decisions.model_dump(mode="json"),
+                    "best_candidate_run_id": best_candidate_run_id,
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        else:
+            content = _render_markdown_report(decisions, best_candidate_run_id=best_candidate_run_id)
+        return TuningDecisionReport(
+            format=output_format,
+            content=content,
+            decision_count=decisions.total_count,
+            accepted_count=decisions.accepted_count,
+            best_candidate_run_id=best_candidate_run_id,
+        )
+
     def _read_decisions(self) -> list[TuningDecisionRecord]:
         if not self.index_path.exists():
             return []
@@ -160,3 +191,35 @@ def _quality_risk(comparison: PreviewRunComparison, findings: list[QualityFindin
 
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _render_markdown_report(
+    decisions: TuningDecisionList,
+    *,
+    best_candidate_run_id: str | None,
+) -> str:
+    lines = [
+        "# AlbumentationsX MCP Tuning Report",
+        "",
+        f"- Decisions: {decisions.total_count}",
+        f"- Accepted: {decisions.accepted_count}",
+        f"- Ranked: {str(decisions.ranked).lower()}",
+        f"- Best candidate: {best_candidate_run_id or 'none'}",
+        "",
+        "| Rank | Candidate | Accepted | Score | Risk | Next Tool | Notes |",
+        "| --- | --- | --- | ---: | --- | --- | --- |",
+    ]
+    for index, decision in enumerate(decisions.decisions, start=1):
+        notes = "; ".join(decision.reviewer_notes)
+        lines.append(
+            "| "
+            f"{index} | "
+            f"{decision.candidate_run_id} | "
+            f"{str(decision.accepted).lower()} | "
+            f"{decision.quality_score:.1f} | "
+            f"{decision.quality_risk} | "
+            f"{decision.recommended_next_tool} | "
+            f"{notes} |"
+        )
+    lines.append("")
+    return "\n".join(lines)

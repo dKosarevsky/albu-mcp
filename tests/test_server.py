@@ -30,6 +30,7 @@ def test_server_exposes_documented_tool_names() -> None:
         "list_quality_profiles",
         "record_tuning_decision",
         "list_tuning_decisions",
+        "export_tuning_report",
         "list_preview_runs",
         "get_preview_manifest",
         "delete_preview_run",
@@ -72,4 +73,5 @@ def test_server_exposes_agent_workflow_resources() -> None:
     assert "rank_preview_candidates" in capabilities
     assert "list_quality_profiles" in capabilities
     assert "record_tuning_decision" in capabilities
+    assert "export_tuning_report" in capabilities
     assert "albumentationsx://workflows/task-profiles" in capabilities

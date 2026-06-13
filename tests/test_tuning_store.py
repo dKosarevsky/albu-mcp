@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from albumentationsx_mcp.models import TuningSessionSummary
@@ -39,6 +40,35 @@ def test_tuning_decision_store_filters_and_ranks_decisions(tmp_path: Path) -> No
         "candidate-low",
     ]
     assert accepted.accepted_count == 2
+
+
+def test_tuning_decision_store_exports_markdown_report(tmp_path: Path) -> None:
+    store = TuningDecisionStore(tmp_path)
+    store.record_decision(_summary("candidate-low", accepted=False, quality_score=35.0), ["too strong"])
+    store.record_decision(_summary("candidate-high", accepted=True, quality_score=88.0), ["best contact sheet"])
+
+    report = store.export_report(output_format="markdown", ranked=True)
+
+    assert report.format == "markdown"
+    assert report.decision_count == 2
+    assert report.accepted_count == 1
+    assert report.best_candidate_run_id == "candidate-high"
+    assert "# AlbumentationsX MCP Tuning Report" in report.content
+    assert "candidate-high" in report.content
+    assert "best contact sheet" in report.content
+
+
+def test_tuning_decision_store_exports_json_report(tmp_path: Path) -> None:
+    store = TuningDecisionStore(tmp_path)
+    store.record_decision(_summary("candidate-a", accepted=True, quality_score=77.0), ["accepted"])
+
+    report = store.export_report(output_format="json")
+    payload = json.loads(report.content)
+
+    assert report.format == "json"
+    assert payload["accepted_count"] == 1
+    assert payload["best_candidate_run_id"] == "candidate-a"
+    assert payload["decisions"][0]["candidate_run_id"] == "candidate-a"
 
 
 def _summary(candidate_run_id: str, *, accepted: bool, quality_score: float) -> TuningSessionSummary:
