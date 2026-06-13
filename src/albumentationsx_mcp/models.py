@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 ArtifactKind = Literal["image", "manifest", "contact_sheet", "overlay", "overlay_contact_sheet"]
 RiskLevel = Literal["low", "medium", "high"]
+QualityProfileName = Literal["balanced", "classification", "detection", "segmentation", "ocr"]
 
 
 class StrictModel(BaseModel):
@@ -215,6 +216,15 @@ class QualityFinding(StrictModel):
     baseline_value: float | None = None
 
 
+class QualityProfileInfo(StrictModel):
+    """Named local quality profile for task-aware preview review."""
+
+    name: QualityProfileName
+    description: str
+    task_hints: list[str] = Field(default_factory=list)
+    thresholds: dict[str, float] = Field(default_factory=dict)
+
+
 class AnnotationObservation(StrictModel):
     """Per-variant annotation retention observation recorded in preview manifests."""
 
@@ -254,6 +264,7 @@ class PreviewAnnotationQualitySummary(StrictModel):
 class PreviewQualitySummary(StrictModel):
     """Quality comparison between baseline and candidate preview runs."""
 
+    quality_profile: QualityProfileName = "balanced"
     baseline: ImageQualityAggregate
     candidate: ImageQualityAggregate
     deltas: dict[str, float] = Field(default_factory=dict)

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 import numpy as np
 from PIL import Image
@@ -16,6 +16,8 @@ from albumentationsx_mcp.models import (
     PreviewAnnotationQualitySummary,
     PreviewQualitySummary,
     QualityFinding,
+    QualityProfileInfo,
+    QualityProfileName,
 )
 
 _METRIC_FIELDS = (
@@ -28,18 +30,70 @@ _METRIC_FIELDS = (
     "clipping_fraction",
 )
 _MIN_SHARPNESS_SIDE = 2
-_LOW_BRIGHTNESS_HIGH = 35.0
-_LOW_BRIGHTNESS_MEDIUM = 55.0
-_HIGH_BRIGHTNESS_HIGH = 220.0
-_HIGH_BRIGHTNESS_MEDIUM = 200.0
-_HIGH_CLIPPING_HIGH = 0.5
-_HIGH_CLIPPING_MEDIUM = 0.1
-_LOW_ENTROPY_MEDIUM = 0.4
 _CLIPPING_LOW_VALUE = 2.0
 _CLIPPING_HIGH_VALUE = 253.0
-_SHARPNESS_DROP_MEDIUM = -20.0
-_MASK_COVERAGE_DROP_MEDIUM = 0.75
-_MASK_COVERAGE_DROP_HIGH = 0.25
+
+
+class QualityProfile(NamedTuple):
+    """Thresholds used to turn local metrics into review findings."""
+
+    name: QualityProfileName
+    description: str
+    task_hints: tuple[str, ...]
+    low_brightness_high: float = 35.0
+    low_brightness_medium: float = 55.0
+    high_brightness_high: float = 220.0
+    high_brightness_medium: float = 200.0
+    clipping_high: float = 0.5
+    clipping_medium: float = 0.1
+    entropy_bits_medium: float = 0.4
+    sharpness_drop_medium: float = -20.0
+    bbox_retention_high: float = 0.0
+    mask_coverage_medium: float = 0.75
+    mask_coverage_high: float = 0.25
+
+
+_QUALITY_PROFILES: dict[QualityProfileName, QualityProfile] = {
+    "balanced": QualityProfile(
+        name="balanced",
+        description="General preview review profile for image-only augmentation tuning.",
+        task_hints=("classification", "general"),
+    ),
+    "classification": QualityProfile(
+        name="classification",
+        description="Classification-focused profile that emphasizes recognizable images and moderate clipping.",
+        task_hints=("classification",),
+        clipping_medium=0.08,
+        entropy_bits_medium=0.5,
+    ),
+    "detection": QualityProfile(
+        name="detection",
+        description="Detection profile that treats any bbox loss as high risk.",
+        task_hints=("object_detection", "bboxes"),
+        bbox_retention_high=1.0,
+    ),
+    "segmentation": QualityProfile(
+        name="segmentation",
+        description="Segmentation profile that is stricter about mask coverage retention.",
+        task_hints=("segmentation", "masks"),
+        mask_coverage_medium=0.9,
+        mask_coverage_high=0.5,
+    ),
+    "ocr": QualityProfile(
+        name="ocr",
+        description="OCR profile that is stricter about entropy, clipping, and sharpness drops.",
+        task_hints=("ocr", "document"),
+        clipping_high=0.2,
+        clipping_medium=0.05,
+        entropy_bits_medium=1.2,
+        sharpness_drop_medium=-10.0,
+    ),
+}
+
+
+def list_quality_profiles() -> list[QualityProfileInfo]:
+    """Return task-aware quality profiles exposed to MCP hosts."""
+    return [_profile_info(profile) for profile in _QUALITY_PROFILES.values()]
 
 
 def collect_image_quality_metrics(path: Path) -> ImageQualityMetrics:
@@ -63,8 +117,11 @@ def collect_image_quality_metrics(path: Path) -> ImageQualityMetrics:
 def compare_manifest_quality(
     baseline_manifest: dict[str, Any],
     candidate_manifest: dict[str, Any],
+    *,
+    quality_profile: QualityProfileName = "balanced",
 ) -> tuple[PreviewQualitySummary | None, list[str]]:
     """Compare image quality metrics for preview image artifacts in two manifests."""
+    profile = _QUALITY_PROFILES[quality_profile]
     warnings: list[str] = []
     baseline = _collect_manifest_metrics(baseline_manifest, label="baseline", warnings=warnings)
     candidate = _collect_manifest_metrics(candidate_manifest, label="candidate", warnings=warnings)
@@ -76,13 +133,35 @@ def compare_manifest_quality(
     candidate_aggregate = _aggregate_quality_metrics(candidate)
     return (
         PreviewQualitySummary(
+            quality_profile=quality_profile,
             baseline=baseline_aggregate,
             candidate=candidate_aggregate,
             deltas=_quality_deltas(baseline_aggregate, candidate_aggregate),
-            findings=_quality_findings(baseline_aggregate, candidate_aggregate, annotation_summary),
+            findings=_quality_findings(baseline_aggregate, candidate_aggregate, annotation_summary, profile),
             annotation_summary=annotation_summary,
         ),
         warnings,
+    )
+
+
+def _profile_info(profile: QualityProfile) -> QualityProfileInfo:
+    return QualityProfileInfo(
+        name=profile.name,
+        description=profile.description,
+        task_hints=list(profile.task_hints),
+        thresholds={
+            "low_brightness_high": profile.low_brightness_high,
+            "low_brightness_medium": profile.low_brightness_medium,
+            "high_brightness_high": profile.high_brightness_high,
+            "high_brightness_medium": profile.high_brightness_medium,
+            "clipping_high": profile.clipping_high,
+            "clipping_medium": profile.clipping_medium,
+            "entropy_bits_medium": profile.entropy_bits_medium,
+            "sharpness_drop_medium": profile.sharpness_drop_medium,
+            "bbox_retention_high": profile.bbox_retention_high,
+            "mask_coverage_medium": profile.mask_coverage_medium,
+            "mask_coverage_high": profile.mask_coverage_high,
+        },
     )
 
 
@@ -183,13 +262,14 @@ def _quality_findings(
     baseline: ImageQualityAggregate,
     candidate: ImageQualityAggregate,
     annotation_summary: PreviewAnnotationQualitySummary | None,
+    profile: QualityProfile,
 ) -> list[QualityFinding]:
     findings: list[QualityFinding] = []
     if candidate.brightness_mean is not None:
-        findings.extend(_brightness_findings(candidate.brightness_mean, baseline.brightness_mean))
+        findings.extend(_brightness_findings(candidate.brightness_mean, baseline.brightness_mean, profile))
     if candidate.clipping_fraction is not None:
-        findings.extend(_clipping_findings(candidate.clipping_fraction, baseline.clipping_fraction))
-    if candidate.entropy_bits is not None and candidate.entropy_bits < _LOW_ENTROPY_MEDIUM:
+        findings.extend(_clipping_findings(candidate.clipping_fraction, baseline.clipping_fraction, profile))
+    if candidate.entropy_bits is not None and candidate.entropy_bits < profile.entropy_bits_medium:
         findings.append(
             QualityFinding(
                 code="candidate_low_entropy",
@@ -202,7 +282,7 @@ def _quality_findings(
         )
     if baseline.sharpness_score is not None and candidate.sharpness_score is not None:
         sharpness_delta = candidate.sharpness_score - baseline.sharpness_score
-        if sharpness_delta <= _SHARPNESS_DROP_MEDIUM:
+        if sharpness_delta <= profile.sharpness_drop_medium:
             findings.append(
                 QualityFinding(
                     code="candidate_sharpness_drop",
@@ -214,12 +294,16 @@ def _quality_findings(
                 ),
             )
     if annotation_summary is not None:
-        findings.extend(_annotation_quality_findings(annotation_summary))
+        findings.extend(_annotation_quality_findings(annotation_summary, profile))
     return findings
 
 
-def _brightness_findings(value: float, baseline_value: float | None) -> list[QualityFinding]:
-    if value < _LOW_BRIGHTNESS_HIGH:
+def _brightness_findings(
+    value: float,
+    baseline_value: float | None,
+    profile: QualityProfile,
+) -> list[QualityFinding]:
+    if value < profile.low_brightness_high:
         return [
             QualityFinding(
                 code="candidate_too_dark",
@@ -230,7 +314,7 @@ def _brightness_findings(value: float, baseline_value: float | None) -> list[Qua
                 baseline_value=baseline_value,
             ),
         ]
-    if value < _LOW_BRIGHTNESS_MEDIUM:
+    if value < profile.low_brightness_medium:
         return [
             QualityFinding(
                 code="candidate_too_dark",
@@ -241,7 +325,7 @@ def _brightness_findings(value: float, baseline_value: float | None) -> list[Qua
                 baseline_value=baseline_value,
             ),
         ]
-    if value > _HIGH_BRIGHTNESS_HIGH:
+    if value > profile.high_brightness_high:
         return [
             QualityFinding(
                 code="candidate_too_bright",
@@ -252,7 +336,7 @@ def _brightness_findings(value: float, baseline_value: float | None) -> list[Qua
                 baseline_value=baseline_value,
             ),
         ]
-    if value > _HIGH_BRIGHTNESS_MEDIUM:
+    if value > profile.high_brightness_medium:
         return [
             QualityFinding(
                 code="candidate_too_bright",
@@ -266,8 +350,12 @@ def _brightness_findings(value: float, baseline_value: float | None) -> list[Qua
     return []
 
 
-def _clipping_findings(value: float, baseline_value: float | None) -> list[QualityFinding]:
-    if value >= _HIGH_CLIPPING_HIGH:
+def _clipping_findings(
+    value: float,
+    baseline_value: float | None,
+    profile: QualityProfile,
+) -> list[QualityFinding]:
+    if value >= profile.clipping_high:
         return [
             QualityFinding(
                 code="candidate_high_clipping",
@@ -278,7 +366,7 @@ def _clipping_findings(value: float, baseline_value: float | None) -> list[Quali
                 baseline_value=baseline_value,
             ),
         ]
-    if value >= _HIGH_CLIPPING_MEDIUM:
+    if value >= profile.clipping_medium:
         return [
             QualityFinding(
                 code="candidate_high_clipping",
@@ -374,7 +462,10 @@ def _annotation_deltas(
     return deltas
 
 
-def _annotation_quality_findings(summary: PreviewAnnotationQualitySummary) -> list[QualityFinding]:
+def _annotation_quality_findings(
+    summary: PreviewAnnotationQualitySummary,
+    profile: QualityProfile,
+) -> list[QualityFinding]:
     findings: list[QualityFinding] = []
     candidate = summary.candidate
     baseline = summary.baseline
@@ -382,7 +473,7 @@ def _annotation_quality_findings(summary: PreviewAnnotationQualitySummary) -> li
         findings.append(
             QualityFinding(
                 code="candidate_bbox_loss",
-                severity="high" if candidate.bbox_retention_ratio == 0 else "medium",
+                severity="high" if candidate.bbox_retention_ratio <= profile.bbox_retention_high else "medium",
                 message="Candidate preview drops bounding boxes from annotated inputs.",
                 metric="bbox_retention_ratio",
                 value=candidate.bbox_retention_ratio,
@@ -400,11 +491,11 @@ def _annotation_quality_findings(summary: PreviewAnnotationQualitySummary) -> li
                 baseline_value=baseline.keypoint_retention_ratio,
             ),
         )
-    if candidate.mask_coverage_ratio is not None and candidate.mask_coverage_ratio < _MASK_COVERAGE_DROP_MEDIUM:
+    if candidate.mask_coverage_ratio is not None and candidate.mask_coverage_ratio < profile.mask_coverage_medium:
         findings.append(
             QualityFinding(
                 code="candidate_mask_coverage_drop",
-                severity="high" if candidate.mask_coverage_ratio < _MASK_COVERAGE_DROP_HIGH else "medium",
+                severity="high" if candidate.mask_coverage_ratio < profile.mask_coverage_high else "medium",
                 message="Candidate preview reduces transformed mask coverage substantially.",
                 metric="mask_coverage_ratio",
                 value=candidate.mask_coverage_ratio,
