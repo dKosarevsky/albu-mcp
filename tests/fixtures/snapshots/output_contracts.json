@@ -1,0 +1,287 @@
+{
+  "export_preview_report": {
+    "artifact": {
+      "kind": "report",
+      "mime_type": "text/markdown",
+      "path": "<artifact-path>",
+      "sha256": "<sha256>",
+      "size_bytes": "<size-bytes>",
+      "uri": "artifact://reports/preview-report-baseline.<md>"
+    },
+    "baseline_run_id": "baseline",
+    "best_candidate_run_id": "candidate-a",
+    "candidate_count": 2,
+    "content": "# AlbumentationsX MCP Preview Report\n\n- Baseline run: baseline\n- Quality profile: classification\n- Candidates: 2\n- Best candidate: candidate-a\n\n## Contact Sheets\n\n### Baseline\n\n- ![contact sheet](<OUTPUT_CONTRACT_ROOT>/images/baseline-contact.png)\n- <OUTPUT_CONTRACT_ROOT>/images/baseline-contact.png\n\n### Candidates\n\n| Rank | Candidate | Score | Risk | Export Ready | Next Tool | Feedback Tags | Contact Sheets |\n| ---: | --- | ---: | --- | --- | --- | --- | --- |\n| 1 | candidate-a | 100.0 | low | true | export_pipeline | too_noisy:low | ![contact sheet](<OUTPUT_CONTRACT_ROOT>/images/candidate-a-contact.png)<br><OUTPUT_CONTRACT_ROOT>/images/candidate-a-contact.png |\n| 2 | candidate-b | 85.0 | medium | false | adjust_pipeline | too_blurry:high | ![contact sheet](<OUTPUT_CONTRACT_ROOT>/images/candidate-b-contact.png)<br><OUTPUT_CONTRACT_ROOT>/images/candidate-b-contact.png |\n\n## Dataset Metrics\n\n| Metric | Candidates | Min | Max | Mean |\n| --- | ---: | ---: | ---: | ---: |\n| brightness_mean | 2 | 78.0000 | 128.0000 | 103.0000 |\n| clipping_fraction | 2 | 0.0200 | 0.1800 | 0.1000 |\n\n## Finding Counts\n\n| Severity | Code | Count |\n| --- | --- | ---: |\n| medium | candidate_high_clipping | 1 |\n\n## Tuning Decisions\n\n| Decision | Candidate | Accepted | Score | Risk | Notes |\n| --- | --- | --- | ---: | --- | --- |\n| decision-a | candidate-a | true | 100.0 | low | accepted output contract fixture |\n\n## Concrete Preview Feedback\n\n| Feedback | Run | Target | Accepted | Tags | Next Tool | Note |\n| --- | --- | --- | --- | --- | --- | --- |\n| <feedback-id> | candidate-a | example 8 / variant 1 | false | too_noisy:high | adjust_pipeline | example 8 is too noisy |\n",
+    "format": "markdown"
+  },
+  "list_preview_feedback": {
+    "accepted_count": 0,
+    "accepted_only": false,
+    "aggregated_feedback_tags": [
+      "too_noisy:high"
+    ],
+    "feedback": [
+      {
+        "accepted": false,
+        "created_at": "<created-at>",
+        "feedback_id": "<feedback-id>",
+        "feedback_tags": [
+          "too_noisy:high"
+        ],
+        "image_index": 7,
+        "note": "example 8 is too noisy",
+        "recommended_next_tool": "adjust_pipeline",
+        "review_target": "example 8 / variant 1",
+        "run_id": "candidate-a",
+        "variant_index": 0
+      }
+    ],
+    "run_id": "candidate-a",
+    "total_count": 1
+  },
+  "recommend_recipe": {
+    "explanations": [
+      {
+        "kind": "quality_profile",
+        "rationale": "Selected the ocr quality profile for the matched ocr recipe.",
+        "selected": "ocr"
+      },
+      {
+        "kind": "targets",
+        "rationale": "Used default targets for the ocr recipe.",
+        "selected": [
+          "image"
+        ]
+      },
+      {
+        "kind": "feedback_tags",
+        "rationale": "These feedback tags match the transforms and failure modes most likely to matter for this task.",
+        "selected": [
+          "too_blurry",
+          "too_distorted",
+          "object_unrecognizable"
+        ]
+      },
+      {
+        "kind": "workflow",
+        "rationale": "Render, rank, score, report, record the decision, then export only after preview acceptance.",
+        "selected": [
+          "render_preview_batch",
+          "rank_preview_candidates",
+          "score_dataset_preview_candidates",
+          "export_preview_report",
+          "record_tuning_decision",
+          "export_pipeline"
+        ]
+      }
+    ],
+    "feedback_tags": [
+      "too_blurry",
+      "too_distorted",
+      "object_unrecognizable"
+    ],
+    "intensity": "low",
+    "pipeline": {
+      "additional_targets": {},
+      "bbox_params": null,
+      "is_check_shapes": true,
+      "keypoint_params": null,
+      "seed": 137,
+      "strict": true,
+      "transforms": [
+        {
+          "name": "HorizontalFlip",
+          "p": 0.2,
+          "params": {}
+        },
+        {
+          "name": "Perspective",
+          "p": 0.2,
+          "params": {
+            "scale": [
+              0.02,
+              0.06
+            ]
+          }
+        },
+        {
+          "name": "ImageCompression",
+          "p": 0.2,
+          "params": {
+            "quality_range": [
+              70,
+              100
+            ]
+          }
+        }
+      ]
+    },
+    "preview_guidance": [
+      "Use the ocr quality profile when comparing preview runs.",
+      "Render at least two candidate preview runs before ranking.",
+      "Score the candidate set before exporting a report or final pipeline."
+    ],
+    "quality_profile": "ocr",
+    "rationale": "Matched the ocr recipe, selected the ocr quality profile, and paired a conservative starter pipeline with preview ranking and report export tools.",
+    "recipe_name": "ocr",
+    "recommended_tools": [
+      "render_preview_batch",
+      "rank_preview_candidates",
+      "score_dataset_preview_candidates",
+      "export_preview_report",
+      "record_tuning_decision",
+      "export_pipeline"
+    ],
+    "targets": [
+      "image"
+    ],
+    "task": "ocr"
+  },
+  "record_preview_feedback": {
+    "accepted": false,
+    "created_at": "<created-at>",
+    "feedback_id": "<feedback-id>",
+    "feedback_tags": [
+      "too_noisy:high"
+    ],
+    "image_index": 7,
+    "note": "example 8 is too noisy",
+    "recommended_next_tool": "adjust_pipeline",
+    "review_target": "example 8 / variant 1",
+    "run_id": "candidate-a",
+    "variant_index": 0
+  },
+  "score_dataset_preview_candidates": {
+    "baseline_run_id": "baseline",
+    "best_candidate_run_id": "candidate-a",
+    "candidate_count": 2,
+    "decision_guidance": [
+      "Best dataset candidate is candidate-a.",
+      "Best candidate is candidate-a with score 100.0.",
+      "The best candidate is marked export-ready."
+    ],
+    "finding_counts": [
+      {
+        "code": "candidate_high_clipping",
+        "count": 1,
+        "severity": "medium"
+      }
+    ],
+    "metric_stats": [
+      {
+        "candidate_count": 2,
+        "max_value": 128.0,
+        "mean_value": 103.0,
+        "metric": "brightness_mean",
+        "min_value": 78.0
+      },
+      {
+        "candidate_count": 2,
+        "max_value": 0.18,
+        "mean_value": 0.1,
+        "metric": "clipping_fraction",
+        "min_value": 0.02
+      }
+    ],
+    "quality_profile": "classification",
+    "ranking": {
+      "baseline_run_id": "baseline",
+      "best_candidate_run_id": "candidate-a",
+      "candidate_count": 2,
+      "decision_guidance": [
+        "Best candidate is candidate-a with score 100.0.",
+        "The best candidate is marked export-ready."
+      ],
+      "quality_profile": "classification",
+      "ranked_candidates": [
+        {
+          "candidate_run_id": "candidate-a",
+          "export_ready": true,
+          "feedback_tags": [
+            "too_noisy:low"
+          ],
+          "quality_risk": "low",
+          "quality_score": 100.0,
+          "rank": 1,
+          "recommended_next_tool": "export_pipeline",
+          "summary": {
+            "accepted": true,
+            "baseline_run_id": "baseline",
+            "candidate_run_id": "candidate-a",
+            "export_ready": true,
+            "feedback_tags": [
+              "too_noisy:low"
+            ],
+            "quality_deltas": {},
+            "quality_findings": [],
+            "quality_risk": "low",
+            "quality_score": 100.0,
+            "rationale": "The candidate is accepted and used the same inputs, so export is ready.",
+            "recommended_next_tool": "export_pipeline",
+            "review_notes": [
+              "Review rendered contact sheets."
+            ],
+            "suggested_feedback_tags": [
+              "too_noisy"
+            ]
+          },
+          "top_findings": []
+        },
+        {
+          "candidate_run_id": "candidate-b",
+          "export_ready": false,
+          "feedback_tags": [
+            "too_blurry:high"
+          ],
+          "quality_risk": "medium",
+          "quality_score": 85.0,
+          "rank": 2,
+          "recommended_next_tool": "adjust_pipeline",
+          "summary": {
+            "accepted": false,
+            "baseline_run_id": "baseline",
+            "candidate_run_id": "candidate-b",
+            "export_ready": false,
+            "feedback_tags": [
+              "too_blurry:high"
+            ],
+            "quality_deltas": {},
+            "quality_findings": [
+              {
+                "baseline_value": 0.01,
+                "code": "candidate_high_clipping",
+                "message": "Candidate preview has noticeable clipped dark or bright pixels.",
+                "metric": "clipping_fraction",
+                "severity": "medium",
+                "value": 0.18
+              }
+            ],
+            "quality_risk": "medium",
+            "quality_score": 85.0,
+            "rationale": "Apply the selected feedback tags, validate, and render another candidate.",
+            "recommended_next_tool": "adjust_pipeline",
+            "review_notes": [
+              "Review rendered contact sheets."
+            ],
+            "suggested_feedback_tags": [
+              "too_noisy"
+            ]
+          },
+          "top_findings": [
+            {
+              "baseline_value": 0.01,
+              "code": "candidate_high_clipping",
+              "message": "Candidate preview has noticeable clipped dark or bright pixels.",
+              "metric": "clipping_fraction",
+              "severity": "medium",
+              "value": 0.18
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "snapshot": {
+    "version": 1
+  }
+}
