@@ -21,6 +21,9 @@ This project is intentionally a thin MCP layer around existing AlbumentationsX p
 
 The server does not execute arbitrary Python, fetch remote images, overwrite datasets, or train models.
 
+Public MCP tool, resource, prompt, and metadata changes follow the
+[compatibility policy](docs/COMPATIBILITY.md) and are guarded by contract snapshots.
+
 ## Install
 
 Run the published MCP server without cloning:
@@ -193,8 +196,9 @@ run a final docs pass over README, usage, recipes, and release automation.
 
 See [docs/USAGE.md](docs/USAGE.md) for an end-to-end MCP host workflow, [docs/RECIPES.md](docs/RECIPES.md) for
 task-specific host recipes, [docs/DEMO.md](docs/DEMO.md) for a generated preview comparison demo,
-[CHANGELOG.md](CHANGELOG.md) for release notes, [docs/RELEASE.md](docs/RELEASE.md) for the package and MCP Registry
-release process, [server.json](server.json) for public discovery metadata, and
+[CHANGELOG.md](CHANGELOG.md) for release notes, [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) for public contract
+rules, [docs/RELEASE.md](docs/RELEASE.md) for the package and MCP Registry release process, [server.json](server.json)
+for public discovery metadata, and
 [evals/golden_mcp_scenarios.yaml](evals/golden_mcp_scenarios.yaml) for executable MCP scenarios.
 
 ## Verification

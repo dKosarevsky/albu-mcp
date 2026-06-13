@@ -214,6 +214,14 @@ Run executable MCP scenarios locally before changing tool contracts:
 uv run python scripts/run_golden_evals.py
 ```
 
+Public MCP contract changes should also follow [docs/COMPATIBILITY.md](COMPATIBILITY.md) and update the contract snapshot
+when tool, resource, or prompt schemas change:
+
+```bash
+uv run python scripts/export_mcp_contract.py --output tests/fixtures/snapshots/mcp_contract.json
+uv run pytest tests/test_mcp_contract_snapshot.py -q
+```
+
 ## Resources
 
 - `albumentationsx://transforms/catalog`: all transform metadata from `albu-spec`.
