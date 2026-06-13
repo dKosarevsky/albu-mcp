@@ -381,6 +381,37 @@ class PreviewCandidateRanking(StrictModel):
     decision_guidance: list[str] = Field(default_factory=list)
 
 
+class DatasetMetricStats(StrictModel):
+    """Cross-candidate dataset-level stats for one quality metric."""
+
+    metric: str
+    candidate_count: int
+    min_value: float
+    max_value: float
+    mean_value: float
+
+
+class DatasetFindingCount(StrictModel):
+    """Cross-candidate count for one quality finding type."""
+
+    code: str
+    severity: RiskLevel
+    count: int
+
+
+class DatasetPreviewScore(StrictModel):
+    """Dataset-level score for several preview candidates against one baseline."""
+
+    baseline_run_id: str
+    quality_profile: QualityProfileName = "balanced"
+    candidate_count: int
+    best_candidate_run_id: str | None = None
+    ranking: PreviewCandidateRanking
+    metric_stats: list[DatasetMetricStats] = Field(default_factory=list)
+    finding_counts: list[DatasetFindingCount] = Field(default_factory=list)
+    decision_guidance: list[str] = Field(default_factory=list)
+
+
 class TransformSearchResult(StrictModel):
     """Search result for transform discovery."""
 
