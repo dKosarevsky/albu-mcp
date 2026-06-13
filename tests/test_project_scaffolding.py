@@ -104,6 +104,18 @@ def test_public_package_metadata_is_polished() -> None:
     assert '"Topic :: Scientific/Engineering :: Artificial Intelligence"' in pyproject
 
 
+def test_public_docs_describe_current_preview_workflow() -> None:
+    readme = Path("README.md").read_text(encoding="utf-8")
+    server_json = json.loads(Path("server.json").read_text(encoding="utf-8"))
+
+    assert "## What Changed In 0.2" in readme
+    assert "batch previews" in readme
+    assert "compare preview runs" in readme
+    assert "agent workflow resources" in readme
+    assert "batch previews" in server_json["description"]
+    assert "compare preview runs" in server_json["description"]
+
+
 def test_release_workflow_checks_versions_and_smokes_published_package() -> None:
     workflow = yaml.safe_load(Path(".github/workflows/release.yml").read_text(encoding="utf-8"))
     build_commands = "\n".join(step.get("run", "") for step in workflow["jobs"]["build"]["steps"])

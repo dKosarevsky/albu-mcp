@@ -94,6 +94,23 @@ See [examples/claude_desktop_pypi_config.json](examples/claude_desktop_pypi_conf
 previews. Preview manifests include an agent-legible `summary` block with input counts, seeds, transform names, artifact
 counts, contact sheets, and warnings.
 
+## What Changed In 0.2
+
+- PyPI and MCP Registry publishing are automated with release version guardrails and post-release smoke checks.
+- `render_preview_batch` produces batch previews and contact sheets for multi-image review.
+- `compare_preview_runs` summarizes baseline and candidate manifests to compare preview runs before choosing feedback tags.
+- Preview manifests include reproducibility summaries for seeds, transforms, artifact counts, and contact sheets.
+- agent workflow resources and prompts guide preview tuning, annotation review, feedback adjustment, and final export.
+
+## Demo Workflow
+
+1. Use `recommend_pipeline` and `validate_pipeline` for a conservative baseline.
+2. Call `render_preview_batch` on a small local image set.
+3. Adjust with structured feedback such as `too_noisy` or `too_distorted`.
+4. Render the candidate preview batch with the same inputs.
+5. Call `compare_preview_runs` before accepting the candidate.
+6. Export the accepted pipeline with `export_pipeline`.
+
 See [docs/USAGE.md](docs/USAGE.md) for an end-to-end MCP host workflow, [docs/RELEASE.md](docs/RELEASE.md) for the
 package and MCP Registry release process, [server.json](server.json) for public discovery metadata, and
 [evals/golden_mcp_scenarios.yaml](evals/golden_mcp_scenarios.yaml) for executable MCP scenarios.
