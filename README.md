@@ -173,11 +173,18 @@ counts, contact sheets, and warnings.
 - Golden MCP evals verify that recorded feedback note, target, and tags appear in the visual preview report.
 - v1 readiness is defined around stable public MCP contracts, schema snapshots, and a compatibility policy.
 
+## What Changed In 0.11
+
+- Added deterministic MCP contract snapshots for public tools, resources, resource templates, and prompts.
+- Added `scripts/export_mcp_contract.py` to regenerate reviewed contract fixtures.
+- Added [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) for compatible additions, breaking changes, deprecations, and
+  required coverage.
+
 ## V1 Readiness
 
-The next major milestone should be `v1.0.0` once public tool/resource names, response fields, and host workflows are
-frozen. Before cutting v1, add contract snapshot checks for MCP schemas, document compatibility/deprecation rules, and
-run a final docs pass over README, usage, recipes, and release automation.
+The next major milestone can be `v1.0.0` once public tool/resource names, response fields, and host workflows are
+frozen. `v0.11.0` adds tool/resource/prompt snapshots and compatibility rules. Before cutting v1, review response-field
+coverage for the main tool outputs and run a final docs pass over README, usage, recipes, and release automation.
 
 ## Demo Workflow
 

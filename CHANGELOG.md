@@ -6,6 +6,14 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 - No unreleased changes yet.
 
+## 0.11.0 - 2026-06-13
+
+- Added deterministic MCP contract snapshots for tools, resources, resource templates, and prompts.
+- Added `scripts/export_mcp_contract.py` for reviewed contract fixture updates.
+- Added a public MCP compatibility policy covering compatible additions, breaking changes, deprecations, and required
+  coverage.
+- Linked compatibility guidance from README and usage docs.
+
 ## 0.10.0 - 2026-06-13
 
 - Added concrete preview feedback records to Markdown and HTML preview reports.
