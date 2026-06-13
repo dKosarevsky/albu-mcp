@@ -42,9 +42,11 @@ retention limit for long-running MCP hosts.
 7. Review `suggested_feedback_tags` as candidates, then ask the user which tags match the contact sheets.
 8. Call `adjust_pipeline` with tags from `list_feedback_tags`, for example `too_noisy`, `too_noisy:high`, or
    `too_distorted`.
-9. Re-render, then call `summarize_tuning_session` to inspect `quality_score`, `quality_risk`, and `export_ready`.
-10. Call `record_tuning_decision` to persist the accepted or rejected candidate.
-11. Call `export_pipeline` once the preview set is acceptable.
+9. Re-render one or more candidates with the same input set.
+10. Call `rank_preview_candidates` when multiple candidates need comparison.
+11. Call `summarize_tuning_session` to inspect `quality_score`, `quality_risk`, and `export_ready`.
+12. Call `record_tuning_decision` to persist the accepted or rejected candidate.
+13. Call `export_tuning_report` for a Markdown or JSON handoff, then `export_pipeline` once the preview set is acceptable.
 
 ## Preview Artifacts
 
@@ -70,6 +72,11 @@ brightness, contrast, sharpness, saturation, colorfulness, entropy, clipping, ca
 structured `findings`. Missing or unreadable local artifacts are reported as `quality_warnings` instead of failing the
 comparison.
 
+Use `list_quality_profiles` before comparing task-specific previews. The built-in profiles are `balanced`,
+`classification`, `detection`, `segmentation`, and `ocr`. Pass `quality_profile` to `compare_preview_runs`,
+`summarize_tuning_session`, `record_tuning_decision`, or `rank_preview_candidates` when a task needs stricter findings,
+for example OCR sharpness and entropy or detection bbox retention.
+
 When preview manifests include `annotation_observations`, `quality_summary.annotation_summary` reports bbox, keypoint,
 and mask retention aggregates plus deltas. Findings such as `candidate_bbox_loss`, `candidate_keypoint_loss`, and
 `candidate_mask_coverage_drop` are review prompts for the host, not automatic rejection rules.
@@ -81,6 +88,24 @@ can decide whether to ask for more feedback or call `export_pipeline`.
 Use `record_tuning_decision` after the user accepts or rejects a candidate. Decisions are stored in
 `tuning_decisions.json` under the configured artifact root. `list_tuning_decisions` can return newest-first history or
 score-ranked candidates with `ranked=true`, and can restrict output to accepted decisions with `accepted_only=true`.
+Use `export_tuning_report` to render the same journal as Markdown for humans or JSON for automation.
+
+`rank_preview_candidates` accepts one baseline id and several candidate ids:
+
+```json
+{
+  "baseline_run_id": "baseline-run-id",
+  "candidate_run_ids": ["candidate-a", "candidate-b"],
+  "feedback_tags_by_candidate": {
+    "candidate-a": ["too_noisy:low"],
+    "candidate-b": ["too_blurry"]
+  },
+  "accepted_candidate_ids": ["candidate-a"],
+  "quality_profile": "ocr"
+}
+```
+
+Ranking is deterministic: higher `quality_score`, lower `quality_risk`, export-ready candidates, then candidate run id.
 
 ## Feedback Severity
 
@@ -156,6 +181,7 @@ uv run python scripts/run_golden_evals.py
 - `albumentationsx://transforms/{name}`: metadata for one transform.
 - `albumentationsx://schemas/pipeline`: JSON Schema for pipeline specs.
 - `albumentationsx://feedback-tags`: structured feedback tags accepted by `adjust_pipeline`.
+- `albumentationsx://quality-profiles`: task-aware quality profiles accepted by comparison and ranking tools.
 - `albumentationsx://capabilities`: configured roots, preview limits, and exposed tools.
 - `albumentationsx://workflows/catalog`: built-in agent workflow guides.
 - `albumentationsx://workflows/task-profiles`: task-specific workflow defaults for common CV workflows.

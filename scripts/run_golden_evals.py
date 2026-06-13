@@ -16,6 +16,8 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from PIL import Image
 
+_RANKING_CANDIDATE_COUNT = 2
+
 
 def main() -> None:
     """Run configured golden scenarios and exit non-zero on the first failure."""
@@ -160,6 +162,7 @@ async def _run_preview_comparison(
     pipeline: dict[str, Any],
     baseline_run_id: str,
 ) -> None:
+    quality_profile = scenario.get("quality_profile", "balanced")
     candidate_pipeline = await _call_tool_json(
         session,
         "adjust_pipeline",
@@ -181,7 +184,11 @@ async def _run_preview_comparison(
     comparison = await _call_tool_json(
         session,
         "compare_preview_runs",
-        {"baseline_run_id": baseline_run_id, "candidate_run_id": candidate["run_id"]},
+        {
+            "baseline_run_id": baseline_run_id,
+            "candidate_run_id": candidate["run_id"],
+            "quality_profile": quality_profile,
+        },
     )
     if comparison["baseline"]["run_id"] != baseline_run_id:
         raise AssertionError(f"{scenario['name']} comparison returned wrong baseline: {comparison}")
@@ -200,36 +207,127 @@ async def _run_preview_comparison(
                 "candidate_run_id": candidate["run_id"],
                 "feedback_tags": scenario.get("feedback_tags", []),
                 "accepted": bool(scenario.get("accepted", False)),
+                "quality_profile": quality_profile,
             },
         )
         if summary["candidate_run_id"] != candidate["run_id"]:
             raise AssertionError(f"{scenario['name']} summary returned wrong candidate: {summary}")
         if scenario.get("accepted") and summary["export_ready"] is not True:
             raise AssertionError(f"{scenario['name']} summary was not export-ready: {summary}")
-    if scenario.get("record_tuning_decision"):
-        decision = await _call_tool_json(
-            session,
-            "record_tuning_decision",
-            {
-                "baseline_run_id": baseline_run_id,
-                "candidate_run_id": candidate["run_id"],
-                "feedback_tags": scenario.get("feedback_tags", []),
-                "accepted": bool(scenario.get("accepted", False)),
-                "reviewer_notes": ["golden eval accepted candidate"],
-            },
-        )
-        if decision["candidate_run_id"] != candidate["run_id"]:
-            raise AssertionError(f"{scenario['name']} decision returned wrong candidate: {decision}")
-        decisions = await _call_tool_json(
-            session,
-            "list_tuning_decisions",
-            {"limit": 5, "accepted_only": bool(scenario.get("accepted", False)), "ranked": True},
-        )
-        if decision["decision_id"] not in {item["decision_id"] for item in decisions["decisions"]}:
-            raise AssertionError(f"{scenario['name']} decision was not listed: {decisions}")
+    extra_candidate_ids = await _run_candidate_ranking(
+        session,
+        scenario,
+        image_paths,
+        pipeline,
+        baseline_run_id,
+        candidate["run_id"],
+        quality_profile,
+    )
+    await _record_tuning_decision_and_report(
+        session,
+        scenario,
+        baseline_run_id,
+        candidate["run_id"],
+        quality_profile,
+    )
+    for extra_candidate_id in extra_candidate_ids:
+        deleted_extra = await _call_tool_json(session, "delete_preview_run", {"run_id": extra_candidate_id})
+        if deleted_extra["deleted"]["run_id"] != extra_candidate_id:
+            raise AssertionError(f"{scenario['name']} did not delete extra candidate run")
     deleted = await _call_tool_json(session, "delete_preview_run", {"run_id": candidate["run_id"]})
     if deleted["deleted"]["run_id"] != candidate["run_id"]:
         raise AssertionError(f"{scenario['name']} did not delete candidate preview run")
+
+
+async def _run_candidate_ranking(  # noqa: PLR0913
+    session: ClientSession,
+    scenario: dict[str, Any],
+    image_paths: list[Path],
+    pipeline: dict[str, Any],
+    baseline_run_id: str,
+    candidate_run_id: str,
+    quality_profile: str,
+) -> list[str]:
+    if not scenario.get("rank_preview_candidates"):
+        return []
+    alternate_tags = scenario.get("alternate_feedback_tags", ["too_blurry"])
+    alternate_pipeline = await _call_tool_json(
+        session,
+        "adjust_pipeline",
+        {"pipeline": pipeline, "feedback_tags": alternate_tags},
+    )
+    alternate = await _call_tool_json(
+        session,
+        "render_preview_batch",
+        {
+            "request": {
+                "input_paths": [str(path) for path in image_paths],
+                "pipeline": alternate_pipeline,
+                "variants_per_image": scenario.get("variants_per_image", 1),
+                "seed": int(scenario.get("seed", 137)) + 20,
+                "max_side": 128,
+            },
+        },
+    )
+    ranking = await _call_tool_json(
+        session,
+        "rank_preview_candidates",
+        {
+            "baseline_run_id": baseline_run_id,
+            "candidate_run_ids": [candidate_run_id, alternate["run_id"]],
+            "feedback_tags_by_candidate": {
+                candidate_run_id: scenario.get("feedback_tags", []),
+                alternate["run_id"]: alternate_tags,
+            },
+            "accepted_candidate_ids": [candidate_run_id] if scenario.get("accepted") else [],
+            "quality_profile": quality_profile,
+        },
+    )
+    if ranking["candidate_count"] != _RANKING_CANDIDATE_COUNT:
+        raise AssertionError(f"{scenario['name']} ranking did not include both candidates: {ranking}")
+    if not ranking["best_candidate_run_id"]:
+        raise AssertionError(f"{scenario['name']} ranking did not return a best candidate: {ranking}")
+    return [str(alternate["run_id"])]
+
+
+async def _record_tuning_decision_and_report(
+    session: ClientSession,
+    scenario: dict[str, Any],
+    baseline_run_id: str,
+    candidate_run_id: str,
+    quality_profile: str,
+) -> None:
+    if not scenario.get("record_tuning_decision"):
+        return
+    decision = await _call_tool_json(
+        session,
+        "record_tuning_decision",
+        {
+            "baseline_run_id": baseline_run_id,
+            "candidate_run_id": candidate_run_id,
+            "feedback_tags": scenario.get("feedback_tags", []),
+            "accepted": bool(scenario.get("accepted", False)),
+            "reviewer_notes": ["golden eval accepted candidate"],
+            "quality_profile": quality_profile,
+        },
+    )
+    if decision["candidate_run_id"] != candidate_run_id:
+        raise AssertionError(f"{scenario['name']} decision returned wrong candidate: {decision}")
+    decisions = await _call_tool_json(
+        session,
+        "list_tuning_decisions",
+        {"limit": 5, "accepted_only": bool(scenario.get("accepted", False)), "ranked": True},
+    )
+    if decision["decision_id"] not in {item["decision_id"] for item in decisions["decisions"]}:
+        raise AssertionError(f"{scenario['name']} decision was not listed: {decisions}")
+    if scenario.get("export_tuning_report"):
+        report = await _call_tool_json(
+            session,
+            "export_tuning_report",
+            {"output_format": "json", "limit": 10, "accepted_only": False, "ranked": True},
+        )
+        if decision["decision_id"] not in report["content"]:
+            raise AssertionError(f"{scenario['name']} report did not include decision: {report}")
 
 
 async def _call_tool_json(session: ClientSession, name: str, arguments: dict[str, Any]) -> dict[str, Any]:

@@ -36,8 +36,12 @@ scenarios:
     compare_preview: true
     assert_quality_summary: true
     summarize_tuning_session: true
+    rank_preview_candidates: true
     record_tuning_decision: true
+    export_tuning_report: true
+    quality_profile: ocr
     accepted: true
     input_count: 2
     variants_per_image: 1
     feedback_tags: ["too_noisy:high"]
+    alternate_feedback_tags: ["too_blurry:low"]

@@ -13,9 +13,10 @@ def test_list_quality_profiles_documents_task_thresholds() -> None:
     assert profiles["balanced"].description
     assert profiles["ocr"].thresholds["entropy_bits_medium"] > profiles["balanced"].thresholds["entropy_bits_medium"]
     assert profiles["detection"].thresholds["bbox_retention_high"] == 1.0
-    assert profiles["segmentation"].thresholds["mask_coverage_medium"] > profiles["balanced"].thresholds[
-        "mask_coverage_medium"
-    ]
+    assert (
+        profiles["segmentation"].thresholds["mask_coverage_medium"]
+        > profiles["balanced"].thresholds["mask_coverage_medium"]
+    )
 
 
 def test_collect_image_quality_metrics_detects_contrast_and_sharpness(tmp_path: Path) -> None:

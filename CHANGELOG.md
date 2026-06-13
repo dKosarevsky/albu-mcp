@@ -6,6 +6,14 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 - No unreleased changes yet.
 
+## 0.6.0 - 2026-06-13
+
+- Added task-aware quality profiles for balanced, classification, detection, segmentation, and OCR review.
+- Added `rank_preview_candidates` for deterministic multi-candidate preview ranking.
+- Added `export_tuning_report` for Markdown or JSON tuning decision handoff.
+- Exposed `albumentationsx://quality-profiles` for MCP host discovery.
+- Extended golden MCP evals to cover two-candidate ranking and report export.
+
 ## 0.5.0 - 2026-06-13
 
 - Added richer local quality metrics: saturation, colorfulness, entropy, clipping, and deterministic quality findings.

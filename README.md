@@ -81,12 +81,15 @@ See [examples/claude_desktop_pypi_config.json](examples/claude_desktop_pypi_conf
 - `adjust_pipeline`: apply structured preview feedback such as `too_noisy` or `too_blurry`.
 - `explain_pipeline`: summarize likely effects, preview risks, and useful feedback tags.
 - `list_feedback_tags`: list the structured feedback contract used by `adjust_pipeline`.
+- `list_quality_profiles`: list task-aware quality profiles for balanced, classification, detection, segmentation, and OCR review.
 - `render_preview`: create deterministic local preview artifacts inside an allowed output root.
 - `render_preview_batch`: create deterministic multi-image preview contact sheets using the same request schema.
 - `compare_preview_runs`: compare two preview manifests before choosing feedback tags or exporting a pipeline.
 - `summarize_tuning_session`: summarize quality findings, feedback tags, score, risk, and export readiness.
+- `rank_preview_candidates`: rank several candidate preview runs against one baseline.
 - `record_tuning_decision`: persist a local accepted or rejected tuning decision.
 - `list_tuning_decisions`: list local tuning decisions newest-first or score-ranked.
+- `export_tuning_report`: export persisted tuning decisions as Markdown or JSON.
 - `list_preview_runs`: list recent preview manifests recorded under the artifact root.
 - `get_preview_manifest`: read one recorded preview manifest by run id.
 - `delete_preview_run`: delete one preview run and its artifacts.
@@ -127,6 +130,13 @@ counts, contact sheets, and warnings.
 - `summarize_tuning_session` returns `quality_score`, `quality_risk`, and structured `quality_findings`.
 - `record_tuning_decision` and `list_tuning_decisions` provide a local JSON-backed tuning decision journal.
 
+## What Changed In 0.6
+
+- Added task-aware quality profiles for balanced, classification, detection, segmentation, and OCR review.
+- Added `rank_preview_candidates` to choose between multiple candidate preview runs.
+- Added `export_tuning_report` for Markdown or JSON handoff from the local tuning decision journal.
+- Extended golden MCP evals to cover two-candidate ranking and report export.
+
 ## Demo Workflow
 
 1. Use `recommend_pipeline` and `validate_pipeline` for a conservative baseline.
@@ -134,8 +144,10 @@ counts, contact sheets, and warnings.
 3. Adjust with structured feedback such as `too_noisy`, `too_noisy:high`, or `too_distorted`.
 4. Render the candidate preview batch with the same inputs.
 5. Call `compare_preview_runs` before accepting the candidate and inspect `quality_summary.findings`.
-6. Call `summarize_tuning_session` and review `quality_score`, `quality_risk`, and `export_ready`.
-7. Call `record_tuning_decision` for the accepted or rejected candidate, then export with `export_pipeline`.
+6. If several candidates exist, call `rank_preview_candidates` with the matching quality profile.
+7. Call `summarize_tuning_session` and review `quality_score`, `quality_risk`, and `export_ready`.
+8. Call `record_tuning_decision` for the accepted or rejected candidate.
+9. Call `export_tuning_report` for handoff, then export the accepted pipeline with `export_pipeline`.
 
 See [docs/USAGE.md](docs/USAGE.md) for an end-to-end MCP host workflow, [docs/RECIPES.md](docs/RECIPES.md) for
 task-specific host recipes, [docs/DEMO.md](docs/DEMO.md) for a generated preview comparison demo,
