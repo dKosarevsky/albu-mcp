@@ -1,7 +1,8 @@
 # AlbumentationsX MCP
 
-Model Context Protocol server for discovering AlbumentationsX transforms, validating augmentation pipelines,
-rendering deterministic previews, and exporting reproducible pipeline specs.
+Model Context Protocol server for [AlbumentationsX](https://github.com/albumentations-team/AlbumentationsX):
+discovering transforms, validating augmentation pipelines, rendering deterministic previews, and exporting reproducible
+pipeline specs.
 
 ## Scope
 

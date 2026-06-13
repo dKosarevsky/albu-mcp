@@ -4,15 +4,21 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import uuid
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 import numpy as np
 from PIL import Image
 
-from albumentationsx_mcp.models import ArtifactKind, ArtifactRef, PreviewRequest, PreviewResult
-from albumentationsx_mcp.pipeline import PipelineService
+from albumentationsx_mcp.models import ArtifactKind, ArtifactRef, ComposeSpec, PreviewRequest, PreviewResult
+
+
+class PipelineBuilder(Protocol):
+    """Builds executable Albumentations pipelines from validated specs."""
+
+    def build_pipeline(self, pipeline: ComposeSpec) -> Any: ...
 
 
 class PathPolicy:
@@ -68,7 +74,7 @@ class PreviewService:
 
     def __init__(
         self,
-        pipeline_service: PipelineService,
+        pipeline_service: PipelineBuilder,
         path_policy: PathPolicy,
         artifact_store: ArtifactStore,
     ) -> None:
@@ -94,6 +100,16 @@ class PreviewService:
                 Image.fromarray(result).save(output)
                 artifacts.append(self.artifact_store.artifact_ref(output, kind="image", mime_type="image/png"))
 
+        contact_sheet_path = run_dir / "contact_sheet.png"
+        self._write_contact_sheet([Path(artifact.path) for artifact in artifacts], contact_sheet_path)
+        artifacts.append(
+            self.artifact_store.artifact_ref(
+                contact_sheet_path,
+                kind="contact_sheet",
+                mime_type="image/png",
+            ),
+        )
+
         manifest_path = run_dir / "manifest.json"
         manifest_data: dict[str, Any] = {
             "run_id": run_id,
@@ -115,3 +131,23 @@ class PreviewService:
         image = Image.open(path).convert("RGB")
         image.thumbnail((max_side, max_side))
         return image
+
+    @staticmethod
+    def _write_contact_sheet(image_paths: list[Path], output_path: Path) -> None:
+        images = [Image.open(path).convert("RGB") for path in image_paths]
+        if not images:
+            Image.new("RGB", (1, 1), "white").save(output_path)
+            return
+
+        tile_width = max(image.width for image in images)
+        tile_height = max(image.height for image in images)
+        columns = math.ceil(math.sqrt(len(images)))
+        rows = math.ceil(len(images) / columns)
+        sheet = Image.new("RGB", (columns * tile_width, rows * tile_height), "white")
+
+        for index, image in enumerate(images):
+            column = index % columns
+            row = index // columns
+            sheet.paste(image, (column * tile_width, row * tile_height))
+
+        sheet.save(output_path)
