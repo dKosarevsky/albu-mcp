@@ -7,7 +7,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-ArtifactKind = Literal["image", "manifest", "contact_sheet", "overlay", "overlay_contact_sheet"]
+ArtifactKind = Literal["image", "manifest", "contact_sheet", "overlay", "overlay_contact_sheet", "report"]
 RiskLevel = Literal["low", "medium", "high"]
 QualityProfileName = Literal["balanced", "classification", "detection", "segmentation", "ocr"]
 
@@ -348,6 +348,17 @@ class TuningDecisionReport(StrictModel):
     content: str
     decision_count: int
     accepted_count: int
+    best_candidate_run_id: str | None = None
+
+
+class PreviewReportExport(StrictModel):
+    """Exported visual preview report artifact."""
+
+    format: Literal["markdown", "html"]
+    content: str
+    artifact: ArtifactRef
+    baseline_run_id: str
+    candidate_count: int
     best_candidate_run_id: str | None = None
 
 
