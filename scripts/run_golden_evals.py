@@ -189,6 +189,23 @@ async def _run_preview_comparison(
         raise AssertionError(f"{scenario['name']} comparison returned wrong candidate: {comparison}")
     if not comparison["review_notes"]:
         raise AssertionError(f"{scenario['name']} comparison returned no review notes")
+    if scenario.get("assert_quality_summary") and not comparison.get("quality_summary"):
+        raise AssertionError(f"{scenario['name']} comparison returned no quality summary: {comparison}")
+    if scenario.get("summarize_tuning_session"):
+        summary = await _call_tool_json(
+            session,
+            "summarize_tuning_session",
+            {
+                "baseline_run_id": baseline_run_id,
+                "candidate_run_id": candidate["run_id"],
+                "feedback_tags": scenario.get("feedback_tags", []),
+                "accepted": bool(scenario.get("accepted", False)),
+            },
+        )
+        if summary["candidate_run_id"] != candidate["run_id"]:
+            raise AssertionError(f"{scenario['name']} summary returned wrong candidate: {summary}")
+        if scenario.get("accepted") and summary["export_ready"] is not True:
+            raise AssertionError(f"{scenario['name']} summary was not export-ready: {summary}")
     deleted = await _call_tool_json(session, "delete_preview_run", {"run_id": candidate["run_id"]})
     if deleted["deleted"]["run_id"] != candidate["run_id"]:
         raise AssertionError(f"{scenario['name']} did not delete candidate preview run")
@@ -202,7 +219,9 @@ async def _call_tool_json(session: ClientSession, name: str, arguments: dict[str
         return result.structuredContent
     for content in result.content:
         if getattr(content, "type", None) == "text":
-            return json.loads(content.text)
+            text = getattr(content, "text", None)
+            if isinstance(text, str):
+                return json.loads(text)
     raise AssertionError(f"{name} returned no JSON content: {result.content}")
 
 

@@ -18,6 +18,7 @@ def test_golden_eval_assets_are_present() -> None:
         "classification_recommend_validate_explain_export",
         "preview_lifecycle",
         "preview_batch_compare",
+        "preview_quality_tuning_summary",
     }
 
 
@@ -40,3 +41,4 @@ def test_golden_eval_runner_executes_scenarios_over_stdio(tmp_path: Path) -> Non
     assert "classification_recommend_validate_explain_export: ok" in completed.stdout
     assert "preview_lifecycle: ok" in completed.stdout
     assert "preview_batch_compare: ok" in completed.stdout
+    assert "preview_quality_tuning_summary: ok" in completed.stdout
