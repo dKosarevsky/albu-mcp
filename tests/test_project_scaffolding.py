@@ -147,6 +147,7 @@ def test_mcp_registry_metadata_is_ready_for_pypi_distribution() -> None:
     readme = Path("README.md").read_text(encoding="utf-8")
 
     assert server_json["name"] == "io.github.dKosarevsky/albu-mcp"
+    assert len(server_json["description"]) <= 100
     assert server_json["packages"][0]["registryType"] == "pypi"
     assert server_json["packages"][0]["identifier"] == "albumentationsx-mcp"
     assert server_json["packages"][0]["transport"]["type"] == "stdio"
