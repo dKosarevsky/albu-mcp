@@ -25,6 +25,7 @@ def test_server_exposes_documented_tool_names() -> None:
         "render_preview",
         "render_preview_batch",
         "compare_preview_runs",
+        "summarize_tuning_session",
         "list_preview_runs",
         "get_preview_manifest",
         "delete_preview_run",
@@ -59,3 +60,4 @@ def test_server_exposes_agent_workflow_resources() -> None:
     assert "adjust_pipeline" in preview_tuning
     assert "workflow_resources" in capabilities
     assert "compare_preview_runs_for_feedback" in capabilities
+    assert "summarize_tuning_session" in capabilities

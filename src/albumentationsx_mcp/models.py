@@ -218,6 +218,26 @@ class PreviewRunComparison(StrictModel):
     quality_warnings: list[str] = Field(default_factory=list)
 
 
+class TuningSessionSummary(StrictModel):
+    """Agent-facing summary for one baseline-to-candidate tuning step."""
+
+    baseline_run_id: str
+    candidate_run_id: str
+    feedback_tags: list[str] = Field(default_factory=list)
+    accepted: bool = False
+    export_ready: bool
+    recommended_next_tool: Literal[
+        "list_feedback_tags",
+        "adjust_pipeline",
+        "render_preview_batch",
+        "export_pipeline",
+    ]
+    rationale: str
+    suggested_feedback_tags: list[str] = Field(default_factory=list)
+    quality_deltas: dict[str, float] = Field(default_factory=dict)
+    review_notes: list[str] = Field(default_factory=list)
+
+
 class TransformSearchResult(StrictModel):
     """Search result for transform discovery."""
 

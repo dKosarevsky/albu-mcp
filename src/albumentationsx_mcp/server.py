@@ -28,6 +28,7 @@ from albumentationsx_mcp.prompts import (
 from albumentationsx_mcp.prompts import (
     tune_pipeline_from_preview_feedback as tune_feedback_prompt,
 )
+from albumentationsx_mcp.tuning import build_tuning_session_summary
 from albumentationsx_mcp.workflows import get_agent_workflow, list_agent_workflows
 
 
@@ -112,6 +113,7 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
                     "render_preview",
                     "render_preview_batch",
                     "compare_preview_runs",
+                    "summarize_tuning_session",
                     "list_preview_runs",
                     "get_preview_manifest",
                     "delete_preview_run",
@@ -231,6 +233,21 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
     def compare_preview_runs(baseline_run_id: str, candidate_run_id: str) -> dict[str, Any]:
         """Compare two preview manifests to guide structured feedback and reproducible tuning."""
         return preview_service.compare_preview_runs(baseline_run_id, candidate_run_id).model_dump(mode="json")
+
+    @mcp.tool()
+    def summarize_tuning_session(
+        baseline_run_id: str,
+        candidate_run_id: str,
+        feedback_tags: list[str] | None = None,
+        accepted: bool = False,  # noqa: FBT001, FBT002
+    ) -> dict[str, Any]:
+        """Summarize a baseline-to-candidate preview tuning step."""
+        comparison = preview_service.compare_preview_runs(baseline_run_id, candidate_run_id)
+        return build_tuning_session_summary(
+            comparison,
+            feedback_tags=feedback_tags or [],
+            accepted=accepted,
+        ).model_dump(mode="json")
 
     @mcp.tool()
     def list_preview_runs(limit: int = 20) -> dict[str, Any]:
