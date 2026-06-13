@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 
 from albumentationsx_mcp.advisor import explain_pipeline, list_feedback_tags
 from albumentationsx_mcp.catalog import TransformCatalog
+from albumentationsx_mcp.dataset import score_dataset_preview_candidates as score_dataset_candidates
 from albumentationsx_mcp.models import ComposeSpec, PreviewRequest, QualityProfileName, TargetSpec
 from albumentationsx_mcp.pipeline import PipelineService
 from albumentationsx_mcp.presets import Intensity, adjust_pipeline, recommend_pipeline
@@ -30,6 +31,8 @@ from albumentationsx_mcp.prompts import (
 )
 from albumentationsx_mcp.quality import list_quality_profiles
 from albumentationsx_mcp.ranking import rank_preview_candidates as rank_candidates
+from albumentationsx_mcp.recipes import list_recipe_catalog, recommend_recipe
+from albumentationsx_mcp.reports import PreviewReportService
 from albumentationsx_mcp.tuning import TuningDecisionStore, build_tuning_session_summary
 from albumentationsx_mcp.workflows import get_agent_workflow, list_agent_workflows, list_task_profiles
 
@@ -68,6 +71,7 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
         ArtifactStore(settings.artifact_root, max_runs=settings.max_preview_runs),
     )
     tuning_store = TuningDecisionStore(settings.artifact_root)
+    report_service = PreviewReportService(settings.artifact_root)
     mcp = FastMCP("AlbumentationsX MCP")
 
     @mcp.resource("albumentationsx://transforms/catalog")
@@ -98,6 +102,12 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
         data = [profile.model_dump(mode="json") for profile in list_quality_profiles()]
         return json.dumps(data, sort_keys=True)
 
+    @mcp.resource("albumentationsx://recipes/catalog")
+    def recipes_catalog_resource() -> str:
+        """Return task-aware recipe recommendations as compact JSON."""
+        data = [recipe.model_dump(mode="json") for recipe in list_recipe_catalog()]
+        return json.dumps(data, sort_keys=True)
+
     @mcp.resource("albumentationsx://capabilities")
     def capabilities_resource() -> str:
         """Return operational limits and safety boundaries for this MCP server."""
@@ -124,10 +134,13 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
                     "compare_preview_runs",
                     "summarize_tuning_session",
                     "rank_preview_candidates",
+                    "score_dataset_preview_candidates",
                     "list_quality_profiles",
+                    "recommend_recipe",
                     "record_tuning_decision",
                     "list_tuning_decisions",
                     "export_tuning_report",
+                    "export_preview_report",
                     "list_preview_runs",
                     "get_preview_manifest",
                     "delete_preview_run",
@@ -145,6 +158,7 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
                     "albumentationsx://workflows/preview-tuning",
                     "albumentationsx://workflows/annotation-preview",
                     "albumentationsx://workflows/task-profiles",
+                    "albumentationsx://recipes/catalog",
                 ],
             },
             sort_keys=True,
@@ -237,6 +251,18 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
         """List task-aware quality profiles accepted by preview comparison tools."""
         return {"profiles": [profile.model_dump(mode="json") for profile in list_quality_profiles()]}
 
+    @mcp.tool(name="recommend_recipe")
+    def recommend_recipe_tool(
+        task: str,
+        intensity: Intensity = "medium",
+        targets: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Recommend a task-aware starter pipeline, quality profile, and preview workflow."""
+        return recommend_recipe(task=task, intensity=intensity, targets=targets).model_dump(
+            mode="json",
+            exclude_none=True,
+        )
+
     @mcp.tool()
     def export_pipeline(pipeline: dict[str, Any], output_format: OutputFormat = "python") -> dict[str, Any]:
         """Export a validated pipeline as Python, JSON, or YAML."""
@@ -316,6 +342,33 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
         ).model_dump(mode="json")
 
     @mcp.tool()
+    def score_dataset_preview_candidates(
+        baseline_run_id: str,
+        candidate_run_ids: list[str],
+        feedback_tags_by_candidate: dict[str, list[str]] | None = None,
+        accepted_candidate_ids: list[str] | None = None,
+        quality_profile: QualityProfileName = "balanced",
+    ) -> dict[str, Any]:
+        """Score several preview candidates as one dataset-level decision set."""
+        if not candidate_run_ids:
+            msg = "candidate_run_ids must contain at least one run id"
+            raise ValueError(msg)
+        comparisons = [
+            preview_service.compare_preview_runs(
+                baseline_run_id,
+                candidate_run_id,
+                quality_profile=quality_profile,
+            )
+            for candidate_run_id in candidate_run_ids[:20]
+        ]
+        return score_dataset_candidates(
+            comparisons,
+            feedback_tags_by_candidate=feedback_tags_by_candidate or {},
+            accepted_candidate_ids=set(accepted_candidate_ids or []),
+            quality_profile=quality_profile,
+        ).model_dump(mode="json")
+
+    @mcp.tool()
     def record_tuning_decision(  # noqa: PLR0913
         baseline_run_id: str,
         candidate_run_id: str,
@@ -364,6 +417,51 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
         ).model_dump(mode="json")
 
     @mcp.tool()
+    def export_preview_report(  # noqa: PLR0913
+        baseline_run_id: str,
+        candidate_run_ids: list[str],
+        output_format: Literal["markdown", "html"] = "markdown",
+        feedback_tags_by_candidate: dict[str, list[str]] | None = None,
+        accepted_candidate_ids: list[str] | None = None,
+        quality_profile: QualityProfileName = "balanced",
+        include_decisions: bool = True,  # noqa: FBT001, FBT002
+    ) -> dict[str, Any]:
+        """Export a visual preview report with ranking, contact sheets, and decisions."""
+        if not candidate_run_ids:
+            msg = "candidate_run_ids must contain at least one run id"
+            raise ValueError(msg)
+        bounded_candidate_ids = candidate_run_ids[:20]
+        comparisons = [
+            preview_service.compare_preview_runs(
+                baseline_run_id,
+                candidate_run_id,
+                quality_profile=quality_profile,
+            )
+            for candidate_run_id in bounded_candidate_ids
+        ]
+        score = score_dataset_candidates(
+            comparisons,
+            feedback_tags_by_candidate=feedback_tags_by_candidate or {},
+            accepted_candidate_ids=set(accepted_candidate_ids or []),
+            quality_profile=quality_profile,
+        )
+        return report_service.export_report(
+            score,
+            baseline_manifest=preview_service.artifact_store.read_manifest(baseline_run_id),
+            candidate_manifests=[
+                preview_service.artifact_store.read_manifest(candidate_run_id)
+                for candidate_run_id in bounded_candidate_ids
+            ],
+            decisions=_matching_tuning_decisions(
+                tuning_store,
+                baseline_run_id=baseline_run_id,
+                candidate_run_ids=set(bounded_candidate_ids),
+                include_decisions=include_decisions,
+            ),
+            output_format=output_format,
+        ).model_dump(mode="json")
+
+    @mcp.tool()
     def list_preview_runs(limit: int = 20) -> dict[str, Any]:
         """List recent preview runs recorded under the configured artifact root."""
         bounded_limit = max(1, min(limit, 100))
@@ -409,3 +507,20 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
         return export_pipeline_prompt(run_id, output_format)
 
     return mcp
+
+
+def _matching_tuning_decisions(
+    tuning_store: TuningDecisionStore,
+    *,
+    baseline_run_id: str,
+    candidate_run_ids: set[str],
+    include_decisions: bool,
+) -> list[Any]:
+    if not include_decisions:
+        return []
+    decisions = tuning_store.list_decisions(limit=100, ranked=True).decisions
+    return [
+        decision
+        for decision in decisions
+        if decision.baseline_run_id == baseline_run_id and decision.candidate_run_id in candidate_run_ids
+    ]

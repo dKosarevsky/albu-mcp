@@ -77,6 +77,8 @@ def _prepare_work_dirs(work_dir: Path) -> tuple[Path, Path]:
 async def _run_scenario(session: ClientSession, scenario: dict[str, Any], images_dir: Path) -> None:
     task = scenario["task"]
     targets = scenario["targets"]
+    if scenario.get("recommend_recipe"):
+        await _run_recipe_recommendation(session, scenario)
     recommended = await _call_tool_json(
         session,
         "recommend_pipeline",
@@ -223,11 +225,19 @@ async def _run_preview_comparison(
         candidate["run_id"],
         quality_profile,
     )
+    candidate_ids = [candidate["run_id"], *extra_candidate_ids]
     await _record_tuning_decision_and_report(
         session,
         scenario,
         baseline_run_id,
         candidate["run_id"],
+        quality_profile,
+    )
+    await _run_dataset_scoring_and_preview_report(
+        session,
+        scenario,
+        baseline_run_id,
+        candidate_ids,
         quality_profile,
     )
     for extra_candidate_id in extra_candidate_ids:
@@ -288,6 +298,73 @@ async def _run_candidate_ranking(  # noqa: PLR0913
     if not ranking["best_candidate_run_id"]:
         raise AssertionError(f"{scenario['name']} ranking did not return a best candidate: {ranking}")
     return [str(alternate["run_id"])]
+
+
+async def _run_recipe_recommendation(session: ClientSession, scenario: dict[str, Any]) -> None:
+    recipe = await _call_tool_json(
+        session,
+        "recommend_recipe",
+        {
+            "task": scenario.get("recipe_task", scenario["task"]),
+            "intensity": scenario.get("intensity", "medium"),
+            "targets": scenario.get("recipe_targets"),
+        },
+    )
+    expected_profile = scenario.get("expected_recipe_profile")
+    if expected_profile and recipe["quality_profile"] != expected_profile:
+        raise AssertionError(f"{scenario['name']} recipe returned wrong quality profile: {recipe}")
+    for tool_name in ("render_preview_batch", "score_dataset_preview_candidates", "export_preview_report"):
+        if tool_name not in recipe["recommended_tools"]:
+            raise AssertionError(f"{scenario['name']} recipe did not include {tool_name}: {recipe}")
+
+
+async def _run_dataset_scoring_and_preview_report(
+    session: ClientSession,
+    scenario: dict[str, Any],
+    baseline_run_id: str,
+    candidate_run_ids: list[str],
+    quality_profile: str,
+) -> None:
+    score: dict[str, Any] | None = None
+    if scenario.get("score_dataset_preview_candidates"):
+        score = await _call_tool_json(
+            session,
+            "score_dataset_preview_candidates",
+            {
+                "baseline_run_id": baseline_run_id,
+                "candidate_run_ids": candidate_run_ids,
+                "feedback_tags_by_candidate": {candidate_run_ids[0]: scenario.get("feedback_tags", [])},
+                "accepted_candidate_ids": [candidate_run_ids[0]] if scenario.get("accepted") else [],
+                "quality_profile": quality_profile,
+            },
+        )
+        if score["candidate_count"] != len(candidate_run_ids):
+            raise AssertionError(f"{scenario['name']} dataset score did not include all candidates: {score}")
+        if not score["best_candidate_run_id"]:
+            raise AssertionError(f"{scenario['name']} dataset score did not return a best candidate: {score}")
+        if not score["metric_stats"]:
+            raise AssertionError(f"{scenario['name']} dataset score returned no metric stats: {score}")
+    if scenario.get("export_preview_report"):
+        report = await _call_tool_json(
+            session,
+            "export_preview_report",
+            {
+                "baseline_run_id": baseline_run_id,
+                "candidate_run_ids": candidate_run_ids,
+                "output_format": scenario.get("preview_report_format", "markdown"),
+                "feedback_tags_by_candidate": {candidate_run_ids[0]: scenario.get("feedback_tags", [])},
+                "accepted_candidate_ids": [candidate_run_ids[0]] if scenario.get("accepted") else [],
+                "quality_profile": quality_profile,
+                "include_decisions": True,
+            },
+        )
+        if report["artifact"]["kind"] != "report":
+            raise AssertionError(f"{scenario['name']} preview report returned wrong artifact: {report}")
+        report_exists = await asyncio.to_thread(Path(report["artifact"]["path"]).exists)
+        if not report_exists:
+            raise AssertionError(f"{scenario['name']} preview report artifact was not written: {report}")
+        if score is not None and score["best_candidate_run_id"] not in report["content"]:
+            raise AssertionError(f"{scenario['name']} preview report did not include best candidate: {report}")
 
 
 async def _record_tuning_decision_and_report(

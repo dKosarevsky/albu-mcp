@@ -37,8 +37,14 @@ scenarios:
     assert_quality_summary: true
     summarize_tuning_session: true
     rank_preview_candidates: true
+    score_dataset_preview_candidates: true
     record_tuning_decision: true
     export_tuning_report: true
+    export_preview_report: true
+    preview_report_format: html
+    recommend_recipe: true
+    recipe_task: ocr
+    expected_recipe_profile: ocr
     quality_profile: ocr
     accepted: true
     input_count: 2

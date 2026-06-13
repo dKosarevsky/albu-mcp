@@ -27,10 +27,13 @@ def test_server_exposes_documented_tool_names() -> None:
         "compare_preview_runs",
         "summarize_tuning_session",
         "rank_preview_candidates",
+        "score_dataset_preview_candidates",
         "list_quality_profiles",
+        "recommend_recipe",
         "record_tuning_decision",
         "list_tuning_decisions",
         "export_tuning_report",
+        "export_preview_report",
         "list_preview_runs",
         "get_preview_manifest",
         "delete_preview_run",
@@ -60,18 +63,24 @@ def test_server_exposes_agent_workflow_resources() -> None:
     preview_tuning = cast("Any", resources["albumentationsx://workflows/preview-tuning"]).fn()
     task_profiles = cast("Any", resources["albumentationsx://workflows/task-profiles"]).fn()
     quality_profiles = cast("Any", resources["albumentationsx://quality-profiles"]).fn()
+    recipes_catalog = cast("Any", resources["albumentationsx://recipes/catalog"]).fn()
     capabilities = cast("Any", resources["albumentationsx://capabilities"]).fn()
 
     assert "preview-tuning" in workflow_catalog
     assert "recommend_pipeline" in preview_tuning
     assert "classification-robustness" in task_profiles
     assert "segmentation" in quality_profiles
+    assert "object_detection" in recipes_catalog
     assert "adjust_pipeline" in preview_tuning
     assert "workflow_resources" in capabilities
     assert "compare_preview_runs_for_feedback" in capabilities
     assert "summarize_tuning_session" in capabilities
     assert "rank_preview_candidates" in capabilities
+    assert "score_dataset_preview_candidates" in capabilities
     assert "list_quality_profiles" in capabilities
+    assert "recommend_recipe" in capabilities
     assert "record_tuning_decision" in capabilities
     assert "export_tuning_report" in capabilities
+    assert "export_preview_report" in capabilities
+    assert "albumentationsx://recipes/catalog" in capabilities
     assert "albumentationsx://workflows/task-profiles" in capabilities
