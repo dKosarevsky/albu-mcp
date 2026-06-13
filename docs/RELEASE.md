@@ -56,18 +56,24 @@ git push origin main
 git push origin v0.1.0
 ```
 
-The `Release` workflow builds the wheel and source distribution, runs the quality gate, and creates a GitHub Release with
-`dist/*` attached.
+The `Release` workflow runs in three stages:
+
+1. `build`: runs the quality gate, builds the wheel/source distribution, and uploads `dist/*` as a workflow artifact.
+2. `publish-pypi`: waits for the protected GitHub environment `pypi`, then publishes the same artifact to PyPI through
+   Trusted Publishing.
+3. `github-release`: creates the GitHub Release and attaches the same `dist/*` artifact.
 
 ## PyPI Package Publishing
 
-After a PyPI trusted publisher is configured for this repository, publish the underlying Python package with:
+The release workflow publishes the underlying Python package with:
 
 ```bash
 uv publish --trusted-publishing automatic dist/*
 ```
 
-Once published, users can run the server package with:
+This uses PyPI Trusted Publishing through GitHub OIDC. Do not create long-lived PyPI API tokens for the release workflow.
+
+Once the package is published, users can run the server package with:
 
 ```bash
 uvx --from albumentationsx-mcp albumentationsx-mcp

@@ -58,11 +58,28 @@ def test_release_workflow_and_readme_publish_instructions_are_present() -> None:
 
     assert release_workflow.exists()
     workflow = yaml.safe_load(release_workflow.read_text(encoding="utf-8"))
-    commands = "\n".join(step.get("run", "") for step in workflow["jobs"]["release"]["steps"])
-    assert "uv build" in commands
-    assert "gh release create" in commands
+    build_commands = "\n".join(step.get("run", "") for step in workflow["jobs"]["build"]["steps"])
+    release_commands = "\n".join(step.get("run", "") for step in workflow["jobs"]["github-release"]["steps"])
+    assert "uv build" in build_commands
+    assert "gh release create" in release_commands
     assert "uvx --from albumentationsx-mcp albumentationsx-mcp" in readme
     assert "uv publish --trusted-publishing automatic" in release_docs.read_text(encoding="utf-8")
+
+
+def test_release_workflow_publishes_to_pypi_with_trusted_publishing() -> None:
+    workflow = yaml.safe_load(Path(".github/workflows/release.yml").read_text(encoding="utf-8"))
+    publish_job = workflow["jobs"]["publish-pypi"]
+    release_job = workflow["jobs"]["github-release"]
+    publish_commands = "\n".join(step.get("run", "") for step in publish_job["steps"])
+
+    assert publish_job["needs"] == "build"
+    assert publish_job["environment"]["name"] == "pypi"
+    assert publish_job["environment"]["url"] == "https://pypi.org/project/albumentationsx-mcp/"
+    assert publish_job["permissions"]["id-token"] == "write"
+    assert publish_job["permissions"]["contents"] == "read"
+    assert "uv publish --trusted-publishing automatic dist/*" in publish_commands
+    assert release_job["needs"] == "publish-pypi"
+    assert release_job["permissions"]["contents"] == "write"
 
 
 def test_mcp_registry_metadata_is_ready_for_pypi_distribution() -> None:
