@@ -3,6 +3,7 @@ from pathlib import Path
 from albumentationsx_mcp.dataset import score_dataset_preview_candidates
 from albumentationsx_mcp.models import (
     ImageQualityAggregate,
+    PreviewFeedbackRecord,
     PreviewManifestSummary,
     PreviewQualitySummary,
     PreviewRunComparison,
@@ -44,6 +45,27 @@ def test_preview_report_service_exports_markdown_artifact_with_decision_trail(tm
     assert "decision-a" in report.content
 
 
+def test_preview_report_service_exports_markdown_with_concrete_feedback(tmp_path: Path) -> None:
+    contact_sheet = tmp_path / "candidate-a.png"
+    contact_sheet.write_bytes(b"candidate")
+    feedback = _feedback("candidate-a")
+
+    report = PreviewReportService(tmp_path / "artifacts").export_report(
+        _score("candidate-a"),
+        baseline_manifest=_manifest("baseline", contact_sheet),
+        candidate_manifests=[_manifest("candidate-a", contact_sheet)],
+        decisions=[],
+        feedback_records=[feedback],
+        output_format="markdown",
+    )
+
+    assert "## Concrete Preview Feedback" in report.content
+    assert "example 8 / variant 1" in report.content
+    assert "example 8 is too noisy" in report.content
+    assert "too_noisy:high" in report.content
+    assert "adjust_pipeline" in report.content
+
+
 def test_preview_report_service_exports_html_with_escaped_dynamic_text(tmp_path: Path) -> None:
     contact_sheet = tmp_path / "candidate.png"
     contact_sheet.write_bytes(b"candidate")
@@ -63,6 +85,26 @@ def test_preview_report_service_exports_html_with_escaped_dynamic_text(tmp_path:
     assert "<script>" not in report.content
     assert "candidate-&lt;script&gt;" in report.content
     assert contact_sheet.resolve().as_uri() in report.content
+
+
+def test_preview_report_service_exports_html_with_escaped_concrete_feedback(tmp_path: Path) -> None:
+    contact_sheet = tmp_path / "candidate.png"
+    contact_sheet.write_bytes(b"candidate")
+    feedback = _feedback("candidate-<script>", note="example 8 has <noise>")
+
+    report = PreviewReportService(tmp_path / "artifacts").export_report(
+        _score("candidate-<script>"),
+        baseline_manifest=_manifest("baseline", contact_sheet),
+        candidate_manifests=[_manifest("candidate-<script>", contact_sheet)],
+        decisions=[],
+        feedback_records=[feedback],
+        output_format="html",
+    )
+
+    assert "<h2>Concrete Preview Feedback</h2>" in report.content
+    assert "candidate-&lt;script&gt;" in report.content
+    assert "example 8 has &lt;noise&gt;" in report.content
+    assert "<noise>" not in report.content
 
 
 def _score(candidate_run_id: str):
@@ -138,4 +180,19 @@ def _decision(decision_id: str, candidate_run_id: str) -> TuningDecisionRecord:
         quality_risk="low",
         reviewer_notes=["best sheet"],
         summary=summary,
+    )
+
+
+def _feedback(candidate_run_id: str, *, note: str = "example 8 is too noisy") -> PreviewFeedbackRecord:
+    return PreviewFeedbackRecord(
+        feedback_id="feedback-a",
+        created_at="2026-06-13T12:02:00Z",
+        run_id=candidate_run_id,
+        image_index=7,
+        variant_index=0,
+        feedback_tags=["too_noisy:high"],
+        note=note,
+        accepted=False,
+        review_target="example 8 / variant 1",
+        recommended_next_tool="adjust_pipeline",
     )

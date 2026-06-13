@@ -14,6 +14,7 @@ from albumentationsx_mcp.models import (
     DatasetFindingCount,
     DatasetMetricStats,
     DatasetPreviewScore,
+    PreviewFeedbackRecord,
     PreviewReportExport,
     TuningDecisionRecord,
 )
@@ -39,13 +40,14 @@ class PreviewReportService:
         self.report_root = self.artifact_root / "reports"
         self.report_root.mkdir(parents=True, exist_ok=True)
 
-    def export_report(
+    def export_report(  # noqa: PLR0913
         self,
         score: DatasetPreviewScore,
         *,
         baseline_manifest: dict[str, Any],
         candidate_manifests: list[dict[str, Any]],
         decisions: list[TuningDecisionRecord],
+        feedback_records: list[PreviewFeedbackRecord] | None = None,
         output_format: ReportFormat = "markdown",
     ) -> PreviewReportExport:
         """Render a Markdown or HTML preview report and return its artifact metadata."""
@@ -54,9 +56,9 @@ class PreviewReportService:
             raise ValueError(msg)
 
         content = (
-            _render_markdown_report(score, baseline_manifest, candidate_manifests, decisions)
+            _render_markdown_report(score, baseline_manifest, candidate_manifests, decisions, feedback_records or [])
             if output_format == "markdown"
-            else _render_html_report(score, baseline_manifest, candidate_manifests, decisions)
+            else _render_html_report(score, baseline_manifest, candidate_manifests, decisions, feedback_records or [])
         )
         path = self._report_path(score.baseline_run_id, output_format)
         path.write_text(content, encoding="utf-8")
@@ -91,6 +93,7 @@ def _render_markdown_report(
     baseline_manifest: dict[str, Any],
     candidate_manifests: list[dict[str, Any]],
     decisions: list[TuningDecisionRecord],
+    feedback_records: list[PreviewFeedbackRecord],
 ) -> str:
     candidate_contact_sheets = _contact_sheets_by_run_id(candidate_manifests)
     lines = [
@@ -141,6 +144,10 @@ def _render_markdown_report(
             "",
             *_markdown_decisions(decisions),
             "",
+            "## Concrete Preview Feedback",
+            "",
+            *_markdown_feedback(feedback_records),
+            "",
         ],
     )
     return "\n".join(lines)
@@ -151,6 +158,7 @@ def _render_html_report(
     baseline_manifest: dict[str, Any],
     candidate_manifests: list[dict[str, Any]],
     decisions: list[TuningDecisionRecord],
+    feedback_records: list[PreviewFeedbackRecord],
 ) -> str:
     candidate_contact_sheets = _contact_sheets_by_run_id(candidate_manifests)
     rows = []
@@ -204,6 +212,8 @@ def _render_html_report(
             _html_finding_counts(score.finding_counts),
             "<h2>Tuning Decisions</h2>",
             _html_decisions(decisions),
+            "<h2>Concrete Preview Feedback</h2>",
+            _html_feedback(feedback_records),
             "</body></html>",
         ],
     )
@@ -295,6 +305,29 @@ def _markdown_decisions(decisions: list[TuningDecisionRecord]) -> list[str]:
     return lines
 
 
+def _markdown_feedback(feedback_records: list[PreviewFeedbackRecord]) -> list[str]:
+    if not feedback_records:
+        return ["No concrete preview feedback matched this report."]
+    lines = [
+        "| Feedback | Run | Target | Accepted | Tags | Next Tool | Note |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
+    ]
+    lines.extend(
+        (
+            "| "
+            f"{record.feedback_id} | "
+            f"{record.run_id} | "
+            f"{record.review_target} | "
+            f"{str(record.accepted).lower()} | "
+            f"{', '.join(record.feedback_tags) or 'none'} | "
+            f"{record.recommended_next_tool} | "
+            f"{record.note} |"
+        )
+        for record in feedback_records
+    )
+    return lines
+
+
 def _html_path_list(paths: list[str]) -> str:
     if not paths:
         return "<p>none</p>"
@@ -363,6 +396,27 @@ def _html_decisions(decisions: list[TuningDecisionRecord]) -> str:
     return (
         "<table><thead><tr><th>Decision</th><th>Candidate</th><th>Accepted</th>"
         f"<th>Score</th><th>Risk</th><th>Notes</th></tr></thead><tbody>{''.join(rows)}</tbody></table>"
+    )
+
+
+def _html_feedback(feedback_records: list[PreviewFeedbackRecord]) -> str:
+    if not feedback_records:
+        return "<p>No concrete preview feedback matched this report.</p>"
+    rows = [
+        "<tr>"
+        f"<td>{html.escape(record.feedback_id)}</td>"
+        f"<td>{html.escape(record.run_id)}</td>"
+        f"<td>{html.escape(record.review_target)}</td>"
+        f"<td>{str(record.accepted).lower()}</td>"
+        f"<td>{html.escape(', '.join(record.feedback_tags) or 'none')}</td>"
+        f"<td>{html.escape(record.recommended_next_tool)}</td>"
+        f"<td>{html.escape(record.note)}</td>"
+        "</tr>"
+        for record in feedback_records
+    ]
+    return (
+        "<table><thead><tr><th>Feedback</th><th>Run</th><th>Target</th><th>Accepted</th>"
+        f"<th>Tags</th><th>Next Tool</th><th>Note</th></tr></thead><tbody>{''.join(rows)}</tbody></table>"
     )
 
 

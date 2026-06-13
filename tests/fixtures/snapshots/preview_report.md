@@ -38,3 +38,6 @@
 | --- | --- | --- | ---: | --- | --- |
 | decision-a | candidate-a | true | 100.0 | low | accepted snapshot fixture |
 
+## Concrete Preview Feedback
+
+No concrete preview feedback matched this report.
