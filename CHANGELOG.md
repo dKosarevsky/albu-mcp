@@ -6,6 +6,14 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 - No unreleased changes yet.
 
+## 0.7.0 - 2026-06-13
+
+- Added `recommend_recipe` for task-aware starter pipelines, quality profiles, feedback tags, and next-tool guidance.
+- Added `score_dataset_preview_candidates` for dataset-level scoring across multiple candidate preview runs.
+- Added `export_preview_report` for Markdown or HTML visual reports with contact sheets, ranking, metrics, and decisions.
+- Exposed `albumentationsx://recipes/catalog` for MCP host discovery.
+- Extended golden MCP evals to cover recipe recommendation, dataset scoring, and preview report export.
+
 ## 0.6.0 - 2026-06-13
 
 - Added task-aware quality profiles for balanced, classification, detection, segmentation, and OCR review.

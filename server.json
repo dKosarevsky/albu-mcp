@@ -2,8 +2,8 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.dKosarevsky/albu-mcp",
   "title": "AlbumentationsX MCP",
-  "description": "AlbumentationsX MCP for batch previews, compare preview runs, ranking decisions, and export.",
-  "version": "0.6.0",
+  "description": "AlbumentationsX MCP for batch previews, compare preview runs, dataset scoring, and reports.",
+  "version": "0.7.0",
   "repository": {
     "url": "https://github.com/dKosarevsky/albu-mcp",
     "source": "github"
@@ -12,7 +12,7 @@
     {
       "registryType": "pypi",
       "identifier": "albumentationsx-mcp",
-      "version": "0.6.0",
+      "version": "0.7.0",
       "transport": {
         "type": "stdio"
       },

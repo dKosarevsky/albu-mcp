@@ -290,9 +290,7 @@ def _markdown_decisions(decisions: list[TuningDecisionRecord]) -> list[str]:
 def _html_path_list(paths: list[str]) -> str:
     if not paths:
         return "<p>none</p>"
-    items = [
-        f'<li><a href="{html.escape(_file_uri(path), quote=True)}">{html.escape(path)}</a></li>' for path in paths
-    ]
+    items = [f'<li><a href="{html.escape(_file_uri(path), quote=True)}">{html.escape(path)}</a></li>' for path in paths]
     return f"<ul>{''.join(items)}</ul>"
 
 
@@ -319,11 +317,7 @@ def _html_finding_counts(counts: list[DatasetFindingCount]) -> str:
     if not counts:
         return "<p>No quality findings across candidates.</p>"
     rows = [
-        "<tr>"
-        f"<td>{html.escape(item.severity)}</td>"
-        f"<td>{html.escape(item.code)}</td>"
-        f"<td>{item.count}</td>"
-        "</tr>"
+        f"<tr><td>{html.escape(item.severity)}</td><td>{html.escape(item.code)}</td><td>{item.count}</td></tr>"
         for item in counts
     ]
     return (

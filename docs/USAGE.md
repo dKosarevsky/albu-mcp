@@ -33,10 +33,10 @@ retention limit for long-running MCP hosts.
 
 ## Agent Workflow
 
-1. Call `recommend_pipeline` for the target task and intensity.
+1. Call `recommend_recipe` for the target task, intensity, quality profile, feedback tags, and next tools.
 2. Call `validate_pipeline` before rendering or exporting.
 3. Call `explain_pipeline` to identify likely preview risks and feedback tags.
-4. Call `render_preview` on a small local image set.
+4. Call `render_preview_batch` on a small local image set.
 5. Review the generated `contact_sheet` artifact.
 6. Use `compare_preview_runs` when comparing a baseline preview to an adjusted candidate preview.
 7. Review `suggested_feedback_tags` as candidates, then ask the user which tags match the contact sheets.
@@ -44,9 +44,11 @@ retention limit for long-running MCP hosts.
    `too_distorted`.
 9. Re-render one or more candidates with the same input set.
 10. Call `rank_preview_candidates` when multiple candidates need comparison.
-11. Call `summarize_tuning_session` to inspect `quality_score`, `quality_risk`, and `export_ready`.
-12. Call `record_tuning_decision` to persist the accepted or rejected candidate.
-13. Call `export_tuning_report` for a Markdown or JSON handoff, then `export_pipeline` once the preview set is acceptable.
+11. Call `score_dataset_preview_candidates` to inspect cross-candidate metric ranges and finding counts.
+12. Call `summarize_tuning_session` to inspect `quality_score`, `quality_risk`, and `export_ready`.
+13. Call `record_tuning_decision` to persist the accepted or rejected candidate.
+14. Call `export_preview_report` for a visual Markdown or HTML handoff.
+15. Call `export_tuning_report` for a decision journal handoff, then `export_pipeline` once the preview set is acceptable.
 
 ## Preview Artifacts
 
@@ -106,6 +108,20 @@ Use `export_tuning_report` to render the same journal as Markdown for humans or 
 ```
 
 Ranking is deterministic: higher `quality_score`, lower `quality_risk`, export-ready candidates, then candidate run id.
+
+`score_dataset_preview_candidates` accepts the same run ids and returns dataset-level metric stats plus finding counts:
+
+```json
+{
+  "baseline_run_id": "baseline-run-id",
+  "candidate_run_ids": ["candidate-a", "candidate-b"],
+  "quality_profile": "detection"
+}
+```
+
+Use `export_preview_report` after scoring or recording a decision. It writes a Markdown or HTML report under
+`artifact_root/reports/` and returns a `report` artifact with the rendered content, ranked candidates, contact sheet
+paths, metric ranges, finding counts, and matching tuning decisions.
 
 ## Feedback Severity
 
@@ -182,6 +198,7 @@ uv run python scripts/run_golden_evals.py
 - `albumentationsx://schemas/pipeline`: JSON Schema for pipeline specs.
 - `albumentationsx://feedback-tags`: structured feedback tags accepted by `adjust_pipeline`.
 - `albumentationsx://quality-profiles`: task-aware quality profiles accepted by comparison and ranking tools.
+- `albumentationsx://recipes/catalog`: task-aware recipe catalog for starter workflows.
 - `albumentationsx://capabilities`: configured roots, preview limits, and exposed tools.
 - `albumentationsx://workflows/catalog`: built-in agent workflow guides.
 - `albumentationsx://workflows/task-profiles`: task-specific workflow defaults for common CV workflows.

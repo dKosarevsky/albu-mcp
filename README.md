@@ -78,6 +78,7 @@ See [examples/claude_desktop_pypi_config.json](examples/claude_desktop_pypi_conf
 - `get_transform_schema`: inspect a transform schema and constraints.
 - `validate_pipeline`: validate a typed pipeline spec before running it.
 - `recommend_pipeline`: create a conservative task preset for classification, detection, segmentation, or OCR.
+- `recommend_recipe`: return a task-aware starter pipeline, quality profile, feedback tags, and next MCP tools.
 - `adjust_pipeline`: apply structured preview feedback such as `too_noisy` or `too_blurry`.
 - `explain_pipeline`: summarize likely effects, preview risks, and useful feedback tags.
 - `list_feedback_tags`: list the structured feedback contract used by `adjust_pipeline`.
@@ -87,9 +88,11 @@ See [examples/claude_desktop_pypi_config.json](examples/claude_desktop_pypi_conf
 - `compare_preview_runs`: compare two preview manifests before choosing feedback tags or exporting a pipeline.
 - `summarize_tuning_session`: summarize quality findings, feedback tags, score, risk, and export readiness.
 - `rank_preview_candidates`: rank several candidate preview runs against one baseline.
+- `score_dataset_preview_candidates`: score a candidate set across dataset-level metrics, findings, and ranking.
 - `record_tuning_decision`: persist a local accepted or rejected tuning decision.
 - `list_tuning_decisions`: list local tuning decisions newest-first or score-ranked.
 - `export_tuning_report`: export persisted tuning decisions as Markdown or JSON.
+- `export_preview_report`: export Markdown or HTML reports with contact sheets, ranking, metrics, and decisions.
 - `list_preview_runs`: list recent preview manifests recorded under the artifact root.
 - `get_preview_manifest`: read one recorded preview manifest by run id.
 - `delete_preview_run`: delete one preview run and its artifacts.
@@ -137,17 +140,25 @@ counts, contact sheets, and warnings.
 - Added `export_tuning_report` for Markdown or JSON handoff from the local tuning decision journal.
 - Extended golden MCP evals to cover two-candidate ranking and report export.
 
+## What Changed In 0.7
+
+- Added `recommend_recipe` for task-aware workflow envelopes around conservative starter pipelines.
+- Added `score_dataset_preview_candidates` for dataset-level candidate metrics and finding counts.
+- Added `export_preview_report` for Markdown or HTML visual handoff with contact sheets and decision context.
+- Exposed `albumentationsx://recipes/catalog` for recipe discovery by MCP hosts.
+- Extended golden MCP evals to cover recipes, dataset scoring, and preview report export.
+
 ## Demo Workflow
 
-1. Use `recommend_pipeline` and `validate_pipeline` for a conservative baseline.
-2. Call `render_preview_batch` on a small local image set.
-3. Adjust with structured feedback such as `too_noisy`, `too_noisy:high`, or `too_distorted`.
-4. Render the candidate preview batch with the same inputs.
-5. Call `compare_preview_runs` before accepting the candidate and inspect `quality_summary.findings`.
-6. If several candidates exist, call `rank_preview_candidates` with the matching quality profile.
-7. Call `summarize_tuning_session` and review `quality_score`, `quality_risk`, and `export_ready`.
-8. Call `record_tuning_decision` for the accepted or rejected candidate.
-9. Call `export_tuning_report` for handoff, then export the accepted pipeline with `export_pipeline`.
+1. Use `recommend_recipe` to choose the starter pipeline, quality profile, feedback tags, and next tools.
+2. Call `validate_pipeline` for the recommended pipeline.
+3. Call `render_preview_batch` on a small local image set.
+4. Adjust with structured feedback such as `too_noisy`, `too_noisy:high`, or `too_distorted`.
+5. Render one or more candidate preview batches with the same inputs.
+6. Call `compare_preview_runs` before accepting a candidate and inspect `quality_summary.findings`.
+7. Call `rank_preview_candidates` and `score_dataset_preview_candidates` with the matching quality profile.
+8. Call `record_tuning_decision` for accepted or rejected candidates.
+9. Call `export_preview_report` for visual handoff, `export_tuning_report` for decision history, then `export_pipeline`.
 
 See [docs/USAGE.md](docs/USAGE.md) for an end-to-end MCP host workflow, [docs/RECIPES.md](docs/RECIPES.md) for
 task-specific host recipes, [docs/DEMO.md](docs/DEMO.md) for a generated preview comparison demo,

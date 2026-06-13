@@ -6,19 +6,20 @@ These recipes are short host-facing workflows for common AlbumentationsX MCP ses
 
 Use profile `classification-robustness`.
 
-1. Call `recommend_pipeline` with task `classification`, targets `["image"]`, and intensity `medium`.
+1. Call `recommend_recipe` with task `classification` and intensity `medium`.
 2. Render a small balanced preview batch.
 3. Use `compare_preview_runs` and inspect `quality_summary.findings` plus contact sheets.
 4. Ask the user to choose feedback tags such as `too_noisy`, `too_blurry`, or `object_unrecognizable`.
 5. Render two or three candidates when feedback is ambiguous, then call `rank_preview_candidates`.
-6. Call `summarize_tuning_session` and check `quality_score`, `quality_risk`, and `export_ready`.
+6. Call `score_dataset_preview_candidates` to compare metric ranges and finding counts.
 7. Persist the accepted or rejected outcome with `record_tuning_decision`.
+8. Export a visual handoff with `export_preview_report`.
 
 ## Detection Annotation Review
 
 Use profile `detection-annotation-review`.
 
-1. Call `recommend_pipeline` with task `object_detection`, targets `["image", "bboxes"]`, and intensity `low`.
+1. Call `recommend_recipe` with task `object_detection`, targets `["image", "bboxes"]`, and intensity `low`.
 2. Render previews with bbox annotations and inspect overlay contact sheets.
 3. Use quality profile `detection`.
 4. Inspect `quality_summary.annotation_summary` and findings such as `candidate_bbox_loss`.
@@ -30,18 +31,19 @@ Use profile `detection-annotation-review`.
 
 Use profile `segmentation-mask-review`.
 
-1. Validate mask-compatible target settings before previewing.
-2. Render annotation overlays and compare boundaries between baseline and candidate.
-3. Use quality profile `segmentation`.
-4. Check `candidate_mask_coverage_drop` before accepting aggressive geometric transforms.
-5. Use `too_distorted:high` only when masks are clearly misaligned.
-6. Prefer lower geometric intensity until overlays remain stable across examples.
+1. Call `recommend_recipe` with task `segmentation`, targets `["image", "mask"]`, and intensity `low`.
+2. Validate mask-compatible target settings before previewing.
+3. Render annotation overlays and compare boundaries between baseline and candidate.
+4. Use quality profile `segmentation`.
+5. Check `candidate_mask_coverage_drop` before accepting aggressive geometric transforms.
+6. Use `too_distorted:high` only when masks are clearly misaligned.
+7. Prefer lower geometric intensity until overlays remain stable across examples.
 
 ## OCR Document Robustness
 
 Use profile `ocr-document-robustness`.
 
-1. Start with low intensity document transforms.
+1. Call `recommend_recipe` with task `ocr` and intensity `low`.
 2. Review text legibility before accepting perspective, compression, or blur changes.
 3. Use quality profile `ocr`.
 4. Use `too_blurry`, `too_distorted`, or `object_unrecognizable:high` when characters become unreadable.
@@ -56,7 +58,8 @@ After every accepted or rejected candidate:
 2. Call `record_tuning_decision` with the same run ids and user-facing notes.
 3. Call `list_tuning_decisions` with `ranked=true` when choosing the best candidate across several attempts.
 4. Use `accepted_only=true` before final export if the host needs a short list of accepted candidates.
-5. Call `export_tuning_report` with `output_format="markdown"` for handoff or `"json"` for automation.
+5. Call `export_preview_report` with `output_format="html"` for visual handoff.
+6. Call `export_tuning_report` with `output_format="markdown"` for decision handoff or `"json"` for automation.
 
 ## Resource Discovery
 
@@ -66,3 +69,4 @@ MCP hosts can read:
 - `albumentationsx://workflows/task-profiles`
 - `albumentationsx://workflows/preview-tuning`
 - `albumentationsx://workflows/annotation-preview`
+- `albumentationsx://recipes/catalog`
