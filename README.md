@@ -84,6 +84,9 @@ See [examples/claude_desktop_pypi_config.json](examples/claude_desktop_pypi_conf
 - `render_preview`: create deterministic local preview artifacts inside an allowed output root.
 - `render_preview_batch`: create deterministic multi-image preview contact sheets using the same request schema.
 - `compare_preview_runs`: compare two preview manifests before choosing feedback tags or exporting a pipeline.
+- `summarize_tuning_session`: summarize quality findings, feedback tags, score, risk, and export readiness.
+- `record_tuning_decision`: persist a local accepted or rejected tuning decision.
+- `list_tuning_decisions`: list local tuning decisions newest-first or score-ranked.
 - `list_preview_runs`: list recent preview manifests recorded under the artifact root.
 - `get_preview_manifest`: read one recorded preview manifest by run id.
 - `delete_preview_run`: delete one preview run and its artifacts.
@@ -116,14 +119,23 @@ counts, contact sheets, and warnings.
 - task workflow profiles and [docs/RECIPES.md](docs/RECIPES.md) guide classification, detection, segmentation, and OCR
   MCP host sessions.
 
+## What Changed In 0.5
+
+- `quality_summary` now includes saturation, colorfulness, entropy, clipping, and deterministic quality findings.
+- Annotation previews record bbox, keypoint, and mask retention observations in preview manifests.
+- `compare_preview_runs` includes `annotation_summary` when annotation observations are available.
+- `summarize_tuning_session` returns `quality_score`, `quality_risk`, and structured `quality_findings`.
+- `record_tuning_decision` and `list_tuning_decisions` provide a local JSON-backed tuning decision journal.
+
 ## Demo Workflow
 
 1. Use `recommend_pipeline` and `validate_pipeline` for a conservative baseline.
 2. Call `render_preview_batch` on a small local image set.
 3. Adjust with structured feedback such as `too_noisy`, `too_noisy:high`, or `too_distorted`.
 4. Render the candidate preview batch with the same inputs.
-5. Call `compare_preview_runs` before accepting the candidate and inspect `quality_summary`.
-6. Call `summarize_tuning_session` before exporting with `export_pipeline`.
+5. Call `compare_preview_runs` before accepting the candidate and inspect `quality_summary.findings`.
+6. Call `summarize_tuning_session` and review `quality_score`, `quality_risk`, and `export_ready`.
+7. Call `record_tuning_decision` for the accepted or rejected candidate, then export with `export_pipeline`.
 
 See [docs/USAGE.md](docs/USAGE.md) for an end-to-end MCP host workflow, [docs/RECIPES.md](docs/RECIPES.md) for
 task-specific host recipes, [docs/DEMO.md](docs/DEMO.md) for a generated preview comparison demo,

@@ -36,6 +36,7 @@ scenarios:
     compare_preview: true
     assert_quality_summary: true
     summarize_tuning_session: true
+    record_tuning_decision: true
     accepted: true
     input_count: 2
     variants_per_image: 1

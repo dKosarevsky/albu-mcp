@@ -206,6 +206,27 @@ async def _run_preview_comparison(
             raise AssertionError(f"{scenario['name']} summary returned wrong candidate: {summary}")
         if scenario.get("accepted") and summary["export_ready"] is not True:
             raise AssertionError(f"{scenario['name']} summary was not export-ready: {summary}")
+    if scenario.get("record_tuning_decision"):
+        decision = await _call_tool_json(
+            session,
+            "record_tuning_decision",
+            {
+                "baseline_run_id": baseline_run_id,
+                "candidate_run_id": candidate["run_id"],
+                "feedback_tags": scenario.get("feedback_tags", []),
+                "accepted": bool(scenario.get("accepted", False)),
+                "reviewer_notes": ["golden eval accepted candidate"],
+            },
+        )
+        if decision["candidate_run_id"] != candidate["run_id"]:
+            raise AssertionError(f"{scenario['name']} decision returned wrong candidate: {decision}")
+        decisions = await _call_tool_json(
+            session,
+            "list_tuning_decisions",
+            {"limit": 5, "accepted_only": bool(scenario.get("accepted", False)), "ranked": True},
+        )
+        if decision["decision_id"] not in {item["decision_id"] for item in decisions["decisions"]}:
+            raise AssertionError(f"{scenario['name']} decision was not listed: {decisions}")
     deleted = await _call_tool_json(session, "delete_preview_run", {"run_id": candidate["run_id"]})
     if deleted["deleted"]["run_id"] != candidate["run_id"]:
         raise AssertionError(f"{scenario['name']} did not delete candidate preview run")

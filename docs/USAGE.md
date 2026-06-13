@@ -42,7 +42,9 @@ retention limit for long-running MCP hosts.
 7. Review `suggested_feedback_tags` as candidates, then ask the user which tags match the contact sheets.
 8. Call `adjust_pipeline` with tags from `list_feedback_tags`, for example `too_noisy`, `too_noisy:high`, or
    `too_distorted`.
-9. Re-render, then call `export_pipeline` once the preview set is acceptable.
+9. Re-render, then call `summarize_tuning_session` to inspect `quality_score`, `quality_risk`, and `export_ready`.
+10. Call `record_tuning_decision` to persist the accepted or rejected candidate.
+11. Call `export_pipeline` once the preview set is acceptable.
 
 ## Preview Artifacts
 
@@ -54,6 +56,7 @@ Each preview run writes:
 - optional `overlay_contact_sheet.png` for annotation-aware review
 - `manifest.json` with input paths, pipeline JSON, artifact hashes, and timestamps
 - `summary` inside `manifest.json` with input counts, seeds, transform names, artifact counts, contact sheets, and warnings
+- `annotation_observations` when bboxes, keypoints, or masks are supplied
 
 Use `list_preview_runs` to find recent runs, `get_preview_manifest` to retrieve a manifest by run id,
 `compare_preview_runs` to compare two manifests, `delete_preview_run` to remove one run, and `cleanup_preview_runs` to
@@ -63,12 +66,21 @@ For multi-image review, call `render_preview_batch` with the same request schema
 variants plus a shared contact sheet for quick side-by-side review.
 
 `compare_preview_runs` includes `quality_summary` when preview image artifacts are still available locally. It reports
-brightness, contrast, sharpness, and candidate-minus-baseline deltas. Missing or unreadable local artifacts are reported
-as `quality_warnings` instead of failing the comparison.
+brightness, contrast, sharpness, saturation, colorfulness, entropy, clipping, candidate-minus-baseline deltas, and
+structured `findings`. Missing or unreadable local artifacts are reported as `quality_warnings` instead of failing the
+comparison.
+
+When preview manifests include `annotation_observations`, `quality_summary.annotation_summary` reports bbox, keypoint,
+and mask retention aggregates plus deltas. Findings such as `candidate_bbox_loss`, `candidate_keypoint_loss`, and
+`candidate_mask_coverage_drop` are review prompts for the host, not automatic rejection rules.
 
 Call `summarize_tuning_session` after comparing a baseline and candidate. It combines feedback tags, suggested tags,
-quality deltas, and an `export_ready` flag so the host can decide whether to ask for more feedback or call
-`export_pipeline`.
+quality deltas, `quality_score`, `quality_risk`, structured `quality_findings`, and an `export_ready` flag so the host
+can decide whether to ask for more feedback or call `export_pipeline`.
+
+Use `record_tuning_decision` after the user accepts or rejects a candidate. Decisions are stored in
+`tuning_decisions.json` under the configured artifact root. `list_tuning_decisions` can return newest-first history or
+score-ranked candidates with `ranked=true`, and can restrict output to accepted decisions with `accepted_only=true`.
 
 ## Feedback Severity
 
@@ -110,6 +122,25 @@ candidates only; they are not an automatic verdict about image quality.
 ```
 
 Mask paths are resolved through the same `--allowed-root` policy as input images.
+
+Preview manifests record annotation observations like this:
+
+```json
+{
+  "annotation_observations": [
+    {
+      "image_index": 0,
+      "variant_index": 0,
+      "input_bbox_count": 1,
+      "output_bbox_count": 1,
+      "input_keypoint_count": 1,
+      "output_keypoint_count": 1,
+      "input_mask_coverage": 0.25,
+      "output_mask_coverage": 0.25
+    }
+  ]
+}
+```
 
 ## Golden Evals
 

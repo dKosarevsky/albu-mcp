@@ -6,6 +6,15 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 - No unreleased changes yet.
 
+## 0.5.0 - 2026-06-13
+
+- Added richer local quality metrics: saturation, colorfulness, entropy, clipping, and deterministic quality findings.
+- Added annotation retention observations for bbox, keypoint, and mask previews.
+- Added annotation-aware comparison summaries and findings in `compare_preview_runs`.
+- Added `quality_score`, `quality_risk`, and structured findings to `summarize_tuning_session`.
+- Added `record_tuning_decision` and `list_tuning_decisions` for a local JSON-backed tuning decision journal.
+- Extended golden MCP evals to cover persisted tuning decisions.
+
 ## 0.4.0 - 2026-06-13
 
 - Added local image quality metrics to preview run comparisons.
