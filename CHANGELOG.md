@@ -6,6 +6,13 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 - No unreleased changes yet.
 
+## 0.12.0 - 2026-06-14
+
+- Added deterministic representative output contract snapshots for recipe recommendation, dataset scoring, preview
+  feedback, and preview report exports.
+- Added `scripts/export_output_contracts.py` for reviewed output fixture updates.
+- Extended compatibility documentation to cover output contract snapshots alongside MCP surface snapshots.
+
 ## 0.11.0 - 2026-06-13
 
 - Added deterministic MCP contract snapshots for tools, resources, resource templates, and prompts.

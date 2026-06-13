@@ -180,11 +180,17 @@ counts, contact sheets, and warnings.
 - Added [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) for compatible additions, breaking changes, deprecations, and
   required coverage.
 
+## What Changed In 0.12
+
+- Added representative output contract snapshots for recipe, scoring, feedback, and preview report responses.
+- Added `scripts/export_output_contracts.py` to regenerate reviewed output fixtures.
+- Extended compatibility guidance so response-shape changes get explicit fixture coverage.
+
 ## V1 Readiness
 
 The next major milestone can be `v1.0.0` once public tool/resource names, response fields, and host workflows are
-frozen. `v0.11.0` adds tool/resource/prompt snapshots and compatibility rules. Before cutting v1, review response-field
-coverage for the main tool outputs and run a final docs pass over README, usage, recipes, and release automation.
+frozen. `v0.11.0` adds tool/resource/prompt snapshots and compatibility rules; `v0.12.0` adds representative output
+contract snapshots. Before cutting v1, run a final docs pass over README, usage, recipes, and release automation.
 
 ## Demo Workflow
 
