@@ -184,6 +184,10 @@ class ImageQualityMetrics(StrictModel):
     brightness_mean: float
     contrast_std: float
     sharpness_score: float
+    saturation_mean: float
+    colorfulness_score: float
+    entropy_bits: float
+    clipping_fraction: float
 
 
 class ImageQualityAggregate(StrictModel):
@@ -193,6 +197,21 @@ class ImageQualityAggregate(StrictModel):
     brightness_mean: float | None = None
     contrast_std: float | None = None
     sharpness_score: float | None = None
+    saturation_mean: float | None = None
+    colorfulness_score: float | None = None
+    entropy_bits: float | None = None
+    clipping_fraction: float | None = None
+
+
+class QualityFinding(StrictModel):
+    """Machine-readable local preview quality finding."""
+
+    code: str
+    severity: RiskLevel
+    message: str
+    metric: str
+    value: float
+    baseline_value: float | None = None
 
 
 class PreviewQualitySummary(StrictModel):
@@ -201,6 +220,7 @@ class PreviewQualitySummary(StrictModel):
     baseline: ImageQualityAggregate
     candidate: ImageQualityAggregate
     deltas: dict[str, float] = Field(default_factory=dict)
+    findings: list[QualityFinding] = Field(default_factory=list)
 
 
 class PreviewRunComparison(StrictModel):
