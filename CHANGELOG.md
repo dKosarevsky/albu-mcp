@@ -6,6 +6,13 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 - No unreleased changes yet.
 
+## 0.10.0 - 2026-06-13
+
+- Added concrete preview feedback records to Markdown and HTML preview reports.
+- Wired `export_preview_report` to include matching `record_preview_feedback` entries for baseline and candidate runs.
+- Extended golden MCP evals to verify feedback-aware preview report content through stdio.
+- Documented v1 readiness criteria around stable MCP contracts, schema snapshots, and compatibility policy.
+
 ## 0.9.0 - 2026-06-13
 
 - Added `record_preview_feedback` and `list_preview_feedback` for concrete image/variant feedback such as

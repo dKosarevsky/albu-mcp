@@ -94,7 +94,8 @@ See [examples/claude_desktop_pypi_config.json](examples/claude_desktop_pypi_conf
 - `record_tuning_decision`: persist a local accepted or rejected tuning decision.
 - `list_tuning_decisions`: list local tuning decisions newest-first or score-ranked.
 - `export_tuning_report`: export persisted tuning decisions as Markdown or JSON.
-- `export_preview_report`: export Markdown or HTML reports with contact sheet image refs, ranking, metrics, and decisions.
+- `export_preview_report`: export Markdown or HTML reports with contact sheets, ranking, metrics, decisions, and concrete
+  feedback.
 - `list_preview_runs`: list recent preview manifests recorded under the artifact root.
 - `get_preview_manifest`: read one recorded preview manifest by run id.
 - `delete_preview_run`: delete one preview run and its artifacts.
@@ -163,6 +164,18 @@ counts, contact sheets, and warnings.
 - Added host example resources for the preview feedback loop and visual report handoff.
 - Golden MCP evals now cover the "example 8 is too noisy" review path through stdio.
 
+## What Changed In 0.10
+
+- `export_preview_report` now includes matching concrete preview feedback records in Markdown and HTML handoffs.
+- Golden MCP evals verify that recorded feedback note, target, and tags appear in the visual preview report.
+- v1 readiness is defined around stable public MCP contracts, schema snapshots, and a compatibility policy.
+
+## V1 Readiness
+
+The next major milestone should be `v1.0.0` once public tool/resource names, response fields, and host workflows are
+frozen. Before cutting v1, add contract snapshot checks for MCP schemas, document compatibility/deprecation rules, and
+run a final docs pass over README, usage, recipes, and release automation.
+
 ## Demo Workflow
 
 1. Use `recommend_recipe` to choose the starter pipeline, quality profile, feedback tags, explanations, and next tools.
@@ -175,7 +188,8 @@ counts, contact sheets, and warnings.
 8. Call `list_preview_feedback` and reuse `aggregated_feedback_tags` for the next `adjust_pipeline` call.
 9. Call `rank_preview_candidates` and `score_dataset_preview_candidates` with the matching quality profile.
 10. Call `record_tuning_decision` for accepted or rejected candidates.
-11. Call `export_preview_report` for visual handoff with contact sheet thumbnails, `export_tuning_report` for decision history, then `export_pipeline`.
+11. Call `export_preview_report` for visual handoff with contact sheet thumbnails and concrete feedback,
+    `export_tuning_report` for decision history, then `export_pipeline`.
 
 See [docs/USAGE.md](docs/USAGE.md) for an end-to-end MCP host workflow, [docs/RECIPES.md](docs/RECIPES.md) for
 task-specific host recipes, [docs/DEMO.md](docs/DEMO.md) for a generated preview comparison demo,

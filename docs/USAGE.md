@@ -50,7 +50,7 @@ retention limit for long-running MCP hosts.
 13. Call `list_preview_feedback` and reuse `aggregated_feedback_tags` for the next `adjust_pipeline` call.
 14. Call `summarize_tuning_session` to inspect `quality_score`, `quality_risk`, and `export_ready`.
 15. Call `record_tuning_decision` to persist the accepted or rejected candidate.
-16. Call `export_preview_report` for a visual Markdown or HTML handoff.
+16. Call `export_preview_report` for a visual Markdown or HTML handoff that includes matching concrete feedback.
 17. Call `export_tuning_report` for a decision journal handoff, then `export_pipeline` once the preview set is acceptable.
 
 ## Preview Artifacts
@@ -124,7 +124,8 @@ Ranking is deterministic: higher `quality_score`, lower `quality_risk`, export-r
 
 Use `export_preview_report` after scoring or recording a decision. It writes a Markdown or HTML report under
 `artifact_root/reports/` and returns a `report` artifact with the rendered content, ranked candidates, contact sheet
-paths, Markdown image refs or HTML thumbnails, metric ranges, finding counts, and matching tuning decisions.
+paths, Markdown image refs or HTML thumbnails, metric ranges, finding counts, matching tuning decisions, and matching
+concrete preview feedback from `record_preview_feedback`.
 
 ## Feedback Severity
 
