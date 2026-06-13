@@ -37,6 +37,25 @@ class TaskWorkflowProfile(StrictModel):
     notes: list[str]
 
 
+class HostExampleStep(StrictModel):
+    """One tool step in a canonical MCP host example."""
+
+    order: int
+    tool: str
+    instruction: str
+    expected_result: str
+
+
+class HostExample(StrictModel):
+    """Machine-readable host playbook for common user interactions."""
+
+    name: str
+    goal: str
+    trigger_phrase: str
+    steps: list[HostExampleStep]
+    success_criteria: list[str]
+
+
 _WORKFLOWS = {
     "preview-tuning": AgentWorkflow(
         name="preview-tuning",
@@ -149,6 +168,82 @@ _WORKFLOWS = {
     ),
 }
 
+_HOST_EXAMPLES = {
+    "review-loop": HostExample(
+        name="review-loop",
+        goal="Turn concrete user feedback about one preview example into structured tags and a safer next render.",
+        trigger_phrase="example 8 is too noisy",
+        steps=[
+            HostExampleStep(
+                order=1,
+                tool="record_preview_feedback",
+                instruction=(
+                    "Persist the user note against the reviewed candidate run, zero-based image index, "
+                    "zero-based variant index, and selected structured feedback tags."
+                ),
+                expected_result="A feedback record with review_target and recommended_next_tool.",
+            ),
+            HostExampleStep(
+                order=2,
+                tool="list_preview_feedback",
+                instruction=(
+                    "List feedback for the same run and reuse aggregated_feedback_tags as the adjustment input."
+                ),
+                expected_result="Newest-first feedback records and deduplicated feedback tags.",
+            ),
+            HostExampleStep(
+                order=3,
+                tool="adjust_pipeline",
+                instruction=(
+                    "Apply the recorded tags to the current candidate pipeline before rendering a lighter version."
+                ),
+                expected_result="An adjusted pipeline that responds to the concrete reviewed example.",
+            ),
+            HostExampleStep(
+                order=4,
+                tool="render_preview_batch",
+                instruction="Re-render with the same input images, variants, and deterministic seed family.",
+                expected_result="A comparable preview run with a new contact sheet.",
+            ),
+        ],
+        success_criteria=[
+            "The feedback record points to the same preview run the user reviewed.",
+            "The host uses structured tags from the feedback journal instead of free-form text.",
+            "The next candidate is rendered against the same inputs before comparison.",
+        ],
+    ),
+    "report-handoff": HostExample(
+        name="report-handoff",
+        goal="Create a visual handoff after ranking candidates and recording decisions.",
+        trigger_phrase="send me the final preview report",
+        steps=[
+            HostExampleStep(
+                order=1,
+                tool="score_dataset_preview_candidates",
+                instruction="Score the candidate set with the task-appropriate quality profile.",
+                expected_result="A dataset-level score with ranking, metric stats, and finding counts.",
+            ),
+            HostExampleStep(
+                order=2,
+                tool="record_tuning_decision",
+                instruction="Persist the accepted or rejected outcome with reviewer notes.",
+                expected_result="A local tuning decision linked to baseline and candidate run ids.",
+            ),
+            HostExampleStep(
+                order=3,
+                tool="export_preview_report",
+                instruction="Export HTML for visual review or Markdown for text-first handoff.",
+                expected_result="A report artifact with contact sheet thumbnails or image refs.",
+            ),
+        ],
+        success_criteria=[
+            "The report includes baseline and candidate contact sheets.",
+            "The report includes ranking, metric ranges, finding counts, and matching decisions.",
+            "The host exports the pipeline only after the user accepts the candidate.",
+        ],
+    ),
+}
+
 _TASK_PROFILES = {
     "classification-robustness": TaskWorkflowProfile(
         name="classification-robustness",
@@ -226,4 +321,18 @@ def get_task_profile(name: str) -> TaskWorkflowProfile:
         return _TASK_PROFILES[name]
     except KeyError as exc:
         msg = f"Unknown task workflow profile: {name}"
+        raise KeyError(msg) from exc
+
+
+def list_host_examples() -> list[HostExample]:
+    """Return canonical host interaction examples."""
+    return sorted(_HOST_EXAMPLES.values(), key=lambda example: example.name)
+
+
+def get_host_example(name: str) -> HostExample:
+    """Return one host interaction example by stable name."""
+    try:
+        return _HOST_EXAMPLES[name]
+    except KeyError as exc:
+        msg = f"Unknown host example: {name}"
         raise KeyError(msg) from exc

@@ -33,8 +33,14 @@ from albumentationsx_mcp.quality import list_quality_profiles
 from albumentationsx_mcp.ranking import rank_preview_candidates as rank_candidates
 from albumentationsx_mcp.recipes import list_recipe_catalog, recommend_recipe
 from albumentationsx_mcp.reports import PreviewReportService
+from albumentationsx_mcp.review import PreviewFeedbackStore
 from albumentationsx_mcp.tuning import TuningDecisionStore, build_tuning_session_summary
-from albumentationsx_mcp.workflows import get_agent_workflow, list_agent_workflows, list_task_profiles
+from albumentationsx_mcp.workflows import (
+    get_agent_workflow,
+    get_host_example,
+    list_agent_workflows,
+    list_task_profiles,
+)
 
 
 class ServerSettings(BaseModel):
@@ -71,6 +77,7 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
         ArtifactStore(settings.artifact_root, max_runs=settings.max_preview_runs),
     )
     tuning_store = TuningDecisionStore(settings.artifact_root)
+    feedback_store = PreviewFeedbackStore(settings.artifact_root)
     report_service = PreviewReportService(settings.artifact_root)
     mcp = FastMCP("AlbumentationsX MCP")
 
@@ -137,6 +144,8 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
                     "score_dataset_preview_candidates",
                     "list_quality_profiles",
                     "recommend_recipe",
+                    "record_preview_feedback",
+                    "list_preview_feedback",
                     "record_tuning_decision",
                     "list_tuning_decisions",
                     "export_tuning_report",
@@ -159,6 +168,8 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
                     "albumentationsx://workflows/annotation-preview",
                     "albumentationsx://workflows/task-profiles",
                     "albumentationsx://recipes/catalog",
+                    "albumentationsx://examples/review-loop",
+                    "albumentationsx://examples/report-handoff",
                 ],
             },
             sort_keys=True,
@@ -185,6 +196,16 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
     def annotation_preview_workflow() -> str:
         """Return the annotation-aware preview workflow guide."""
         return get_agent_workflow("annotation-preview").model_dump_json()
+
+    @mcp.resource("albumentationsx://examples/review-loop")
+    def review_loop_example() -> str:
+        """Return the concrete preview feedback host example."""
+        return get_host_example("review-loop").model_dump_json()
+
+    @mcp.resource("albumentationsx://examples/report-handoff")
+    def report_handoff_example() -> str:
+        """Return the visual report handoff host example."""
+        return get_host_example("report-handoff").model_dump_json()
 
     @mcp.tool()
     def search_transforms(
@@ -369,6 +390,40 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
         ).model_dump(mode="json")
 
     @mcp.tool()
+    def record_preview_feedback(  # noqa: PLR0913
+        run_id: str,
+        image_index: int,
+        variant_index: int,
+        feedback_tags: list[str] | None = None,
+        note: str = "",
+        accepted: bool = False,  # noqa: FBT001, FBT002
+    ) -> dict[str, Any]:
+        """Persist user feedback for one concrete preview image variant."""
+        manifest = preview_service.artifact_store.read_manifest(run_id)
+        _validate_feedback_target(manifest, image_index=image_index, variant_index=variant_index)
+        return feedback_store.record_feedback(
+            run_id=run_id,
+            image_index=image_index,
+            variant_index=variant_index,
+            feedback_tags=feedback_tags or [],
+            note=note,
+            accepted=accepted,
+        ).model_dump(mode="json")
+
+    @mcp.tool()
+    def list_preview_feedback(
+        run_id: str | None = None,
+        limit: int = 20,
+        accepted_only: bool = False,  # noqa: FBT001, FBT002
+    ) -> dict[str, Any]:
+        """List concrete preview feedback records."""
+        return feedback_store.list_feedback(
+            run_id=run_id,
+            limit=limit,
+            accepted_only=accepted_only,
+        ).model_dump(mode="json")
+
+    @mcp.tool()
     def record_tuning_decision(  # noqa: PLR0913
         baseline_run_id: str,
         candidate_run_id: str,
@@ -524,3 +579,15 @@ def _matching_tuning_decisions(
         for decision in decisions
         if decision.baseline_run_id == baseline_run_id and decision.candidate_run_id in candidate_run_ids
     ]
+
+
+def _validate_feedback_target(manifest: dict[str, Any], *, image_index: int, variant_index: int) -> None:
+    summary = manifest.get("summary", {})
+    input_count = int(summary.get("input_count", len(manifest.get("inputs", []))))
+    variants_per_image = int(summary.get("variants_per_image", 1))
+    if image_index < 0 or image_index >= input_count:
+        msg = f"image_index must be between 0 and {max(input_count - 1, 0)}"
+        raise ValueError(msg)
+    if variant_index < 0 or variant_index >= variants_per_image:
+        msg = f"variant_index must be between 0 and {max(variants_per_image - 1, 0)}"
+        raise ValueError(msg)

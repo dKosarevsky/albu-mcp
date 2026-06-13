@@ -2,8 +2,10 @@ import pytest
 
 from albumentationsx_mcp.workflows import (
     get_agent_workflow,
+    get_host_example,
     get_task_profile,
     list_agent_workflows,
+    list_host_examples,
     list_task_profiles,
 )
 
@@ -43,3 +45,18 @@ def test_task_profiles_cover_common_computer_vision_workflows() -> None:
     assert detection.workflow == "annotation-preview"
     assert "bboxes" in detection.targets
     assert "too_distorted" in detection.feedback_tags
+
+
+def test_host_examples_cover_review_loop_and_report_handoff() -> None:
+    examples = list_host_examples()
+    review_loop = get_host_example("review-loop")
+    report_handoff = get_host_example("report-handoff")
+
+    assert {example.name for example in examples} >= {"review-loop", "report-handoff"}
+    assert review_loop.trigger_phrase == "example 8 is too noisy"
+    assert [step.tool for step in review_loop.steps[:3]] == [
+        "record_preview_feedback",
+        "list_preview_feedback",
+        "adjust_pipeline",
+    ]
+    assert "export_preview_report" in [step.tool for step in report_handoff.steps]
