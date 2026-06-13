@@ -13,8 +13,12 @@ The public contract includes:
 - response fields documented in README, usage docs, recipes, or golden evals;
 - `server.json` package identity, version, registry package name, and transport metadata.
 
-`scripts/export_mcp_contract.py` writes the reviewed tool/resource/prompt snapshot used by
-`tests/test_mcp_contract_snapshot.py`.
+Two reviewed snapshot layers guard this contract:
+
+- `scripts/export_mcp_contract.py` writes the tool/resource/prompt surface snapshot used by
+  `tests/test_mcp_contract_snapshot.py`.
+- `scripts/export_output_contracts.py` writes representative output payload snapshots used by
+  `tests/test_output_contract_snapshots.py`.
 
 ## Compatible Changes
 
@@ -55,8 +59,16 @@ Prefer additive migration:
 Every public contract change needs at least one of these checks:
 
 - contract snapshot update for tool/resource/prompt surface changes;
+- output contract snapshot update for representative response shape changes;
 - golden MCP eval coverage for end-to-end host workflow changes;
 - focused pytest coverage for storage, report, preview, ranking, recipe, or pipeline behavior;
 - release version guard updates for package or registry metadata changes.
 
 If a snapshot diff is intentional, commit it with the code or docs that explain the change.
+
+Regenerate snapshots with:
+
+```bash
+uv run python scripts/export_mcp_contract.py --output tests/fixtures/snapshots/mcp_contract.json
+uv run python scripts/export_output_contracts.py --output tests/fixtures/snapshots/output_contracts.json
+```

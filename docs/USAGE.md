@@ -215,11 +215,13 @@ uv run python scripts/run_golden_evals.py
 ```
 
 Public MCP contract changes should also follow [docs/COMPATIBILITY.md](COMPATIBILITY.md) and update the contract snapshot
-when tool, resource, or prompt schemas change:
+when tool, resource, prompt, or representative output schemas change:
 
 ```bash
 uv run python scripts/export_mcp_contract.py --output tests/fixtures/snapshots/mcp_contract.json
+uv run python scripts/export_output_contracts.py --output tests/fixtures/snapshots/output_contracts.json
 uv run pytest tests/test_mcp_contract_snapshot.py -q
+uv run pytest tests/test_output_contract_snapshots.py -q
 ```
 
 ## Resources

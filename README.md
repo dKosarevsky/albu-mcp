@@ -22,7 +22,7 @@ This project is intentionally a thin MCP layer around existing AlbumentationsX p
 The server does not execute arbitrary Python, fetch remote images, overwrite datasets, or train models.
 
 Public MCP tool, resource, prompt, and metadata changes follow the
-[compatibility policy](docs/COMPATIBILITY.md) and are guarded by contract snapshots.
+[compatibility policy](docs/COMPATIBILITY.md) and are guarded by surface and output contract snapshots.
 
 ## Install
 
