@@ -46,6 +46,7 @@ def test_ci_workflow_uses_node24_ready_actions() -> None:
 def test_usage_docs_and_examples_are_present() -> None:
     assert Path("docs/USAGE.md").exists()
     assert Path("docs/RELEASE.md").exists()
+    assert Path("CHANGELOG.md").exists()
     assert Path("server.json").exists()
     assert Path("examples/claude_desktop_config.json").exists()
     assert Path("examples/claude_desktop_pypi_config.json").exists()
@@ -54,6 +55,17 @@ def test_usage_docs_and_examples_are_present() -> None:
     assert Path("examples/classification_pipeline.json").exists()
     assert Path("scripts/render_demo_assets.py").exists()
     assert Path("docs/DEMO.md").exists()
+
+
+def test_changelog_tracks_public_releases_and_next_features() -> None:
+    changelog = Path("CHANGELOG.md").read_text(encoding="utf-8")
+
+    assert "## 0.2.1" in changelog
+    assert "## 0.2.0" in changelog
+    assert "## 0.1.0" in changelog
+    assert "demo" in changelog.lower()
+    assert "mcp registry" in changelog.lower()
+    assert "feedback severity" in changelog.lower()
 
 
 def test_release_workflow_and_readme_publish_instructions_are_present() -> None:

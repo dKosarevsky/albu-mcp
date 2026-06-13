@@ -26,9 +26,10 @@ The same name must match `server.json`.
 
 ## Version Bump
 
-1. Update `version` in `pyproject.toml`.
-2. Update `version` in `server.json` and `packages[0].version`.
-3. Run the local quality gate:
+1. Update `CHANGELOG.md` with user-facing changes and the release date.
+2. Update `version` in `pyproject.toml`.
+3. Update `version` in `server.json` and `packages[0].version`.
+4. Run the local quality gate:
 
 ```bash
 uv run pytest
@@ -39,7 +40,7 @@ uv run python scripts/run_golden_evals.py
 uv build
 ```
 
-4. Commit the version bump:
+5. Commit the version bump:
 
 ```bash
 git add pyproject.toml server.json uv.lock
