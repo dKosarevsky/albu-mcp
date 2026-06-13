@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Protocol
 
+import numpy as np
 from PIL import Image
 
 from albumentationsx_mcp.annotations import (
@@ -23,6 +24,7 @@ from albumentationsx_mcp.annotations import (
     scale_annotations,
 )
 from albumentationsx_mcp.models import (
+    AnnotationObservation,
     ArtifactKind,
     ArtifactRef,
     ComposeSpec,
@@ -182,6 +184,7 @@ class PreviewService:
         artifacts: list[ArtifactRef] = []
         image_paths: list[Path] = []
         overlay_paths: list[Path] = []
+        annotation_observations: list[AnnotationObservation] = []
         source_paths = [self.path_policy.resolve_input(path) for path in request.input_paths]
         annotations = self._resolve_annotations(request)
 
@@ -201,6 +204,16 @@ class PreviewService:
                     pipeline.seed = request.seed + variant_index
                 transform = self.pipeline_service.build_pipeline(pipeline)
                 result = transform(**build_transform_payload(image, annotation, mask))
+                if annotation_has_content(annotation):
+                    annotation_observations.append(
+                        self._annotation_observation(
+                            image_index=source_index,
+                            variant_index=variant_index,
+                            annotation=annotation,
+                            input_mask=mask,
+                            result=result,
+                        ),
+                    )
                 output = run_dir / f"{source_index:03d}-{variant_index:03d}.png"
                 Image.fromarray(result["image"]).save(output)
                 image_paths.append(output)
@@ -261,8 +274,12 @@ class PreviewService:
                     if artifact.kind in {"contact_sheet", "overlay_contact_sheet"}
                 ],
                 "warnings": [],
+                "annotation_observation_count": len(annotation_observations),
             },
             "artifacts": [artifact.model_dump(mode="json") for artifact in artifacts],
+            "annotation_observations": [
+                observation.model_dump(mode="json", exclude_none=True) for observation in annotation_observations
+            ],
         }
         manifest_path.write_text(json.dumps(manifest_data, indent=2, sort_keys=True), encoding="utf-8")
         self.artifact_store.record_run(manifest_data)
@@ -304,6 +321,26 @@ class PreviewService:
         return image, original_size
 
     @staticmethod
+    def _annotation_observation(
+        *,
+        image_index: int,
+        variant_index: int,
+        annotation: Any,
+        input_mask: Any,
+        result: dict[str, Any],
+    ) -> AnnotationObservation:
+        return AnnotationObservation(
+            image_index=image_index,
+            variant_index=variant_index,
+            input_bbox_count=len(annotation.bboxes),
+            output_bbox_count=len(result.get("bboxes") or []),
+            input_keypoint_count=len(annotation.keypoints),
+            output_keypoint_count=len(result.get("keypoints") or []),
+            input_mask_coverage=_mask_coverage(input_mask),
+            output_mask_coverage=_mask_coverage(result.get("mask")),
+        )
+
+    @staticmethod
     def _write_contact_sheet(image_paths: list[Path], output_path: Path) -> None:
         images = [Image.open(path).convert("RGB") for path in image_paths]
         if not images:
@@ -322,3 +359,12 @@ class PreviewService:
             sheet.paste(image, (column * tile_width, row * tile_height))
 
         sheet.save(output_path)
+
+
+def _mask_coverage(mask: Any) -> float | None:
+    if mask is None:
+        return None
+    data = np.asarray(mask)
+    if data.size == 0:
+        return None
+    return round(float((data > 0).mean()), 6)

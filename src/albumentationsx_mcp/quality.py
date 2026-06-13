@@ -8,7 +8,15 @@ from typing import Any
 import numpy as np
 from PIL import Image
 
-from albumentationsx_mcp.models import ImageQualityAggregate, ImageQualityMetrics, PreviewQualitySummary, QualityFinding
+from albumentationsx_mcp.models import (
+    AnnotationObservation,
+    AnnotationQualityAggregate,
+    ImageQualityAggregate,
+    ImageQualityMetrics,
+    PreviewAnnotationQualitySummary,
+    PreviewQualitySummary,
+    QualityFinding,
+)
 
 _METRIC_FIELDS = (
     "brightness_mean",
@@ -30,6 +38,8 @@ _LOW_ENTROPY_MEDIUM = 0.4
 _CLIPPING_LOW_VALUE = 2.0
 _CLIPPING_HIGH_VALUE = 253.0
 _SHARPNESS_DROP_MEDIUM = -20.0
+_MASK_COVERAGE_DROP_MEDIUM = 0.75
+_MASK_COVERAGE_DROP_HIGH = 0.25
 
 
 def collect_image_quality_metrics(path: Path) -> ImageQualityMetrics:
@@ -58,7 +68,8 @@ def compare_manifest_quality(
     warnings: list[str] = []
     baseline = _collect_manifest_metrics(baseline_manifest, label="baseline", warnings=warnings)
     candidate = _collect_manifest_metrics(candidate_manifest, label="candidate", warnings=warnings)
-    if not baseline and not candidate:
+    annotation_summary = _compare_annotation_quality(baseline_manifest, candidate_manifest, warnings=warnings)
+    if not baseline and not candidate and annotation_summary is None:
         return None, warnings
 
     baseline_aggregate = _aggregate_quality_metrics(baseline)
@@ -68,7 +79,8 @@ def compare_manifest_quality(
             baseline=baseline_aggregate,
             candidate=candidate_aggregate,
             deltas=_quality_deltas(baseline_aggregate, candidate_aggregate),
-            findings=_quality_findings(baseline_aggregate, candidate_aggregate),
+            findings=_quality_findings(baseline_aggregate, candidate_aggregate, annotation_summary),
+            annotation_summary=annotation_summary,
         ),
         warnings,
     )
@@ -167,7 +179,11 @@ def _quality_deltas(baseline: ImageQualityAggregate, candidate: ImageQualityAggr
     return deltas
 
 
-def _quality_findings(baseline: ImageQualityAggregate, candidate: ImageQualityAggregate) -> list[QualityFinding]:
+def _quality_findings(
+    baseline: ImageQualityAggregate,
+    candidate: ImageQualityAggregate,
+    annotation_summary: PreviewAnnotationQualitySummary | None,
+) -> list[QualityFinding]:
     findings: list[QualityFinding] = []
     if candidate.brightness_mean is not None:
         findings.extend(_brightness_findings(candidate.brightness_mean, baseline.brightness_mean))
@@ -197,6 +213,8 @@ def _quality_findings(baseline: ImageQualityAggregate, candidate: ImageQualityAg
                     baseline_value=baseline.sharpness_score,
                 ),
             )
+    if annotation_summary is not None:
+        findings.extend(_annotation_quality_findings(annotation_summary))
     return findings
 
 
@@ -272,3 +290,144 @@ def _clipping_findings(value: float, baseline_value: float | None) -> list[Quali
             ),
         ]
     return []
+
+
+def _compare_annotation_quality(
+    baseline_manifest: dict[str, Any],
+    candidate_manifest: dict[str, Any],
+    *,
+    warnings: list[str],
+) -> PreviewAnnotationQualitySummary | None:
+    baseline_observations = _collect_annotation_observations(baseline_manifest, label="baseline", warnings=warnings)
+    candidate_observations = _collect_annotation_observations(candidate_manifest, label="candidate", warnings=warnings)
+    if not baseline_observations and not candidate_observations:
+        return None
+
+    baseline = _aggregate_annotation_observations(baseline_observations)
+    candidate = _aggregate_annotation_observations(candidate_observations)
+    return PreviewAnnotationQualitySummary(
+        baseline=baseline,
+        candidate=candidate,
+        deltas=_annotation_deltas(baseline, candidate),
+    )
+
+
+def _collect_annotation_observations(
+    manifest: dict[str, Any],
+    *,
+    label: str,
+    warnings: list[str],
+) -> list[AnnotationObservation]:
+    observations = manifest.get("annotation_observations", [])
+    if not isinstance(observations, list):
+        warnings.append(f"{label} annotation quality skipped: annotation_observations is not a list")
+        return []
+
+    parsed: list[AnnotationObservation] = []
+    for index, observation in enumerate(observations):
+        parsed_observation, exc = _parse_annotation_observation(observation)
+        if parsed_observation is not None:
+            parsed.append(parsed_observation)
+        else:
+            warnings.append(f"{label} annotation observation {index} skipped: {exc}")
+    return parsed
+
+
+def _parse_annotation_observation(observation: Any) -> tuple[AnnotationObservation | None, ValueError | None]:
+    try:
+        return AnnotationObservation.model_validate(observation), None
+    except ValueError as exc:
+        return None, exc
+
+
+def _aggregate_annotation_observations(observations: list[AnnotationObservation]) -> AnnotationQualityAggregate:
+    input_bbox_count = sum(observation.input_bbox_count for observation in observations)
+    output_bbox_count = sum(observation.output_bbox_count for observation in observations)
+    input_keypoint_count = sum(observation.input_keypoint_count for observation in observations)
+    output_keypoint_count = sum(observation.output_keypoint_count for observation in observations)
+    input_mask_coverage_mean = _mean_optional([observation.input_mask_coverage for observation in observations])
+    output_mask_coverage_mean = _mean_optional([observation.output_mask_coverage for observation in observations])
+    return AnnotationQualityAggregate(
+        observation_count=len(observations),
+        input_bbox_count=input_bbox_count,
+        output_bbox_count=output_bbox_count,
+        bbox_retention_ratio=_ratio(output_bbox_count, input_bbox_count),
+        input_keypoint_count=input_keypoint_count,
+        output_keypoint_count=output_keypoint_count,
+        keypoint_retention_ratio=_ratio(output_keypoint_count, input_keypoint_count),
+        input_mask_coverage_mean=input_mask_coverage_mean,
+        output_mask_coverage_mean=output_mask_coverage_mean,
+        mask_coverage_ratio=_ratio_optional(output_mask_coverage_mean, input_mask_coverage_mean),
+    )
+
+
+def _annotation_deltas(
+    baseline: AnnotationQualityAggregate,
+    candidate: AnnotationQualityAggregate,
+) -> dict[str, float]:
+    deltas: dict[str, float] = {}
+    for field_name in ("bbox_retention_ratio", "keypoint_retention_ratio", "mask_coverage_ratio"):
+        baseline_value = getattr(baseline, field_name)
+        candidate_value = getattr(candidate, field_name)
+        if baseline_value is not None and candidate_value is not None:
+            deltas[field_name] = round(float(candidate_value) - float(baseline_value), 4)
+    return deltas
+
+
+def _annotation_quality_findings(summary: PreviewAnnotationQualitySummary) -> list[QualityFinding]:
+    findings: list[QualityFinding] = []
+    candidate = summary.candidate
+    baseline = summary.baseline
+    if candidate.bbox_retention_ratio is not None and candidate.bbox_retention_ratio < 1.0:
+        findings.append(
+            QualityFinding(
+                code="candidate_bbox_loss",
+                severity="high" if candidate.bbox_retention_ratio == 0 else "medium",
+                message="Candidate preview drops bounding boxes from annotated inputs.",
+                metric="bbox_retention_ratio",
+                value=candidate.bbox_retention_ratio,
+                baseline_value=baseline.bbox_retention_ratio,
+            ),
+        )
+    if candidate.keypoint_retention_ratio is not None and candidate.keypoint_retention_ratio < 1.0:
+        findings.append(
+            QualityFinding(
+                code="candidate_keypoint_loss",
+                severity="high" if candidate.keypoint_retention_ratio == 0 else "medium",
+                message="Candidate preview drops keypoints from annotated inputs.",
+                metric="keypoint_retention_ratio",
+                value=candidate.keypoint_retention_ratio,
+                baseline_value=baseline.keypoint_retention_ratio,
+            ),
+        )
+    if candidate.mask_coverage_ratio is not None and candidate.mask_coverage_ratio < _MASK_COVERAGE_DROP_MEDIUM:
+        findings.append(
+            QualityFinding(
+                code="candidate_mask_coverage_drop",
+                severity="high" if candidate.mask_coverage_ratio < _MASK_COVERAGE_DROP_HIGH else "medium",
+                message="Candidate preview reduces transformed mask coverage substantially.",
+                metric="mask_coverage_ratio",
+                value=candidate.mask_coverage_ratio,
+                baseline_value=baseline.mask_coverage_ratio,
+            ),
+        )
+    return findings
+
+
+def _ratio(numerator: int, denominator: int) -> float | None:
+    if denominator == 0:
+        return None
+    return round(numerator / denominator, 4)
+
+
+def _ratio_optional(numerator: float | None, denominator: float | None) -> float | None:
+    if numerator is None or denominator is None or denominator == 0.0:
+        return None
+    return round(numerator / denominator, 4)
+
+
+def _mean_optional(values: list[float | None]) -> float | None:
+    filtered = [value for value in values if value is not None]
+    if not filtered:
+        return None
+    return round(sum(filtered) / len(filtered), 4)

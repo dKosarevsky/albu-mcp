@@ -88,6 +88,47 @@ def test_compare_manifest_quality_reports_deterministic_findings(tmp_path: Path)
     assert clipping.metric == "clipping_fraction"
 
 
+def test_compare_manifest_quality_summarizes_annotation_retention() -> None:
+    quality_summary, warnings = compare_manifest_quality(
+        _manifest_with_annotation_observations(
+            [
+                {
+                    "input_bbox_count": 2,
+                    "output_bbox_count": 2,
+                    "input_keypoint_count": 1,
+                    "output_keypoint_count": 1,
+                    "input_mask_coverage": 0.25,
+                    "output_mask_coverage": 0.25,
+                }
+            ]
+        ),
+        _manifest_with_annotation_observations(
+            [
+                {
+                    "input_bbox_count": 2,
+                    "output_bbox_count": 1,
+                    "input_keypoint_count": 1,
+                    "output_keypoint_count": 0,
+                    "input_mask_coverage": 0.25,
+                    "output_mask_coverage": 0.1,
+                }
+            ]
+        ),
+    )
+
+    assert warnings == []
+    assert quality_summary is not None
+    assert quality_summary.annotation_summary is not None
+    assert quality_summary.annotation_summary.baseline.bbox_retention_ratio == 1.0
+    assert quality_summary.annotation_summary.candidate.bbox_retention_ratio == 0.5
+    assert quality_summary.annotation_summary.deltas["bbox_retention_ratio"] == -0.5
+    assert {finding.code for finding in quality_summary.findings} >= {
+        "candidate_bbox_loss",
+        "candidate_keypoint_loss",
+        "candidate_mask_coverage_drop",
+    }
+
+
 def _manifest_with_images(paths: list[Path]) -> dict:
     return {
         "artifacts": [
@@ -96,5 +137,18 @@ def _manifest_with_images(paths: list[Path]) -> dict:
                 "path": str(path),
             }
             for path in paths
+        ],
+    }
+
+
+def _manifest_with_annotation_observations(observations: list[dict]) -> dict:
+    return {
+        "annotation_observations": [
+            {
+                "image_index": index,
+                "variant_index": 0,
+                **observation,
+            }
+            for index, observation in enumerate(observations)
         ],
     }

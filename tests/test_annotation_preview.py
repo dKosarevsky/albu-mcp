@@ -54,6 +54,50 @@ def test_render_preview_writes_overlay_artifacts_for_annotations(tmp_path: Path)
     assert all(Path(artifact.path).exists() for artifact in [*overlays, *overlay_sheets])
 
 
+def test_render_preview_records_annotation_observations(tmp_path: Path) -> None:
+    image_path = tmp_path / "input.png"
+    mask_path = tmp_path / "mask.png"
+    Image.fromarray(np.full((32, 32, 3), 220, dtype=np.uint8)).save(image_path)
+    mask = np.zeros((32, 32), dtype=np.uint8)
+    mask[8:24, 8:24] = 255
+    Image.fromarray(mask).save(mask_path)
+    service = PreviewService(
+        IdentityPipelineService(),
+        PathPolicy([tmp_path]),
+        ArtifactStore(tmp_path / "artifacts"),
+    )
+    request = PreviewRequest(
+        input_paths=[image_path],
+        annotations=[
+            ImageAnnotations(
+                bboxes=[[4, 5, 20, 24]],
+                bbox_labels=["object"],
+                keypoints=[[12, 14]],
+                mask_path=mask_path,
+            ),
+        ],
+        pipeline=ComposeSpec(transforms=[TransformSpec(name="HorizontalFlip", p=1.0)]),
+        variants_per_image=1,
+    )
+
+    result = service.render_preview(request)
+    manifest = service.artifact_store.read_manifest(result.run_id)
+
+    assert manifest["summary"]["annotation_observation_count"] == 1
+    assert manifest["annotation_observations"] == [
+        {
+            "image_index": 0,
+            "variant_index": 0,
+            "input_bbox_count": 1,
+            "output_bbox_count": 1,
+            "input_keypoint_count": 1,
+            "output_keypoint_count": 1,
+            "input_mask_coverage": 0.25,
+            "output_mask_coverage": 0.25,
+        }
+    ]
+
+
 def test_preview_request_requires_annotation_count_to_match_inputs(tmp_path: Path) -> None:
     image_path = tmp_path / "input.png"
     Image.fromarray(np.full((16, 16, 3), 128, dtype=np.uint8)).save(image_path)

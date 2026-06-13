@@ -175,6 +175,7 @@ class PreviewManifestSummary(StrictModel):
     artifact_counts: dict[str, int] = Field(default_factory=dict)
     contact_sheet_paths: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
+    annotation_observation_count: int = 0
 
 
 class ImageQualityMetrics(StrictModel):
@@ -214,6 +215,42 @@ class QualityFinding(StrictModel):
     baseline_value: float | None = None
 
 
+class AnnotationObservation(StrictModel):
+    """Per-variant annotation retention observation recorded in preview manifests."""
+
+    image_index: int
+    variant_index: int
+    input_bbox_count: int = 0
+    output_bbox_count: int = 0
+    input_keypoint_count: int = 0
+    output_keypoint_count: int = 0
+    input_mask_coverage: float | None = None
+    output_mask_coverage: float | None = None
+
+
+class AnnotationQualityAggregate(StrictModel):
+    """Aggregate annotation retention metrics for a preview run."""
+
+    observation_count: int
+    input_bbox_count: int = 0
+    output_bbox_count: int = 0
+    bbox_retention_ratio: float | None = None
+    input_keypoint_count: int = 0
+    output_keypoint_count: int = 0
+    keypoint_retention_ratio: float | None = None
+    input_mask_coverage_mean: float | None = None
+    output_mask_coverage_mean: float | None = None
+    mask_coverage_ratio: float | None = None
+
+
+class PreviewAnnotationQualitySummary(StrictModel):
+    """Annotation retention comparison between two preview runs."""
+
+    baseline: AnnotationQualityAggregate
+    candidate: AnnotationQualityAggregate
+    deltas: dict[str, float] = Field(default_factory=dict)
+
+
 class PreviewQualitySummary(StrictModel):
     """Quality comparison between baseline and candidate preview runs."""
 
@@ -221,6 +258,7 @@ class PreviewQualitySummary(StrictModel):
     candidate: ImageQualityAggregate
     deltas: dict[str, float] = Field(default_factory=dict)
     findings: list[QualityFinding] = Field(default_factory=list)
+    annotation_summary: PreviewAnnotationQualitySummary | None = None
 
 
 class PreviewRunComparison(StrictModel):
