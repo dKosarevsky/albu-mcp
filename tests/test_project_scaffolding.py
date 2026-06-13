@@ -120,9 +120,15 @@ def test_public_package_metadata_is_polished() -> None:
 
 def test_public_docs_describe_current_preview_workflow() -> None:
     readme = Path("README.md").read_text(encoding="utf-8")
+    usage = Path("docs/USAGE.md").read_text(encoding="utf-8")
+    changelog = Path("CHANGELOG.md").read_text(encoding="utf-8")
     server_json = json.loads(Path("server.json").read_text(encoding="utf-8"))
 
     assert "## What Changed In 0.2" in readme
+    assert "## What Changed In 0.3" in readme
+    assert "too_noisy:high" in readme
+    assert "suggested_feedback_tags" in usage
+    assert "## 0.3.0" in changelog
     assert "batch previews" in readme
     assert "compare preview runs" in readme
     assert "agent workflow resources" in readme

@@ -19,6 +19,7 @@ def test_list_feedback_tags_documents_adjustment_contract() -> None:
     assert {"too_noisy", "too_blurry", "too_distorted", "object_unrecognizable"}.issubset(tags)
     assert tags["too_noisy"].description
     assert "noise" in tags["too_noisy"].applies_to
+    assert ":high" in tags["too_noisy"].mitigation
 
 
 def test_explain_pipeline_flags_high_noise_and_suggests_feedback_tag() -> None:

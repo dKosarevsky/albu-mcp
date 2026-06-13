@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
+from albumentationsx_mcp.feedback import normalize_feedback_tags, severity_scaled_factor
 from albumentationsx_mcp.models import ComposeSpec, TransformSpec
 
 Intensity = Literal["low", "medium", "high"]
@@ -61,23 +62,27 @@ def recommend_pipeline(task: str, intensity: Intensity = "medium", targets: list
 def adjust_pipeline(pipeline: ComposeSpec, feedback_tags: list[str]) -> ComposeSpec:
     """Adjust a pipeline using structured preview feedback tags."""
     adjusted = pipeline.model_copy(deep=True)
-    tags = {tag.lower() for tag in feedback_tags}
+    tags = normalize_feedback_tags(feedback_tags)
 
     for transform in adjusted.transforms:
         name = transform.name.lower()
         if "too_noisy" in tags and "noise" in name:
-            _scale_probability(transform, 0.5)
-            _scale_numeric_ranges(transform, 0.5)
+            severity = tags["too_noisy"]
+            _scale_probability(transform, severity_scaled_factor(0.5, severity))
+            _scale_numeric_ranges(transform, severity_scaled_factor(0.5, severity))
         if "too_blurry" in tags and "blur" in name:
-            _scale_probability(transform, 0.5)
-            _scale_numeric_ranges(transform, 0.75)
+            severity = tags["too_blurry"]
+            _scale_probability(transform, severity_scaled_factor(0.5, severity))
+            _scale_numeric_ranges(transform, severity_scaled_factor(0.75, severity))
         if "too_distorted" in tags and any(token in name for token in ["affine", "perspective", "distortion"]):
-            _scale_probability(transform, 0.6)
-            _scale_numeric_ranges(transform, 0.75)
+            severity = tags["too_distorted"]
+            _scale_probability(transform, severity_scaled_factor(0.6, severity))
+            _scale_numeric_ranges(transform, severity_scaled_factor(0.75, severity))
         if "object_unrecognizable" in tags:
-            _scale_probability(transform, 0.7)
+            severity = tags["object_unrecognizable"]
+            _scale_probability(transform, severity_scaled_factor(0.7, severity))
             if any(token in name for token in ["noise", "blur", "dropout", "compression"]):
-                _scale_numeric_ranges(transform, 0.6)
+                _scale_numeric_ranges(transform, severity_scaled_factor(0.6, severity))
 
     return adjusted
 

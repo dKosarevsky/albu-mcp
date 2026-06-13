@@ -102,11 +102,18 @@ counts, contact sheets, and warnings.
 - Preview manifests include reproducibility summaries for seeds, transforms, artifact counts, and contact sheets.
 - agent workflow resources and prompts guide preview tuning, annotation review, feedback adjustment, and final export.
 
+## What Changed In 0.3
+
+- `adjust_pipeline` accepts optional feedback severity suffixes such as `too_noisy:low`, `too_noisy:medium`, and
+  `too_noisy:high`.
+- `compare_preview_runs` returns `suggested_feedback_tags` for candidate transforms that deserve visual review.
+- Suggested tags are review candidates only; the user still chooses feedback after inspecting contact sheets.
+
 ## Demo Workflow
 
 1. Use `recommend_pipeline` and `validate_pipeline` for a conservative baseline.
 2. Call `render_preview_batch` on a small local image set.
-3. Adjust with structured feedback such as `too_noisy` or `too_distorted`.
+3. Adjust with structured feedback such as `too_noisy`, `too_noisy:high`, or `too_distorted`.
 4. Render the candidate preview batch with the same inputs.
 5. Call `compare_preview_runs` before accepting the candidate.
 6. Export the accepted pipeline with `export_pipeline`.

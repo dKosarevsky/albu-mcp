@@ -55,3 +55,13 @@ def test_compare_preview_manifests_reports_reproducibility_differences() -> None
     assert comparison.inputs_changed is False
     assert comparison.artifact_count_delta == 0
     assert "Review both contact sheets" in comparison.review_notes
+
+
+def test_compare_preview_manifests_suggests_feedback_tags_for_candidate_transforms() -> None:
+    comparison = compare_preview_manifests(
+        preview_manifest(run_id="baseline", transform_name="HorizontalFlip", seed=10),
+        preview_manifest(run_id="candidate", transform_name="GaussNoise", seed=10),
+    )
+
+    assert comparison.suggested_feedback_tags == ["too_noisy"]
+    assert any("Suggested feedback tags are review candidates" in note for note in comparison.review_notes)

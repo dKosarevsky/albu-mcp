@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import Counter
 from typing import Any
 
+from albumentationsx_mcp.feedback import suggested_feedback_tags_for_transform_names
 from albumentationsx_mcp.models import PreviewManifestSummary, PreviewRunComparison
 
 _CONTACT_SHEET_KINDS = {"contact_sheet", "overlay_contact_sheet"}
@@ -56,6 +57,10 @@ def compare_preview_manifests(
     inputs_changed = baseline_manifest.get("inputs", []) != candidate_manifest.get("inputs", [])
     seed_changed = baseline.effective_seeds != candidate.effective_seeds
     artifact_count_delta = sum(candidate.artifact_counts.values()) - sum(baseline.artifact_counts.values())
+    suggested_feedback_tags = suggested_feedback_tags_for_transform_names(
+        candidate.transform_names,
+        baseline.transform_names,
+    )
     review_notes = ["Review both contact sheets", "Select structured feedback tags only after visual comparison."]
     if pipeline_changed:
         review_notes.append("Pipeline definitions differ; compare transform effects, not only artifact counts.")
@@ -69,6 +74,8 @@ def compare_preview_manifests(
         review_notes.append(f"Candidate produced {artifact_count_delta:+d} artifacts relative to baseline.")
     if baseline.transform_names != candidate.transform_names:
         review_notes.append("Transform order or transform names changed between runs.")
+    if suggested_feedback_tags:
+        review_notes.append("Suggested feedback tags are review candidates, not an automatic verdict.")
     return PreviewRunComparison(
         baseline=baseline,
         candidate=candidate,
@@ -77,4 +84,5 @@ def compare_preview_manifests(
         seed_changed=seed_changed,
         artifact_count_delta=artifact_count_delta,
         review_notes=review_notes,
+        suggested_feedback_tags=suggested_feedback_tags,
     )

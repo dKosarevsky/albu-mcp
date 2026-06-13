@@ -4,8 +4,15 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 ## Unreleased
 
-- Planned: feedback severity modifiers for `adjust_pipeline`.
-- Planned: compare-run recommendations that can suggest candidate feedback tags after preview review.
+- No unreleased changes yet.
+
+## 0.3.0 - 2026-06-13
+
+- Added feedback severity modifiers for `adjust_pipeline`: `:low`, `:medium`, and `:high`.
+- Added `suggested_feedback_tags` to `compare_preview_runs` so agents can present review candidates before asking the
+  user for final feedback.
+- Documented that compare-run suggestions are not automatic quality verdicts and should be confirmed against contact
+  sheets.
 
 ## 0.2.1 - 2026-06-13
 

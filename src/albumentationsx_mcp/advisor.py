@@ -44,25 +44,31 @@ _FEEDBACK_TAGS = [
         name="too_noisy",
         description="Noise makes objects, text, or boundaries harder to recognize.",
         applies_to=["noise"],
-        mitigation="Reduce noise probabilities and numeric noise ranges.",
+        mitigation="Reduce noise probabilities and numeric noise ranges; append :low, :medium, or :high for severity.",
     ),
     FeedbackTagInfo(
         name="too_blurry",
         description="Blur removes details that should stay visible for the task.",
         applies_to=["blur"],
-        mitigation="Reduce blur probabilities and kernel or sigma ranges.",
+        mitigation="Reduce blur probabilities and kernel or sigma ranges; append :low, :medium, or :high for severity.",
     ),
     FeedbackTagInfo(
         name="too_distorted",
         description="Geometric transforms bend, rotate, or warp samples beyond realistic variation.",
         applies_to=["geometric"],
-        mitigation="Reduce affine, perspective, and distortion probabilities and ranges.",
+        mitigation=(
+            "Reduce affine, perspective, and distortion probabilities and ranges; "
+            "append :low, :medium, or :high for severity."
+        ),
     ),
     FeedbackTagInfo(
         name="object_unrecognizable",
         description="The augmented sample no longer preserves the labeled object or class evidence.",
         applies_to=["noise", "blur", "compression", "occlusion", "geometric"],
-        mitigation="Globally reduce destructive transform probabilities and ranges.",
+        mitigation=(
+            "Globally reduce destructive transform probabilities and ranges; "
+            "append :low, :medium, or :high for severity."
+        ),
     ),
 ]
 

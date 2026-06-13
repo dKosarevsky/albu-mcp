@@ -187,6 +187,7 @@ class PreviewRunComparison(StrictModel):
     seed_changed: bool
     artifact_count_delta: int
     review_notes: list[str] = Field(default_factory=list)
+    suggested_feedback_tags: list[str] = Field(default_factory=list)
 
 
 class TransformSearchResult(StrictModel):

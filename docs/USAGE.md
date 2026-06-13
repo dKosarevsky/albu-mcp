@@ -39,8 +39,10 @@ retention limit for long-running MCP hosts.
 4. Call `render_preview` on a small local image set.
 5. Review the generated `contact_sheet` artifact.
 6. Use `compare_preview_runs` when comparing a baseline preview to an adjusted candidate preview.
-7. Call `adjust_pipeline` with tags from `list_feedback_tags`, for example `too_noisy` or `too_distorted`.
-8. Re-render, then call `export_pipeline` once the preview set is acceptable.
+7. Review `suggested_feedback_tags` as candidates, then ask the user which tags match the contact sheets.
+8. Call `adjust_pipeline` with tags from `list_feedback_tags`, for example `too_noisy`, `too_noisy:high`, or
+   `too_distorted`.
+9. Re-render, then call `export_pipeline` once the preview set is acceptable.
 
 ## Preview Artifacts
 
@@ -59,6 +61,19 @@ prune older runs.
 
 For multi-image review, call `render_preview_batch` with the same request schema as `render_preview`. It writes per-image
 variants plus a shared contact sheet for quick side-by-side review.
+
+## Feedback Severity
+
+`adjust_pipeline` accepts the base tags from `list_feedback_tags` and optional severity suffixes:
+
+- `:low` applies a lighter reduction when only a few examples are slightly too strong.
+- `:medium` is the default and matches the base tag behavior.
+- `:high` applies a stronger reduction when previews are clearly unusable.
+
+Examples: `too_noisy:low`, `too_blurry:medium`, `too_distorted:high`, and `object_unrecognizable:high`.
+
+`compare_preview_runs` may return `suggested_feedback_tags` based on candidate transform names. Treat them as review
+candidates only; they are not an automatic verdict about image quality.
 
 ## Annotation Previews
 
