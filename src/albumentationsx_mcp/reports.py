@@ -122,7 +122,7 @@ def _render_markdown_report(
             f"{str(candidate.export_ready).lower()} | "
             f"{candidate.recommended_next_tool} | "
             f"{', '.join(candidate.feedback_tags) or 'none'} | "
-            f"{'<br>'.join(candidate_contact_sheets.get(candidate.candidate_run_id, [])) or 'none'} |"
+            f"{_markdown_contact_sheet_cell(candidate_contact_sheets.get(candidate.candidate_run_id, []))} |"
         )
         for candidate in score.ranking.ranked_candidates
     )
@@ -155,10 +155,7 @@ def _render_html_report(
     candidate_contact_sheets = _contact_sheets_by_run_id(candidate_manifests)
     rows = []
     for candidate in score.ranking.ranked_candidates:
-        contact_links = "".join(
-            f'<a href="{html.escape(_file_uri(path), quote=True)}">{html.escape(path)}</a><br>'
-            for path in candidate_contact_sheets.get(candidate.candidate_run_id, [])
-        )
+        contact_links = _html_contact_sheet_links(candidate_contact_sheets.get(candidate.candidate_run_id, []))
         rows.append(
             "<tr>"
             f"<td>{candidate.rank}</td>"
@@ -181,7 +178,8 @@ def _render_html_report(
             "<style>body{font-family:system-ui,sans-serif;line-height:1.45;margin:2rem}"
             "table{border-collapse:collapse;width:100%;margin:1rem 0}"
             "td,th{border:1px solid #ddd;padding:.4rem;text-align:left}"
-            "th{background:#f6f8fa}</style>",
+            "th{background:#f6f8fa}"
+            ".contact-sheet{max-width:240px;height:auto;display:block;margin:.25rem 0}</style>",
             "</head>",
             "<body>",
             "<h1>AlbumentationsX MCP Preview Report</h1>",
@@ -234,7 +232,17 @@ def _contact_sheet_paths(manifest: dict[str, Any]) -> list[str]:
 def _markdown_paths(paths: list[str]) -> list[str]:
     if not paths:
         return ["- none"]
-    return [f"- {path}" for path in paths]
+    lines: list[str] = []
+    for path in paths:
+        lines.append(f"- ![contact sheet]({path})")
+        lines.append(f"- {path}")
+    return lines
+
+
+def _markdown_contact_sheet_cell(paths: list[str]) -> str:
+    if not paths:
+        return "none"
+    return "<br>".join(f"![contact sheet]({path})<br>{path}" for path in paths)
 
 
 def _markdown_metric_stats(stats: list[DatasetMetricStats]) -> list[str]:
@@ -290,8 +298,23 @@ def _markdown_decisions(decisions: list[TuningDecisionRecord]) -> list[str]:
 def _html_path_list(paths: list[str]) -> str:
     if not paths:
         return "<p>none</p>"
-    items = [f'<li><a href="{html.escape(_file_uri(path), quote=True)}">{html.escape(path)}</a></li>' for path in paths]
+    items = [f"<li>{_html_contact_sheet_link(path)}</li>" for path in paths]
     return f"<ul>{''.join(items)}</ul>"
+
+
+def _html_contact_sheet_links(paths: list[str]) -> str:
+    if not paths:
+        return "none"
+    return "".join(f"{_html_contact_sheet_link(path)}<br>" for path in paths)
+
+
+def _html_contact_sheet_link(path: str) -> str:
+    uri = html.escape(_file_uri(path), quote=True)
+    escaped_path = html.escape(path)
+    return (
+        f'<a href="{uri}"><img class="contact-sheet" src="{uri}" alt="contact sheet"></a>'
+        f"<span>{escaped_path}</span>"
+    )
 
 
 def _html_metric_stats(stats: list[DatasetMetricStats]) -> str:

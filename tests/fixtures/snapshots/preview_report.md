@@ -1,0 +1,40 @@
+# AlbumentationsX MCP Preview Report
+
+- Baseline run: baseline
+- Quality profile: classification
+- Candidates: 2
+- Best candidate: candidate-a
+
+## Contact Sheets
+
+### Baseline
+
+- ![contact sheet](<FIXTURE_ROOT>/images/baseline-contact.png)
+- <FIXTURE_ROOT>/images/baseline-contact.png
+
+### Candidates
+
+| Rank | Candidate | Score | Risk | Export Ready | Next Tool | Feedback Tags | Contact Sheets |
+| ---: | --- | ---: | --- | --- | --- | --- | --- |
+| 1 | candidate-a | 100.0 | low | true | export_pipeline | none | ![contact sheet](<FIXTURE_ROOT>/images/candidate-a-contact.png)<br><FIXTURE_ROOT>/images/candidate-a-contact.png |
+| 2 | candidate-b | 85.0 | medium | false | adjust_pipeline | too_noisy:high | ![contact sheet](<FIXTURE_ROOT>/images/candidate-b-contact.png)<br><FIXTURE_ROOT>/images/candidate-b-contact.png |
+
+## Dataset Metrics
+
+| Metric | Candidates | Min | Max | Mean |
+| --- | ---: | ---: | ---: | ---: |
+| brightness_mean | 2 | 78.0000 | 128.0000 | 103.0000 |
+| clipping_fraction | 2 | 0.0200 | 0.1800 | 0.1000 |
+
+## Finding Counts
+
+| Severity | Code | Count |
+| --- | --- | ---: |
+| medium | candidate_high_clipping | 1 |
+
+## Tuning Decisions
+
+| Decision | Candidate | Accepted | Score | Risk | Notes |
+| --- | --- | --- | ---: | --- | --- |
+| decision-a | candidate-a | true | 100.0 | low | accepted snapshot fixture |
+
