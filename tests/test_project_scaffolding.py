@@ -24,4 +24,11 @@ def test_ci_workflow_runs_core_quality_gates() -> None:
     assert "uv run ruff check ." in commands
     assert "uv run ruff format --check ." in commands
     assert "uv run ty check" in commands
+    assert "uv build" in commands
     assert "ClientSession" in commands
+
+
+def test_usage_docs_and_examples_are_present() -> None:
+    assert Path("docs/USAGE.md").exists()
+    assert Path("examples/claude_desktop_config.json").exists()
+    assert Path("examples/classification_pipeline.json").exists()

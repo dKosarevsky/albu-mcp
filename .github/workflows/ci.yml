@@ -40,6 +40,9 @@ jobs:
       - name: Run ty
         run: uv run ty check
 
+      - name: Build package
+        run: uv build
+
       - name: MCP stdio smoke
         run: |
           uv run python - <<'PY'

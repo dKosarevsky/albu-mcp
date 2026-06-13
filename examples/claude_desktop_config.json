@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "albumentationsx": {
+      "command": "uv",
+      "args": [
+        "run",
+        "albumentationsx-mcp"
+      ],
+      "cwd": "/path/to/albu-mcp"
+    }
+  }
+}

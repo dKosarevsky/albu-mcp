@@ -18,6 +18,10 @@ def test_server_exposes_documented_tool_names() -> None:
         "validate_pipeline",
         "recommend_pipeline",
         "adjust_pipeline",
+        "explain_pipeline",
+        "list_feedback_tags",
         "render_preview",
+        "list_preview_runs",
+        "get_preview_manifest",
         "export_pipeline",
     }.issubset(tool_names)

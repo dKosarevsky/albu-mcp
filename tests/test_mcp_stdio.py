@@ -35,6 +35,10 @@ def test_mcp_stdio_lists_documented_tools(tmp_path: Path) -> None:
         "validate_pipeline",
         "recommend_pipeline",
         "adjust_pipeline",
+        "explain_pipeline",
+        "list_feedback_tags",
         "export_pipeline",
         "render_preview",
+        "list_preview_runs",
+        "get_preview_manifest",
     }.issubset(tool_names)

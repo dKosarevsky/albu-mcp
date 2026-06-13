@@ -1,0 +1,35 @@
+{
+  "seed": 137,
+  "strict": true,
+  "is_check_shapes": true,
+  "transforms": [
+    {
+      "name": "HorizontalFlip",
+      "p": 0.4
+    },
+    {
+      "name": "RandomBrightnessContrast",
+      "p": 0.4
+    },
+    {
+      "name": "GaussNoise",
+      "params": {
+        "std_range": [
+          0.02,
+          0.1
+        ]
+      },
+      "p": 0.2
+    },
+    {
+      "name": "MotionBlur",
+      "params": {
+        "blur_range": [
+          3,
+          5
+        ]
+      },
+      "p": 0.13
+    }
+  ]
+}

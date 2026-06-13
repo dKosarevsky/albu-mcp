@@ -5,14 +5,25 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import re
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Protocol
 
 import numpy as np
 from PIL import Image
 
-from albumentationsx_mcp.models import ArtifactKind, ArtifactRef, ComposeSpec, PreviewRequest, PreviewResult
+from albumentationsx_mcp.models import (
+    ArtifactKind,
+    ArtifactRef,
+    ComposeSpec,
+    PreviewRequest,
+    PreviewResult,
+    PreviewRunSummary,
+)
+
+_RUN_ID_PATTERN = re.compile(r"^[0-9a-f]{32}$")
 
 
 class PipelineBuilder(Protocol):
@@ -50,6 +61,7 @@ class ArtifactStore:
     def __init__(self, root: Path) -> None:
         self.root = root.resolve()
         self.root.mkdir(parents=True, exist_ok=True)
+        self.index_path = self.root / "index.json"
 
     def create_run_dir(self) -> tuple[str, Path]:
         run_id = uuid.uuid4().hex
@@ -67,6 +79,41 @@ class ArtifactStore:
             sha256=digest,
             size_bytes=path.stat().st_size,
         )
+
+    def record_run(self, manifest_data: dict[str, Any]) -> None:
+        """Record a preview run in a queryable local index."""
+        run_id = str(manifest_data["run_id"])
+        artifacts = list(manifest_data.get("artifacts", []))
+        contact_sheet = next((artifact for artifact in artifacts if artifact.get("kind") == "contact_sheet"), None)
+        summary = PreviewRunSummary(
+            run_id=run_id,
+            created_at=str(manifest_data["created_at"]),
+            manifest_path=str(self.root / run_id / "manifest.json"),
+            artifact_count=len(artifacts),
+            input_count=len(manifest_data.get("inputs", [])),
+            contact_sheet_path=contact_sheet.get("path") if contact_sheet else None,
+        )
+        existing = [run for run in self.list_runs(limit=100) if run.run_id != run_id]
+        payload = {
+            "runs": [summary.model_dump(mode="json"), *[run.model_dump(mode="json") for run in existing]][:100],
+        }
+        self.index_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+
+    def list_runs(self, limit: int = 20) -> list[PreviewRunSummary]:
+        """Return recent preview run summaries, newest first."""
+        if not self.index_path.exists():
+            return []
+        payload = json.loads(self.index_path.read_text(encoding="utf-8"))
+        return [PreviewRunSummary.model_validate(item) for item in payload.get("runs", [])[: max(0, limit)]]
+
+    def read_manifest(self, run_id: str) -> dict[str, Any]:
+        """Read a preview manifest by run id without allowing path traversal."""
+        if not _RUN_ID_PATTERN.fullmatch(run_id):
+            raise ValueError(f"Invalid preview run id: {run_id}")
+        manifest_path = self.root / run_id / "manifest.json"
+        if not manifest_path.exists():
+            raise FileNotFoundError(manifest_path)
+        return json.loads(manifest_path.read_text(encoding="utf-8"))
 
 
 class PreviewService:
@@ -113,11 +160,13 @@ class PreviewService:
         manifest_path = run_dir / "manifest.json"
         manifest_data: dict[str, Any] = {
             "run_id": run_id,
+            "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             "inputs": [str(path) for path in source_paths],
             "pipeline": request.pipeline.model_dump(mode="json", exclude_none=True),
             "artifacts": [artifact.model_dump(mode="json") for artifact in artifacts],
         }
         manifest_path.write_text(json.dumps(manifest_data, indent=2, sort_keys=True), encoding="utf-8")
+        self.artifact_store.record_run(manifest_data)
         manifest = self.artifact_store.artifact_ref(manifest_path, kind="manifest", mime_type="application/json")
         return PreviewResult(
             run_id=run_id,

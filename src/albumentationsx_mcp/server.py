@@ -10,6 +10,7 @@ from typing import Any, Literal
 from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
+from albumentationsx_mcp.advisor import explain_pipeline, list_feedback_tags
 from albumentationsx_mcp.catalog import TransformCatalog
 from albumentationsx_mcp.models import ComposeSpec, PreviewRequest, TargetSpec
 from albumentationsx_mcp.pipeline import PipelineService
@@ -37,7 +38,7 @@ def settings_from_environment() -> ServerSettings:
 OutputFormat = Literal["python", "json", "yaml"]
 
 
-def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:
+def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noqa: PLR0915
     """Create and register the AlbumentationsX FastMCP server."""
     settings = settings or settings_from_environment()
     catalog = TransformCatalog()
@@ -64,6 +65,41 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:
     def pipeline_schema() -> str:
         """Return the JSON schema for pipeline specs."""
         return json.dumps(ComposeSpec.model_json_schema(), sort_keys=True)
+
+    @mcp.resource("albumentationsx://feedback-tags")
+    def feedback_tags_resource() -> str:
+        """Return structured feedback tags accepted by adjustment tools."""
+        data = [tag.model_dump(mode="json") for tag in list_feedback_tags()]
+        return json.dumps(data, sort_keys=True)
+
+    @mcp.resource("albumentationsx://capabilities")
+    def capabilities_resource() -> str:
+        """Return operational limits and safety boundaries for this MCP server."""
+        return json.dumps(
+            {
+                "allowed_roots": [str(path.resolve()) for path in settings.allowed_roots],
+                "artifact_root": str(settings.artifact_root.resolve()),
+                "preview_limits": {
+                    "max_input_paths": 32,
+                    "max_variants_per_image": 16,
+                    "max_side": 4096,
+                },
+                "tools": [
+                    "search_transforms",
+                    "get_transform_schema",
+                    "validate_pipeline",
+                    "recommend_pipeline",
+                    "adjust_pipeline",
+                    "explain_pipeline",
+                    "list_feedback_tags",
+                    "render_preview",
+                    "list_preview_runs",
+                    "get_preview_manifest",
+                    "export_pipeline",
+                ],
+            },
+            sort_keys=True,
+        )
 
     @mcp.tool()
     def search_transforms(
@@ -113,6 +149,18 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:
         spec = ComposeSpec.model_validate(pipeline)
         return adjust_pipeline(spec, feedback_tags).model_dump(mode="json", exclude_none=True)
 
+    @mcp.tool(name="explain_pipeline")
+    def explain_pipeline_tool(pipeline: dict[str, Any], target: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Explain likely pipeline effects, risks, and useful preview feedback tags."""
+        spec = ComposeSpec.model_validate(pipeline)
+        target_spec = TargetSpec.model_validate(target or {})
+        return explain_pipeline(spec, target_spec).model_dump(mode="json", exclude_none=True)
+
+    @mcp.tool(name="list_feedback_tags")
+    def list_feedback_tags_tool() -> dict[str, Any]:
+        """List structured feedback tags accepted by adjust_pipeline."""
+        return {"tags": [tag.model_dump(mode="json") for tag in list_feedback_tags()]}
+
     @mcp.tool()
     def export_pipeline(pipeline: dict[str, Any], output_format: OutputFormat = "python") -> dict[str, Any]:
         """Export a validated pipeline as Python, JSON, or YAML."""
@@ -124,6 +172,19 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:
         """Render deterministic preview artifacts for local input images."""
         preview_request = PreviewRequest.model_validate(request)
         return preview_service.render_preview(preview_request).model_dump(mode="json")
+
+    @mcp.tool()
+    def list_preview_runs(limit: int = 20) -> dict[str, Any]:
+        """List recent preview runs recorded under the configured artifact root."""
+        bounded_limit = max(1, min(limit, 100))
+        return {
+            "runs": [run.model_dump(mode="json") for run in preview_service.artifact_store.list_runs(bounded_limit)]
+        }
+
+    @mcp.tool()
+    def get_preview_manifest(run_id: str) -> dict[str, Any]:
+        """Return the manifest JSON for one recorded preview run."""
+        return preview_service.artifact_store.read_manifest(run_id)
 
     @mcp.prompt()
     def build_robustness_augmentation_session(task: str, targets: str = "image") -> str:

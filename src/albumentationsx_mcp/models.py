@@ -8,6 +8,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 ArtifactKind = Literal["image", "manifest", "contact_sheet"]
+RiskLevel = Literal["low", "medium", "high"]
 
 
 class StrictModel(BaseModel):
@@ -138,6 +139,17 @@ class PreviewResult(StrictModel):
     pipeline: dict[str, Any]
 
 
+class PreviewRunSummary(StrictModel):
+    """Queryable summary for one rendered preview run."""
+
+    run_id: str
+    created_at: str
+    manifest_path: str
+    artifact_count: int
+    input_count: int
+    contact_sheet_path: str | None = None
+
+
 class TransformSearchResult(StrictModel):
     """Search result for transform discovery."""
 
@@ -147,3 +159,32 @@ class TransformSearchResult(StrictModel):
     score: float
     summary: str | None = None
     supported_bbox_types: list[str] | None = None
+
+
+class FeedbackTagInfo(StrictModel):
+    """Structured feedback tag accepted by pipeline adjustment tools."""
+
+    name: str
+    description: str
+    applies_to: list[str]
+    mitigation: str
+
+
+class TransformExplanation(StrictModel):
+    """Human and machine-readable explanation of one transform's likely effect."""
+
+    name: str
+    category: str
+    probability: float
+    impact: str
+    notable_params: dict[str, Any] = Field(default_factory=dict)
+
+
+class PipelineExplanation(StrictModel):
+    """Pipeline explanation for preview-driven augmentation tuning."""
+
+    risk_level: RiskLevel
+    summary: str
+    transforms: list[TransformExplanation]
+    warnings: list[ValidationIssue] = Field(default_factory=list)
+    suggested_feedback_tags: list[str] = Field(default_factory=list)

@@ -47,8 +47,14 @@ Claude Desktop or another MCP host can launch it with stdio:
 - `validate_pipeline`: validate a typed pipeline spec before running it.
 - `recommend_pipeline`: create a conservative task preset for classification, detection, segmentation, or OCR.
 - `adjust_pipeline`: apply structured preview feedback such as `too_noisy` or `too_blurry`.
+- `explain_pipeline`: summarize likely effects, preview risks, and useful feedback tags.
+- `list_feedback_tags`: list the structured feedback contract used by `adjust_pipeline`.
 - `render_preview`: create deterministic local preview artifacts inside an allowed output root.
+- `list_preview_runs`: list recent preview manifests recorded under the artifact root.
+- `get_preview_manifest`: read one recorded preview manifest by run id.
 - `export_pipeline`: export a pipeline as Python, JSON, or YAML.
+
+See [docs/USAGE.md](docs/USAGE.md) for an end-to-end MCP host workflow and example configuration files.
 
 ## Verification
 
@@ -57,4 +63,5 @@ uv run pytest
 uv run ruff check .
 uv run ruff format --check .
 uv run ty check
+uv build
 ```
