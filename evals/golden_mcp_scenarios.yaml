@@ -49,6 +49,7 @@ scenarios:
     recommend_recipe: true
     assert_recipe_explanations: true
     assert_preview_report_images: true
+    assert_preview_report_feedback: true
     recipe_task: ocr
     expected_recipe_profile: ocr
     quality_profile: ocr

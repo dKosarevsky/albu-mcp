@@ -13,7 +13,13 @@ from pydantic import BaseModel, Field
 from albumentationsx_mcp.advisor import explain_pipeline, list_feedback_tags
 from albumentationsx_mcp.catalog import TransformCatalog
 from albumentationsx_mcp.dataset import score_dataset_preview_candidates as score_dataset_candidates
-from albumentationsx_mcp.models import ComposeSpec, PreviewRequest, QualityProfileName, TargetSpec
+from albumentationsx_mcp.models import (
+    ComposeSpec,
+    PreviewFeedbackRecord,
+    PreviewRequest,
+    QualityProfileName,
+    TargetSpec,
+)
 from albumentationsx_mcp.pipeline import PipelineService
 from albumentationsx_mcp.presets import Intensity, adjust_pipeline, recommend_pipeline
 from albumentationsx_mcp.preview import ArtifactStore, PathPolicy, PreviewService
@@ -513,6 +519,10 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
                 candidate_run_ids=set(bounded_candidate_ids),
                 include_decisions=include_decisions,
             ),
+            feedback_records=_matching_preview_feedback(
+                feedback_store,
+                run_ids={baseline_run_id, *bounded_candidate_ids},
+            ),
             output_format=output_format,
         ).model_dump(mode="json")
 
@@ -579,6 +589,17 @@ def _matching_tuning_decisions(
         for decision in decisions
         if decision.baseline_run_id == baseline_run_id and decision.candidate_run_id in candidate_run_ids
     ]
+
+
+def _matching_preview_feedback(
+    feedback_store: PreviewFeedbackStore,
+    *,
+    run_ids: set[str],
+) -> list[PreviewFeedbackRecord]:
+    records: list[PreviewFeedbackRecord] = []
+    for run_id in sorted(run_ids):
+        records.extend(feedback_store.list_feedback(run_id=run_id, limit=100).feedback)
+    return sorted(records, key=lambda record: record.created_at, reverse=True)
 
 
 def _validate_feedback_target(manifest: dict[str, Any], *, image_index: int, variant_index: int) -> None:

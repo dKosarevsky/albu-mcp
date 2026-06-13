@@ -27,7 +27,9 @@ def test_golden_eval_assets_are_present() -> None:
     }
     assert quality_scenario["record_preview_feedback"] is True
     assert quality_scenario["feedback_image_index"] == 7
+    assert quality_scenario["assert_preview_report_feedback"] is True
     assert "record_preview_feedback" in runner_source
+    assert "assert_preview_report_feedback" in runner_source
 
 
 def test_golden_eval_runner_executes_scenarios_over_stdio(tmp_path: Path) -> None:

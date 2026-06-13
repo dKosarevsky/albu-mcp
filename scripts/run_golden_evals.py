@@ -423,12 +423,30 @@ async def _run_dataset_scoring_and_preview_report(
             expected_markup = _expected_report_image_markup(scenario.get("preview_report_format", "markdown"))
             if expected_markup not in report["content"]:
                 raise AssertionError(f"{scenario['name']} preview report did not include image markup: {report}")
+        if scenario.get("assert_preview_report_feedback"):
+            _assert_preview_report_feedback(scenario, report["content"])
 
 
 def _expected_report_image_markup(output_format: str) -> str:
     if output_format == "html":
         return '<img class="contact-sheet"'
     return "![contact sheet]"
+
+
+def _assert_preview_report_feedback(scenario: dict[str, Any], content: str) -> None:
+    image_index = int(scenario.get("feedback_image_index", 0))
+    variant_index = int(scenario.get("feedback_variant_index", 0))
+    expected_values = [
+        "Concrete Preview Feedback",
+        f"example {image_index + 1} / variant {variant_index + 1}",
+        scenario.get("preview_feedback_note", ""),
+        *scenario.get("preview_feedback_tags", scenario.get("feedback_tags", [])),
+    ]
+    missing_values = [str(value) for value in expected_values if value and str(value) not in content]
+    if missing_values:
+        raise AssertionError(
+            f"{scenario['name']} preview report did not include recorded feedback values: {missing_values}"
+        )
 
 
 async def _record_tuning_decision_and_report(
