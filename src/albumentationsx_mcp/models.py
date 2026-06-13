@@ -160,6 +160,35 @@ class PreviewRunSummary(StrictModel):
     contact_sheet_path: str | None = None
 
 
+class PreviewManifestSummary(StrictModel):
+    """Agent-legible summary embedded in and derived from preview manifests."""
+
+    run_id: str
+    created_at: str
+    input_count: int
+    variants_per_image: int | None = None
+    seed: int | None = None
+    effective_seeds: list[int] = Field(default_factory=list)
+    max_side: int | None = None
+    transform_count: int
+    transform_names: list[str]
+    artifact_counts: dict[str, int] = Field(default_factory=dict)
+    contact_sheet_paths: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+
+
+class PreviewRunComparison(StrictModel):
+    """Comparison of two preview run manifests for feedback-driven tuning."""
+
+    baseline: PreviewManifestSummary
+    candidate: PreviewManifestSummary
+    pipeline_changed: bool
+    inputs_changed: bool
+    seed_changed: bool
+    artifact_count_delta: int
+    review_notes: list[str] = Field(default_factory=list)
+
+
 class TransformSearchResult(StrictModel):
     """Search result for transform discovery."""
 

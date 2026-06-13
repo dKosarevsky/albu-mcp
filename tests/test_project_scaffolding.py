@@ -48,6 +48,9 @@ def test_usage_docs_and_examples_are_present() -> None:
     assert Path("docs/RELEASE.md").exists()
     assert Path("server.json").exists()
     assert Path("examples/claude_desktop_config.json").exists()
+    assert Path("examples/claude_desktop_pypi_config.json").exists()
+    assert Path("examples/cursor_mcp_config.json").exists()
+    assert Path("examples/codex_mcp_config.toml").exists()
     assert Path("examples/classification_pipeline.json").exists()
 
 
@@ -82,6 +85,37 @@ def test_release_workflow_publishes_to_pypi_with_trusted_publishing() -> None:
     assert release_job["permissions"]["contents"] == "write"
 
 
+def test_public_package_metadata_is_polished() -> None:
+    pyproject = Path("pyproject.toml").read_text(encoding="utf-8")
+    readme = Path("README.md").read_text(encoding="utf-8")
+
+    assert "https://img.shields.io/pypi/v/albumentationsx-mcp" in readme
+    assert "https://pypi.org/project/albumentationsx-mcp/" in readme
+    assert "https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.dKosarevsky/albu-mcp" in readme
+    assert "[project.urls]" in pyproject
+    assert '"Repository" = "https://github.com/dKosarevsky/albu-mcp"' in pyproject
+    assert '"Documentation" = "https://github.com/dKosarevsky/albu-mcp/blob/main/docs/USAGE.md"' in pyproject
+    assert (
+        '"MCP Registry" = "https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.dKosarevsky/albu-mcp"'
+        in pyproject
+    )
+    assert '"Development Status :: 3 - Alpha"' in pyproject
+    assert '"Framework :: Pytest"' in pyproject
+    assert '"Topic :: Scientific/Engineering :: Artificial Intelligence"' in pyproject
+
+
+def test_release_workflow_checks_versions_and_smokes_published_package() -> None:
+    workflow = yaml.safe_load(Path(".github/workflows/release.yml").read_text(encoding="utf-8"))
+    build_commands = "\n".join(step.get("run", "") for step in workflow["jobs"]["build"]["steps"])
+    smoke_job = workflow["jobs"]["post-release-smoke"]
+    smoke_commands = "\n".join(step.get("run", "") for step in smoke_job["steps"])
+
+    assert Path("scripts/check_release_version.py").exists()
+    assert "uv run python scripts/check_release_version.py" in build_commands
+    assert smoke_job["needs"] == "github-release"
+    assert 'uvx --from "albumentationsx-mcp==${GITHUB_REF_NAME#v}" albumentationsx-mcp --help' in smoke_commands
+
+
 def test_mcp_registry_metadata_is_ready_for_pypi_distribution() -> None:
     server_json = json.loads(Path("server.json").read_text(encoding="utf-8"))
     readme = Path("README.md").read_text(encoding="utf-8")
@@ -102,3 +136,4 @@ def test_mcp_registry_publish_workflow_is_present() -> None:
     assert workflow["jobs"]["publish"]["permissions"]["id-token"] == "write"
     assert "mcp-publisher login github-oidc" in commands
     assert "mcp-publisher publish" in commands
+    assert "registry.modelcontextprotocol.io/v0.1/servers?search=io.github.dKosarevsky/albu-mcp" in commands

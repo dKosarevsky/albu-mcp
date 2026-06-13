@@ -23,3 +23,8 @@ jobs:
 
       - name: Publish metadata to MCP Registry
         run: ./mcp-publisher publish
+
+      - name: Verify MCP Registry metadata
+        run: |
+          curl -fsSL "https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.dKosarevsky/albu-mcp" \
+            | python -c 'import json, sys; data = json.load(sys.stdin); assert data["metadata"]["count"] >= 1'

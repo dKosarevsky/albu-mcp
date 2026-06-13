@@ -17,6 +17,7 @@ def test_golden_eval_assets_are_present() -> None:
     assert {scenario["name"] for scenario in scenarios["scenarios"]} == {
         "classification_recommend_validate_explain_export",
         "preview_lifecycle",
+        "preview_batch_compare",
     }
 
 
@@ -38,3 +39,4 @@ def test_golden_eval_runner_executes_scenarios_over_stdio(tmp_path: Path) -> Non
     assert completed.returncode == 0, completed.stderr
     assert "classification_recommend_validate_explain_export: ok" in completed.stdout
     assert "preview_lifecycle: ok" in completed.stdout
+    assert "preview_batch_compare: ok" in completed.stdout

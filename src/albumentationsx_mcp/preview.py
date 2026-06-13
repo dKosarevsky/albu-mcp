@@ -8,6 +8,7 @@ import math
 import re
 import shutil
 import uuid
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Protocol
@@ -27,8 +28,10 @@ from albumentationsx_mcp.models import (
     ComposeSpec,
     PreviewRequest,
     PreviewResult,
+    PreviewRunComparison,
     PreviewRunSummary,
 )
+from albumentationsx_mcp.preview_analysis import compare_preview_manifests
 
 _RUN_ID_PATTERN = re.compile(r"^[0-9a-f]{32}$")
 
@@ -230,11 +233,34 @@ class PreviewService:
             )
 
         manifest_path = run_dir / "manifest.json"
+        seed = request.seed if request.seed is not None else request.pipeline.seed
+        effective_seeds = (
+            [request.seed + index for index in range(request.variants_per_image)]
+            if request.seed is not None
+            else ([request.pipeline.seed] if request.pipeline.seed is not None else [])
+        )
+        artifact_counts = Counter(artifact.kind for artifact in artifacts)
         manifest_data: dict[str, Any] = {
             "run_id": run_id,
             "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             "inputs": [str(path) for path in source_paths],
             "pipeline": request.pipeline.model_dump(mode="json", exclude_none=True),
+            "summary": {
+                "input_count": len(source_paths),
+                "variants_per_image": request.variants_per_image,
+                "seed": seed,
+                "effective_seeds": effective_seeds,
+                "max_side": request.max_side,
+                "transform_count": len(request.pipeline.transforms),
+                "transform_names": [transform.name for transform in request.pipeline.transforms],
+                "artifact_counts": dict(artifact_counts),
+                "contact_sheet_paths": [
+                    artifact.path
+                    for artifact in artifacts
+                    if artifact.kind in {"contact_sheet", "overlay_contact_sheet"}
+                ],
+                "warnings": [],
+            },
             "artifacts": [artifact.model_dump(mode="json") for artifact in artifacts],
         }
         manifest_path.write_text(json.dumps(manifest_data, indent=2, sort_keys=True), encoding="utf-8")
@@ -247,7 +273,12 @@ class PreviewService:
             pipeline=request.pipeline.model_dump(mode="json", exclude_none=True),
         )
 
-    @staticmethod
+    def compare_preview_runs(self, baseline_run_id: str, candidate_run_id: str) -> PreviewRunComparison:
+        """Compare two recorded preview manifests."""
+        baseline = self.artifact_store.read_manifest(baseline_run_id)
+        candidate = self.artifact_store.read_manifest(candidate_run_id)
+        return compare_preview_manifests(baseline, candidate)
+
     @staticmethod
     def _resolve_annotations(request: PreviewRequest) -> list[Any]:
         if request.annotations is None:

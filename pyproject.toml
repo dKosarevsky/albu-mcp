@@ -11,6 +11,21 @@ requires-python = ">=3.10"
 license = "AGPL-3.0-or-later"
 authors = [{ name = "dKosarevsky" }]
 keywords = ["albumentationsx", "mcp", "computer-vision", "augmentation"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Framework :: Pytest",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Scientific/Engineering :: Image Processing",
+  "Typing :: Typed",
+]
 dependencies = [
   "albu-spec>=0.0.6",
   "albumentationsx[headless]>=2.3.1",
@@ -20,6 +35,14 @@ dependencies = [
   "pydantic>=2.12.4",
   "pyyaml>=6.0.0",
 ]
+
+[project.urls]
+"Homepage" = "https://github.com/dKosarevsky/albu-mcp"
+"Repository" = "https://github.com/dKosarevsky/albu-mcp"
+"Documentation" = "https://github.com/dKosarevsky/albu-mcp/blob/main/docs/USAGE.md"
+"Issues" = "https://github.com/dKosarevsky/albu-mcp/issues"
+"MCP Registry" = "https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.dKosarevsky/albu-mcp"
+"PyPI" = "https://pypi.org/project/albumentationsx-mcp/"
 
 [project.scripts]
 albumentationsx-mcp = "albumentationsx_mcp.cli:main"

@@ -40,6 +40,10 @@ def test_preview_rendering_records_queryable_run_index(tmp_path: Path) -> None:
     assert runs[0].artifact_count == len(result.artifacts)
     assert runs[0].input_count == 1
     assert manifest["run_id"] == result.run_id
+    assert manifest["summary"]["input_count"] == 1
+    assert manifest["summary"]["variants_per_image"] == 2
+    assert manifest["summary"]["transform_names"] == ["HorizontalFlip"]
+    assert manifest["summary"]["artifact_counts"]["image"] == 2
     assert any(artifact["kind"] == "contact_sheet" for artifact in manifest["artifacts"])
 
 
@@ -91,3 +95,33 @@ def test_artifact_store_prunes_runs_beyond_retention_limit(tmp_path: Path) -> No
     runs = store.list_runs()
     assert [run.run_id for run in runs] == [second.run_id]
     assert not (store.root / first.run_id).exists()
+
+
+def test_preview_service_compares_two_recorded_runs(tmp_path: Path) -> None:
+    image_path = tmp_path / "input.png"
+    Image.fromarray(np.full((16, 16, 3), 128, dtype=np.uint8)).save(image_path)
+    store = ArtifactStore(tmp_path / "artifacts")
+    service = PreviewService(IdentityPipelineService(), PathPolicy([tmp_path]), store)
+    baseline = service.render_preview(
+        PreviewRequest(
+            input_paths=[image_path],
+            pipeline=ComposeSpec(transforms=[TransformSpec(name="HorizontalFlip", p=1.0)], seed=10),
+            variants_per_image=1,
+            seed=10,
+        ),
+    )
+    candidate = service.render_preview(
+        PreviewRequest(
+            input_paths=[image_path],
+            pipeline=ComposeSpec(transforms=[TransformSpec(name="VerticalFlip", p=1.0)], seed=20),
+            variants_per_image=1,
+            seed=20,
+        ),
+    )
+
+    comparison = service.compare_preview_runs(baseline.run_id, candidate.run_id)
+
+    assert comparison.baseline.run_id == baseline.run_id
+    assert comparison.candidate.run_id == candidate.run_id
+    assert comparison.pipeline_changed is True
+    assert comparison.seed_changed is True

@@ -113,16 +113,16 @@ async def _run_preview_lifecycle(
     images_dir: Path,
     pipeline: dict[str, Any],
 ) -> None:
-    image_path = images_dir / f"{scenario['name']}.png"
-    Image.fromarray(np.full((32, 32, 3), 180, dtype=np.uint8)).save(image_path)
+    image_paths = _write_preview_inputs(images_dir, scenario)
     preview = await _call_tool_json(
         session,
-        "render_preview",
+        scenario.get("preview_tool", "render_preview"),
         {
             "request": {
-                "input_paths": [str(image_path)],
+                "input_paths": [str(path) for path in image_paths],
                 "pipeline": pipeline,
                 "variants_per_image": scenario.get("variants_per_image", 1),
+                "seed": scenario.get("seed", 137),
                 "max_side": 128,
             },
         },
@@ -134,9 +134,64 @@ async def _run_preview_lifecycle(
     manifest = await _call_tool_json(session, "get_preview_manifest", {"run_id": run_id})
     if manifest["run_id"] != run_id:
         raise AssertionError(f"{scenario['name']} returned wrong manifest: {manifest}")
+    if "summary" not in manifest:
+        raise AssertionError(f"{scenario['name']} manifest has no summary: {manifest}")
+    if scenario.get("compare_preview"):
+        await _run_preview_comparison(session, scenario, image_paths, pipeline, run_id)
     deleted = await _call_tool_json(session, "delete_preview_run", {"run_id": run_id})
     if deleted["deleted"]["run_id"] != run_id:
         raise AssertionError(f"{scenario['name']} did not delete the preview run")
+
+
+def _write_preview_inputs(images_dir: Path, scenario: dict[str, Any]) -> list[Path]:
+    paths: list[Path] = []
+    input_count = int(scenario.get("input_count", 1))
+    for index in range(input_count):
+        image_path = images_dir / f"{scenario['name']}-{index}.png"
+        Image.fromarray(np.full((32, 32, 3), 180 + index, dtype=np.uint8)).save(image_path)
+        paths.append(image_path)
+    return paths
+
+
+async def _run_preview_comparison(
+    session: ClientSession,
+    scenario: dict[str, Any],
+    image_paths: list[Path],
+    pipeline: dict[str, Any],
+    baseline_run_id: str,
+) -> None:
+    candidate_pipeline = await _call_tool_json(
+        session,
+        "adjust_pipeline",
+        {"pipeline": pipeline, "feedback_tags": scenario.get("feedback_tags", ["too_noisy"])},
+    )
+    candidate = await _call_tool_json(
+        session,
+        "render_preview_batch",
+        {
+            "request": {
+                "input_paths": [str(path) for path in image_paths],
+                "pipeline": candidate_pipeline,
+                "variants_per_image": scenario.get("variants_per_image", 1),
+                "seed": int(scenario.get("seed", 137)) + 10,
+                "max_side": 128,
+            },
+        },
+    )
+    comparison = await _call_tool_json(
+        session,
+        "compare_preview_runs",
+        {"baseline_run_id": baseline_run_id, "candidate_run_id": candidate["run_id"]},
+    )
+    if comparison["baseline"]["run_id"] != baseline_run_id:
+        raise AssertionError(f"{scenario['name']} comparison returned wrong baseline: {comparison}")
+    if comparison["candidate"]["run_id"] != candidate["run_id"]:
+        raise AssertionError(f"{scenario['name']} comparison returned wrong candidate: {comparison}")
+    if not comparison["review_notes"]:
+        raise AssertionError(f"{scenario['name']} comparison returned no review notes")
+    deleted = await _call_tool_json(session, "delete_preview_run", {"run_id": candidate["run_id"]})
+    if deleted["deleted"]["run_id"] != candidate["run_id"]:
+        raise AssertionError(f"{scenario['name']} did not delete candidate preview run")
 
 
 async def _call_tool_json(session: ClientSession, name: str, arguments: dict[str, Any]) -> dict[str, Any]:

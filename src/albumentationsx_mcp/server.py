@@ -16,6 +16,19 @@ from albumentationsx_mcp.models import ComposeSpec, PreviewRequest, TargetSpec
 from albumentationsx_mcp.pipeline import PipelineService
 from albumentationsx_mcp.presets import Intensity, adjust_pipeline, recommend_pipeline
 from albumentationsx_mcp.preview import ArtifactStore, PathPolicy, PreviewService
+from albumentationsx_mcp.prompts import (
+    build_robustness_augmentation_session as build_robustness_prompt,
+)
+from albumentationsx_mcp.prompts import (
+    compare_preview_runs_for_feedback as compare_preview_runs_prompt,
+)
+from albumentationsx_mcp.prompts import (
+    export_reproducible_pipeline as export_pipeline_prompt,
+)
+from albumentationsx_mcp.prompts import (
+    tune_pipeline_from_preview_feedback as tune_feedback_prompt,
+)
+from albumentationsx_mcp.workflows import get_agent_workflow, list_agent_workflows
 
 
 class ServerSettings(BaseModel):
@@ -97,15 +110,44 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
                     "explain_pipeline",
                     "list_feedback_tags",
                     "render_preview",
+                    "render_preview_batch",
+                    "compare_preview_runs",
                     "list_preview_runs",
                     "get_preview_manifest",
                     "delete_preview_run",
                     "cleanup_preview_runs",
                     "export_pipeline",
                 ],
+                "prompts": [
+                    "build_robustness_augmentation_session",
+                    "compare_preview_runs_for_feedback",
+                    "tune_pipeline_from_preview_feedback",
+                    "export_reproducible_pipeline",
+                ],
+                "workflow_resources": [
+                    "albumentationsx://workflows/catalog",
+                    "albumentationsx://workflows/preview-tuning",
+                    "albumentationsx://workflows/annotation-preview",
+                ],
             },
             sort_keys=True,
         )
+
+    @mcp.resource("albumentationsx://workflows/catalog")
+    def workflows_catalog() -> str:
+        """Return built-in agent workflow guides as compact JSON."""
+        data = [workflow.model_dump(mode="json") for workflow in list_agent_workflows()]
+        return json.dumps(data, sort_keys=True)
+
+    @mcp.resource("albumentationsx://workflows/preview-tuning")
+    def preview_tuning_workflow() -> str:
+        """Return the preview-driven augmentation tuning workflow guide."""
+        return get_agent_workflow("preview-tuning").model_dump_json()
+
+    @mcp.resource("albumentationsx://workflows/annotation-preview")
+    def annotation_preview_workflow() -> str:
+        """Return the annotation-aware preview workflow guide."""
+        return get_agent_workflow("annotation-preview").model_dump_json()
 
     @mcp.tool()
     def search_transforms(
@@ -180,6 +222,17 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
         return preview_service.render_preview(preview_request).model_dump(mode="json")
 
     @mcp.tool()
+    def render_preview_batch(request: dict[str, Any]) -> dict[str, Any]:
+        """Render deterministic batch preview artifacts and contact sheets for local input images."""
+        preview_request = PreviewRequest.model_validate(request)
+        return preview_service.render_preview(preview_request).model_dump(mode="json")
+
+    @mcp.tool()
+    def compare_preview_runs(baseline_run_id: str, candidate_run_id: str) -> dict[str, Any]:
+        """Compare two preview manifests to guide structured feedback and reproducible tuning."""
+        return preview_service.compare_preview_runs(baseline_run_id, candidate_run_id).model_dump(mode="json")
+
+    @mcp.tool()
     def list_preview_runs(limit: int = 20) -> dict[str, Any]:
         """List recent preview runs recorded under the configured artifact root."""
         bounded_limit = max(1, min(limit, 100))
@@ -207,11 +260,21 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
     @mcp.prompt()
     def build_robustness_augmentation_session(task: str, targets: str = "image") -> str:
         """Guide an assistant through preview-driven augmentation tuning."""
-        return (
-            "Use AlbumentationsX MCP to recommend a conservative pipeline for "
-            f"{task} with targets {targets}. Validate it, render a small preview set, "
-            "ask the user for structured feedback tags, then adjust and re-render. "
-            "Keep the exported pipeline and manifest reproducible."
-        )
+        return build_robustness_prompt(task, targets)
+
+    @mcp.prompt()
+    def compare_preview_runs_for_feedback(baseline_run_id: str, candidate_run_id: str) -> str:
+        """Guide an assistant through preview run comparison before adjustment."""
+        return compare_preview_runs_prompt(baseline_run_id, candidate_run_id)
+
+    @mcp.prompt()
+    def tune_pipeline_from_preview_feedback(task: str, run_id: str, feedback_tags: str) -> str:
+        """Guide an assistant through structured preview feedback adjustment."""
+        return tune_feedback_prompt(task, run_id, feedback_tags)
+
+    @mcp.prompt()
+    def export_reproducible_pipeline(run_id: str, output_format: str = "python") -> str:
+        """Guide final reproducible pipeline export after preview acceptance."""
+        return export_pipeline_prompt(run_id, output_format)
 
     return mcp

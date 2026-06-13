@@ -13,3 +13,15 @@ scenarios:
     export_format: python
     preview: true
     variants_per_image: 1
+
+  - name: preview_batch_compare
+    task: classification
+    intensity: low
+    targets: ["image"]
+    export_format: json
+    preview: true
+    preview_tool: render_preview_batch
+    compare_preview: true
+    input_count: 2
+    variants_per_image: 1
+    feedback_tags: ["too_noisy"]

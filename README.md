@@ -7,8 +7,9 @@ pipeline specs.
 <!-- mcp-name: io.github.dKosarevsky/albu-mcp -->
 
 [![CI](https://github.com/dKosarevsky/albu-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/dKosarevsky/albu-mcp/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/albumentationsx-mcp)](https://pypi.org/project/albumentationsx-mcp/)
 [![Python](https://img.shields.io/badge/python-3.10--3.13-blue)](pyproject.toml)
-[![MCP](https://img.shields.io/badge/MCP-AlbumentationsX-green)](docs/USAGE.md)
+[![MCP Registry](https://img.shields.io/badge/MCP%20Registry-active-green)](https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.dKosarevsky/albu-mcp)
 
 ## Scope
 
@@ -22,14 +23,16 @@ The server does not execute arbitrary Python, fetch remote images, overwrite dat
 
 ## Install
 
-```bash
-uv sync --all-extras --dev
-```
-
-After the Python MCP server package is published to PyPI, it can be launched without cloning:
+Run the published MCP server without cloning:
 
 ```bash
 uvx --from albumentationsx-mcp albumentationsx-mcp
+```
+
+For local development:
+
+```bash
+uv sync --all-extras --dev
 ```
 
 ## Run
@@ -38,7 +41,7 @@ uvx --from albumentationsx-mcp albumentationsx-mcp
 uv run albumentationsx-mcp
 ```
 
-Claude Desktop or another MCP host can launch it with stdio:
+Claude Desktop or another JSON-configured MCP host can launch a local checkout with stdio:
 
 ```json
 {
@@ -52,6 +55,23 @@ Claude Desktop or another MCP host can launch it with stdio:
 }
 ```
 
+Installed from PyPI:
+
+```json
+{
+  "mcpServers": {
+    "albumentationsx": {
+      "command": "uvx",
+      "args": ["--from", "albumentationsx-mcp", "albumentationsx-mcp"]
+    }
+  }
+}
+```
+
+See [examples/claude_desktop_pypi_config.json](examples/claude_desktop_pypi_config.json),
+[examples/cursor_mcp_config.json](examples/cursor_mcp_config.json), and
+[examples/codex_mcp_config.toml](examples/codex_mcp_config.toml) for copyable host snippets.
+
 ## Core Tools
 
 - `search_transforms`: search transform metadata by query, targets, type, and bbox support.
@@ -62,13 +82,17 @@ Claude Desktop or another MCP host can launch it with stdio:
 - `explain_pipeline`: summarize likely effects, preview risks, and useful feedback tags.
 - `list_feedback_tags`: list the structured feedback contract used by `adjust_pipeline`.
 - `render_preview`: create deterministic local preview artifacts inside an allowed output root.
+- `render_preview_batch`: create deterministic multi-image preview contact sheets using the same request schema.
+- `compare_preview_runs`: compare two preview manifests before choosing feedback tags or exporting a pipeline.
 - `list_preview_runs`: list recent preview manifests recorded under the artifact root.
 - `get_preview_manifest`: read one recorded preview manifest by run id.
 - `delete_preview_run`: delete one preview run and its artifacts.
 - `cleanup_preview_runs`: prune older preview runs beyond a retention count.
 - `export_pipeline`: export a pipeline as Python, JSON, or YAML.
 
-`render_preview` supports optional bboxes, keypoints, and mask paths for annotation overlay previews.
+`render_preview` and `render_preview_batch` support optional bboxes, keypoints, and mask paths for annotation overlay
+previews. Preview manifests include an agent-legible `summary` block with input counts, seeds, transform names, artifact
+counts, contact sheets, and warnings.
 
 See [docs/USAGE.md](docs/USAGE.md) for an end-to-end MCP host workflow, [docs/RELEASE.md](docs/RELEASE.md) for the
 package and MCP Registry release process, [server.json](server.json) for public discovery metadata, and

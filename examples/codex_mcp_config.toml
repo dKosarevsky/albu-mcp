@@ -1,0 +1,3 @@
+[mcp_servers.albumentationsx]
+command = "uvx"
+args = ["--from", "albumentationsx-mcp", "albumentationsx-mcp"]
