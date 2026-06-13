@@ -225,6 +225,33 @@ class QualityProfileInfo(StrictModel):
     thresholds: dict[str, float] = Field(default_factory=dict)
 
 
+class RecipeInfo(StrictModel):
+    """Agent-legible task recipe metadata."""
+
+    name: str
+    description: str
+    task_aliases: list[str] = Field(default_factory=list)
+    quality_profile: QualityProfileName
+    default_targets: list[str] = Field(default_factory=list)
+    feedback_tags: list[str] = Field(default_factory=list)
+    recommended_tools: list[str] = Field(default_factory=list)
+
+
+class RecipeRecommendation(StrictModel):
+    """Task-aware starter recipe and workflow guidance."""
+
+    task: str
+    recipe_name: str
+    intensity: Literal["low", "medium", "high"]
+    targets: list[str] = Field(default_factory=list)
+    quality_profile: QualityProfileName
+    pipeline: ComposeSpec
+    recommended_tools: list[str] = Field(default_factory=list)
+    feedback_tags: list[str] = Field(default_factory=list)
+    preview_guidance: list[str] = Field(default_factory=list)
+    rationale: str
+
+
 class AnnotationObservation(StrictModel):
     """Per-variant annotation retention observation recorded in preview manifests."""
 
