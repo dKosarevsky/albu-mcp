@@ -3,7 +3,7 @@
   "name": "io.github.dKosarevsky/albu-mcp",
   "title": "AlbumentationsX MCP",
   "description": "Discover, validate, preview, tune, and export AlbumentationsX augmentation pipelines through MCP.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "repository": {
     "url": "https://github.com/dKosarevsky/albu-mcp",
     "source": "github"
@@ -12,7 +12,7 @@
     {
       "registryType": "pypi",
       "identifier": "albumentationsx-mcp",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "transport": {
         "type": "stdio"
       },
