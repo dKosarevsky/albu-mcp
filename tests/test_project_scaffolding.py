@@ -52,6 +52,8 @@ def test_usage_docs_and_examples_are_present() -> None:
     assert Path("examples/cursor_mcp_config.json").exists()
     assert Path("examples/codex_mcp_config.toml").exists()
     assert Path("examples/classification_pipeline.json").exists()
+    assert Path("scripts/render_demo_assets.py").exists()
+    assert Path("docs/DEMO.md").exists()
 
 
 def test_release_workflow_and_readme_publish_instructions_are_present() -> None:
