@@ -127,6 +127,8 @@ def test_public_docs_describe_current_preview_workflow() -> None:
 
     assert "## What Changed In 0.2" in readme
     assert "## What Changed In 0.3" in readme
+    assert "## What Changed In 0.4" in readme
+    assert "quality_summary" in usage
     assert "too_noisy:high" in readme
     assert "suggested_feedback_tags" in usage
     assert "docs/RECIPES.md" in readme

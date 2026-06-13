@@ -62,6 +62,14 @@ prune older runs.
 For multi-image review, call `render_preview_batch` with the same request schema as `render_preview`. It writes per-image
 variants plus a shared contact sheet for quick side-by-side review.
 
+`compare_preview_runs` includes `quality_summary` when preview image artifacts are still available locally. It reports
+brightness, contrast, sharpness, and candidate-minus-baseline deltas. Missing or unreadable local artifacts are reported
+as `quality_warnings` instead of failing the comparison.
+
+Call `summarize_tuning_session` after comparing a baseline and candidate. It combines feedback tags, suggested tags,
+quality deltas, and an `export_ready` flag so the host can decide whether to ask for more feedback or call
+`export_pipeline`.
+
 ## Feedback Severity
 
 `adjust_pipeline` accepts the base tags from `list_feedback_tags` and optional severity suffixes:

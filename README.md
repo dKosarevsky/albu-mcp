@@ -109,14 +109,21 @@ counts, contact sheets, and warnings.
 - `compare_preview_runs` returns `suggested_feedback_tags` for candidate transforms that deserve visual review.
 - Suggested tags are review candidates only; the user still chooses feedback after inspecting contact sheets.
 
+## What Changed In 0.4
+
+- `compare_preview_runs` includes local `quality_summary` metrics for preview image artifacts.
+- `summarize_tuning_session` explains baseline-to-candidate feedback, quality deltas, and export readiness.
+- task workflow profiles and [docs/RECIPES.md](docs/RECIPES.md) guide classification, detection, segmentation, and OCR
+  MCP host sessions.
+
 ## Demo Workflow
 
 1. Use `recommend_pipeline` and `validate_pipeline` for a conservative baseline.
 2. Call `render_preview_batch` on a small local image set.
 3. Adjust with structured feedback such as `too_noisy`, `too_noisy:high`, or `too_distorted`.
 4. Render the candidate preview batch with the same inputs.
-5. Call `compare_preview_runs` before accepting the candidate.
-6. Export the accepted pipeline with `export_pipeline`.
+5. Call `compare_preview_runs` before accepting the candidate and inspect `quality_summary`.
+6. Call `summarize_tuning_session` before exporting with `export_pipeline`.
 
 See [docs/USAGE.md](docs/USAGE.md) for an end-to-end MCP host workflow, [docs/RECIPES.md](docs/RECIPES.md) for
 task-specific host recipes, [docs/DEMO.md](docs/DEMO.md) for a generated preview comparison demo,

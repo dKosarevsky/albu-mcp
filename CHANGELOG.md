@@ -6,6 +6,13 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 - No unreleased changes yet.
 
+## 0.4.0 - 2026-06-13
+
+- Added local image quality metrics to preview run comparisons.
+- Added `summarize_tuning_session` for baseline-to-candidate feedback, quality deltas, and export readiness.
+- Added task workflow profiles and host recipes for classification, detection, segmentation, and OCR sessions.
+- Added a golden MCP scenario covering quality summaries and tuning session summaries.
+
 ## 0.3.0 - 2026-06-13
 
 - Added feedback severity modifiers for `adjust_pipeline`: `:low`, `:medium`, and `:high`.
