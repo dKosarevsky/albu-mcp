@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 
 from albumentationsx_mcp.advisor import explain_pipeline, list_feedback_tags
 from albumentationsx_mcp.catalog import TransformCatalog
-from albumentationsx_mcp.models import ComposeSpec, PreviewRequest, TargetSpec
+from albumentationsx_mcp.models import ComposeSpec, PreviewRequest, QualityProfileName, TargetSpec
 from albumentationsx_mcp.pipeline import PipelineService
 from albumentationsx_mcp.presets import Intensity, adjust_pipeline, recommend_pipeline
 from albumentationsx_mcp.preview import ArtifactStore, PathPolicy, PreviewService
@@ -28,6 +28,8 @@ from albumentationsx_mcp.prompts import (
 from albumentationsx_mcp.prompts import (
     tune_pipeline_from_preview_feedback as tune_feedback_prompt,
 )
+from albumentationsx_mcp.quality import list_quality_profiles
+from albumentationsx_mcp.ranking import rank_preview_candidates as rank_candidates
 from albumentationsx_mcp.tuning import TuningDecisionStore, build_tuning_session_summary
 from albumentationsx_mcp.workflows import get_agent_workflow, list_agent_workflows, list_task_profiles
 
@@ -90,6 +92,12 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
         data = [tag.model_dump(mode="json") for tag in list_feedback_tags()]
         return json.dumps(data, sort_keys=True)
 
+    @mcp.resource("albumentationsx://quality-profiles")
+    def quality_profiles_resource() -> str:
+        """Return task-aware quality profiles accepted by comparison tools."""
+        data = [profile.model_dump(mode="json") for profile in list_quality_profiles()]
+        return json.dumps(data, sort_keys=True)
+
     @mcp.resource("albumentationsx://capabilities")
     def capabilities_resource() -> str:
         """Return operational limits and safety boundaries for this MCP server."""
@@ -115,6 +123,8 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
                     "render_preview_batch",
                     "compare_preview_runs",
                     "summarize_tuning_session",
+                    "rank_preview_candidates",
+                    "list_quality_profiles",
                     "record_tuning_decision",
                     "list_tuning_decisions",
                     "list_preview_runs",
@@ -221,6 +231,11 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
         """List structured feedback tags accepted by adjust_pipeline."""
         return {"tags": [tag.model_dump(mode="json") for tag in list_feedback_tags()]}
 
+    @mcp.tool(name="list_quality_profiles")
+    def list_quality_profiles_tool() -> dict[str, Any]:
+        """List task-aware quality profiles accepted by preview comparison tools."""
+        return {"profiles": [profile.model_dump(mode="json") for profile in list_quality_profiles()]}
+
     @mcp.tool()
     def export_pipeline(pipeline: dict[str, Any], output_format: OutputFormat = "python") -> dict[str, Any]:
         """Export a validated pipeline as Python, JSON, or YAML."""
@@ -240,9 +255,17 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
         return preview_service.render_preview(preview_request).model_dump(mode="json")
 
     @mcp.tool()
-    def compare_preview_runs(baseline_run_id: str, candidate_run_id: str) -> dict[str, Any]:
+    def compare_preview_runs(
+        baseline_run_id: str,
+        candidate_run_id: str,
+        quality_profile: QualityProfileName = "balanced",
+    ) -> dict[str, Any]:
         """Compare two preview manifests to guide structured feedback and reproducible tuning."""
-        return preview_service.compare_preview_runs(baseline_run_id, candidate_run_id).model_dump(mode="json")
+        return preview_service.compare_preview_runs(
+            baseline_run_id,
+            candidate_run_id,
+            quality_profile=quality_profile,
+        ).model_dump(mode="json")
 
     @mcp.tool()
     def summarize_tuning_session(
@@ -250,9 +273,14 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
         candidate_run_id: str,
         feedback_tags: list[str] | None = None,
         accepted: bool = False,  # noqa: FBT001, FBT002
+        quality_profile: QualityProfileName = "balanced",
     ) -> dict[str, Any]:
         """Summarize a baseline-to-candidate preview tuning step."""
-        comparison = preview_service.compare_preview_runs(baseline_run_id, candidate_run_id)
+        comparison = preview_service.compare_preview_runs(
+            baseline_run_id,
+            candidate_run_id,
+            quality_profile=quality_profile,
+        )
         return build_tuning_session_summary(
             comparison,
             feedback_tags=feedback_tags or [],
@@ -260,15 +288,47 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
         ).model_dump(mode="json")
 
     @mcp.tool()
-    def record_tuning_decision(
+    def rank_preview_candidates(
+        baseline_run_id: str,
+        candidate_run_ids: list[str],
+        feedback_tags_by_candidate: dict[str, list[str]] | None = None,
+        accepted_candidate_ids: list[str] | None = None,
+        quality_profile: QualityProfileName = "balanced",
+    ) -> dict[str, Any]:
+        """Rank multiple candidate preview runs against one baseline."""
+        if not candidate_run_ids:
+            msg = "candidate_run_ids must contain at least one run id"
+            raise ValueError(msg)
+        comparisons = [
+            preview_service.compare_preview_runs(
+                baseline_run_id,
+                candidate_run_id,
+                quality_profile=quality_profile,
+            )
+            for candidate_run_id in candidate_run_ids[:20]
+        ]
+        return rank_candidates(
+            comparisons,
+            feedback_tags_by_candidate=feedback_tags_by_candidate or {},
+            accepted_candidate_ids=set(accepted_candidate_ids or []),
+            quality_profile=quality_profile,
+        ).model_dump(mode="json")
+
+    @mcp.tool()
+    def record_tuning_decision(  # noqa: PLR0913
         baseline_run_id: str,
         candidate_run_id: str,
         feedback_tags: list[str] | None = None,
         accepted: bool = False,  # noqa: FBT001, FBT002
         reviewer_notes: list[str] | None = None,
+        quality_profile: QualityProfileName = "balanced",
     ) -> dict[str, Any]:
         """Persist a local tuning decision for one preview comparison."""
-        comparison = preview_service.compare_preview_runs(baseline_run_id, candidate_run_id)
+        comparison = preview_service.compare_preview_runs(
+            baseline_run_id,
+            candidate_run_id,
+            quality_profile=quality_profile,
+        )
         summary = build_tuning_session_summary(
             comparison,
             feedback_tags=feedback_tags or [],

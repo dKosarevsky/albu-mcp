@@ -26,6 +26,8 @@ def test_server_exposes_documented_tool_names() -> None:
         "render_preview_batch",
         "compare_preview_runs",
         "summarize_tuning_session",
+        "rank_preview_candidates",
+        "list_quality_profiles",
         "record_tuning_decision",
         "list_tuning_decisions",
         "list_preview_runs",
@@ -56,14 +58,18 @@ def test_server_exposes_agent_workflow_resources() -> None:
     workflow_catalog = cast("Any", resources["albumentationsx://workflows/catalog"]).fn()
     preview_tuning = cast("Any", resources["albumentationsx://workflows/preview-tuning"]).fn()
     task_profiles = cast("Any", resources["albumentationsx://workflows/task-profiles"]).fn()
+    quality_profiles = cast("Any", resources["albumentationsx://quality-profiles"]).fn()
     capabilities = cast("Any", resources["albumentationsx://capabilities"]).fn()
 
     assert "preview-tuning" in workflow_catalog
     assert "recommend_pipeline" in preview_tuning
     assert "classification-robustness" in task_profiles
+    assert "segmentation" in quality_profiles
     assert "adjust_pipeline" in preview_tuning
     assert "workflow_resources" in capabilities
     assert "compare_preview_runs_for_feedback" in capabilities
     assert "summarize_tuning_session" in capabilities
+    assert "rank_preview_candidates" in capabilities
+    assert "list_quality_profiles" in capabilities
     assert "record_tuning_decision" in capabilities
     assert "albumentationsx://workflows/task-profiles" in capabilities

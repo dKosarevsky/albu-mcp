@@ -341,6 +341,36 @@ class TuningDecisionList(StrictModel):
     ranked: bool = False
 
 
+class RankedPreviewCandidate(StrictModel):
+    """One candidate in a ranked preview tuning comparison."""
+
+    rank: int
+    candidate_run_id: str
+    quality_score: float = Field(ge=0.0, le=100.0)
+    quality_risk: RiskLevel
+    export_ready: bool
+    recommended_next_tool: Literal[
+        "list_feedback_tags",
+        "adjust_pipeline",
+        "render_preview_batch",
+        "export_pipeline",
+    ]
+    feedback_tags: list[str] = Field(default_factory=list)
+    top_findings: list[QualityFinding] = Field(default_factory=list)
+    summary: TuningSessionSummary
+
+
+class PreviewCandidateRanking(StrictModel):
+    """Ranked candidate list for one baseline preview run."""
+
+    baseline_run_id: str
+    quality_profile: QualityProfileName = "balanced"
+    candidate_count: int
+    best_candidate_run_id: str | None = None
+    ranked_candidates: list[RankedPreviewCandidate] = Field(default_factory=list)
+    decision_guidance: list[str] = Field(default_factory=list)
+
+
 class TransformSearchResult(StrictModel):
     """Search result for transform discovery."""
 

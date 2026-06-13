@@ -32,6 +32,7 @@ from albumentationsx_mcp.models import (
     PreviewResult,
     PreviewRunComparison,
     PreviewRunSummary,
+    QualityProfileName,
 )
 from albumentationsx_mcp.preview_analysis import compare_preview_manifests
 from albumentationsx_mcp.quality import compare_manifest_quality
@@ -291,12 +292,22 @@ class PreviewService:
             pipeline=request.pipeline.model_dump(mode="json", exclude_none=True),
         )
 
-    def compare_preview_runs(self, baseline_run_id: str, candidate_run_id: str) -> PreviewRunComparison:
+    def compare_preview_runs(
+        self,
+        baseline_run_id: str,
+        candidate_run_id: str,
+        *,
+        quality_profile: QualityProfileName = "balanced",
+    ) -> PreviewRunComparison:
         """Compare two recorded preview manifests."""
         baseline = self.artifact_store.read_manifest(baseline_run_id)
         candidate = self.artifact_store.read_manifest(candidate_run_id)
         comparison = compare_preview_manifests(baseline, candidate)
-        quality_summary, quality_warnings = compare_manifest_quality(baseline, candidate)
+        quality_summary, quality_warnings = compare_manifest_quality(
+            baseline,
+            candidate,
+            quality_profile=quality_profile,
+        )
         return comparison.model_copy(
             update={
                 "quality_summary": quality_summary,
