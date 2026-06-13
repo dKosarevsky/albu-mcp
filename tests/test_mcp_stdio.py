@@ -46,6 +46,8 @@ def test_mcp_stdio_lists_documented_tools(tmp_path: Path) -> None:
         "score_dataset_preview_candidates",
         "list_quality_profiles",
         "recommend_recipe",
+        "record_preview_feedback",
+        "list_preview_feedback",
         "record_tuning_decision",
         "list_tuning_decisions",
         "export_tuning_report",

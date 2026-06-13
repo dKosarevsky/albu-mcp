@@ -38,6 +38,10 @@ scenarios:
     summarize_tuning_session: true
     rank_preview_candidates: true
     score_dataset_preview_candidates: true
+    record_preview_feedback: true
+    feedback_image_index: 7
+    feedback_variant_index: 0
+    preview_feedback_note: "example 8 is too noisy"
     record_tuning_decision: true
     export_tuning_report: true
     export_preview_report: true
@@ -49,7 +53,7 @@ scenarios:
     expected_recipe_profile: ocr
     quality_profile: ocr
     accepted: true
-    input_count: 2
+    input_count: 8
     variants_per_image: 1
     feedback_tags: ["too_noisy:high"]
     alternate_feedback_tags: ["too_blurry:low"]

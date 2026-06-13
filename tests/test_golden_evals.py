@@ -14,12 +14,20 @@ def test_golden_eval_assets_are_present() -> None:
     assert scenarios_path.exists()
     assert runner_path.exists()
     scenarios = yaml.safe_load(scenarios_path.read_text(encoding="utf-8"))
+    runner_source = runner_path.read_text(encoding="utf-8")
+    quality_scenario = next(
+        scenario for scenario in scenarios["scenarios"] if scenario["name"] == "preview_quality_tuning_summary"
+    )
+
     assert {scenario["name"] for scenario in scenarios["scenarios"]} == {
         "classification_recommend_validate_explain_export",
         "preview_lifecycle",
         "preview_batch_compare",
         "preview_quality_tuning_summary",
     }
+    assert quality_scenario["record_preview_feedback"] is True
+    assert quality_scenario["feedback_image_index"] == 7
+    assert "record_preview_feedback" in runner_source
 
 
 def test_golden_eval_runner_executes_scenarios_over_stdio(tmp_path: Path) -> None:

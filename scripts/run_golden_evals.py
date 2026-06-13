@@ -200,6 +200,8 @@ async def _run_preview_comparison(
         raise AssertionError(f"{scenario['name']} comparison returned no review notes")
     if scenario.get("assert_quality_summary") and not comparison.get("quality_summary"):
         raise AssertionError(f"{scenario['name']} comparison returned no quality summary: {comparison}")
+    if scenario.get("record_preview_feedback"):
+        await _run_preview_feedback_loop(session, scenario, candidate["run_id"], candidate_pipeline)
     if scenario.get("summarize_tuning_session"):
         summary = await _call_tool_json(
             session,
@@ -298,6 +300,51 @@ async def _run_candidate_ranking(  # noqa: PLR0913
     if not ranking["best_candidate_run_id"]:
         raise AssertionError(f"{scenario['name']} ranking did not return a best candidate: {ranking}")
     return [str(alternate["run_id"])]
+
+
+async def _run_preview_feedback_loop(
+    session: ClientSession,
+    scenario: dict[str, Any],
+    candidate_run_id: str,
+    candidate_pipeline: dict[str, Any],
+) -> None:
+    feedback_tags = scenario.get("preview_feedback_tags", scenario.get("feedback_tags", []))
+    image_index = int(scenario.get("feedback_image_index", 0))
+    variant_index = int(scenario.get("feedback_variant_index", 0))
+    feedback = await _call_tool_json(
+        session,
+        "record_preview_feedback",
+        {
+            "run_id": candidate_run_id,
+            "image_index": image_index,
+            "variant_index": variant_index,
+            "feedback_tags": feedback_tags,
+            "note": scenario.get("preview_feedback_note", ""),
+            "accepted": bool(scenario.get("preview_feedback_accepted", False)),
+        },
+    )
+    expected_target = f"example {image_index + 1} / variant {variant_index + 1}"
+    if feedback["review_target"] != expected_target:
+        raise AssertionError(f"{scenario['name']} feedback returned wrong target: {feedback}")
+    if feedback["recommended_next_tool"] != "adjust_pipeline":
+        raise AssertionError(f"{scenario['name']} feedback returned wrong next tool: {feedback}")
+    listed = await _call_tool_json(
+        session,
+        "list_preview_feedback",
+        {"run_id": candidate_run_id, "limit": 5},
+    )
+    if feedback["feedback_id"] not in {item["feedback_id"] for item in listed["feedback"]}:
+        raise AssertionError(f"{scenario['name']} feedback was not listed: {listed}")
+    for tag in feedback_tags:
+        if tag not in listed["aggregated_feedback_tags"]:
+            raise AssertionError(f"{scenario['name']} feedback tag was not aggregated: {listed}")
+    adjusted = await _call_tool_json(
+        session,
+        "adjust_pipeline",
+        {"pipeline": candidate_pipeline, "feedback_tags": listed["aggregated_feedback_tags"]},
+    )
+    if not adjusted.get("transforms"):
+        raise AssertionError(f"{scenario['name']} feedback adjustment returned no transforms: {adjusted}")
 
 
 async def _run_recipe_recommendation(session: ClientSession, scenario: dict[str, Any]) -> None:

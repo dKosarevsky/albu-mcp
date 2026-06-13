@@ -89,6 +89,8 @@ See [examples/claude_desktop_pypi_config.json](examples/claude_desktop_pypi_conf
 - `summarize_tuning_session`: summarize quality findings, feedback tags, score, risk, and export readiness.
 - `rank_preview_candidates`: rank several candidate preview runs against one baseline.
 - `score_dataset_preview_candidates`: score a candidate set across dataset-level metrics, findings, and ranking.
+- `record_preview_feedback`: persist user feedback for one concrete preview example and variant.
+- `list_preview_feedback`: list concrete preview feedback and aggregate tags for the next adjustment.
 - `record_tuning_decision`: persist a local accepted or rejected tuning decision.
 - `list_tuning_decisions`: list local tuning decisions newest-first or score-ranked.
 - `export_tuning_report`: export persisted tuning decisions as Markdown or JSON.
@@ -163,9 +165,11 @@ counts, contact sheets, and warnings.
 4. Adjust with structured feedback such as `too_noisy`, `too_noisy:high`, or `too_distorted`.
 5. Render one or more candidate preview batches with the same inputs.
 6. Call `compare_preview_runs` before accepting a candidate and inspect `quality_summary.findings`.
-7. Call `rank_preview_candidates` and `score_dataset_preview_candidates` with the matching quality profile.
-8. Call `record_tuning_decision` for accepted or rejected candidates.
-9. Call `export_preview_report` for visual handoff with contact sheet thumbnails, `export_tuning_report` for decision history, then `export_pipeline`.
+7. Call `record_preview_feedback` when the user points to a concrete example such as "example 8 is too noisy".
+8. Call `list_preview_feedback` and reuse `aggregated_feedback_tags` for the next `adjust_pipeline` call.
+9. Call `rank_preview_candidates` and `score_dataset_preview_candidates` with the matching quality profile.
+10. Call `record_tuning_decision` for accepted or rejected candidates.
+11. Call `export_preview_report` for visual handoff with contact sheet thumbnails, `export_tuning_report` for decision history, then `export_pipeline`.
 
 See [docs/USAGE.md](docs/USAGE.md) for an end-to-end MCP host workflow, [docs/RECIPES.md](docs/RECIPES.md) for
 task-specific host recipes, [docs/DEMO.md](docs/DEMO.md) for a generated preview comparison demo,

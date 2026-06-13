@@ -45,10 +45,13 @@ retention limit for long-running MCP hosts.
 9. Re-render one or more candidates with the same input set.
 10. Call `rank_preview_candidates` when multiple candidates need comparison.
 11. Call `score_dataset_preview_candidates` to inspect cross-candidate metric ranges and finding counts.
-12. Call `summarize_tuning_session` to inspect `quality_score`, `quality_risk`, and `export_ready`.
-13. Call `record_tuning_decision` to persist the accepted or rejected candidate.
-14. Call `export_preview_report` for a visual Markdown or HTML handoff.
-15. Call `export_tuning_report` for a decision journal handoff, then `export_pipeline` once the preview set is acceptable.
+12. Call `record_preview_feedback` when the user points to a concrete image and variant, for example
+    "example 8 is too noisy".
+13. Call `list_preview_feedback` and reuse `aggregated_feedback_tags` for the next `adjust_pipeline` call.
+14. Call `summarize_tuning_session` to inspect `quality_score`, `quality_risk`, and `export_ready`.
+15. Call `record_tuning_decision` to persist the accepted or rejected candidate.
+16. Call `export_preview_report` for a visual Markdown or HTML handoff.
+17. Call `export_tuning_report` for a decision journal handoff, then `export_pipeline` once the preview set is acceptable.
 
 ## Preview Artifacts
 
@@ -136,6 +139,25 @@ Examples: `too_noisy:low`, `too_blurry:medium`, `too_distorted:high`, and `objec
 `compare_preview_runs` may return `suggested_feedback_tags` based on candidate transform names. Treat them as review
 candidates only; they are not an automatic verdict about image quality.
 
+## Concrete Preview Feedback
+
+Use `record_preview_feedback` when the user points to one concrete preview example instead of giving only global
+feedback. Indices are zero-based in the tool call and one-based in the returned `review_target`.
+
+```json
+{
+  "run_id": "candidate-run-id",
+  "image_index": 7,
+  "variant_index": 0,
+  "feedback_tags": ["too_noisy:high"],
+  "note": "example 8 is too noisy",
+  "accepted": false
+}
+```
+
+Then call `list_preview_feedback` for the same run and pass `aggregated_feedback_tags` to `adjust_pipeline`. Accepted
+example feedback can use `accepted=true` with no tags, but negative feedback must include at least one structured tag.
+
 ## Annotation Previews
 
 `render_preview` accepts an optional `annotations` list with one item per `input_paths` entry:
@@ -204,6 +226,8 @@ uv run python scripts/run_golden_evals.py
 - `albumentationsx://workflows/task-profiles`: task-specific workflow defaults for common CV workflows.
 - `albumentationsx://workflows/preview-tuning`: step-by-step preview tuning workflow.
 - `albumentationsx://workflows/annotation-preview`: annotation-aware preview workflow.
+- `albumentationsx://examples/review-loop`: concrete example feedback loop for prompts like "example 8 is too noisy".
+- `albumentationsx://examples/report-handoff`: visual report handoff loop after ranking and decisions.
 
 ## Prompts
 

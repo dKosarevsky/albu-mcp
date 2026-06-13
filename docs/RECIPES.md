@@ -14,10 +14,12 @@ Use profile `classification-robustness`.
 2. Render a small balanced preview batch.
 3. Use `compare_preview_runs` and inspect `quality_summary.findings` plus contact sheets.
 4. Ask the user to choose feedback tags such as `too_noisy`, `too_blurry`, or `object_unrecognizable`.
-5. Render two or three candidates when feedback is ambiguous, then call `rank_preview_candidates`.
-6. Call `score_dataset_preview_candidates` to compare metric ranges and finding counts.
-7. Persist the accepted or rejected outcome with `record_tuning_decision`.
-8. Export a visual handoff with `export_preview_report`; Markdown reports include image refs and HTML reports include
+5. When the user points to a concrete preview, call `record_preview_feedback` with the image and variant index.
+6. Call `list_preview_feedback` and reuse `aggregated_feedback_tags` for the next adjustment.
+7. Render two or three candidates when feedback is ambiguous, then call `rank_preview_candidates`.
+8. Call `score_dataset_preview_candidates` to compare metric ranges and finding counts.
+9. Persist the accepted or rejected outcome with `record_tuning_decision`.
+10. Export a visual handoff with `export_preview_report`; Markdown reports include image refs and HTML reports include
    contact sheet thumbnails.
 
 ## Detection Annotation Review
@@ -59,12 +61,13 @@ Use profile `ocr-document-robustness`.
 
 After every accepted or rejected candidate:
 
-1. Call `summarize_tuning_session` with the chosen feedback tags and acceptance state.
-2. Call `record_tuning_decision` with the same run ids and user-facing notes.
-3. Call `list_tuning_decisions` with `ranked=true` when choosing the best candidate across several attempts.
-4. Use `accepted_only=true` before final export if the host needs a short list of accepted candidates.
-5. Call `export_preview_report` with `output_format="html"` for visual handoff with contact sheet thumbnails.
-6. Call `export_tuning_report` with `output_format="markdown"` for decision handoff or `"json"` for automation.
+1. Call `record_preview_feedback` for any concrete examples the user named during visual review.
+2. Call `summarize_tuning_session` with the chosen feedback tags and acceptance state.
+3. Call `record_tuning_decision` with the same run ids and user-facing notes.
+4. Call `list_tuning_decisions` with `ranked=true` when choosing the best candidate across several attempts.
+5. Use `accepted_only=true` before final export if the host needs a short list of accepted candidates.
+6. Call `export_preview_report` with `output_format="html"` for visual handoff with contact sheet thumbnails.
+7. Call `export_tuning_report` with `output_format="markdown"` for decision handoff or `"json"` for automation.
 
 ## Resource Discovery
 
@@ -75,3 +78,5 @@ MCP hosts can read:
 - `albumentationsx://workflows/preview-tuning`
 - `albumentationsx://workflows/annotation-preview`
 - `albumentationsx://recipes/catalog`
+- `albumentationsx://examples/review-loop`
+- `albumentationsx://examples/report-handoff`
