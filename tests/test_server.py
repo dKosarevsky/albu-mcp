@@ -23,5 +23,7 @@ def test_server_exposes_documented_tool_names() -> None:
         "render_preview",
         "list_preview_runs",
         "get_preview_manifest",
+        "delete_preview_run",
+        "cleanup_preview_runs",
         "export_pipeline",
     }.issubset(tool_names)

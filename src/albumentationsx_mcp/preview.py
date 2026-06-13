@@ -6,14 +6,21 @@ import hashlib
 import json
 import math
 import re
+import shutil
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Protocol
 
-import numpy as np
 from PIL import Image
 
+from albumentationsx_mcp.annotations import (
+    annotation_has_content,
+    build_transform_payload,
+    load_mask,
+    render_overlay,
+    scale_annotations,
+)
 from albumentationsx_mcp.models import (
     ArtifactKind,
     ArtifactRef,
@@ -58,10 +65,11 @@ class PathPolicy:
 class ArtifactStore:
     """Writes preview artifacts under one controlled root directory."""
 
-    def __init__(self, root: Path) -> None:
+    def __init__(self, root: Path, *, max_runs: int = 100) -> None:
         self.root = root.resolve()
         self.root.mkdir(parents=True, exist_ok=True)
         self.index_path = self.root / "index.json"
+        self.max_runs = max(1, max_runs)
 
     def create_run_dir(self) -> tuple[str, Path]:
         run_id = uuid.uuid4().hex
@@ -93,27 +101,62 @@ class ArtifactStore:
             input_count=len(manifest_data.get("inputs", [])),
             contact_sheet_path=contact_sheet.get("path") if contact_sheet else None,
         )
-        existing = [run for run in self.list_runs(limit=100) if run.run_id != run_id]
-        payload = {
-            "runs": [summary.model_dump(mode="json"), *[run.model_dump(mode="json") for run in existing]][:100],
-        }
-        self.index_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+        existing = [run for run in self._read_index() if run.run_id != run_id]
+        runs = [summary, *existing]
+        self._write_index(runs[: self.max_runs])
+        for stale_run in runs[self.max_runs :]:
+            self._delete_run_dir(stale_run.run_id)
 
     def list_runs(self, limit: int = 20) -> list[PreviewRunSummary]:
         """Return recent preview run summaries, newest first."""
-        if not self.index_path.exists():
-            return []
-        payload = json.loads(self.index_path.read_text(encoding="utf-8"))
-        return [PreviewRunSummary.model_validate(item) for item in payload.get("runs", [])[: max(0, limit)]]
+        return self._read_index()[: max(0, limit)]
 
     def read_manifest(self, run_id: str) -> dict[str, Any]:
         """Read a preview manifest by run id without allowing path traversal."""
-        if not _RUN_ID_PATTERN.fullmatch(run_id):
-            raise ValueError(f"Invalid preview run id: {run_id}")
-        manifest_path = self.root / run_id / "manifest.json"
+        manifest_path = self._run_dir(run_id) / "manifest.json"
         if not manifest_path.exists():
             raise FileNotFoundError(manifest_path)
         return json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    def delete_run(self, run_id: str) -> PreviewRunSummary:
+        """Delete a preview run directory and remove it from the local index."""
+        run_dir = self._run_dir(run_id)
+        runs = self._read_index()
+        summary = next((run for run in runs if run.run_id == run_id), None)
+        if summary is None:
+            raise FileNotFoundError(run_dir)
+        self._delete_run_dir(run_id)
+        self._write_index([run for run in runs if run.run_id != run_id])
+        return summary
+
+    def cleanup_runs(self, keep_last: int | None = None) -> list[PreviewRunSummary]:
+        """Delete older preview runs beyond the requested retention count."""
+        keep_count = self.max_runs if keep_last is None else max(0, keep_last)
+        runs = self._read_index()
+        retained = runs[:keep_count]
+        deleted = runs[keep_count:]
+        for run in deleted:
+            self._delete_run_dir(run.run_id)
+        self._write_index(retained)
+        return deleted
+
+    def _read_index(self) -> list[PreviewRunSummary]:
+        if not self.index_path.exists():
+            return []
+        payload = json.loads(self.index_path.read_text(encoding="utf-8"))
+        return [PreviewRunSummary.model_validate(item) for item in payload.get("runs", [])]
+
+    def _write_index(self, runs: list[PreviewRunSummary]) -> None:
+        payload = {"runs": [run.model_dump(mode="json") for run in runs]}
+        self.index_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+
+    def _run_dir(self, run_id: str) -> Path:
+        if not _RUN_ID_PATTERN.fullmatch(run_id):
+            raise ValueError(f"Invalid preview run id: {run_id}")
+        return self.root / run_id
+
+    def _delete_run_dir(self, run_id: str) -> None:
+        shutil.rmtree(self._run_dir(run_id), ignore_errors=True)
 
 
 class PreviewService:
@@ -133,22 +176,41 @@ class PreviewService:
         """Apply the pipeline to local images and write preview artifacts."""
         run_id, run_dir = self.artifact_store.create_run_dir()
         artifacts: list[ArtifactRef] = []
+        image_paths: list[Path] = []
+        overlay_paths: list[Path] = []
         source_paths = [self.path_policy.resolve_input(path) for path in request.input_paths]
+        annotations = self._resolve_annotations(request)
 
         for source_index, source_path in enumerate(source_paths):
-            image = self._load_rgb(source_path, request.max_side)
+            image, original_size = self._load_rgb(source_path, request.max_side)
+            annotation = scale_annotations(
+                annotations[source_index],
+                original_size=original_size,
+                output_size=image.size,
+            )
+            if annotation and annotation.mask_path is not None:
+                annotation.mask_path = self.path_policy.resolve_input(annotation.mask_path)
+            mask = load_mask(annotation.mask_path if annotation else None, image.size)
             for variant_index in range(request.variants_per_image):
                 pipeline = request.pipeline.model_copy(deep=True)
                 if request.seed is not None:
                     pipeline.seed = request.seed + variant_index
                 transform = self.pipeline_service.build_pipeline(pipeline)
-                result = transform(image=np.asarray(image))["image"]
+                result = transform(**build_transform_payload(image, annotation, mask))
                 output = run_dir / f"{source_index:03d}-{variant_index:03d}.png"
-                Image.fromarray(result).save(output)
+                Image.fromarray(result["image"]).save(output)
+                image_paths.append(output)
                 artifacts.append(self.artifact_store.artifact_ref(output, kind="image", mime_type="image/png"))
+                if annotation_has_content(annotation):
+                    overlay_output = run_dir / f"{source_index:03d}-{variant_index:03d}-overlay.png"
+                    render_overlay(result).save(overlay_output)
+                    overlay_paths.append(overlay_output)
+                    artifacts.append(
+                        self.artifact_store.artifact_ref(overlay_output, kind="overlay", mime_type="image/png"),
+                    )
 
         contact_sheet_path = run_dir / "contact_sheet.png"
-        self._write_contact_sheet([Path(artifact.path) for artifact in artifacts], contact_sheet_path)
+        self._write_contact_sheet(image_paths, contact_sheet_path)
         artifacts.append(
             self.artifact_store.artifact_ref(
                 contact_sheet_path,
@@ -156,6 +218,16 @@ class PreviewService:
                 mime_type="image/png",
             ),
         )
+        if overlay_paths:
+            overlay_contact_sheet_path = run_dir / "overlay_contact_sheet.png"
+            self._write_contact_sheet(overlay_paths, overlay_contact_sheet_path)
+            artifacts.append(
+                self.artifact_store.artifact_ref(
+                    overlay_contact_sheet_path,
+                    kind="overlay_contact_sheet",
+                    mime_type="image/png",
+                ),
+            )
 
         manifest_path = run_dir / "manifest.json"
         manifest_data: dict[str, Any] = {
@@ -176,10 +248,21 @@ class PreviewService:
         )
 
     @staticmethod
-    def _load_rgb(path: Path, max_side: int) -> Image.Image:
+    @staticmethod
+    def _resolve_annotations(request: PreviewRequest) -> list[Any]:
+        if request.annotations is None:
+            return [None] * len(request.input_paths)
+        if len(request.annotations) != len(request.input_paths):
+            msg = "annotations length must match input_paths length"
+            raise ValueError(msg)
+        return request.annotations
+
+    @staticmethod
+    def _load_rgb(path: Path, max_side: int) -> tuple[Image.Image, tuple[int, int]]:
         image = Image.open(path).convert("RGB")
+        original_size = image.size
         image.thumbnail((max_side, max_side))
-        return image
+        return image, original_size
 
     @staticmethod
     def _write_contact_sheet(image_paths: list[Path], output_path: Path) -> None:

@@ -48,3 +48,46 @@ def test_artifact_store_rejects_manifest_path_traversal(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="Invalid preview run id"):
         store.read_manifest("../outside")
+
+
+def test_artifact_store_can_delete_preview_run_and_update_index(tmp_path: Path) -> None:
+    image_path = tmp_path / "input.png"
+    Image.fromarray(np.full((16, 16, 3), 128, dtype=np.uint8)).save(image_path)
+    store = ArtifactStore(tmp_path / "artifacts")
+    service = PreviewService(IdentityPipelineService(), PathPolicy([tmp_path]), store)
+    result = service.render_preview(
+        PreviewRequest(
+            input_paths=[image_path],
+            pipeline=ComposeSpec(transforms=[TransformSpec(name="HorizontalFlip", p=1.0)]),
+        ),
+    )
+
+    deleted = store.delete_run(result.run_id)
+
+    assert deleted.run_id == result.run_id
+    assert not Path(deleted.manifest_path).parent.exists()
+    assert store.list_runs() == []
+
+
+def test_artifact_store_prunes_runs_beyond_retention_limit(tmp_path: Path) -> None:
+    image_path = tmp_path / "input.png"
+    Image.fromarray(np.full((16, 16, 3), 128, dtype=np.uint8)).save(image_path)
+    store = ArtifactStore(tmp_path / "artifacts", max_runs=1)
+    service = PreviewService(IdentityPipelineService(), PathPolicy([tmp_path]), store)
+
+    first = service.render_preview(
+        PreviewRequest(
+            input_paths=[image_path],
+            pipeline=ComposeSpec(transforms=[TransformSpec(name="HorizontalFlip", p=1.0)]),
+        ),
+    )
+    second = service.render_preview(
+        PreviewRequest(
+            input_paths=[image_path],
+            pipeline=ComposeSpec(transforms=[TransformSpec(name="VerticalFlip", p=1.0)]),
+        ),
+    )
+
+    runs = store.list_runs()
+    assert [run.run_id for run in runs] == [second.run_id]
+    assert not (store.root / first.run_id).exists()

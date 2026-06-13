@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Any
+from typing import Any, Protocol
 
 from albumentationsx_mcp.models import (
     ComposeSpec,
@@ -12,6 +12,7 @@ from albumentationsx_mcp.models import (
     RiskLevel,
     TargetSpec,
     TransformExplanation,
+    TransformMetadata,
     TransformSpec,
     ValidationIssue,
 )
@@ -66,12 +67,23 @@ _FEEDBACK_TAGS = [
 ]
 
 
+class MetadataCatalog(Protocol):
+    """Catalog contract needed for metadata-aware explanations."""
+
+    def get_transform_schema(self, name: str) -> TransformMetadata: ...
+
+
 def list_feedback_tags() -> list[FeedbackTagInfo]:
     """Return the structured feedback tags understood by adjustment tools."""
     return list(_FEEDBACK_TAGS)
 
 
-def explain_pipeline(pipeline: ComposeSpec, target: TargetSpec | None = None) -> PipelineExplanation:
+def explain_pipeline(
+    pipeline: ComposeSpec,
+    target: TargetSpec | None = None,
+    *,
+    catalog: MetadataCatalog | None = None,
+) -> PipelineExplanation:
     """Explain likely augmentation effects and risks for an agent-guided preview session."""
     target = target or TargetSpec()
     transform_explanations: list[TransformExplanation] = []
@@ -80,7 +92,8 @@ def explain_pipeline(pipeline: ComposeSpec, target: TargetSpec | None = None) ->
     risk_points = 0
 
     for index, transform in enumerate(pipeline.transforms):
-        category = _category_for_transform(transform.name)
+        metadata = _get_metadata(catalog, transform.name)
+        category = _category_for_transform(transform.name, metadata)
         probability = 0.5 if transform.p is None else transform.p
         notable_params = _notable_params(transform)
         transform_explanations.append(
@@ -89,6 +102,9 @@ def explain_pipeline(pipeline: ComposeSpec, target: TargetSpec | None = None) ->
                 category=category,
                 probability=probability,
                 impact=_impact_for_category(category),
+                transform_type=metadata.transform_type if metadata else None,
+                targets=metadata.targets if metadata else [],
+                metadata_summary=metadata.docstring_short if metadata else None,
                 notable_params=notable_params,
             ),
         )
@@ -107,6 +123,9 @@ def explain_pipeline(pipeline: ComposeSpec, target: TargetSpec | None = None) ->
         risk_points += category_risk
         warnings.extend(category_warnings)
         suggested_tags.update(category_tags)
+        metadata_risk, metadata_warnings = _metadata_risk(transform, metadata, target, index)
+        risk_points += metadata_risk
+        warnings.extend(metadata_warnings)
 
         if category == "geometric" and any(item in target.targets for item in ["bboxes", "keypoints", "mask"]):
             risk_points += 1
@@ -180,8 +199,49 @@ def _warning(code: str, index: int, transform_name: str, message: str) -> Valida
     return ValidationIssue(code=code, path=f"transforms.{index}.name", message=f"{transform_name}: {message}")
 
 
-def _category_for_transform(name: str) -> str:
-    lowered = name.lower()
+def _get_metadata(catalog: MetadataCatalog | None, name: str) -> TransformMetadata | None:
+    if catalog is None:
+        return None
+    try:
+        return catalog.get_transform_schema(name)
+    except KeyError:
+        return None
+
+
+def _metadata_risk(
+    transform: TransformSpec,
+    metadata: TransformMetadata | None,
+    target: TargetSpec,
+    index: int,
+) -> tuple[int, list[ValidationIssue]]:
+    if metadata is None:
+        return 0, []
+    requested_annotation_targets = set(target.targets) - {"image", "images", "volume", "volumes"}
+    if not requested_annotation_targets:
+        return 0, []
+    supported_targets = set(metadata.targets)
+    unsupported_targets = sorted(requested_annotation_targets - supported_targets)
+    if metadata.transform_type == "image_only":
+        unsupported_targets = sorted(requested_annotation_targets)
+    if not unsupported_targets:
+        return 0, []
+    return 1, [
+        ValidationIssue(
+            code="target_not_supported_by_transform",
+            path=f"transforms.{index}.name",
+            message=f"{transform.name} metadata does not advertise targets: {', '.join(unsupported_targets)}",
+        ),
+    ]
+
+
+def _category_for_transform(name: str, metadata: TransformMetadata | None = None) -> str:
+    lowered = " ".join(
+        [
+            name,
+            metadata.module if metadata else "",
+            metadata.docstring_short if metadata and metadata.docstring_short else "",
+        ],
+    ).lower()
     for tokens, category in _CATEGORY_RULES:
         if any(token in lowered for token in tokens):
             return category

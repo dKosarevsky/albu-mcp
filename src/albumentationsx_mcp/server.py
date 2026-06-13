@@ -23,15 +23,18 @@ class ServerSettings(BaseModel):
 
     allowed_roots: list[Path] = Field(default_factory=lambda: [Path.cwd()])
     artifact_root: Path = Field(default_factory=lambda: Path.cwd() / "artifacts")
+    max_preview_runs: int = Field(default=100, ge=1)
 
 
 def settings_from_environment() -> ServerSettings:
     """Create settings from environment variables."""
     allowed = os.getenv("ALBU_MCP_ALLOWED_ROOTS")
     artifact_root = os.getenv("ALBU_MCP_ARTIFACT_ROOT")
+    max_preview_runs = os.getenv("ALBU_MCP_MAX_PREVIEW_RUNS")
     return ServerSettings(
         allowed_roots=[Path(item) for item in allowed.split(os.pathsep)] if allowed else [Path.cwd()],
         artifact_root=Path(artifact_root) if artifact_root else Path.cwd() / "artifacts",
+        max_preview_runs=int(max_preview_runs) if max_preview_runs else 100,
     )
 
 
@@ -46,7 +49,7 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
     preview_service = PreviewService(
         pipeline_service,
         PathPolicy(settings.allowed_roots),
-        ArtifactStore(settings.artifact_root),
+        ArtifactStore(settings.artifact_root, max_runs=settings.max_preview_runs),
     )
     mcp = FastMCP("AlbumentationsX MCP")
 
@@ -83,6 +86,7 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
                     "max_input_paths": 32,
                     "max_variants_per_image": 16,
                     "max_side": 4096,
+                    "max_preview_runs": settings.max_preview_runs,
                 },
                 "tools": [
                     "search_transforms",
@@ -95,6 +99,8 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
                     "render_preview",
                     "list_preview_runs",
                     "get_preview_manifest",
+                    "delete_preview_run",
+                    "cleanup_preview_runs",
                     "export_pipeline",
                 ],
             },
@@ -154,7 +160,7 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
         """Explain likely pipeline effects, risks, and useful preview feedback tags."""
         spec = ComposeSpec.model_validate(pipeline)
         target_spec = TargetSpec.model_validate(target or {})
-        return explain_pipeline(spec, target_spec).model_dump(mode="json", exclude_none=True)
+        return explain_pipeline(spec, target_spec, catalog=catalog).model_dump(mode="json", exclude_none=True)
 
     @mcp.tool(name="list_feedback_tags")
     def list_feedback_tags_tool() -> dict[str, Any]:
@@ -185,6 +191,18 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
     def get_preview_manifest(run_id: str) -> dict[str, Any]:
         """Return the manifest JSON for one recorded preview run."""
         return preview_service.artifact_store.read_manifest(run_id)
+
+    @mcp.tool()
+    def delete_preview_run(run_id: str) -> dict[str, Any]:
+        """Delete one preview run and its artifacts from the configured artifact root."""
+        deleted = preview_service.artifact_store.delete_run(run_id)
+        return {"deleted": deleted.model_dump(mode="json")}
+
+    @mcp.tool()
+    def cleanup_preview_runs(keep_last: int | None = None) -> dict[str, Any]:
+        """Delete older preview runs beyond a retention count."""
+        deleted = preview_service.artifact_store.cleanup_runs(keep_last)
+        return {"deleted_runs": [run.model_dump(mode="json") for run in deleted]}
 
     @mcp.prompt()
     def build_robustness_augmentation_session(task: str, targets: str = "image") -> str:

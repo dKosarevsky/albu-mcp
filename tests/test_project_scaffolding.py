@@ -25,6 +25,7 @@ def test_ci_workflow_runs_core_quality_gates() -> None:
     assert "uv run ruff format --check ." in commands
     assert "uv run ty check" in commands
     assert "uv build" in commands
+    assert "uv run python scripts/run_golden_evals.py" in commands
     assert "ClientSession" in commands
 
 
@@ -33,13 +34,30 @@ def test_ci_workflow_uses_node24_ready_actions() -> None:
     workflow = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
     steps = workflow["jobs"]["test"]["steps"]
     actions = {step["name"]: step["uses"] for step in steps if "uses" in step}
+    setup_uv = next(step for step in steps if step.get("name") == "Install uv")
 
     assert actions["Check out repository"] == "actions/checkout@v5"
     assert actions["Install uv"] == "astral-sh/setup-uv@v7"
     assert actions["Set up Python"] == "actions/setup-python@v6"
+    assert setup_uv["with"]["enable-cache"] is False
 
 
 def test_usage_docs_and_examples_are_present() -> None:
     assert Path("docs/USAGE.md").exists()
+    assert Path("docs/RELEASE.md").exists()
     assert Path("examples/claude_desktop_config.json").exists()
     assert Path("examples/classification_pipeline.json").exists()
+
+
+def test_release_workflow_and_readme_publish_instructions_are_present() -> None:
+    release_workflow = Path(".github/workflows/release.yml")
+    readme = Path("README.md").read_text(encoding="utf-8")
+    release_docs = Path("docs/RELEASE.md")
+
+    assert release_workflow.exists()
+    workflow = yaml.safe_load(release_workflow.read_text(encoding="utf-8"))
+    commands = "\n".join(step.get("run", "") for step in workflow["jobs"]["release"]["steps"])
+    assert "uv build" in commands
+    assert "gh release create" in commands
+    assert "uvx --from albumentationsx-mcp albumentationsx-mcp" in readme
+    assert "uv publish --trusted-publishing automatic" in release_docs.read_text(encoding="utf-8")

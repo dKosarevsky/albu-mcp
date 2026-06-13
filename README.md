@@ -4,6 +4,10 @@ Model Context Protocol server for [AlbumentationsX](https://github.com/albumenta
 discovering transforms, validating augmentation pipelines, rendering deterministic previews, and exporting reproducible
 pipeline specs.
 
+[![CI](https://github.com/dKosarevsky/albu-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/dKosarevsky/albu-mcp/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/python-3.10--3.13-blue)](pyproject.toml)
+[![MCP](https://img.shields.io/badge/MCP-AlbumentationsX-green)](docs/USAGE.md)
+
 ## Scope
 
 This project is intentionally a thin MCP layer around existing AlbumentationsX primitives:
@@ -18,6 +22,12 @@ The server does not execute arbitrary Python, fetch remote images, overwrite dat
 
 ```bash
 uv sync --all-extras --dev
+```
+
+Once the package is published, it can be launched without cloning:
+
+```bash
+uvx --from albumentationsx-mcp albumentationsx-mcp
 ```
 
 ## Run
@@ -52,9 +62,14 @@ Claude Desktop or another MCP host can launch it with stdio:
 - `render_preview`: create deterministic local preview artifacts inside an allowed output root.
 - `list_preview_runs`: list recent preview manifests recorded under the artifact root.
 - `get_preview_manifest`: read one recorded preview manifest by run id.
+- `delete_preview_run`: delete one preview run and its artifacts.
+- `cleanup_preview_runs`: prune older preview runs beyond a retention count.
 - `export_pipeline`: export a pipeline as Python, JSON, or YAML.
 
-See [docs/USAGE.md](docs/USAGE.md) for an end-to-end MCP host workflow and example configuration files.
+`render_preview` supports optional bboxes, keypoints, and mask paths for annotation overlay previews.
+
+See [docs/USAGE.md](docs/USAGE.md) for an end-to-end MCP host workflow, [docs/RELEASE.md](docs/RELEASE.md) for the
+release process, and [evals/golden_mcp_scenarios.yaml](evals/golden_mcp_scenarios.yaml) for executable MCP scenarios.
 
 ## Verification
 
@@ -63,5 +78,6 @@ uv run pytest
 uv run ruff check .
 uv run ruff format --check .
 uv run ty check
+uv run python scripts/run_golden_evals.py
 uv build
 ```

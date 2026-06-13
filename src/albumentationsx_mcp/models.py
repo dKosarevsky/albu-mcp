@@ -7,7 +7,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-ArtifactKind = Literal["image", "manifest", "contact_sheet"]
+ArtifactKind = Literal["image", "manifest", "contact_sheet", "overlay", "overlay_contact_sheet"]
 RiskLevel = Literal["low", "medium", "high"]
 
 
@@ -109,10 +109,20 @@ class ExportResult(StrictModel):
     content: str
 
 
+class ImageAnnotations(StrictModel):
+    """Optional annotations supplied for one preview input image."""
+
+    bboxes: list[list[float]] = Field(default_factory=list)
+    bbox_labels: list[str | int] = Field(default_factory=list)
+    keypoints: list[list[float]] = Field(default_factory=list)
+    mask_path: Path | None = None
+
+
 class PreviewRequest(StrictModel):
     """Preview rendering request with bounded work size."""
 
     input_paths: list[Path] = Field(min_length=1, max_length=32)
+    annotations: list[ImageAnnotations | None] | None = None
     pipeline: ComposeSpec
     variants_per_image: int = Field(default=4, ge=1, le=16)
     seed: int | None = None
@@ -177,6 +187,9 @@ class TransformExplanation(StrictModel):
     category: str
     probability: float
     impact: str
+    transform_type: str | None = None
+    targets: list[str] = Field(default_factory=list)
+    metadata_summary: str | None = None
     notable_params: dict[str, Any] = Field(default_factory=dict)
 
 

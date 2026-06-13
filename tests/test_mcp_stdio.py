@@ -41,4 +41,6 @@ def test_mcp_stdio_lists_documented_tools(tmp_path: Path) -> None:
         "render_preview",
         "list_preview_runs",
         "get_preview_manifest",
+        "delete_preview_run",
+        "cleanup_preview_runs",
     }.issubset(tool_names)

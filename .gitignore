@@ -8,5 +8,6 @@ build/
 dist/
 *.egg-info/
 artifacts/
+.golden-evals/
 .coverage
 coverage.xml
