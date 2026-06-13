@@ -32,6 +32,9 @@ Run the published MCP server without cloning:
 uvx --from albumentationsx-mcp albumentationsx-mcp
 ```
 
+For host-specific setup, bounded filesystem access, smoke checks, and troubleshooting, see the
+[install guide](docs/INSTALL.md).
+
 For local development:
 
 ```bash
@@ -190,7 +193,8 @@ counts, contact sheets, and warnings.
 
 The next major milestone can be `v1.0.0` once public tool/resource names, response fields, and host workflows are
 frozen. `v0.11.0` adds tool/resource/prompt snapshots and compatibility rules; `v0.12.0` adds representative output
-contract snapshots. Before cutting v1, run a final docs pass over README, usage, recipes, and release automation.
+contract snapshots. The remaining readiness pass is host-facing documentation in [docs/INSTALL.md](docs/INSTALL.md),
+README, usage, recipes, and release automation.
 
 ## Demo Workflow
 
@@ -207,11 +211,11 @@ contract snapshots. Before cutting v1, run a final docs pass over README, usage,
 11. Call `export_preview_report` for visual handoff with contact sheet thumbnails and concrete feedback,
     `export_tuning_report` for decision history, then `export_pipeline`.
 
-See [docs/USAGE.md](docs/USAGE.md) for an end-to-end MCP host workflow, [docs/RECIPES.md](docs/RECIPES.md) for
-task-specific host recipes, [docs/DEMO.md](docs/DEMO.md) for a generated preview comparison demo,
-[CHANGELOG.md](CHANGELOG.md) for release notes, [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) for public contract
-rules, [docs/RELEASE.md](docs/RELEASE.md) for the package and MCP Registry release process, [server.json](server.json)
-for public discovery metadata, and
+See [docs/INSTALL.md](docs/INSTALL.md) for host setup, [docs/USAGE.md](docs/USAGE.md) for an end-to-end MCP host
+workflow, [docs/RECIPES.md](docs/RECIPES.md) for task-specific host recipes, [docs/DEMO.md](docs/DEMO.md) for a
+generated preview comparison demo, [CHANGELOG.md](CHANGELOG.md) for release notes,
+[docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) for public contract rules, [docs/RELEASE.md](docs/RELEASE.md) for the
+package and MCP Registry release process, [server.json](server.json) for public discovery metadata, and
 [evals/golden_mcp_scenarios.yaml](evals/golden_mcp_scenarios.yaml) for executable MCP scenarios.
 
 ## Verification

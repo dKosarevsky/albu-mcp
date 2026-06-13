@@ -45,6 +45,7 @@ def test_ci_workflow_uses_node24_ready_actions() -> None:
 
 def test_usage_docs_and_examples_are_present() -> None:
     assert Path("docs/USAGE.md").exists()
+    assert Path("docs/INSTALL.md").exists()
     assert Path("docs/RELEASE.md").exists()
     assert Path("docs/RECIPES.md").exists()
     assert Path("CHANGELOG.md").exists()
@@ -56,6 +57,39 @@ def test_usage_docs_and_examples_are_present() -> None:
     assert Path("examples/classification_pipeline.json").exists()
     assert Path("scripts/render_demo_assets.py").exists()
     assert Path("docs/DEMO.md").exists()
+
+
+def test_install_guide_covers_host_setup_and_examples() -> None:
+    readme = Path("README.md").read_text(encoding="utf-8")
+    usage = Path("docs/USAGE.md").read_text(encoding="utf-8")
+    install = Path("docs/INSTALL.md").read_text(encoding="utf-8")
+    claude_pypi = json.loads(Path("examples/claude_desktop_pypi_config.json").read_text(encoding="utf-8"))
+    cursor = json.loads(Path("examples/cursor_mcp_config.json").read_text(encoding="utf-8"))
+    codex = Path("examples/codex_mcp_config.toml").read_text(encoding="utf-8")
+
+    required_terms = [
+        "PyPI",
+        "MCP Registry",
+        "Claude Desktop",
+        "Claude Code",
+        "Cursor",
+        "Codex",
+        "--allowed-root",
+        "--artifact-root",
+        "Smoke Check",
+        "Troubleshooting",
+    ]
+
+    assert "[docs/INSTALL.md](docs/INSTALL.md)" in readme
+    assert "[INSTALL.md](INSTALL.md)" in usage
+    for term in required_terms:
+        assert term in install
+    for config in [claude_pypi, cursor]:
+        server = config["mcpServers"]["albumentationsx"]
+        assert server["command"] == "uvx"
+        assert server["args"][:3] == ["--from", "albumentationsx-mcp", "albumentationsx-mcp"]
+    assert 'command = "uvx"' in codex
+    assert 'args = ["--from", "albumentationsx-mcp", "albumentationsx-mcp"]' in codex
 
 
 def test_changelog_tracks_public_releases_and_next_features() -> None:

@@ -6,6 +6,9 @@ Python code.
 
 ## Host Configuration
 
+For copyable host snippets, PyPI install, bounded local access, and troubleshooting, start with
+[INSTALL.md](INSTALL.md). This page focuses on the augmentation workflow after the server is connected.
+
 Use `examples/claude_desktop_config.json` as a starting point and replace `/path/to/albu-mcp` with the repository path:
 
 ```json
