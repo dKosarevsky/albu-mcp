@@ -28,6 +28,17 @@ def test_ci_workflow_runs_core_quality_gates() -> None:
     assert "ClientSession" in commands
 
 
+def test_ci_workflow_uses_node24_ready_actions() -> None:
+    workflow_path = Path(".github/workflows/ci.yml")
+    workflow = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
+    steps = workflow["jobs"]["test"]["steps"]
+    actions = {step["name"]: step["uses"] for step in steps if "uses" in step}
+
+    assert actions["Check out repository"] == "actions/checkout@v5"
+    assert actions["Install uv"] == "astral-sh/setup-uv@v7"
+    assert actions["Set up Python"] == "actions/setup-python@v6"
+
+
 def test_usage_docs_and_examples_are_present() -> None:
     assert Path("docs/USAGE.md").exists()
     assert Path("examples/claude_desktop_config.json").exists()
