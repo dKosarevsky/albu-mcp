@@ -177,6 +177,32 @@ class PreviewManifestSummary(StrictModel):
     warnings: list[str] = Field(default_factory=list)
 
 
+class ImageQualityMetrics(StrictModel):
+    """Simple local image quality metrics for one preview artifact."""
+
+    path: str
+    brightness_mean: float
+    contrast_std: float
+    sharpness_score: float
+
+
+class ImageQualityAggregate(StrictModel):
+    """Aggregate quality metrics for a preview run."""
+
+    image_count: int
+    brightness_mean: float | None = None
+    contrast_std: float | None = None
+    sharpness_score: float | None = None
+
+
+class PreviewQualitySummary(StrictModel):
+    """Quality comparison between baseline and candidate preview runs."""
+
+    baseline: ImageQualityAggregate
+    candidate: ImageQualityAggregate
+    deltas: dict[str, float] = Field(default_factory=dict)
+
+
 class PreviewRunComparison(StrictModel):
     """Comparison of two preview run manifests for feedback-driven tuning."""
 
@@ -188,6 +214,8 @@ class PreviewRunComparison(StrictModel):
     artifact_count_delta: int
     review_notes: list[str] = Field(default_factory=list)
     suggested_feedback_tags: list[str] = Field(default_factory=list)
+    quality_summary: PreviewQualitySummary | None = None
+    quality_warnings: list[str] = Field(default_factory=list)
 
 
 class TransformSearchResult(StrictModel):

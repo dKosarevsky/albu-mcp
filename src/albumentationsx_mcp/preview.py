@@ -32,6 +32,7 @@ from albumentationsx_mcp.models import (
     PreviewRunSummary,
 )
 from albumentationsx_mcp.preview_analysis import compare_preview_manifests
+from albumentationsx_mcp.quality import compare_manifest_quality
 
 _RUN_ID_PATTERN = re.compile(r"^[0-9a-f]{32}$")
 
@@ -277,7 +278,14 @@ class PreviewService:
         """Compare two recorded preview manifests."""
         baseline = self.artifact_store.read_manifest(baseline_run_id)
         candidate = self.artifact_store.read_manifest(candidate_run_id)
-        return compare_preview_manifests(baseline, candidate)
+        comparison = compare_preview_manifests(baseline, candidate)
+        quality_summary, quality_warnings = compare_manifest_quality(baseline, candidate)
+        return comparison.model_copy(
+            update={
+                "quality_summary": quality_summary,
+                "quality_warnings": quality_warnings,
+            },
+        )
 
     @staticmethod
     def _resolve_annotations(request: PreviewRequest) -> list[Any]:

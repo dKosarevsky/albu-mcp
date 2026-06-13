@@ -19,6 +19,19 @@ class IdentityPipelineService:
         return transform
 
 
+class BrightnessPipelineService:
+    def build_pipeline(self, pipeline: ComposeSpec) -> Any:
+        should_brighten = any(transform.name == "Brighten" for transform in pipeline.transforms)
+
+        def transform(**kwargs: Any) -> dict[str, Any]:
+            if not should_brighten:
+                return kwargs
+            image = kwargs["image"]
+            return {**kwargs, "image": np.clip(image + 60, 0, 255).astype(np.uint8)}
+
+        return transform
+
+
 def test_preview_rendering_records_queryable_run_index(tmp_path: Path) -> None:
     image_path = tmp_path / "input.png"
     Image.fromarray(np.full((16, 16, 3), 128, dtype=np.uint8)).save(image_path)
@@ -125,3 +138,34 @@ def test_preview_service_compares_two_recorded_runs(tmp_path: Path) -> None:
     assert comparison.candidate.run_id == candidate.run_id
     assert comparison.pipeline_changed is True
     assert comparison.seed_changed is True
+
+
+def test_preview_service_compare_includes_quality_summary(tmp_path: Path) -> None:
+    image_path = tmp_path / "input.png"
+    Image.fromarray(np.full((16, 16, 3), 80, dtype=np.uint8)).save(image_path)
+    store = ArtifactStore(tmp_path / "artifacts")
+    service = PreviewService(BrightnessPipelineService(), PathPolicy([tmp_path]), store)
+    baseline = service.render_preview(
+        PreviewRequest(
+            input_paths=[image_path],
+            pipeline=ComposeSpec(transforms=[TransformSpec(name="Identity", p=1.0)], seed=10),
+            variants_per_image=1,
+            seed=10,
+        ),
+    )
+    candidate = service.render_preview(
+        PreviewRequest(
+            input_paths=[image_path],
+            pipeline=ComposeSpec(transforms=[TransformSpec(name="Brighten", p=1.0)], seed=10),
+            variants_per_image=1,
+            seed=10,
+        ),
+    )
+
+    comparison = service.compare_preview_runs(baseline.run_id, candidate.run_id)
+
+    assert comparison.quality_summary is not None
+    assert comparison.quality_summary.baseline.image_count == 1
+    assert comparison.quality_summary.candidate.image_count == 1
+    assert comparison.quality_summary.deltas["brightness_mean"] == 60.0
+    assert comparison.quality_warnings == []
