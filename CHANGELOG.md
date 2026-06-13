@@ -6,6 +6,14 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 - No unreleased changes yet.
 
+## 0.13.0 - 2026-06-14
+
+- Added `docs/INSTALL.md` as the canonical MCP host install guide for PyPI, MCP Registry, Claude Desktop, Claude Code,
+  Cursor, Codex, bounded local roots, smoke checks, and troubleshooting.
+- Linked install guidance from README and usage docs so host setup is separate from workflow details.
+- Added project-scaffolding tests that keep host setup docs and example snippets aligned with the published package
+  command.
+
 ## 0.12.0 - 2026-06-14
 
 - Added deterministic representative output contract snapshots for recipe recommendation, dataset scoring, preview

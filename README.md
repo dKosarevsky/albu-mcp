@@ -189,12 +189,19 @@ counts, contact sheets, and warnings.
 - Added `scripts/export_output_contracts.py` to regenerate reviewed output fixtures.
 - Extended compatibility guidance so response-shape changes get explicit fixture coverage.
 
+## What Changed In 0.13
+
+- Added [docs/INSTALL.md](docs/INSTALL.md) as the canonical MCP host install guide.
+- Documented PyPI, MCP Registry, Claude Desktop, Claude Code, Cursor, Codex, bounded local roots, smoke checks, and
+  troubleshooting in one place.
+- Added documentation tests to keep host setup guidance and example snippets aligned with the published package command.
+
 ## V1 Readiness
 
 The next major milestone can be `v1.0.0` once public tool/resource names, response fields, and host workflows are
 frozen. `v0.11.0` adds tool/resource/prompt snapshots and compatibility rules; `v0.12.0` adds representative output
-contract snapshots. The remaining readiness pass is host-facing documentation in [docs/INSTALL.md](docs/INSTALL.md),
-README, usage, recipes, and release automation.
+contract snapshots; `v0.13.0` adds the host install guide and documentation checks. The remaining readiness decision is
+whether to cut v1 after one final compatibility review or do another small hardening release first.
 
 ## Demo Workflow
 
