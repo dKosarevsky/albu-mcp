@@ -92,6 +92,40 @@ def test_install_guide_covers_host_setup_and_examples() -> None:
     assert 'args = ["--from", "albumentationsx-mcp", "albumentationsx-mcp"]' in codex
 
 
+def test_v1_readiness_audit_is_present_and_complete() -> None:
+    audit = Path("docs/V1_READINESS.md").read_text(encoding="utf-8")
+    readme = Path("README.md").read_text(encoding="utf-8")
+
+    required_terms = [
+        "Public Contract Freeze",
+        "Snapshot Guards",
+        "Golden Evals",
+        "Release Automation",
+        "Install Flow",
+        "Compatibility Policy",
+        "No runtime API changes",
+        "v1.0.0",
+    ]
+
+    for term in required_terms:
+        assert term in audit
+    assert "[docs/V1_READINESS.md](docs/V1_READINESS.md)" in readme
+
+
+def test_release_docs_and_package_metadata_are_v1_ready() -> None:
+    pyproject = Path("pyproject.toml").read_text(encoding="utf-8")
+    release_docs = Path("docs/RELEASE.md").read_text(encoding="utf-8")
+
+    assert '"Development Status :: 5 - Production/Stable"' in pyproject
+    assert '"Development Status :: 3 - Alpha"' not in pyproject
+    assert "v0.1.0" not in release_docs
+    assert "vX.Y.Z" in release_docs
+    assert "CHANGELOG.md" in release_docs
+    assert "README.md" in release_docs
+    assert "server.json" in release_docs
+    assert "uv.lock" in release_docs
+
+
 def test_changelog_tracks_public_releases_and_next_features() -> None:
     changelog = Path("CHANGELOG.md").read_text(encoding="utf-8")
 
@@ -148,7 +182,7 @@ def test_public_package_metadata_is_polished() -> None:
         '"MCP Registry" = "https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.dKosarevsky/albu-mcp"'
         in pyproject
     )
-    assert '"Development Status :: 3 - Alpha"' in pyproject
+    assert '"Development Status :: 5 - Production/Stable"' in pyproject
     assert '"Framework :: Pytest"' in pyproject
     assert '"Topic :: Scientific/Engineering :: Artificial Intelligence"' in pyproject
 

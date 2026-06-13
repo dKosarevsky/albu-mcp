@@ -200,8 +200,8 @@ counts, contact sheets, and warnings.
 
 The next major milestone can be `v1.0.0` once public tool/resource names, response fields, and host workflows are
 frozen. `v0.11.0` adds tool/resource/prompt snapshots and compatibility rules; `v0.12.0` adds representative output
-contract snapshots; `v0.13.0` adds the host install guide and documentation checks. The remaining readiness decision is
-whether to cut v1 after one final compatibility review or do another small hardening release first.
+contract snapshots; `v0.13.0` adds the host install guide and documentation checks. The final release gate is tracked in
+[docs/V1_READINESS.md](docs/V1_READINESS.md).
 
 ## Demo Workflow
 

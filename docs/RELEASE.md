@@ -43,18 +43,18 @@ uv build
 5. Commit the version bump:
 
 ```bash
-git add pyproject.toml server.json uv.lock
-git commit -m "chore: release v0.1.0"
+git add pyproject.toml server.json uv.lock README.md CHANGELOG.md docs/INSTALL.md docs/V1_READINESS.md
+git commit -m "chore: release vX.Y.Z"
 ```
 
 ## GitHub Release
 
-Create and push an annotated tag:
+Create and push a `vX.Y.Z` tag:
 
 ```bash
-git tag -a v0.1.0 -m "v0.1.0"
+git tag vX.Y.Z
 git push origin main
-git push origin v0.1.0
+git push origin vX.Y.Z
 ```
 
 The `Release` workflow runs in three stages:
