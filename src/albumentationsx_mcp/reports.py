@@ -311,10 +311,7 @@ def _html_contact_sheet_links(paths: list[str]) -> str:
 def _html_contact_sheet_link(path: str) -> str:
     uri = html.escape(_file_uri(path), quote=True)
     escaped_path = html.escape(path)
-    return (
-        f'<a href="{uri}"><img class="contact-sheet" src="{uri}" alt="contact sheet"></a>'
-        f"<span>{escaped_path}</span>"
-    )
+    return f'<a href="{uri}"><img class="contact-sheet" src="{uri}" alt="contact sheet"></a><span>{escaped_path}</span>'
 
 
 def _html_metric_stats(stats: list[DatasetMetricStats]) -> str:

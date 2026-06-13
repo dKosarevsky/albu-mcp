@@ -78,7 +78,7 @@ See [examples/claude_desktop_pypi_config.json](examples/claude_desktop_pypi_conf
 - `get_transform_schema`: inspect a transform schema and constraints.
 - `validate_pipeline`: validate a typed pipeline spec before running it.
 - `recommend_pipeline`: create a conservative task preset for classification, detection, segmentation, or OCR.
-- `recommend_recipe`: return a task-aware starter pipeline, quality profile, feedback tags, and next MCP tools.
+- `recommend_recipe`: return a task-aware starter pipeline, quality profile, feedback tags, explanations, and next MCP tools.
 - `adjust_pipeline`: apply structured preview feedback such as `too_noisy` or `too_blurry`.
 - `explain_pipeline`: summarize likely effects, preview risks, and useful feedback tags.
 - `list_feedback_tags`: list the structured feedback contract used by `adjust_pipeline`.
@@ -92,7 +92,7 @@ See [examples/claude_desktop_pypi_config.json](examples/claude_desktop_pypi_conf
 - `record_tuning_decision`: persist a local accepted or rejected tuning decision.
 - `list_tuning_decisions`: list local tuning decisions newest-first or score-ranked.
 - `export_tuning_report`: export persisted tuning decisions as Markdown or JSON.
-- `export_preview_report`: export Markdown or HTML reports with contact sheets, ranking, metrics, and decisions.
+- `export_preview_report`: export Markdown or HTML reports with contact sheet image refs, ranking, metrics, and decisions.
 - `list_preview_runs`: list recent preview manifests recorded under the artifact root.
 - `get_preview_manifest`: read one recorded preview manifest by run id.
 - `delete_preview_run`: delete one preview run and its artifacts.
@@ -148,9 +148,16 @@ counts, contact sheets, and warnings.
 - Exposed `albumentationsx://recipes/catalog` for recipe discovery by MCP hosts.
 - Extended golden MCP evals to cover recipes, dataset scoring, and preview report export.
 
+## What Changed In 0.8
+
+- `recommend_recipe` now returns structured explanations for profile selection, targets, feedback tags, and workflow.
+- `export_preview_report` now embeds Markdown image refs or HTML thumbnails for contact sheet artifacts.
+- Report snapshot tests use deterministic tiny PNG fixtures to lock visual handoff output.
+- Golden MCP evals verify recipe explanations and preview report image markup.
+
 ## Demo Workflow
 
-1. Use `recommend_recipe` to choose the starter pipeline, quality profile, feedback tags, and next tools.
+1. Use `recommend_recipe` to choose the starter pipeline, quality profile, feedback tags, explanations, and next tools.
 2. Call `validate_pipeline` for the recommended pipeline.
 3. Call `render_preview_batch` on a small local image set.
 4. Adjust with structured feedback such as `too_noisy`, `too_noisy:high`, or `too_distorted`.
@@ -158,7 +165,7 @@ counts, contact sheets, and warnings.
 6. Call `compare_preview_runs` before accepting a candidate and inspect `quality_summary.findings`.
 7. Call `rank_preview_candidates` and `score_dataset_preview_candidates` with the matching quality profile.
 8. Call `record_tuning_decision` for accepted or rejected candidates.
-9. Call `export_preview_report` for visual handoff, `export_tuning_report` for decision history, then `export_pipeline`.
+9. Call `export_preview_report` for visual handoff with contact sheet thumbnails, `export_tuning_report` for decision history, then `export_pipeline`.
 
 See [docs/USAGE.md](docs/USAGE.md) for an end-to-end MCP host workflow, [docs/RECIPES.md](docs/RECIPES.md) for
 task-specific host recipes, [docs/DEMO.md](docs/DEMO.md) for a generated preview comparison demo,

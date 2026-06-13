@@ -43,6 +43,8 @@ scenarios:
     export_preview_report: true
     preview_report_format: html
     recommend_recipe: true
+    assert_recipe_explanations: true
+    assert_preview_report_images: true
     recipe_task: ocr
     expected_recipe_profile: ocr
     quality_profile: ocr

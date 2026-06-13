@@ -33,7 +33,7 @@ retention limit for long-running MCP hosts.
 
 ## Agent Workflow
 
-1. Call `recommend_recipe` for the target task, intensity, quality profile, feedback tags, and next tools.
+1. Call `recommend_recipe` for the target task, intensity, quality profile, feedback tags, explanations, and next tools.
 2. Call `validate_pipeline` before rendering or exporting.
 3. Call `explain_pipeline` to identify likely preview risks and feedback tags.
 4. Call `render_preview_batch` on a small local image set.
@@ -121,7 +121,7 @@ Ranking is deterministic: higher `quality_score`, lower `quality_risk`, export-r
 
 Use `export_preview_report` after scoring or recording a decision. It writes a Markdown or HTML report under
 `artifact_root/reports/` and returns a `report` artifact with the rendered content, ranked candidates, contact sheet
-paths, metric ranges, finding counts, and matching tuning decisions.
+paths, Markdown image refs or HTML thumbnails, metric ranges, finding counts, and matching tuning decisions.
 
 ## Feedback Severity
 

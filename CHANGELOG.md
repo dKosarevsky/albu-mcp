@@ -6,6 +6,13 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 - No unreleased changes yet.
 
+## 0.8.0 - 2026-06-13
+
+- Added deterministic preview report snapshot fixtures with tiny real PNG contact sheets.
+- Added Markdown image references and HTML thumbnails to preview reports.
+- Added structured `recommend_recipe` explanations for quality profiles, targets, feedback tags, and workflow tools.
+- Extended golden MCP evals to verify recipe explanations and preview report image markup.
+
 ## 0.7.0 - 2026-06-13
 
 - Added `recommend_recipe` for task-aware starter pipelines, quality profiles, feedback tags, and next-tool guidance.

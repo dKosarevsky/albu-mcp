@@ -2,6 +2,10 @@
 
 These recipes are short host-facing workflows for common AlbumentationsX MCP sessions.
 
+`recommend_recipe` returns structured `explanations` for the selected quality profile, targets, feedback tags, and next
+workflow tools. MCP hosts should surface those fields when asking the user to confirm whether a starter workflow matches
+the dataset and review goal.
+
 ## Classification Robustness
 
 Use profile `classification-robustness`.
@@ -13,7 +17,8 @@ Use profile `classification-robustness`.
 5. Render two or three candidates when feedback is ambiguous, then call `rank_preview_candidates`.
 6. Call `score_dataset_preview_candidates` to compare metric ranges and finding counts.
 7. Persist the accepted or rejected outcome with `record_tuning_decision`.
-8. Export a visual handoff with `export_preview_report`.
+8. Export a visual handoff with `export_preview_report`; Markdown reports include image refs and HTML reports include
+   contact sheet thumbnails.
 
 ## Detection Annotation Review
 
@@ -58,7 +63,7 @@ After every accepted or rejected candidate:
 2. Call `record_tuning_decision` with the same run ids and user-facing notes.
 3. Call `list_tuning_decisions` with `ranked=true` when choosing the best candidate across several attempts.
 4. Use `accepted_only=true` before final export if the host needs a short list of accepted candidates.
-5. Call `export_preview_report` with `output_format="html"` for visual handoff.
+5. Call `export_preview_report` with `output_format="html"` for visual handoff with contact sheet thumbnails.
 6. Call `export_tuning_report` with `output_format="markdown"` for decision handoff or `"json"` for automation.
 
 ## Resource Discovery

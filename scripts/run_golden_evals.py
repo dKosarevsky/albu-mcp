@@ -313,6 +313,13 @@ async def _run_recipe_recommendation(session: ClientSession, scenario: dict[str,
     expected_profile = scenario.get("expected_recipe_profile")
     if expected_profile and recipe["quality_profile"] != expected_profile:
         raise AssertionError(f"{scenario['name']} recipe returned wrong quality profile: {recipe}")
+    if scenario.get("assert_recipe_explanations"):
+        explanation_kinds = {item["kind"] for item in recipe.get("explanations", [])}
+        expected_kinds = {"quality_profile", "targets", "feedback_tags", "workflow"}
+        if explanation_kinds != expected_kinds:
+            raise AssertionError(f"{scenario['name']} recipe returned wrong explanations: {recipe}")
+        if not all(item.get("rationale") for item in recipe["explanations"]):
+            raise AssertionError(f"{scenario['name']} recipe returned empty explanation rationale: {recipe}")
     for tool_name in ("render_preview_batch", "score_dataset_preview_candidates", "export_preview_report"):
         if tool_name not in recipe["recommended_tools"]:
             raise AssertionError(f"{scenario['name']} recipe did not include {tool_name}: {recipe}")
@@ -365,6 +372,16 @@ async def _run_dataset_scoring_and_preview_report(
             raise AssertionError(f"{scenario['name']} preview report artifact was not written: {report}")
         if score is not None and score["best_candidate_run_id"] not in report["content"]:
             raise AssertionError(f"{scenario['name']} preview report did not include best candidate: {report}")
+        if scenario.get("assert_preview_report_images"):
+            expected_markup = _expected_report_image_markup(scenario.get("preview_report_format", "markdown"))
+            if expected_markup not in report["content"]:
+                raise AssertionError(f"{scenario['name']} preview report did not include image markup: {report}")
+
+
+def _expected_report_image_markup(output_format: str) -> str:
+    if output_format == "html":
+        return '<img class="contact-sheet"'
+    return "![contact sheet]"
 
 
 async def _record_tuning_decision_and_report(
