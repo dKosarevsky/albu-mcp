@@ -157,6 +157,12 @@ counts, contact sheets, and warnings.
 - Report snapshot tests use deterministic tiny PNG fixtures to lock visual handoff output.
 - Golden MCP evals verify recipe explanations and preview report image markup.
 
+## What Changed In 0.9
+
+- Added `record_preview_feedback` and `list_preview_feedback` for concrete example/variant feedback.
+- Added host example resources for the preview feedback loop and visual report handoff.
+- Golden MCP evals now cover the "example 8 is too noisy" review path through stdio.
+
 ## Demo Workflow
 
 1. Use `recommend_recipe` to choose the starter pipeline, quality profile, feedback tags, explanations, and next tools.

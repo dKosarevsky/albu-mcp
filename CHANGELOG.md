@@ -6,6 +6,14 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 - No unreleased changes yet.
 
+## 0.9.0 - 2026-06-13
+
+- Added `record_preview_feedback` and `list_preview_feedback` for concrete image/variant feedback such as
+  "example 8 is too noisy".
+- Added host example resources for the preview feedback loop and visual report handoff.
+- Extended golden MCP evals to persist concrete preview feedback and reuse aggregated tags for adjustment.
+- Documented the concrete preview feedback workflow in README, usage docs, and recipes.
+
 ## 0.8.0 - 2026-06-13
 
 - Added deterministic preview report snapshot fixtures with tiny real PNG contact sheets.
