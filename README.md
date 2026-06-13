@@ -196,11 +196,18 @@ counts, contact sheets, and warnings.
   troubleshooting in one place.
 - Added documentation tests to keep host setup guidance and example snippets aligned with the published package command.
 
+## What Changed In 1.0
+
+- Declared the public MCP tool, resource, prompt, package metadata, and representative output contracts stable.
+- Added [docs/V1_READINESS.md](docs/V1_READINESS.md) as the release audit for contract freeze, snapshots, golden evals,
+  install flow, compatibility policy, and publication checks.
+- Updated package maturity metadata to `Development Status :: 5 - Production/Stable`.
+
 ## V1 Readiness
 
-The next major milestone can be `v1.0.0` once public tool/resource names, response fields, and host workflows are
-frozen. `v0.11.0` adds tool/resource/prompt snapshots and compatibility rules; `v0.12.0` adds representative output
-contract snapshots; `v0.13.0` adds the host install guide and documentation checks. The final release gate is tracked in
+`v1.0.0` freezes public tool/resource names, response fields, package metadata, and host workflows. `v0.11.0` added
+tool/resource/prompt snapshots and compatibility rules; `v0.12.0` added representative output contract snapshots;
+`v0.13.0` added the host install guide and documentation checks. The final release gate is tracked in
 [docs/V1_READINESS.md](docs/V1_READINESS.md).
 
 ## Demo Workflow

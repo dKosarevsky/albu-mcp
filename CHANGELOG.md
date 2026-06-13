@@ -6,6 +6,14 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 - No unreleased changes yet.
 
+## 1.0.0 - 2026-06-14
+
+- Declared the public MCP tool, resource, prompt, package metadata, and representative output contracts stable.
+- Added `docs/V1_READINESS.md` with the v1 release audit for contract freeze, snapshots, golden evals, release automation,
+  install flow, compatibility policy, and publication checks.
+- Updated release documentation from old version-specific examples to version-neutral `vX.Y.Z` commands.
+- Updated package maturity metadata to `Development Status :: 5 - Production/Stable`.
+
 ## 0.13.0 - 2026-06-14
 
 - Added `docs/INSTALL.md` as the canonical MCP host install guide for PyPI, MCP Registry, Claude Desktop, Claude Code,
