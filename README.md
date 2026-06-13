@@ -4,6 +4,8 @@ Model Context Protocol server for [AlbumentationsX](https://github.com/albumenta
 discovering transforms, validating augmentation pipelines, rendering deterministic previews, and exporting reproducible
 pipeline specs.
 
+<!-- mcp-name: io.github.dKosarevsky/albu-mcp -->
+
 [![CI](https://github.com/dKosarevsky/albu-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/dKosarevsky/albu-mcp/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10--3.13-blue)](pyproject.toml)
 [![MCP](https://img.shields.io/badge/MCP-AlbumentationsX-green)](docs/USAGE.md)
@@ -24,7 +26,7 @@ The server does not execute arbitrary Python, fetch remote images, overwrite dat
 uv sync --all-extras --dev
 ```
 
-Once the package is published, it can be launched without cloning:
+After the Python MCP server package is published to PyPI, it can be launched without cloning:
 
 ```bash
 uvx --from albumentationsx-mcp albumentationsx-mcp
@@ -69,7 +71,8 @@ Claude Desktop or another MCP host can launch it with stdio:
 `render_preview` supports optional bboxes, keypoints, and mask paths for annotation overlay previews.
 
 See [docs/USAGE.md](docs/USAGE.md) for an end-to-end MCP host workflow, [docs/RELEASE.md](docs/RELEASE.md) for the
-release process, and [evals/golden_mcp_scenarios.yaml](evals/golden_mcp_scenarios.yaml) for executable MCP scenarios.
+package and MCP Registry release process, [server.json](server.json) for public discovery metadata, and
+[evals/golden_mcp_scenarios.yaml](evals/golden_mcp_scenarios.yaml) for executable MCP scenarios.
 
 ## Verification
 

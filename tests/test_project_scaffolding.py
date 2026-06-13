@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import yaml
@@ -45,6 +46,7 @@ def test_ci_workflow_uses_node24_ready_actions() -> None:
 def test_usage_docs_and_examples_are_present() -> None:
     assert Path("docs/USAGE.md").exists()
     assert Path("docs/RELEASE.md").exists()
+    assert Path("server.json").exists()
     assert Path("examples/claude_desktop_config.json").exists()
     assert Path("examples/classification_pipeline.json").exists()
 
@@ -61,3 +63,25 @@ def test_release_workflow_and_readme_publish_instructions_are_present() -> None:
     assert "gh release create" in commands
     assert "uvx --from albumentationsx-mcp albumentationsx-mcp" in readme
     assert "uv publish --trusted-publishing automatic" in release_docs.read_text(encoding="utf-8")
+
+
+def test_mcp_registry_metadata_is_ready_for_pypi_distribution() -> None:
+    server_json = json.loads(Path("server.json").read_text(encoding="utf-8"))
+    readme = Path("README.md").read_text(encoding="utf-8")
+
+    assert server_json["name"] == "io.github.dKosarevsky/albu-mcp"
+    assert server_json["packages"][0]["registryType"] == "pypi"
+    assert server_json["packages"][0]["identifier"] == "albumentationsx-mcp"
+    assert server_json["packages"][0]["transport"]["type"] == "stdio"
+    assert "<!-- mcp-name: io.github.dKosarevsky/albu-mcp -->" in readme
+
+
+def test_mcp_registry_publish_workflow_is_present() -> None:
+    workflow_path = Path(".github/workflows/publish-mcp.yml")
+    workflow = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
+    steps = workflow["jobs"]["publish"]["steps"]
+    commands = "\n".join(step.get("run", "") for step in steps)
+
+    assert workflow["jobs"]["publish"]["permissions"]["id-token"] == "write"
+    assert "mcp-publisher login github-oidc" in commands
+    assert "mcp-publisher publish" in commands

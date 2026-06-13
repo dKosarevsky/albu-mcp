@@ -1,0 +1,44 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.dKosarevsky/albu-mcp",
+  "title": "AlbumentationsX MCP",
+  "description": "Discover, validate, preview, tune, and export AlbumentationsX augmentation pipelines through MCP.",
+  "version": "0.1.0",
+  "repository": {
+    "url": "https://github.com/dKosarevsky/albu-mcp",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "albumentationsx-mcp",
+      "version": "0.1.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "ALBU_MCP_ALLOWED_ROOTS",
+          "description": "Optional os.pathsep-separated allowlist of local roots that preview inputs and masks may be read from.",
+          "format": "string",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "ALBU_MCP_ARTIFACT_ROOT",
+          "description": "Optional local directory where generated preview artifacts and manifests are written.",
+          "format": "string",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "ALBU_MCP_MAX_PREVIEW_RUNS",
+          "description": "Optional retention limit for indexed preview runs. Defaults to 100.",
+          "format": "string",
+          "isRequired": false,
+          "isSecret": false
+        }
+      ]
+    }
+  ]
+}
