@@ -118,9 +118,10 @@ counts, contact sheets, and warnings.
 5. Call `compare_preview_runs` before accepting the candidate.
 6. Export the accepted pipeline with `export_pipeline`.
 
-See [docs/USAGE.md](docs/USAGE.md) for an end-to-end MCP host workflow, [docs/DEMO.md](docs/DEMO.md) for a generated
-preview comparison demo, [CHANGELOG.md](CHANGELOG.md) for release notes, [docs/RELEASE.md](docs/RELEASE.md) for the
-package and MCP Registry release process, [server.json](server.json) for public discovery metadata, and
+See [docs/USAGE.md](docs/USAGE.md) for an end-to-end MCP host workflow, [docs/RECIPES.md](docs/RECIPES.md) for
+task-specific host recipes, [docs/DEMO.md](docs/DEMO.md) for a generated preview comparison demo,
+[CHANGELOG.md](CHANGELOG.md) for release notes, [docs/RELEASE.md](docs/RELEASE.md) for the package and MCP Registry
+release process, [server.json](server.json) for public discovery metadata, and
 [evals/golden_mcp_scenarios.yaml](evals/golden_mcp_scenarios.yaml) for executable MCP scenarios.
 
 ## Verification

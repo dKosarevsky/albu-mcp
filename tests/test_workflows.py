@@ -1,6 +1,11 @@
 import pytest
 
-from albumentationsx_mcp.workflows import get_agent_workflow, list_agent_workflows
+from albumentationsx_mcp.workflows import (
+    get_agent_workflow,
+    get_task_profile,
+    list_agent_workflows,
+    list_task_profiles,
+)
 
 
 def test_agent_workflow_catalog_contains_preview_tuning_contract() -> None:
@@ -22,3 +27,19 @@ def test_agent_workflow_catalog_contains_preview_tuning_contract() -> None:
 def test_unknown_agent_workflow_is_rejected() -> None:
     with pytest.raises(KeyError, match="Unknown agent workflow"):
         get_agent_workflow("missing")
+
+
+def test_task_profiles_cover_common_computer_vision_workflows() -> None:
+    profiles = list_task_profiles()
+    profile_names = {profile.name for profile in profiles}
+    detection = get_task_profile("detection-annotation-review")
+
+    assert {
+        "classification-robustness",
+        "detection-annotation-review",
+        "segmentation-mask-review",
+        "ocr-document-robustness",
+    }.issubset(profile_names)
+    assert detection.workflow == "annotation-preview"
+    assert "bboxes" in detection.targets
+    assert "too_distorted" in detection.feedback_tags

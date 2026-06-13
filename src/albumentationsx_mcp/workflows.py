@@ -25,6 +25,18 @@ class AgentWorkflow(StrictModel):
     completion_criteria: list[str]
 
 
+class TaskWorkflowProfile(StrictModel):
+    """Task-specific workflow defaults for MCP hosts."""
+
+    name: str
+    task: str
+    workflow: str
+    targets: list[str]
+    recommended_intensity: str
+    feedback_tags: list[str]
+    notes: list[str]
+
+
 _WORKFLOWS = {
     "preview-tuning": AgentWorkflow(
         name="preview-tuning",
@@ -137,6 +149,57 @@ _WORKFLOWS = {
     ),
 }
 
+_TASK_PROFILES = {
+    "classification-robustness": TaskWorkflowProfile(
+        name="classification-robustness",
+        task="classification",
+        workflow="preview-tuning",
+        targets=["image"],
+        recommended_intensity="medium",
+        feedback_tags=["too_noisy", "too_blurry", "object_unrecognizable"],
+        notes=[
+            "Start with a small class-balanced image set.",
+            "Prefer severity suffixes only after the user points to concrete preview examples.",
+        ],
+    ),
+    "detection-annotation-review": TaskWorkflowProfile(
+        name="detection-annotation-review",
+        task="object_detection",
+        workflow="annotation-preview",
+        targets=["image", "bboxes"],
+        recommended_intensity="low",
+        feedback_tags=["too_distorted", "object_unrecognizable"],
+        notes=[
+            "Render overlays before accepting geometric transforms.",
+            "Keep bbox label fields aligned with bbox_params.",
+        ],
+    ),
+    "segmentation-mask-review": TaskWorkflowProfile(
+        name="segmentation-mask-review",
+        task="segmentation",
+        workflow="annotation-preview",
+        targets=["image", "mask"],
+        recommended_intensity="low",
+        feedback_tags=["too_distorted", "too_blurry", "object_unrecognizable"],
+        notes=[
+            "Use mask overlays to confirm boundaries stay aligned.",
+            "Avoid high geometric severity until annotation overlays look stable.",
+        ],
+    ),
+    "ocr-document-robustness": TaskWorkflowProfile(
+        name="ocr-document-robustness",
+        task="ocr",
+        workflow="preview-tuning",
+        targets=["image"],
+        recommended_intensity="low",
+        feedback_tags=["too_blurry", "too_distorted", "object_unrecognizable"],
+        notes=[
+            "Review text legibility before increasing perspective or compression.",
+            "Use high severity feedback when characters become unreadable.",
+        ],
+    ),
+}
+
 
 def list_agent_workflows() -> list[AgentWorkflow]:
     """Return all built-in agent workflow guides."""
@@ -149,4 +212,18 @@ def get_agent_workflow(name: str) -> AgentWorkflow:
         return _WORKFLOWS[name]
     except KeyError as exc:
         msg = f"Unknown agent workflow: {name}"
+        raise KeyError(msg) from exc
+
+
+def list_task_profiles() -> list[TaskWorkflowProfile]:
+    """Return task-specific workflow profiles."""
+    return sorted(_TASK_PROFILES.values(), key=lambda profile: profile.name)
+
+
+def get_task_profile(name: str) -> TaskWorkflowProfile:
+    """Return one task workflow profile by stable name."""
+    try:
+        return _TASK_PROFILES[name]
+    except KeyError as exc:
+        msg = f"Unknown task workflow profile: {name}"
         raise KeyError(msg) from exc

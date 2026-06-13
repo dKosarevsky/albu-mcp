@@ -29,7 +29,7 @@ from albumentationsx_mcp.prompts import (
     tune_pipeline_from_preview_feedback as tune_feedback_prompt,
 )
 from albumentationsx_mcp.tuning import build_tuning_session_summary
-from albumentationsx_mcp.workflows import get_agent_workflow, list_agent_workflows
+from albumentationsx_mcp.workflows import get_agent_workflow, list_agent_workflows, list_task_profiles
 
 
 class ServerSettings(BaseModel):
@@ -130,6 +130,7 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
                     "albumentationsx://workflows/catalog",
                     "albumentationsx://workflows/preview-tuning",
                     "albumentationsx://workflows/annotation-preview",
+                    "albumentationsx://workflows/task-profiles",
                 ],
             },
             sort_keys=True,
@@ -139,6 +140,12 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
     def workflows_catalog() -> str:
         """Return built-in agent workflow guides as compact JSON."""
         data = [workflow.model_dump(mode="json") for workflow in list_agent_workflows()]
+        return json.dumps(data, sort_keys=True)
+
+    @mcp.resource("albumentationsx://workflows/task-profiles")
+    def task_profiles_resource() -> str:
+        """Return task-specific workflow profiles as compact JSON."""
+        data = [profile.model_dump(mode="json") for profile in list_task_profiles()]
         return json.dumps(data, sort_keys=True)
 
     @mcp.resource("albumentationsx://workflows/preview-tuning")

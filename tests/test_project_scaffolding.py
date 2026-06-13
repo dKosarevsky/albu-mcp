@@ -46,6 +46,7 @@ def test_ci_workflow_uses_node24_ready_actions() -> None:
 def test_usage_docs_and_examples_are_present() -> None:
     assert Path("docs/USAGE.md").exists()
     assert Path("docs/RELEASE.md").exists()
+    assert Path("docs/RECIPES.md").exists()
     assert Path("CHANGELOG.md").exists()
     assert Path("server.json").exists()
     assert Path("examples/claude_desktop_config.json").exists()
@@ -128,6 +129,7 @@ def test_public_docs_describe_current_preview_workflow() -> None:
     assert "## What Changed In 0.3" in readme
     assert "too_noisy:high" in readme
     assert "suggested_feedback_tags" in usage
+    assert "docs/RECIPES.md" in readme
     assert "## 0.3.0" in changelog
     assert "batch previews" in readme
     assert "compare preview runs" in readme

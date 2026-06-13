@@ -119,6 +119,7 @@ uv run python scripts/run_golden_evals.py
 - `albumentationsx://feedback-tags`: structured feedback tags accepted by `adjust_pipeline`.
 - `albumentationsx://capabilities`: configured roots, preview limits, and exposed tools.
 - `albumentationsx://workflows/catalog`: built-in agent workflow guides.
+- `albumentationsx://workflows/task-profiles`: task-specific workflow defaults for common CV workflows.
 - `albumentationsx://workflows/preview-tuning`: step-by-step preview tuning workflow.
 - `albumentationsx://workflows/annotation-preview`: annotation-aware preview workflow.
 

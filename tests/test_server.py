@@ -53,11 +53,14 @@ def test_server_exposes_agent_workflow_resources() -> None:
     resources = server._resource_manager._resources
     workflow_catalog = cast("Any", resources["albumentationsx://workflows/catalog"]).fn()
     preview_tuning = cast("Any", resources["albumentationsx://workflows/preview-tuning"]).fn()
+    task_profiles = cast("Any", resources["albumentationsx://workflows/task-profiles"]).fn()
     capabilities = cast("Any", resources["albumentationsx://capabilities"]).fn()
 
     assert "preview-tuning" in workflow_catalog
     assert "recommend_pipeline" in preview_tuning
+    assert "classification-robustness" in task_profiles
     assert "adjust_pipeline" in preview_tuning
     assert "workflow_resources" in capabilities
     assert "compare_preview_runs_for_feedback" in capabilities
     assert "summarize_tuning_session" in capabilities
+    assert "albumentationsx://workflows/task-profiles" in capabilities
