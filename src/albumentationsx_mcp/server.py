@@ -28,7 +28,7 @@ from albumentationsx_mcp.prompts import (
 from albumentationsx_mcp.prompts import (
     tune_pipeline_from_preview_feedback as tune_feedback_prompt,
 )
-from albumentationsx_mcp.tuning import build_tuning_session_summary
+from albumentationsx_mcp.tuning import TuningDecisionStore, build_tuning_session_summary
 from albumentationsx_mcp.workflows import get_agent_workflow, list_agent_workflows, list_task_profiles
 
 
@@ -65,6 +65,7 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
         PathPolicy(settings.allowed_roots),
         ArtifactStore(settings.artifact_root, max_runs=settings.max_preview_runs),
     )
+    tuning_store = TuningDecisionStore(settings.artifact_root)
     mcp = FastMCP("AlbumentationsX MCP")
 
     @mcp.resource("albumentationsx://transforms/catalog")
@@ -114,6 +115,8 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
                     "render_preview_batch",
                     "compare_preview_runs",
                     "summarize_tuning_session",
+                    "record_tuning_decision",
+                    "list_tuning_decisions",
                     "list_preview_runs",
                     "get_preview_manifest",
                     "delete_preview_run",
@@ -255,6 +258,34 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
             feedback_tags=feedback_tags or [],
             accepted=accepted,
         ).model_dump(mode="json")
+
+    @mcp.tool()
+    def record_tuning_decision(
+        baseline_run_id: str,
+        candidate_run_id: str,
+        feedback_tags: list[str] | None = None,
+        accepted: bool = False,  # noqa: FBT001, FBT002
+        reviewer_notes: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Persist a local tuning decision for one preview comparison."""
+        comparison = preview_service.compare_preview_runs(baseline_run_id, candidate_run_id)
+        summary = build_tuning_session_summary(
+            comparison,
+            feedback_tags=feedback_tags or [],
+            accepted=accepted,
+        )
+        return tuning_store.record_decision(summary, reviewer_notes).model_dump(mode="json")
+
+    @mcp.tool()
+    def list_tuning_decisions(
+        limit: int = 20,
+        accepted_only: bool = False,  # noqa: FBT001, FBT002
+        ranked: bool = False,  # noqa: FBT001, FBT002
+    ) -> dict[str, Any]:
+        """List persisted local tuning decisions."""
+        return tuning_store.list_decisions(limit=limit, accepted_only=accepted_only, ranked=ranked).model_dump(
+            mode="json"
+        )
 
     @mcp.tool()
     def list_preview_runs(limit: int = 20) -> dict[str, Any]:

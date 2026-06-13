@@ -293,7 +293,41 @@ class TuningSessionSummary(StrictModel):
     rationale: str
     suggested_feedback_tags: list[str] = Field(default_factory=list)
     quality_deltas: dict[str, float] = Field(default_factory=dict)
+    quality_score: float = Field(default=100.0, ge=0.0, le=100.0)
+    quality_risk: RiskLevel = "low"
+    quality_findings: list[QualityFinding] = Field(default_factory=list)
     review_notes: list[str] = Field(default_factory=list)
+
+
+class TuningDecisionRecord(StrictModel):
+    """Persisted local tuning decision for one baseline-to-candidate comparison."""
+
+    decision_id: str
+    created_at: str
+    baseline_run_id: str
+    candidate_run_id: str
+    feedback_tags: list[str] = Field(default_factory=list)
+    accepted: bool = False
+    export_ready: bool
+    recommended_next_tool: Literal[
+        "list_feedback_tags",
+        "adjust_pipeline",
+        "render_preview_batch",
+        "export_pipeline",
+    ]
+    quality_score: float = Field(ge=0.0, le=100.0)
+    quality_risk: RiskLevel
+    reviewer_notes: list[str] = Field(default_factory=list)
+    summary: TuningSessionSummary
+
+
+class TuningDecisionList(StrictModel):
+    """List response for persisted local tuning decisions."""
+
+    decisions: list[TuningDecisionRecord] = Field(default_factory=list)
+    total_count: int
+    accepted_count: int
+    ranked: bool = False
 
 
 class TransformSearchResult(StrictModel):

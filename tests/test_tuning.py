@@ -3,6 +3,7 @@ from albumentationsx_mcp.models import (
     PreviewManifestSummary,
     PreviewQualitySummary,
     PreviewRunComparison,
+    QualityFinding,
 )
 from albumentationsx_mcp.tuning import build_tuning_session_summary
 
@@ -27,6 +28,8 @@ def test_tuning_summary_marks_accepted_candidate_ready_for_export() -> None:
     assert summary.candidate_run_id == "candidate"
     assert summary.feedback_tags == ["too_noisy:high"]
     assert summary.quality_deltas == {"brightness_mean": 60.0}
+    assert summary.quality_score == 100.0
+    assert summary.quality_risk == "low"
     assert summary.export_ready is True
     assert summary.recommended_next_tool == "export_pipeline"
 
@@ -41,6 +44,35 @@ def test_tuning_summary_blocks_export_when_inputs_changed() -> None:
     assert summary.export_ready is False
     assert summary.recommended_next_tool == "render_preview_batch"
     assert "same inputs" in summary.rationale
+
+
+def test_tuning_summary_penalizes_quality_findings() -> None:
+    summary = build_tuning_session_summary(
+        _comparison(
+            inputs_changed=False,
+            quality_summary=PreviewQualitySummary(
+                baseline=ImageQualityAggregate(image_count=1, brightness_mean=128.0),
+                candidate=ImageQualityAggregate(image_count=1, brightness_mean=0.0),
+                deltas={"brightness_mean": -128.0},
+                findings=[
+                    QualityFinding(
+                        code="candidate_too_dark",
+                        severity="high",
+                        message="Candidate preview is very dark.",
+                        metric="brightness_mean",
+                        value=0.0,
+                        baseline_value=128.0,
+                    )
+                ],
+            ),
+        ),
+        feedback_tags=[],
+        accepted=False,
+    )
+
+    assert summary.quality_risk == "high"
+    assert summary.quality_score == 65.0
+    assert [finding.code for finding in summary.quality_findings] == ["candidate_too_dark"]
 
 
 def _comparison(
