@@ -116,4 +116,14 @@ jobs:
           enable-cache: false
 
       - name: Smoke published package
-        run: uvx --from "albumentationsx-mcp==${GITHUB_REF_NAME#v}" albumentationsx-mcp --help
+        run: |
+          for attempt in {1..6}; do
+            if uvx --from "albumentationsx-mcp==${GITHUB_REF_NAME#v}" \
+              --refresh-package albumentationsx-mcp \
+              albumentationsx-mcp --help; then
+              exit 0
+            fi
+            echo "PyPI package is not visible yet, retrying smoke attempt ${attempt}/6"
+            sleep 10
+          done
+          exit 1

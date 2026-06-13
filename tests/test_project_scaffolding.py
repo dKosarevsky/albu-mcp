@@ -145,7 +145,9 @@ def test_release_workflow_checks_versions_and_smokes_published_package() -> None
     assert Path("scripts/check_release_version.py").exists()
     assert "uv run python scripts/check_release_version.py" in build_commands
     assert smoke_job["needs"] == "github-release"
-    assert 'uvx --from "albumentationsx-mcp==${GITHUB_REF_NAME#v}" albumentationsx-mcp --help' in smoke_commands
+    assert "for attempt in" in smoke_commands
+    assert "--refresh-package albumentationsx-mcp" in smoke_commands
+    assert 'uvx --from "albumentationsx-mcp==${GITHUB_REF_NAME#v}"' in smoke_commands
 
 
 def test_mcp_registry_metadata_is_ready_for_pypi_distribution() -> None:
