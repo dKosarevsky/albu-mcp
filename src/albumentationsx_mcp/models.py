@@ -237,6 +237,14 @@ class RecipeInfo(StrictModel):
     recommended_tools: list[str] = Field(default_factory=list)
 
 
+class RecipeExplanation(StrictModel):
+    """Structured explanation for one recipe recommendation choice."""
+
+    kind: Literal["quality_profile", "targets", "feedback_tags", "workflow"]
+    selected: str | list[str]
+    rationale: str
+
+
 class RecipeRecommendation(StrictModel):
     """Task-aware starter recipe and workflow guidance."""
 
@@ -249,6 +257,7 @@ class RecipeRecommendation(StrictModel):
     recommended_tools: list[str] = Field(default_factory=list)
     feedback_tags: list[str] = Field(default_factory=list)
     preview_guidance: list[str] = Field(default_factory=list)
+    explanations: list[RecipeExplanation] = Field(default_factory=list)
     rationale: str
 
 

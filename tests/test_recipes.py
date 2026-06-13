@@ -31,6 +31,13 @@ def test_recommend_recipe_returns_task_aware_workflow(
     assert "export_preview_report" in recipe.recommended_tools
     assert recipe.feedback_tags
     assert recipe.rationale
+    assert {explanation.kind for explanation in recipe.explanations} == {
+        "quality_profile",
+        "targets",
+        "feedback_tags",
+        "workflow",
+    }
+    assert all(explanation.rationale for explanation in recipe.explanations)
 
 
 def test_recommend_recipe_respects_explicit_targets() -> None:
@@ -40,6 +47,18 @@ def test_recommend_recipe_respects_explicit_targets() -> None:
     assert recipe.targets == ["image", "bboxes", "keypoints"]
     assert recipe.pipeline.bbox_params == {"format": "pascal_voc", "label_fields": ["labels"]}
     assert recipe.pipeline.keypoint_params == {"format": "xy", "remove_invisible": False}
+    targets_explanation = next(item for item in recipe.explanations if item.kind == "targets")
+    assert targets_explanation.selected == ["image", "bboxes", "keypoints"]
+    assert "explicit targets" in targets_explanation.rationale
+
+
+def test_recommend_recipe_explains_balanced_fallback_for_unknown_tasks() -> None:
+    recipe = recommend_recipe("rare industrial defect task", intensity="medium")
+
+    assert recipe.recipe_name == "balanced"
+    fallback = next(item for item in recipe.explanations if item.kind == "quality_profile")
+    assert fallback.selected == "balanced"
+    assert "fallback" in fallback.rationale
 
 
 def test_list_recipe_catalog_is_agent_legible_and_deterministic() -> None:

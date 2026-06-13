@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import NamedTuple
 
-from albumentationsx_mcp.models import QualityProfileName, RecipeInfo, RecipeRecommendation
+from albumentationsx_mcp.models import QualityProfileName, RecipeExplanation, RecipeInfo, RecipeRecommendation
 from albumentationsx_mcp.presets import Intensity
 from albumentationsx_mcp.presets import recommend_pipeline as recommend_preset_pipeline
 
@@ -95,6 +95,7 @@ def recommend_recipe(
     recipe = _match_recipe(task)
     selected_targets = list(targets) if targets is not None else list(recipe.default_targets)
     pipeline = recommend_preset_pipeline(recipe.preset_task, intensity=intensity, targets=selected_targets)
+    explanations = _explanations(recipe, task=task, targets=selected_targets, explicit_targets=targets is not None)
     return RecipeRecommendation(
         task=task,
         recipe_name=recipe.name,
@@ -105,6 +106,7 @@ def recommend_recipe(
         recommended_tools=list(_RECOMMENDED_TOOLS),
         feedback_tags=list(recipe.feedback_tags),
         preview_guidance=_preview_guidance(recipe),
+        explanations=explanations,
         rationale=_rationale(recipe),
     )
 
@@ -127,6 +129,50 @@ def _match_recipe(task: str) -> RecipeDefinition:
         if normalized in recipe.task_aliases:
             return recipe
     return _RECIPES[-1]
+
+
+def _explanations(
+    recipe: RecipeDefinition,
+    *,
+    task: str,
+    targets: list[str],
+    explicit_targets: bool,
+) -> list[RecipeExplanation]:
+    return [
+        RecipeExplanation(
+            kind="quality_profile",
+            selected=recipe.quality_profile,
+            rationale=_quality_profile_rationale(recipe, task),
+        ),
+        RecipeExplanation(
+            kind="targets",
+            selected=targets,
+            rationale=_targets_rationale(recipe, explicit_targets=explicit_targets),
+        ),
+        RecipeExplanation(
+            kind="feedback_tags",
+            selected=list(recipe.feedback_tags),
+            rationale="These feedback tags match the transforms and failure modes most likely to matter for this task.",
+        ),
+        RecipeExplanation(
+            kind="workflow",
+            selected=list(_RECOMMENDED_TOOLS),
+            rationale="Render, rank, score, report, record the decision, then export only after preview acceptance.",
+        ),
+    ]
+
+
+def _quality_profile_rationale(recipe: RecipeDefinition, task: str) -> str:
+    normalized = _normalize_task(task)
+    if recipe.name == "balanced" and normalized not in recipe.task_aliases:
+        return "Used the balanced fallback because the task did not match a specialized recipe alias."
+    return f"Selected the {recipe.quality_profile} quality profile for the matched {recipe.name} recipe."
+
+
+def _targets_rationale(recipe: RecipeDefinition, *, explicit_targets: bool) -> str:
+    if explicit_targets:
+        return "Used explicit targets supplied by the host so validation and preview rendering match the dataset."
+    return f"Used default targets for the {recipe.name} recipe."
 
 
 def _normalize_task(task: str) -> str:
