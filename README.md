@@ -205,6 +205,13 @@ counts, contact sheets, and warnings.
   install flow, compatibility policy, and publication checks.
 - Updated package maturity metadata to `Development Status :: 5 - Production/Stable`.
 
+## What Changed In 1.1
+
+- Added `albumentationsx://examples/client-smoke` as a post-install MCP host smoke playbook.
+- The smoke playbook verifies capabilities, recipe discovery, `recommend_recipe`, and `validate_pipeline` before preview
+  rendering reads local images.
+- Updated the public MCP contract snapshot and host setup docs for the new compatible resource.
+
 ## V1 Readiness
 
 `v1.0.0` freezes public tool/resource names, response fields, package metadata, and host workflows. `v0.11.0` added

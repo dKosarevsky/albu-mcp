@@ -6,6 +6,13 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 - No unreleased changes yet.
 
+## 1.1.0 - 2026-06-14
+
+- Added `albumentationsx://examples/client-smoke` as a read-only MCP host smoke playbook for capabilities, recipe
+  discovery, `recommend_recipe`, and `validate_pipeline`.
+- Documented the client smoke path in README, install, usage, and recipe docs.
+- Updated the public MCP contract snapshot for the new compatible resource.
+
 ## 1.0.0 - 2026-06-14
 
 - Declared the public MCP tool, resource, prompt, package metadata, and representative output contracts stable.
