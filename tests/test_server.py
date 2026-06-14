@@ -66,6 +66,7 @@ def test_server_exposes_agent_workflow_resources() -> None:
     task_profiles = cast("Any", resources["albumentationsx://workflows/task-profiles"]).fn()
     quality_profiles = cast("Any", resources["albumentationsx://quality-profiles"]).fn()
     recipes_catalog = cast("Any", resources["albumentationsx://recipes/catalog"]).fn()
+    client_smoke_example = cast("Any", resources["albumentationsx://examples/client-smoke"]).fn()
     review_loop_example = cast("Any", resources["albumentationsx://examples/review-loop"]).fn()
     report_handoff_example = cast("Any", resources["albumentationsx://examples/report-handoff"]).fn()
     capabilities = cast("Any", resources["albumentationsx://capabilities"]).fn()
@@ -75,6 +76,7 @@ def test_server_exposes_agent_workflow_resources() -> None:
     assert "classification-robustness" in task_profiles
     assert "segmentation" in quality_profiles
     assert "object_detection" in recipes_catalog
+    assert "is AlbumentationsX MCP connected?" in client_smoke_example
     assert "record_preview_feedback" in review_loop_example
     assert "export_preview_report" in report_handoff_example
     assert "adjust_pipeline" in preview_tuning
@@ -91,6 +93,7 @@ def test_server_exposes_agent_workflow_resources() -> None:
     assert "export_tuning_report" in capabilities
     assert "export_preview_report" in capabilities
     assert "albumentationsx://recipes/catalog" in capabilities
+    assert "albumentationsx://examples/client-smoke" in capabilities
     assert "albumentationsx://examples/review-loop" in capabilities
     assert "albumentationsx://examples/report-handoff" in capabilities
     assert "albumentationsx://workflows/task-profiles" in capabilities

@@ -34,6 +34,8 @@ uvx --from albumentationsx-mcp albumentationsx-mcp
 
 For host-specific setup, bounded filesystem access, smoke checks, and troubleshooting, see the
 [install guide](docs/INSTALL.md).
+After connecting a host, read `albumentationsx://examples/client-smoke` to verify resource discovery, recipe
+recommendation, and pipeline validation before rendering local previews.
 
 For local development:
 

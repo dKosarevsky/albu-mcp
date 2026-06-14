@@ -174,6 +174,7 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
                     "albumentationsx://workflows/annotation-preview",
                     "albumentationsx://workflows/task-profiles",
                     "albumentationsx://recipes/catalog",
+                    "albumentationsx://examples/client-smoke",
                     "albumentationsx://examples/review-loop",
                     "albumentationsx://examples/report-handoff",
                 ],
@@ -202,6 +203,11 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
     def annotation_preview_workflow() -> str:
         """Return the annotation-aware preview workflow guide."""
         return get_agent_workflow("annotation-preview").model_dump_json()
+
+    @mcp.resource("albumentationsx://examples/client-smoke")
+    def client_smoke_example() -> str:
+        """Return the MCP host smoke-check example."""
+        return get_host_example("client-smoke").model_dump_json()
 
     @mcp.resource("albumentationsx://examples/review-loop")
     def review_loop_example() -> str:

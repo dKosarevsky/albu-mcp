@@ -92,6 +92,18 @@ def test_install_guide_covers_host_setup_and_examples() -> None:
     assert 'args = ["--from", "albumentationsx-mcp", "albumentationsx-mcp"]' in codex
 
 
+def test_docs_link_client_smoke_playbook_resource() -> None:
+    install = Path("docs/INSTALL.md").read_text(encoding="utf-8")
+    usage = Path("docs/USAGE.md").read_text(encoding="utf-8")
+    recipes = Path("docs/RECIPES.md").read_text(encoding="utf-8")
+
+    for content in [install, usage, recipes]:
+        assert "albumentationsx://examples/client-smoke" in content
+    assert "client smoke" in install.lower()
+    assert "client-smoke" in usage
+    assert "client-smoke" in recipes
+
+
 def test_v1_readiness_audit_is_present_and_complete() -> None:
     audit = Path("docs/V1_READINESS.md").read_text(encoding="utf-8")
     readme = Path("README.md").read_text(encoding="utf-8")

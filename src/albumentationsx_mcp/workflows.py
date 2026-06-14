@@ -169,6 +169,48 @@ _WORKFLOWS = {
 }
 
 _HOST_EXAMPLES = {
+    "client-smoke": HostExample(
+        name="client-smoke",
+        goal="Verify that an MCP host can see AlbumentationsX MCP resources and call a safe typed tool.",
+        trigger_phrase="is AlbumentationsX MCP connected?",
+        steps=[
+            HostExampleStep(
+                order=1,
+                tool="albumentationsx://capabilities",
+                instruction=(
+                    "Read server capabilities and confirm the expected tools and workflow resources are present."
+                ),
+                expected_result=(
+                    "A compact JSON object with tools, workflow_resources, preview limits, and local roots."
+                ),
+            ),
+            HostExampleStep(
+                order=2,
+                tool="albumentationsx://recipes/catalog",
+                instruction="Read the recipe catalog before choosing a starter workflow.",
+                expected_result=(
+                    "Task-aware recipes including classification, detection, segmentation, OCR, and balanced."
+                ),
+            ),
+            HostExampleStep(
+                order=3,
+                tool="recommend_recipe",
+                instruction="Call recommend_recipe with task classification and intensity low.",
+                expected_result="A conservative classification pipeline with explanations and recommended next tools.",
+            ),
+            HostExampleStep(
+                order=4,
+                tool="validate_pipeline",
+                instruction="Validate the recommended pipeline before rendering any local images.",
+                expected_result="A valid normalized pipeline or machine-readable validation errors.",
+            ),
+        ],
+        success_criteria=[
+            "The host can read static resources without filesystem access errors.",
+            "recommend_recipe returns a typed pipeline and explanation list.",
+            "validate_pipeline accepts the recommended pipeline before preview rendering begins.",
+        ],
+    ),
     "review-loop": HostExample(
         name="review-loop",
         goal="Turn concrete user feedback about one preview example into structured tags and a safer next render.",

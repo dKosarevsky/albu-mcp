@@ -49,10 +49,18 @@ def test_task_profiles_cover_common_computer_vision_workflows() -> None:
 
 def test_host_examples_cover_review_loop_and_report_handoff() -> None:
     examples = list_host_examples()
+    client_smoke = get_host_example("client-smoke")
     review_loop = get_host_example("review-loop")
     report_handoff = get_host_example("report-handoff")
 
-    assert {example.name for example in examples} >= {"review-loop", "report-handoff"}
+    assert {example.name for example in examples} >= {"client-smoke", "review-loop", "report-handoff"}
+    assert client_smoke.trigger_phrase == "is AlbumentationsX MCP connected?"
+    assert [step.tool for step in client_smoke.steps] == [
+        "albumentationsx://capabilities",
+        "albumentationsx://recipes/catalog",
+        "recommend_recipe",
+        "validate_pipeline",
+    ]
     assert review_loop.trigger_phrase == "example 8 is too noisy"
     assert [step.tool for step in review_loop.steps[:3]] == [
         "record_preview_feedback",

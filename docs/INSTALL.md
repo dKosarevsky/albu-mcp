@@ -232,11 +232,17 @@ usage: albumentationsx-mcp [-h] [--transport {stdio,streamable-http}]
                            [--allowed-root ALLOWED_ROOT]
 ```
 
+After wiring a host, ask it to read `albumentationsx://examples/client-smoke`. The client smoke playbook checks that the
+host can read capabilities, read the recipe catalog, call `recommend_recipe`, and validate the returned pipeline before
+preview rendering touches local images.
+
 ## Troubleshooting
 
 - If the host cannot start the server, run the same `uvx` or `uv run` command manually and fix terminal errors first.
 - If a local image path is rejected, confirm it is under `--allowed-root` or `ALBU_MCP_ALLOWED_ROOTS`.
 - If preview reports lack thumbnails, confirm the artifact root still contains the preview run and contact sheet files.
+- If host-side tool discovery looks incomplete, read `albumentationsx://examples/client-smoke` and
+  `albumentationsx://capabilities` before running preview tools.
 - If a host shows stale tools after upgrading, restart the host and clear any client-side MCP server cache it provides.
 - If `uvx` cannot find a just-published version, wait for PyPI Simple API propagation and retry with
   `--refresh-package albumentationsx-mcp`.

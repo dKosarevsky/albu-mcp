@@ -99,6 +99,12 @@
       "uri": "albumentationsx://capabilities"
     },
     {
+      "description": "Return the MCP host smoke-check example.",
+      "mime_type": "text/plain",
+      "name": "client_smoke_example",
+      "uri": "albumentationsx://examples/client-smoke"
+    },
+    {
       "description": "Return the visual report handoff host example.",
       "mime_type": "text/plain",
       "name": "report_handoff_example",

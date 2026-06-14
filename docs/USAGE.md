@@ -8,6 +8,8 @@ Python code.
 
 For copyable host snippets, PyPI install, bounded local access, and troubleshooting, start with
 [INSTALL.md](INSTALL.md). This page focuses on the augmentation workflow after the server is connected.
+After connecting a new host, read `albumentationsx://examples/client-smoke` for a short smoke playbook before rendering
+local previews.
 
 Use `examples/claude_desktop_config.json` as a starting point and replace `/path/to/albu-mcp` with the repository path:
 
@@ -240,6 +242,8 @@ uv run pytest tests/test_output_contract_snapshots.py -q
 - `albumentationsx://workflows/task-profiles`: task-specific workflow defaults for common CV workflows.
 - `albumentationsx://workflows/preview-tuning`: step-by-step preview tuning workflow.
 - `albumentationsx://workflows/annotation-preview`: annotation-aware preview workflow.
+- `albumentationsx://examples/client-smoke`: post-install host smoke playbook for capabilities, recipes, recommendation,
+  and validation.
 - `albumentationsx://examples/review-loop`: concrete example feedback loop for prompts like "example 8 is too noisy".
 - `albumentationsx://examples/report-handoff`: visual report handoff loop after ranking and decisions.
 

@@ -79,5 +79,9 @@ MCP hosts can read:
 - `albumentationsx://workflows/preview-tuning`
 - `albumentationsx://workflows/annotation-preview`
 - `albumentationsx://recipes/catalog`
+- `albumentationsx://examples/client-smoke`
 - `albumentationsx://examples/review-loop`
 - `albumentationsx://examples/report-handoff`
+
+Use `albumentationsx://examples/client-smoke` immediately after adding the server to a host. It verifies resource
+discovery, recipe discovery, `recommend_recipe`, and `validate_pipeline` without reading or writing user image data.
