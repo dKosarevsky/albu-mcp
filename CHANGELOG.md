@@ -4,6 +4,10 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 ## Unreleased
 
+- No unreleased changes yet.
+
+## 1.4.0 - 2026-06-15
+
 - Added `run_host_smoke_check` as a read-only host preflight that combines diagnostics, recipe recommendation, pipeline
   validation, and a safe preview request template.
 - Added host smoke golden eval coverage through stdio and representative output snapshots for ready and blocked reports.
