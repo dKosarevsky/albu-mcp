@@ -104,6 +104,19 @@ def test_docs_link_client_smoke_playbook_resource() -> None:
     assert "client-smoke" in recipes
 
 
+def test_docs_link_diagnostics_playbook_resource() -> None:
+    readme = Path("README.md").read_text(encoding="utf-8")
+    install = Path("docs/INSTALL.md").read_text(encoding="utf-8")
+    usage = Path("docs/USAGE.md").read_text(encoding="utf-8")
+    recipes = Path("docs/RECIPES.md").read_text(encoding="utf-8")
+
+    for content in [readme, install, usage, recipes]:
+        assert "albumentationsx://diagnostics/guide" in content
+        assert "diagnose_environment" in content
+    assert "albumentationsx://examples/diagnostics" in usage
+    assert "albumentationsx://examples/diagnostics" in recipes
+
+
 def test_v1_readiness_audit_is_present_and_complete() -> None:
     audit = Path("docs/V1_READINESS.md").read_text(encoding="utf-8")
     readme = Path("README.md").read_text(encoding="utf-8")

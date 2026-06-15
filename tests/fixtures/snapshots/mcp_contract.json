@@ -99,10 +99,22 @@
       "uri": "albumentationsx://capabilities"
     },
     {
+      "description": "Return the MCP host diagnostics playbook.",
+      "mime_type": "text/plain",
+      "name": "diagnostics_guide_resource",
+      "uri": "albumentationsx://diagnostics/guide"
+    },
+    {
       "description": "Return the MCP host smoke-check example.",
       "mime_type": "text/plain",
       "name": "client_smoke_example",
       "uri": "albumentationsx://examples/client-smoke"
+    },
+    {
+      "description": "Return the MCP host diagnostics example.",
+      "mime_type": "text/plain",
+      "name": "diagnostics_example",
+      "uri": "albumentationsx://examples/diagnostics"
     },
     {
       "description": "Return the visual report handoff host example.",
@@ -271,6 +283,21 @@
           "run_id"
         ],
         "title": "delete_preview_runArguments",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Diagnose local MCP setup, root access, artifact writes, and public surface discovery.",
+      "name": "diagnose_environment",
+      "parameters": {
+        "properties": {
+          "include_write_probe": {
+            "default": true,
+            "title": "Include Write Probe",
+            "type": "boolean"
+          }
+        },
+        "title": "diagnose_environment_toolArguments",
         "type": "object"
       }
     },

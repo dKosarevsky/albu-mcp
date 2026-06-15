@@ -236,10 +236,17 @@ After wiring a host, ask it to read `albumentationsx://examples/client-smoke`. T
 host can read capabilities, read the recipe catalog, call `recommend_recipe`, and validate the returned pipeline before
 preview rendering touches local images.
 
+If the host connects but previews fail, ask it to read `albumentationsx://diagnostics/guide` and call
+`diagnose_environment`. The report checks AlbumentationsX import/version, `--allowed-root`, `--artifact-root`,
+artifact writeability, and the public MCP surface. A healthy setup returns `status: "ok"` and concrete `next_actions`.
+
 ## Troubleshooting
 
+- If the host connects but preview rendering fails, call `diagnose_environment` before changing pipelines.
 - If the host cannot start the server, run the same `uvx` or `uv run` command manually and fix terminal errors first.
 - If a local image path is rejected, confirm it is under `--allowed-root` or `ALBU_MCP_ALLOWED_ROOTS`.
+- If `diagnose_environment` reports `allowed_root_missing`, restart the host with an existing absolute `--allowed-root`.
+- If it reports `artifact_root_write_probe_failed`, restart with a writable `--artifact-root` outside source datasets.
 - If preview reports lack thumbnails, confirm the artifact root still contains the preview run and contact sheet files.
 - If host-side tool discovery looks incomplete, read `albumentationsx://examples/client-smoke` and
   `albumentationsx://capabilities` before running preview tools.

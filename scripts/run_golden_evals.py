@@ -80,6 +80,8 @@ async def _run_scenario(session: ClientSession, scenario: dict[str, Any], images
     targets = scenario["targets"]
     if scenario.get("client_smoke"):
         await _run_client_smoke(session, scenario)
+    if scenario.get("diagnostics_smoke"):
+        await _run_diagnostics_smoke(session, scenario)
     if scenario.get("recommend_recipe"):
         await _run_recipe_recommendation(session, scenario)
     recommended = await _call_tool_json(
@@ -428,6 +430,55 @@ async def _run_client_smoke(session: ClientSession, scenario: dict[str, Any]) ->
     )
     if validation["valid"] is not True:
         raise AssertionError(f"{scenario['name']} smoke validation failed: {validation}")
+
+
+async def _run_diagnostics_smoke(session: ClientSession, scenario: dict[str, Any]) -> None:
+    diagnostics_resources = scenario.get("diagnostics_resources", [])
+    expected_resources = {
+        "albumentationsx://diagnostics/guide",
+        "albumentationsx://capabilities",
+    }
+    if set(diagnostics_resources) != expected_resources:
+        raise AssertionError(f"{scenario['name']} declares wrong diagnostics resources: {diagnostics_resources}")
+
+    guide = await _read_resource_json(session, "albumentationsx://diagnostics/guide")
+    step_tools = [step["tool"] for step in guide["steps"]]
+    expected_steps = [
+        "albumentationsx://diagnostics/guide",
+        "diagnose_environment",
+        "albumentationsx://capabilities",
+    ]
+    if guide["trigger_phrase"] != "why does AlbumentationsX MCP preview not work?":
+        raise AssertionError(f"{scenario['name']} returned wrong diagnostics trigger phrase: {guide}")
+    if step_tools != expected_steps:
+        raise AssertionError(f"{scenario['name']} returned wrong diagnostics step tools: {guide}")
+
+    capabilities = await _read_resource_json(session, "albumentationsx://capabilities")
+    for resource_uri in ("albumentationsx://diagnostics/guide", "albumentationsx://examples/diagnostics"):
+        if resource_uri not in capabilities["workflow_resources"]:
+            raise AssertionError(f"{scenario['name']} capabilities did not include {resource_uri}: {capabilities}")
+    if "diagnose_environment" not in capabilities["tools"]:
+        raise AssertionError(f"{scenario['name']} capabilities did not include diagnose_environment: {capabilities}")
+
+    report = await _call_tool_json(session, "diagnose_environment", {"include_write_probe": True})
+    if report["status"] != "ok":
+        raise AssertionError(f"{scenario['name']} diagnostics report was not ok: {report}")
+    check_codes = {check["code"] for check in report["checks"]}
+    expected_check_codes = {
+        "albumentationsx_import",
+        "allowed_root_accessible",
+        "artifact_root_accessible",
+        "artifact_root_write_probe",
+        "required_tools_available",
+        "required_prompts_available",
+        "required_workflow_resources_available",
+    }
+    if not expected_check_codes.issubset(check_codes):
+        raise AssertionError(f"{scenario['name']} diagnostics missed expected checks: {report}")
+    if report["environment"]["write_probe"] != "passed":
+        raise AssertionError(f"{scenario['name']} diagnostics write probe did not pass: {report}")
+    if not report["next_actions"]:
+        raise AssertionError(f"{scenario['name']} diagnostics returned no next actions: {report}")
 
 
 async def _run_dataset_scoring_and_preview_report(

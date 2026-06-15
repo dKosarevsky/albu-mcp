@@ -10,6 +10,8 @@ For copyable host snippets, PyPI install, bounded local access, and troubleshoot
 [INSTALL.md](INSTALL.md). This page focuses on the augmentation workflow after the server is connected.
 After connecting a new host, read `albumentationsx://examples/client-smoke` for a short smoke playbook before rendering
 local previews.
+When preview setup is unclear, read `albumentationsx://diagnostics/guide` and call `diagnose_environment` before
+changing augmentation pipelines.
 
 Use `examples/claude_desktop_config.json` as a starting point and replace `/path/to/albu-mcp` with the repository path:
 
@@ -39,24 +41,36 @@ retention limit for long-running MCP hosts.
 ## Agent Workflow
 
 1. Call `recommend_recipe` for the target task, intensity, quality profile, feedback tags, explanations, and next tools.
-2. Call `validate_pipeline` before rendering or exporting.
-3. Call `explain_pipeline` to identify likely preview risks and feedback tags.
-4. Call `render_preview_batch` on a small local image set.
-5. Review the generated `contact_sheet` artifact.
-6. Use `compare_preview_runs` when comparing a baseline preview to an adjusted candidate preview.
-7. Review `suggested_feedback_tags` as candidates, then ask the user which tags match the contact sheets.
-8. Call `adjust_pipeline` with tags from `list_feedback_tags`, for example `too_noisy`, `too_noisy:high`, or
+2. Call `diagnose_environment` if roots, artifacts, or host discovery are uncertain.
+3. Call `validate_pipeline` before rendering or exporting.
+4. Call `explain_pipeline` to identify likely preview risks and feedback tags.
+5. Call `render_preview_batch` on a small local image set.
+6. Review the generated `contact_sheet` artifact.
+7. Use `compare_preview_runs` when comparing a baseline preview to an adjusted candidate preview.
+8. Review `suggested_feedback_tags` as candidates, then ask the user which tags match the contact sheets.
+9. Call `adjust_pipeline` with tags from `list_feedback_tags`, for example `too_noisy`, `too_noisy:high`, or
    `too_distorted`.
-9. Re-render one or more candidates with the same input set.
-10. Call `rank_preview_candidates` when multiple candidates need comparison.
-11. Call `score_dataset_preview_candidates` to inspect cross-candidate metric ranges and finding counts.
-12. Call `record_preview_feedback` when the user points to a concrete image and variant, for example
+10. Re-render one or more candidates with the same input set.
+11. Call `rank_preview_candidates` when multiple candidates need comparison.
+12. Call `score_dataset_preview_candidates` to inspect cross-candidate metric ranges and finding counts.
+13. Call `record_preview_feedback` when the user points to a concrete image and variant, for example
     "example 8 is too noisy".
-13. Call `list_preview_feedback` and reuse `aggregated_feedback_tags` for the next `adjust_pipeline` call.
-14. Call `summarize_tuning_session` to inspect `quality_score`, `quality_risk`, and `export_ready`.
-15. Call `record_tuning_decision` to persist the accepted or rejected candidate.
-16. Call `export_preview_report` for a visual Markdown or HTML handoff that includes matching concrete feedback.
-17. Call `export_tuning_report` for a decision journal handoff, then `export_pipeline` once the preview set is acceptable.
+14. Call `list_preview_feedback` and reuse `aggregated_feedback_tags` for the next `adjust_pipeline` call.
+15. Call `summarize_tuning_session` to inspect `quality_score`, `quality_risk`, and `export_ready`.
+16. Call `record_tuning_decision` to persist the accepted or rejected candidate.
+17. Call `export_preview_report` for a visual Markdown or HTML handoff that includes matching concrete feedback.
+18. Call `export_tuning_report` for a decision journal handoff, then `export_pipeline` once the preview set is acceptable.
+
+## Diagnostics
+
+Use `diagnose_environment` before preview rendering when a host has stale tool discovery, rejected local paths, or missing
+artifacts. The response includes `status`, ordered `checks`, `warnings`, `next_actions`, and normalized environment
+details. The tool does not inspect datasets; with `include_write_probe=true`, it writes and removes one small probe file
+under `artifact_root`.
+
+Read `albumentationsx://diagnostics/guide` for the canonical troubleshooting flow and
+`albumentationsx://examples/diagnostics` for a host example. Common findings include `allowed_root_missing`,
+`artifact_root_write_probe_failed`, and missing public MCP surface entries after a host upgrade.
 
 ## Preview Artifacts
 
@@ -237,6 +251,7 @@ uv run pytest tests/test_output_contract_snapshots.py -q
 - `albumentationsx://feedback-tags`: structured feedback tags accepted by `adjust_pipeline`.
 - `albumentationsx://quality-profiles`: task-aware quality profiles accepted by comparison and ranking tools.
 - `albumentationsx://recipes/catalog`: task-aware recipe catalog for starter workflows.
+- `albumentationsx://diagnostics/guide`: setup diagnostics playbook for MCP hosts.
 - `albumentationsx://capabilities`: configured roots, preview limits, and exposed tools.
 - `albumentationsx://workflows/catalog`: built-in agent workflow guides.
 - `albumentationsx://workflows/task-profiles`: task-specific workflow defaults for common CV workflows.
@@ -244,6 +259,7 @@ uv run pytest tests/test_output_contract_snapshots.py -q
 - `albumentationsx://workflows/annotation-preview`: annotation-aware preview workflow.
 - `albumentationsx://examples/client-smoke`: post-install host smoke playbook for capabilities, recipes, recommendation,
   and validation.
+- `albumentationsx://examples/diagnostics`: troubleshooting playbook for preview setup and local root issues.
 - `albumentationsx://examples/review-loop`: concrete example feedback loop for prompts like "example 8 is too noisy".
 - `albumentationsx://examples/report-handoff`: visual report handoff loop after ranking and decisions.
 

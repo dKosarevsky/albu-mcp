@@ -36,6 +36,8 @@ For host-specific setup, bounded filesystem access, smoke checks, and troublesho
 [install guide](docs/INSTALL.md).
 After connecting a host, read `albumentationsx://examples/client-smoke` to verify resource discovery, recipe
 recommendation, and pipeline validation before rendering local previews.
+If preview setup fails, read `albumentationsx://diagnostics/guide` and call `diagnose_environment` for a structured
+setup report.
 
 For local development:
 
@@ -109,6 +111,7 @@ See [examples/claude_desktop_pypi_config.json](examples/claude_desktop_pypi_conf
 - `delete_preview_run`: delete one preview run and its artifacts.
 - `cleanup_preview_runs`: prune older preview runs beyond a retention count.
 - `export_pipeline`: export a pipeline as Python, JSON, or YAML.
+- `diagnose_environment`: check package import, local roots, artifact writeability, and public MCP discovery.
 
 `render_preview` and `render_preview_batch` support optional bboxes, keypoints, and mask paths for annotation overlay
 previews. Preview manifests include an agent-legible `summary` block with input counts, seeds, transform names, artifact
@@ -211,6 +214,13 @@ counts, contact sheets, and warnings.
 - The smoke playbook verifies capabilities, recipe discovery, `recommend_recipe`, and `validate_pipeline` before preview
   rendering reads local images.
 - Updated the public MCP contract snapshot and host setup docs for the new compatible resource.
+
+## What Changed In 1.2
+
+- Added `diagnose_environment` for agent-legible local setup diagnostics before preview rendering.
+- Added `albumentationsx://diagnostics/guide` and `albumentationsx://examples/diagnostics` for MCP host troubleshooting.
+- Extended golden MCP evals to verify diagnostics resources, capabilities discovery, and write-probe behavior through
+  stdio.
 
 ## V1 Readiness
 

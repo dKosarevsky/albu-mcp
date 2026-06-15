@@ -11,6 +11,17 @@ scenarios:
       - albumentationsx://capabilities
       - albumentationsx://recipes/catalog
 
+  - name: diagnostics_resource_flow
+    task: classification
+    intensity: low
+    targets: ["image"]
+    export_format: json
+    preview: false
+    diagnostics_smoke: true
+    diagnostics_resources:
+      - albumentationsx://diagnostics/guide
+      - albumentationsx://capabilities
+
   - name: classification_recommend_validate_explain_export
     task: classification
     intensity: low

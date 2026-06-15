@@ -74,14 +74,18 @@ After every accepted or rejected candidate:
 
 MCP hosts can read:
 
+- `albumentationsx://diagnostics/guide`
 - `albumentationsx://workflows/catalog`
 - `albumentationsx://workflows/task-profiles`
 - `albumentationsx://workflows/preview-tuning`
 - `albumentationsx://workflows/annotation-preview`
 - `albumentationsx://recipes/catalog`
 - `albumentationsx://examples/client-smoke`
+- `albumentationsx://examples/diagnostics`
 - `albumentationsx://examples/review-loop`
 - `albumentationsx://examples/report-handoff`
 
 Use `albumentationsx://examples/client-smoke` immediately after adding the server to a host. It verifies resource
 discovery, recipe discovery, `recommend_recipe`, and `validate_pipeline` without reading or writing user image data.
+Use `albumentationsx://diagnostics/guide` plus `diagnose_environment` when preview setup fails, local paths are rejected,
+or host-side tool discovery looks stale.
