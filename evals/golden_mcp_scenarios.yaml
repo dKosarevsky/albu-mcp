@@ -6,6 +6,7 @@ scenarios:
     export_format: json
     preview: false
     client_smoke: true
+    host_smoke: true
     smoke_resources:
       - albumentationsx://examples/client-smoke
       - albumentationsx://capabilities

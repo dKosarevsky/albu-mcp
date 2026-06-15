@@ -914,6 +914,51 @@
       }
     },
     {
+      "description": "Run a read-only host preflight before rendering local previews.",
+      "name": "run_host_smoke_check",
+      "parameters": {
+        "properties": {
+          "include_write_probe": {
+            "default": true,
+            "title": "Include Write Probe",
+            "type": "boolean"
+          },
+          "intensity": {
+            "default": "low",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Intensity",
+            "type": "string"
+          },
+          "targets": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Targets"
+          },
+          "task": {
+            "default": "classification",
+            "title": "Task",
+            "type": "string"
+          }
+        },
+        "title": "run_host_smoke_check_toolArguments",
+        "type": "object"
+      }
+    },
+    {
       "description": "Score several preview candidates as one dataset-level decision set.",
       "name": "score_dataset_preview_candidates",
       "parameters": {

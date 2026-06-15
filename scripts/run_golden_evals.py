@@ -394,6 +394,7 @@ async def _run_client_smoke(session: ClientSession, scenario: dict[str, Any]) ->
         "albumentationsx://recipes/catalog",
         "recommend_recipe",
         "validate_pipeline",
+        "run_host_smoke_check",
     ]
     if playbook["trigger_phrase"] != "is AlbumentationsX MCP connected?":
         raise AssertionError(f"{scenario['name']} returned wrong smoke trigger phrase: {playbook}")
@@ -404,7 +405,7 @@ async def _run_client_smoke(session: ClientSession, scenario: dict[str, Any]) ->
     for resource_uri in ("albumentationsx://examples/client-smoke", "albumentationsx://recipes/catalog"):
         if resource_uri not in capabilities["workflow_resources"]:
             raise AssertionError(f"{scenario['name']} capabilities did not include {resource_uri}: {capabilities}")
-    for tool_name in ("recommend_recipe", "validate_pipeline"):
+    for tool_name in ("recommend_recipe", "validate_pipeline", "run_host_smoke_check"):
         if tool_name not in capabilities["tools"]:
             raise AssertionError(f"{scenario['name']} capabilities did not include {tool_name}: {capabilities}")
 
@@ -430,6 +431,29 @@ async def _run_client_smoke(session: ClientSession, scenario: dict[str, Any]) ->
     )
     if validation["valid"] is not True:
         raise AssertionError(f"{scenario['name']} smoke validation failed: {validation}")
+    if scenario.get("host_smoke"):
+        await _run_host_smoke(session, scenario)
+
+
+async def _run_host_smoke(session: ClientSession, scenario: dict[str, Any]) -> None:
+    smoke_report = await _call_tool_json(
+        session,
+        "run_host_smoke_check",
+        {
+            "include_write_probe": True,
+            "task": scenario["task"],
+            "intensity": scenario.get("intensity", "medium"),
+            "targets": scenario["targets"],
+        },
+    )
+    if smoke_report["status"] != "ok" or smoke_report["preview_ready"] is not True:
+        raise AssertionError(f"{scenario['name']} host smoke was not preview-ready: {smoke_report}")
+    template = smoke_report.get("preview_request_template")
+    if template is None or template["tool"] != "render_preview_batch":
+        raise AssertionError(f"{scenario['name']} host smoke returned no preview template: {smoke_report}")
+    request = template["request"]
+    if request["variants_per_image"] != 1 or request["seed"] != 0 or not request["input_paths"]:
+        raise AssertionError(f"{scenario['name']} host smoke returned unsafe preview request: {smoke_report}")
 
 
 async def _run_diagnostics_smoke(session: ClientSession, scenario: dict[str, Any]) -> None:

@@ -38,6 +38,7 @@
             "export_preview_report",
             "recommend_recipe",
             "render_preview_batch",
+            "run_host_smoke_check",
             "validate_pipeline"
           ]
         },
@@ -149,6 +150,7 @@
             "export_preview_report",
             "recommend_recipe",
             "render_preview_batch",
+            "run_host_smoke_check",
             "validate_pipeline"
           ]
         },
@@ -359,6 +361,435 @@
     "review_target": "example 8 / variant 1",
     "run_id": "candidate-a",
     "variant_index": 0
+  },
+  "run_host_smoke_check_missing_allowed_root": {
+    "checks": [
+      {
+        "code": "diagnostics",
+        "details": {
+          "check_count": 6,
+          "warning_count": 1,
+          "write_probe": "not_run"
+        },
+        "resource_uri": null,
+        "severity": "medium",
+        "status": "warning",
+        "summary": "diagnose_environment returned warning.",
+        "tool": "diagnose_environment"
+      },
+      {
+        "code": "recipe_recommendation",
+        "details": {
+          "feedback_tags": [
+            "too_noisy",
+            "too_blurry",
+            "object_unrecognizable"
+          ],
+          "intensity": "low",
+          "targets": [
+            "image"
+          ],
+          "task": "classification"
+        },
+        "resource_uri": null,
+        "severity": "info",
+        "status": "ok",
+        "summary": "Selected classification recipe with classification quality profile.",
+        "tool": "recommend_recipe"
+      },
+      {
+        "code": "pipeline_validation",
+        "details": {
+          "error_count": 0,
+          "errors": [],
+          "valid": true,
+          "warning_count": 0,
+          "warnings": []
+        },
+        "resource_uri": null,
+        "severity": "info",
+        "status": "ok",
+        "summary": "Recommended pipeline validated.",
+        "tool": "validate_pipeline"
+      },
+      {
+        "code": "preview_request_template",
+        "details": {
+          "blocked_by": [
+            "diagnostics"
+          ],
+          "template_available": false
+        },
+        "resource_uri": null,
+        "severity": "medium",
+        "status": "warning",
+        "summary": "Preview request template is blocked until diagnostics warnings or errors are resolved.",
+        "tool": "render_preview_batch"
+      }
+    ],
+    "diagnostics": {
+      "checks": [
+        {
+          "code": "albumentationsx_import",
+          "details": {
+            "module_version": "<albumentationsx-version>",
+            "package_version": "<albumentationsx-version>"
+          },
+          "message": "AlbumentationsX is importable.",
+          "severity": "info",
+          "status": "ok"
+        },
+        {
+          "code": "allowed_root_missing",
+          "details": {
+            "path": "<OUTPUT_CONTRACT_ROOT>/host-smoke/missing-images"
+          },
+          "message": "Allowed root does not exist: <OUTPUT_CONTRACT_ROOT>/host-smoke/missing-images",
+          "severity": "medium",
+          "status": "warning"
+        },
+        {
+          "code": "artifact_root_accessible",
+          "details": {
+            "path": "<OUTPUT_CONTRACT_ROOT>/host-smoke-missing-root/artifacts"
+          },
+          "message": "Artifact root is accessible: <OUTPUT_CONTRACT_ROOT>/host-smoke-missing-root/artifacts",
+          "severity": "info",
+          "status": "ok"
+        },
+        {
+          "code": "required_tools_available",
+          "details": {
+            "required": [
+              "compare_preview_runs",
+              "diagnose_environment",
+              "export_preview_report",
+              "recommend_recipe",
+              "render_preview_batch",
+              "run_host_smoke_check",
+              "validate_pipeline"
+            ]
+          },
+          "message": "Required diagnostics tools are available.",
+          "severity": "info",
+          "status": "ok"
+        },
+        {
+          "code": "required_prompts_available",
+          "details": {
+            "required": [
+              "build_robustness_augmentation_session",
+              "compare_preview_runs_for_feedback"
+            ]
+          },
+          "message": "Required workflow prompts are available.",
+          "severity": "info",
+          "status": "ok"
+        },
+        {
+          "code": "required_workflow_resources_available",
+          "details": {
+            "required": [
+              "albumentationsx://diagnostics/guide",
+              "albumentationsx://examples/client-smoke",
+              "albumentationsx://recipes/catalog",
+              "albumentationsx://workflows/preview-tuning"
+            ]
+          },
+          "message": "Required workflow resources are available.",
+          "severity": "info",
+          "status": "ok"
+        }
+      ],
+      "environment": {
+        "albumentationsx_version": "<albumentationsx-version>",
+        "allowed_roots": [
+          "<OUTPUT_CONTRACT_ROOT>/host-smoke/missing-images"
+        ],
+        "artifact_root": "<OUTPUT_CONTRACT_ROOT>/host-smoke-missing-root/artifacts",
+        "max_preview_runs": 100,
+        "write_probe": "not_run"
+      },
+      "next_actions": [
+        "Restart the MCP host with `--allowed-root /absolute/path/to/images`."
+      ],
+      "remediation_actions": [
+        {
+          "check_codes": [
+            "allowed_root_missing"
+          ],
+          "code": "fix_allowed_root",
+          "command_hint": "--allowed-root /absolute/path/to/images",
+          "docs_uri": "albumentationsx://diagnostics/guide",
+          "severity": "medium",
+          "summary": "Restart the MCP host with `--allowed-root /absolute/path/to/images`."
+        }
+      ],
+      "status": "warning",
+      "warnings": [
+        "Allowed root does not exist: <OUTPUT_CONTRACT_ROOT>/host-smoke/missing-images"
+      ]
+    },
+    "next_actions": [
+      "Restart the MCP host with `--allowed-root /absolute/path/to/images`."
+    ],
+    "preview_ready": false,
+    "preview_request_template": null,
+    "remediation_actions": [
+      {
+        "check_codes": [
+          "allowed_root_missing"
+        ],
+        "code": "fix_allowed_root",
+        "command_hint": "--allowed-root /absolute/path/to/images",
+        "docs_uri": "albumentationsx://diagnostics/guide",
+        "severity": "medium",
+        "summary": "Restart the MCP host with `--allowed-root /absolute/path/to/images`."
+      }
+    ],
+    "status": "warning"
+  },
+  "run_host_smoke_check_ready": {
+    "checks": [
+      {
+        "code": "diagnostics",
+        "details": {
+          "check_count": 7,
+          "warning_count": 0,
+          "write_probe": "passed"
+        },
+        "resource_uri": null,
+        "severity": "info",
+        "status": "ok",
+        "summary": "diagnose_environment returned ok.",
+        "tool": "diagnose_environment"
+      },
+      {
+        "code": "recipe_recommendation",
+        "details": {
+          "feedback_tags": [
+            "too_noisy",
+            "too_blurry",
+            "object_unrecognizable"
+          ],
+          "intensity": "low",
+          "targets": [
+            "image"
+          ],
+          "task": "classification"
+        },
+        "resource_uri": null,
+        "severity": "info",
+        "status": "ok",
+        "summary": "Selected classification recipe with classification quality profile.",
+        "tool": "recommend_recipe"
+      },
+      {
+        "code": "pipeline_validation",
+        "details": {
+          "error_count": 0,
+          "errors": [],
+          "valid": true,
+          "warning_count": 0,
+          "warnings": []
+        },
+        "resource_uri": null,
+        "severity": "info",
+        "status": "ok",
+        "summary": "Recommended pipeline validated.",
+        "tool": "validate_pipeline"
+      },
+      {
+        "code": "preview_request_template",
+        "details": {
+          "template_available": true
+        },
+        "resource_uri": null,
+        "severity": "info",
+        "status": "ok",
+        "summary": "Preview request template is ready for render_preview_batch.",
+        "tool": "render_preview_batch"
+      }
+    ],
+    "diagnostics": {
+      "checks": [
+        {
+          "code": "albumentationsx_import",
+          "details": {
+            "module_version": "<albumentationsx-version>",
+            "package_version": "<albumentationsx-version>"
+          },
+          "message": "AlbumentationsX is importable.",
+          "severity": "info",
+          "status": "ok"
+        },
+        {
+          "code": "allowed_root_accessible",
+          "details": {
+            "path": "<OUTPUT_CONTRACT_ROOT>/host-smoke/images"
+          },
+          "message": "Allowed root is accessible: <OUTPUT_CONTRACT_ROOT>/host-smoke/images",
+          "severity": "info",
+          "status": "ok"
+        },
+        {
+          "code": "artifact_root_accessible",
+          "details": {
+            "path": "<OUTPUT_CONTRACT_ROOT>/host-smoke/artifacts"
+          },
+          "message": "Artifact root is accessible: <OUTPUT_CONTRACT_ROOT>/host-smoke/artifacts",
+          "severity": "info",
+          "status": "ok"
+        },
+        {
+          "code": "artifact_root_write_probe",
+          "details": {
+            "path": "<OUTPUT_CONTRACT_ROOT>/host-smoke/artifacts/.albumentationsx-mcp-diagnostics-probe"
+          },
+          "message": "Artifact root write probe passed.",
+          "severity": "info",
+          "status": "ok"
+        },
+        {
+          "code": "required_tools_available",
+          "details": {
+            "required": [
+              "compare_preview_runs",
+              "diagnose_environment",
+              "export_preview_report",
+              "recommend_recipe",
+              "render_preview_batch",
+              "run_host_smoke_check",
+              "validate_pipeline"
+            ]
+          },
+          "message": "Required diagnostics tools are available.",
+          "severity": "info",
+          "status": "ok"
+        },
+        {
+          "code": "required_prompts_available",
+          "details": {
+            "required": [
+              "build_robustness_augmentation_session",
+              "compare_preview_runs_for_feedback"
+            ]
+          },
+          "message": "Required workflow prompts are available.",
+          "severity": "info",
+          "status": "ok"
+        },
+        {
+          "code": "required_workflow_resources_available",
+          "details": {
+            "required": [
+              "albumentationsx://diagnostics/guide",
+              "albumentationsx://examples/client-smoke",
+              "albumentationsx://recipes/catalog",
+              "albumentationsx://workflows/preview-tuning"
+            ]
+          },
+          "message": "Required workflow resources are available.",
+          "severity": "info",
+          "status": "ok"
+        }
+      ],
+      "environment": {
+        "albumentationsx_version": "<albumentationsx-version>",
+        "allowed_roots": [
+          "<OUTPUT_CONTRACT_ROOT>/host-smoke/images"
+        ],
+        "artifact_root": "<OUTPUT_CONTRACT_ROOT>/host-smoke/artifacts",
+        "max_preview_runs": 100,
+        "write_probe": "passed"
+      },
+      "next_actions": [
+        "Proceed with `recommend_recipe`, `validate_pipeline`, and a small `render_preview_batch`."
+      ],
+      "remediation_actions": [
+        {
+          "check_codes": [],
+          "code": "proceed_with_preview_smoke",
+          "command_hint": null,
+          "docs_uri": "albumentationsx://diagnostics/guide",
+          "severity": "info",
+          "summary": "Proceed with `recommend_recipe`, `validate_pipeline`, and a small `render_preview_batch`."
+        }
+      ],
+      "status": "ok",
+      "warnings": []
+    },
+    "next_actions": [
+      "Replace the placeholder input path with one small image under an allowed root.",
+      "Call `render_preview_batch` with `preview_request_template.request`.",
+      "Inspect the contact sheet before increasing variants, intensity, or batch size."
+    ],
+    "preview_ready": true,
+    "preview_request_template": {
+      "instructions": [
+        "Replace the placeholder input path with one small image under an allowed root.",
+        "Keep variants_per_image at 1 until the first contact sheet is readable.",
+        "Inspect the contact sheet before increasing intensity or rendering larger batches."
+      ],
+      "request": {
+        "input_paths": [
+          "<OUTPUT_CONTRACT_ROOT>/host-smoke/images/example.jpg"
+        ],
+        "max_side": 512,
+        "pipeline": {
+          "additional_targets": {},
+          "is_check_shapes": true,
+          "seed": 137,
+          "strict": true,
+          "transforms": [
+            {
+              "name": "HorizontalFlip",
+              "p": 0.2,
+              "params": {}
+            },
+            {
+              "name": "RandomBrightnessContrast",
+              "p": 0.2,
+              "params": {}
+            },
+            {
+              "name": "GaussNoise",
+              "p": 0.1,
+              "params": {
+                "std_range": [
+                  0.02,
+                  0.1
+                ]
+              }
+            },
+            {
+              "name": "MotionBlur",
+              "p": 0.06666666666666667,
+              "params": {
+                "blur_range": [
+                  3,
+                  5
+                ]
+              }
+            }
+          ]
+        },
+        "seed": 0,
+        "variants_per_image": 1
+      },
+      "tool": "render_preview_batch"
+    },
+    "remediation_actions": [
+      {
+        "check_codes": [],
+        "code": "proceed_with_preview_smoke",
+        "command_hint": null,
+        "docs_uri": "albumentationsx://diagnostics/guide",
+        "severity": "info",
+        "summary": "Proceed with `recommend_recipe`, `validate_pipeline`, and a small `render_preview_batch`."
+      }
+    ],
+    "status": "ok"
   },
   "score_dataset_preview_candidates": {
     "baseline_run_id": "baseline",

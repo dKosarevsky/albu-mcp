@@ -60,6 +60,7 @@ def test_host_examples_cover_review_loop_and_report_handoff() -> None:
         "albumentationsx://recipes/catalog",
         "recommend_recipe",
         "validate_pipeline",
+        "run_host_smoke_check",
     ]
     assert review_loop.trigger_phrase == "example 8 is too noisy"
     assert [step.tool for step in review_loop.steps[:3]] == [

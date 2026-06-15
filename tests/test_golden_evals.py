@@ -39,6 +39,7 @@ def test_golden_eval_assets_are_present() -> None:
         "albumentationsx://capabilities",
         "albumentationsx://recipes/catalog",
     ]
+    assert smoke_scenario["host_smoke"] is True
     assert diagnostics_scenario["diagnostics_smoke"] is True
     assert diagnostics_scenario["diagnostics_resources"] == [
         "albumentationsx://diagnostics/guide",
@@ -49,6 +50,7 @@ def test_golden_eval_assets_are_present() -> None:
     assert quality_scenario["assert_preview_report_feedback"] is True
     assert "_run_client_smoke" in runner_source
     assert "_run_diagnostics_smoke" in runner_source
+    assert "run_host_smoke_check" in runner_source
     assert "_read_resource_json" in runner_source
     assert "record_preview_feedback" in runner_source
     assert "assert_preview_report_feedback" in runner_source

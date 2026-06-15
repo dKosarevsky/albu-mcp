@@ -204,11 +204,18 @@ _HOST_EXAMPLES = {
                 instruction="Validate the recommended pipeline before rendering any local images.",
                 expected_result="A valid normalized pipeline or machine-readable validation errors.",
             ),
+            HostExampleStep(
+                order=5,
+                tool="run_host_smoke_check",
+                instruction="Call run_host_smoke_check to confirm preview readiness and get a safe request template.",
+                expected_result="A report with preview_ready=true and a render_preview_batch request template.",
+            ),
         ],
         success_criteria=[
             "The host can read static resources without filesystem access errors.",
             "recommend_recipe returns a typed pipeline and explanation list.",
             "validate_pipeline accepts the recommended pipeline before preview rendering begins.",
+            "run_host_smoke_check returns preview_ready=true and a small render_preview_batch template.",
         ],
     ),
     "review-loop": HostExample(

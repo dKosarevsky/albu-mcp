@@ -10,8 +10,10 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from albumentationsx_mcp.catalog import TransformCatalog
 from albumentationsx_mcp.dataset import score_dataset_preview_candidates
-from albumentationsx_mcp.diagnostics import DiagnosticsService, PublicSurface
+from albumentationsx_mcp.diagnostics import DiagnosticsReport, DiagnosticsService, PublicSurface
+from albumentationsx_mcp.host_smoke import HostSmokeReport, build_host_smoke_report
 from albumentationsx_mcp.models import (
     DatasetPreviewScore,
     ImageQualityAggregate,
@@ -20,9 +22,11 @@ from albumentationsx_mcp.models import (
     PreviewQualitySummary,
     PreviewRunComparison,
     QualityFinding,
+    TargetSpec,
     TuningDecisionRecord,
     TuningSessionSummary,
 )
+from albumentationsx_mcp.pipeline import PipelineService
 from albumentationsx_mcp.recipes import recommend_recipe
 from albumentationsx_mcp.reports import PreviewReportService
 from albumentationsx_mcp.review import PreviewFeedbackStore
@@ -57,6 +61,8 @@ def build_output_contract_snapshot(root: Path) -> dict[str, Any]:
         "recommend_recipe": recommend_recipe("ocr", intensity="low").model_dump(mode="json"),
         "diagnose_environment_ok": _diagnostics_ok(root),
         "diagnose_environment_missing_allowed_root": _diagnostics_missing_allowed_root(root),
+        "run_host_smoke_check_ready": _host_smoke_ready(root),
+        "run_host_smoke_check_missing_allowed_root": _host_smoke_missing_allowed_root(root),
         "score_dataset_preview_candidates": _dataset_score().model_dump(mode="json"),
         "record_preview_feedback": _normalize_feedback_record(feedback),
         "list_preview_feedback": {
@@ -217,6 +223,36 @@ def _diagnostics_missing_allowed_root(root: Path) -> dict[str, Any]:
     return _normalize_diagnostics_report(report.model_dump(mode="json"), root)
 
 
+def _host_smoke_ready(root: Path) -> dict[str, Any]:
+    images_root = root / "host-smoke" / "images"
+    images_root.mkdir(parents=True)
+    diagnostics = DiagnosticsService(
+        allowed_roots=[images_root],
+        artifact_root=root / "host-smoke" / "artifacts",
+        max_preview_runs=100,
+        public_surface=_diagnostics_public_surface(),
+    ).diagnose(include_write_probe=True)
+    return _normalize_host_smoke_report(_host_smoke_report(diagnostics).model_dump(mode="json"), root)
+
+
+def _host_smoke_missing_allowed_root(root: Path) -> dict[str, Any]:
+    diagnostics = DiagnosticsService(
+        allowed_roots=[root / "host-smoke" / "missing-images"],
+        artifact_root=root / "host-smoke-missing-root" / "artifacts",
+        max_preview_runs=100,
+        public_surface=_diagnostics_public_surface(),
+    ).diagnose(include_write_probe=False)
+    return _normalize_host_smoke_report(_host_smoke_report(diagnostics).model_dump(mode="json"), root)
+
+
+def _host_smoke_report(diagnostics_report: DiagnosticsReport) -> HostSmokeReport:
+    catalog = TransformCatalog()
+    pipeline_service = PipelineService(catalog)
+    recipe = recommend_recipe("classification", intensity="low", targets=["image"])
+    validation = pipeline_service.validate_pipeline(recipe.pipeline, TargetSpec(targets=recipe.targets))
+    return build_host_smoke_report(diagnostics=diagnostics_report, recipe=recipe, validation=validation)
+
+
 def _diagnostics_public_surface() -> PublicSurface:
     return PublicSurface(
         tools=[
@@ -284,6 +320,12 @@ def _normalize_diagnostics_report(payload: dict[str, Any], root: Path) -> dict[s
         if check["code"] == "albumentationsx_import":
             check["details"]["module_version"] = "<albumentationsx-version>"
             check["details"]["package_version"] = "<albumentationsx-version>"
+    return normalized
+
+
+def _normalize_host_smoke_report(payload: dict[str, Any], root: Path) -> dict[str, Any]:
+    normalized = _normalize_paths(payload, root)
+    normalized["diagnostics"] = _normalize_diagnostics_report(normalized["diagnostics"], root)
     return normalized
 
 
