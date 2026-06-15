@@ -21,6 +21,9 @@ def test_diagnostics_reports_ok_environment(tmp_path: Path) -> None:
     assert report.status == "ok"
     assert "albumentationsx_import" in {check.code for check in report.checks}
     assert "artifact_root_write_probe" in {check.code for check in report.checks}
+    assert {check.severity for check in report.checks} == {"info"}
+    assert [action.code for action in report.remediation_actions] == ["proceed_with_preview_smoke"]
+    assert report.remediation_actions[0].severity == "info"
     assert report.environment.allowed_roots == [str(tmp_path.resolve())]
     assert report.environment.artifact_root == str(artifact_root.resolve())
     assert report.environment.max_preview_runs == 7
@@ -40,6 +43,13 @@ def test_diagnostics_warns_for_missing_allowed_root(tmp_path: Path) -> None:
 
     assert report.status == "warning"
     assert "allowed_root_missing" in {check.code for check in report.checks}
+    missing_root_check = next(check for check in report.checks if check.code == "allowed_root_missing")
+    assert missing_root_check.severity == "medium"
+    allowed_root_action = next(action for action in report.remediation_actions if action.code == "fix_allowed_root")
+    assert allowed_root_action.severity == "medium"
+    assert allowed_root_action.check_codes == ["allowed_root_missing"]
+    assert allowed_root_action.command_hint == "--allowed-root /absolute/path/to/images"
+    assert allowed_root_action.docs_uri == "albumentationsx://diagnostics/guide"
     assert report.environment.write_probe == "not_run"
     assert any("--allowed-root" in action for action in report.next_actions)
     assert any(str(missing_root.resolve()) in warning for warning in report.warnings)
@@ -57,9 +67,33 @@ def test_diagnostics_errors_when_artifact_root_is_a_file(tmp_path: Path) -> None
     ).diagnose(include_write_probe=True)
 
     assert report.status == "error"
-    assert "artifact_root_not_directory" in {check.code for check in report.checks}
+    artifact_root_check = next(check for check in report.checks if check.code == "artifact_root_not_directory")
+    assert artifact_root_check.severity == "high"
+    artifact_root_action = next(action for action in report.remediation_actions if action.code == "fix_artifact_root")
+    assert artifact_root_action.severity == "high"
+    assert artifact_root_action.check_codes == ["artifact_root_not_directory"]
     assert report.environment.write_probe == "failed"
     assert any("--artifact-root" in action for action in report.next_actions)
+
+
+def test_diagnostics_reports_missing_public_surface_remediation(tmp_path: Path) -> None:
+    public_surface = _complete_public_surface()
+    public_surface.tools.remove("diagnose_environment")
+
+    report = DiagnosticsService(
+        allowed_roots=[tmp_path],
+        artifact_root=tmp_path / "artifacts",
+        max_preview_runs=100,
+        public_surface=public_surface,
+    ).diagnose(include_write_probe=False)
+
+    assert report.status == "error"
+    surface_check = next(check for check in report.checks if check.code == "required_tools_available")
+    assert surface_check.severity == "high"
+    surface_action = next(action for action in report.remediation_actions if action.code == "refresh_host_surface")
+    assert surface_action.severity == "high"
+    assert surface_action.check_codes == ["required_tools_available"]
+    assert "albumentationsx-mcp" in surface_action.command_hint
 
 
 def test_diagnostics_guide_is_agent_legible() -> None:

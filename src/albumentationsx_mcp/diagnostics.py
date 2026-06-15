@@ -12,6 +12,7 @@ from pydantic import Field
 from albumentationsx_mcp.models import StrictModel
 
 DiagnosticStatus = Literal["ok", "warning", "error"]
+DiagnosticSeverity = Literal["info", "medium", "high", "critical"]
 WriteProbeStatus = Literal["not_run", "passed", "failed"]
 
 _PROBE_FILENAME = ".albumentationsx-mcp-diagnostics-probe"
@@ -48,8 +49,20 @@ class DiagnosticCheck(StrictModel):
 
     code: str
     status: DiagnosticStatus
+    severity: DiagnosticSeverity = "info"
     message: str
     details: dict[str, Any] = Field(default_factory=dict)
+
+
+class DiagnosticRemediationAction(StrictModel):
+    """One structured remediation action for a diagnostics report."""
+
+    code: str
+    severity: DiagnosticSeverity
+    check_codes: list[str] = Field(default_factory=list)
+    summary: str
+    command_hint: str | None = None
+    docs_uri: str | None = None
 
 
 class DiagnosticsEnvironment(StrictModel):
@@ -69,6 +82,7 @@ class DiagnosticsReport(StrictModel):
     checks: list[DiagnosticCheck]
     warnings: list[str]
     next_actions: list[str]
+    remediation_actions: list[DiagnosticRemediationAction]
     environment: DiagnosticsEnvironment
 
 
@@ -117,11 +131,13 @@ class DiagnosticsService:
         checks.extend(artifact_checks)
         checks.extend(self._public_surface_checks())
         warnings = [check.message for check in checks if check.status == "warning"]
+        remediation_actions = _remediation_actions(checks)
         return DiagnosticsReport(
             status=_aggregate_status(checks),
             checks=checks,
             warnings=warnings,
-            next_actions=_next_actions(checks),
+            next_actions=_next_actions(remediation_actions),
+            remediation_actions=remediation_actions,
             environment=DiagnosticsEnvironment(
                 albumentationsx_version=albumentationsx_version,
                 allowed_roots=[str(path.expanduser().resolve()) for path in self.allowed_roots],
@@ -140,6 +156,7 @@ class DiagnosticsService:
                 DiagnosticCheck(
                     code="albumentationsx_import_failed",
                     status="error",
+                    severity="critical",
                     message="AlbumentationsX could not be imported by the MCP server.",
                     details={"error": str(exc)},
                 )
@@ -165,6 +182,7 @@ class DiagnosticsService:
                     DiagnosticCheck(
                         code="allowed_root_missing",
                         status="warning",
+                        severity="medium",
                         message=f"Allowed root does not exist: {resolved}",
                         details={"path": str(resolved)},
                     )
@@ -174,6 +192,7 @@ class DiagnosticsService:
                     DiagnosticCheck(
                         code="allowed_root_not_directory",
                         status="error",
+                        severity="high",
                         message=f"Allowed root is not a directory: {resolved}",
                         details={"path": str(resolved)},
                     )
@@ -197,6 +216,7 @@ class DiagnosticsService:
                 DiagnosticCheck(
                     code="artifact_root_not_directory",
                     status="error",
+                    severity="high",
                     message=f"Artifact root is not a directory: {resolved}",
                     details={"path": str(resolved)},
                 )
@@ -209,6 +229,7 @@ class DiagnosticsService:
                 DiagnosticCheck(
                     code="artifact_root_unavailable",
                     status="error",
+                    severity="high",
                     message=f"Artifact root could not be created: {resolved}",
                     details={"path": str(resolved), "error": str(exc)},
                 )
@@ -237,6 +258,7 @@ class DiagnosticsService:
                 DiagnosticCheck(
                     code="artifact_root_write_probe_failed",
                     status="error",
+                    severity="high",
                     message="Artifact root write probe failed.",
                     details={"path": str(probe_path), "error": str(exc)},
                 )
@@ -320,6 +342,7 @@ def _surface_check(*, code: str, label: str, present: set[str], required: set[st
         return DiagnosticCheck(
             code=code,
             status="error",
+            severity="high",
             message=f"{label} are missing from the advertised MCP surface.",
             details={"missing": missing},
         )
@@ -340,19 +363,98 @@ def _aggregate_status(checks: list[DiagnosticCheck]) -> DiagnosticStatus:
     return "ok"
 
 
-def _next_actions(checks: list[DiagnosticCheck]) -> list[str]:
-    actions: list[str] = []
+def _next_actions(remediation_actions: list[DiagnosticRemediationAction]) -> list[str]:
+    return [action.summary for action in remediation_actions]
+
+
+def _remediation_actions(checks: list[DiagnosticCheck]) -> list[DiagnosticRemediationAction]:
+    actions: list[DiagnosticRemediationAction] = []
     codes = {check.code for check in checks if check.status != "ok"}
+    docs_uri = "albumentationsx://diagnostics/guide"
     if "albumentationsx_import_failed" in codes:
-        actions.append("Reinstall the package with `uvx --from albumentationsx-mcp albumentationsx-mcp --help`.")
+        actions.append(
+            DiagnosticRemediationAction(
+                code="reinstall_package",
+                severity="critical",
+                check_codes=["albumentationsx_import_failed"],
+                summary="Reinstall the package with `uvx --from albumentationsx-mcp albumentationsx-mcp --help`.",
+                command_hint="uvx --from albumentationsx-mcp albumentationsx-mcp --help",
+                docs_uri=docs_uri,
+            )
+        )
     if "allowed_root_missing" in codes or "allowed_root_not_directory" in codes:
-        actions.append("Restart the MCP host with `--allowed-root /absolute/path/to/images`.")
+        check_codes = _present_codes(codes, ["allowed_root_missing", "allowed_root_not_directory"])
+        actions.append(
+            DiagnosticRemediationAction(
+                code="fix_allowed_root",
+                severity=_max_severity(checks, check_codes),
+                check_codes=check_codes,
+                summary="Restart the MCP host with `--allowed-root /absolute/path/to/images`.",
+                command_hint="--allowed-root /absolute/path/to/images",
+                docs_uri=docs_uri,
+            )
+        )
     if "artifact_root_unavailable" in codes or "artifact_root_not_directory" in codes:
-        actions.append("Restart the MCP host with `--artifact-root /absolute/path/to/writable-artifacts`.")
+        check_codes = _present_codes(codes, ["artifact_root_unavailable", "artifact_root_not_directory"])
+        actions.append(
+            DiagnosticRemediationAction(
+                code="fix_artifact_root",
+                severity=_max_severity(checks, check_codes),
+                check_codes=check_codes,
+                summary="Restart the MCP host with `--artifact-root /absolute/path/to/writable-artifacts`.",
+                command_hint="--artifact-root /absolute/path/to/writable-artifacts",
+                docs_uri=docs_uri,
+            )
+        )
     if "artifact_root_write_probe_failed" in codes:
-        actions.append("Choose a writable `--artifact-root` outside source datasets and restart the host.")
+        actions.append(
+            DiagnosticRemediationAction(
+                code="fix_artifact_permissions",
+                severity="high",
+                check_codes=["artifact_root_write_probe_failed"],
+                summary="Choose a writable `--artifact-root` outside source datasets and restart the host.",
+                command_hint="--artifact-root /absolute/path/to/writable-artifacts",
+                docs_uri=docs_uri,
+            )
+        )
     if any(code.startswith("required_") for code in codes):
-        actions.append("Restart the MCP host after upgrading to the latest `albumentationsx-mcp` package.")
+        check_codes = sorted(code for code in codes if code.startswith("required_"))
+        actions.append(
+            DiagnosticRemediationAction(
+                code="refresh_host_surface",
+                severity=_max_severity(checks, check_codes),
+                check_codes=check_codes,
+                summary="Restart the MCP host after upgrading to the latest `albumentationsx-mcp` package.",
+                command_hint="uvx --from albumentationsx-mcp albumentationsx-mcp --help",
+                docs_uri=docs_uri,
+            )
+        )
     if not actions:
-        actions.append("Proceed with `recommend_recipe`, `validate_pipeline`, and a small `render_preview_batch`.")
+        actions.append(
+            DiagnosticRemediationAction(
+                code="proceed_with_preview_smoke",
+                severity="info",
+                check_codes=[],
+                summary="Proceed with `recommend_recipe`, `validate_pipeline`, and a small `render_preview_batch`.",
+                command_hint=None,
+                docs_uri=docs_uri,
+            )
+        )
     return actions
+
+
+def _present_codes(codes: set[str], ordered_codes: list[str]) -> list[str]:
+    return [code for code in ordered_codes if code in codes]
+
+
+def _max_severity(checks: list[DiagnosticCheck], check_codes: list[str]) -> DiagnosticSeverity:
+    rank: dict[DiagnosticSeverity, int] = {
+        "info": 0,
+        "medium": 1,
+        "high": 2,
+        "critical": 3,
+    }
+    severities = [check.severity for check in checks if check.code in check_codes]
+    if not severities:
+        return "info"
+    return max(severities, key=lambda severity: rank[severity])
