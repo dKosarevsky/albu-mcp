@@ -93,6 +93,7 @@ def test_diagnostics_reports_missing_public_surface_remediation(tmp_path: Path) 
     surface_action = next(action for action in report.remediation_actions if action.code == "refresh_host_surface")
     assert surface_action.severity == "high"
     assert surface_action.check_codes == ["required_tools_available"]
+    assert surface_action.command_hint is not None
     assert "albumentationsx-mcp" in surface_action.command_hint
 
 
