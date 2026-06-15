@@ -111,7 +111,8 @@ See [examples/claude_desktop_pypi_config.json](examples/claude_desktop_pypi_conf
 - `delete_preview_run`: delete one preview run and its artifacts.
 - `cleanup_preview_runs`: prune older preview runs beyond a retention count.
 - `export_pipeline`: export a pipeline as Python, JSON, or YAML.
-- `diagnose_environment`: check package import, local roots, artifact writeability, and public MCP discovery.
+- `diagnose_environment`: check package import, local roots, artifact writeability, and public MCP discovery with
+  machine-readable severity and remediation actions.
 
 `render_preview` and `render_preview_batch` support optional bboxes, keypoints, and mask paths for annotation overlay
 previews. Preview manifests include an agent-legible `summary` block with input counts, seeds, transform names, artifact
@@ -221,6 +222,13 @@ counts, contact sheets, and warnings.
 - Added `albumentationsx://diagnostics/guide` and `albumentationsx://examples/diagnostics` for MCP host troubleshooting.
 - Extended golden MCP evals to verify diagnostics resources, capabilities discovery, and write-probe behavior through
   stdio.
+
+## What Changed In 1.3
+
+- `diagnose_environment` checks now include machine-readable `severity`.
+- Diagnostics reports now include structured `remediation_actions` with stable codes such as `fix_allowed_root`,
+  `fix_artifact_root`, `refresh_host_surface`, and `proceed_with_preview_smoke`.
+- Representative output snapshots now cover healthy and missing-root diagnostics reports.
 
 ## V1 Readiness
 

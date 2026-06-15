@@ -113,6 +113,10 @@ def test_docs_link_diagnostics_playbook_resource() -> None:
     for content in [readme, install, usage, recipes]:
         assert "albumentationsx://diagnostics/guide" in content
         assert "diagnose_environment" in content
+    assert "remediation_actions" in readme
+    assert "remediation_actions" in install
+    assert "remediation_actions" in usage
+    assert "fix_allowed_root" in usage
     assert "albumentationsx://examples/diagnostics" in usage
     assert "albumentationsx://examples/diagnostics" in recipes
 

@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from albumentationsx_mcp.dataset import score_dataset_preview_candidates
+from albumentationsx_mcp.diagnostics import DiagnosticsService, PublicSurface
 from albumentationsx_mcp.models import (
     DatasetPreviewScore,
     ImageQualityAggregate,
@@ -54,6 +55,8 @@ def build_output_contract_snapshot(root: Path) -> dict[str, Any]:
     return {
         "snapshot": {"version": 1},
         "recommend_recipe": recommend_recipe("ocr", intensity="low").model_dump(mode="json"),
+        "diagnose_environment_ok": _diagnostics_ok(root),
+        "diagnose_environment_missing_allowed_root": _diagnostics_missing_allowed_root(root),
         "score_dataset_preview_candidates": _dataset_score().model_dump(mode="json"),
         "record_preview_feedback": _normalize_feedback_record(feedback),
         "list_preview_feedback": {
@@ -192,11 +195,95 @@ def _decision() -> TuningDecisionRecord:
     )
 
 
+def _diagnostics_ok(root: Path) -> dict[str, Any]:
+    images_root = root / "diagnostics" / "images"
+    images_root.mkdir(parents=True)
+    report = DiagnosticsService(
+        allowed_roots=[images_root],
+        artifact_root=root / "diagnostics" / "artifacts",
+        max_preview_runs=7,
+        public_surface=_diagnostics_public_surface(),
+    ).diagnose(include_write_probe=True)
+    return _normalize_diagnostics_report(report.model_dump(mode="json"), root)
+
+
+def _diagnostics_missing_allowed_root(root: Path) -> dict[str, Any]:
+    report = DiagnosticsService(
+        allowed_roots=[root / "diagnostics" / "missing-images"],
+        artifact_root=root / "diagnostics-missing-root" / "artifacts",
+        max_preview_runs=100,
+        public_surface=_diagnostics_public_surface(),
+    ).diagnose(include_write_probe=False)
+    return _normalize_diagnostics_report(report.model_dump(mode="json"), root)
+
+
+def _diagnostics_public_surface() -> PublicSurface:
+    return PublicSurface(
+        tools=[
+            "search_transforms",
+            "get_transform_schema",
+            "validate_pipeline",
+            "recommend_pipeline",
+            "adjust_pipeline",
+            "explain_pipeline",
+            "list_feedback_tags",
+            "render_preview",
+            "render_preview_batch",
+            "compare_preview_runs",
+            "summarize_tuning_session",
+            "rank_preview_candidates",
+            "score_dataset_preview_candidates",
+            "list_quality_profiles",
+            "recommend_recipe",
+            "record_preview_feedback",
+            "list_preview_feedback",
+            "record_tuning_decision",
+            "list_tuning_decisions",
+            "export_tuning_report",
+            "export_preview_report",
+            "list_preview_runs",
+            "get_preview_manifest",
+            "delete_preview_run",
+            "cleanup_preview_runs",
+            "export_pipeline",
+            "diagnose_environment",
+        ],
+        prompts=[
+            "build_robustness_augmentation_session",
+            "compare_preview_runs_for_feedback",
+            "tune_pipeline_from_preview_feedback",
+            "export_reproducible_pipeline",
+        ],
+        workflow_resources=[
+            "albumentationsx://workflows/catalog",
+            "albumentationsx://workflows/preview-tuning",
+            "albumentationsx://workflows/annotation-preview",
+            "albumentationsx://workflows/task-profiles",
+            "albumentationsx://recipes/catalog",
+            "albumentationsx://diagnostics/guide",
+            "albumentationsx://examples/client-smoke",
+            "albumentationsx://examples/diagnostics",
+            "albumentationsx://examples/review-loop",
+            "albumentationsx://examples/report-handoff",
+        ],
+    )
+
+
 def _normalize_feedback_record(record: PreviewFeedbackRecord) -> dict[str, Any]:
     payload = record.model_dump(mode="json")
     payload["feedback_id"] = "<feedback-id>"
     payload["created_at"] = "<created-at>"
     return payload
+
+
+def _normalize_diagnostics_report(payload: dict[str, Any], root: Path) -> dict[str, Any]:
+    normalized = _normalize_paths(payload, root)
+    normalized["environment"]["albumentationsx_version"] = "<albumentationsx-version>"
+    for check in normalized["checks"]:
+        if check["code"] == "albumentationsx_import":
+            check["details"]["module_version"] = "<albumentationsx-version>"
+            check["details"]["package_version"] = "<albumentationsx-version>"
+    return normalized
 
 
 def _normalize_report_export(payload: dict[str, Any], root: Path, feedback: PreviewFeedbackRecord) -> dict[str, Any]:

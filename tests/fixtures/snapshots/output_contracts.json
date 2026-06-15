@@ -1,4 +1,213 @@
 {
+  "diagnose_environment_missing_allowed_root": {
+    "checks": [
+      {
+        "code": "albumentationsx_import",
+        "details": {
+          "module_version": "<albumentationsx-version>",
+          "package_version": "<albumentationsx-version>"
+        },
+        "message": "AlbumentationsX is importable.",
+        "severity": "info",
+        "status": "ok"
+      },
+      {
+        "code": "allowed_root_missing",
+        "details": {
+          "path": "<OUTPUT_CONTRACT_ROOT>/diagnostics/missing-images"
+        },
+        "message": "Allowed root does not exist: <OUTPUT_CONTRACT_ROOT>/diagnostics/missing-images",
+        "severity": "medium",
+        "status": "warning"
+      },
+      {
+        "code": "artifact_root_accessible",
+        "details": {
+          "path": "<OUTPUT_CONTRACT_ROOT>/diagnostics-missing-root/artifacts"
+        },
+        "message": "Artifact root is accessible: <OUTPUT_CONTRACT_ROOT>/diagnostics-missing-root/artifacts",
+        "severity": "info",
+        "status": "ok"
+      },
+      {
+        "code": "required_tools_available",
+        "details": {
+          "required": [
+            "compare_preview_runs",
+            "diagnose_environment",
+            "export_preview_report",
+            "recommend_recipe",
+            "render_preview_batch",
+            "validate_pipeline"
+          ]
+        },
+        "message": "Required diagnostics tools are available.",
+        "severity": "info",
+        "status": "ok"
+      },
+      {
+        "code": "required_prompts_available",
+        "details": {
+          "required": [
+            "build_robustness_augmentation_session",
+            "compare_preview_runs_for_feedback"
+          ]
+        },
+        "message": "Required workflow prompts are available.",
+        "severity": "info",
+        "status": "ok"
+      },
+      {
+        "code": "required_workflow_resources_available",
+        "details": {
+          "required": [
+            "albumentationsx://diagnostics/guide",
+            "albumentationsx://examples/client-smoke",
+            "albumentationsx://recipes/catalog",
+            "albumentationsx://workflows/preview-tuning"
+          ]
+        },
+        "message": "Required workflow resources are available.",
+        "severity": "info",
+        "status": "ok"
+      }
+    ],
+    "environment": {
+      "albumentationsx_version": "<albumentationsx-version>",
+      "allowed_roots": [
+        "<OUTPUT_CONTRACT_ROOT>/diagnostics/missing-images"
+      ],
+      "artifact_root": "<OUTPUT_CONTRACT_ROOT>/diagnostics-missing-root/artifacts",
+      "max_preview_runs": 100,
+      "write_probe": "not_run"
+    },
+    "next_actions": [
+      "Restart the MCP host with `--allowed-root /absolute/path/to/images`."
+    ],
+    "remediation_actions": [
+      {
+        "check_codes": [
+          "allowed_root_missing"
+        ],
+        "code": "fix_allowed_root",
+        "command_hint": "--allowed-root /absolute/path/to/images",
+        "docs_uri": "albumentationsx://diagnostics/guide",
+        "severity": "medium",
+        "summary": "Restart the MCP host with `--allowed-root /absolute/path/to/images`."
+      }
+    ],
+    "status": "warning",
+    "warnings": [
+      "Allowed root does not exist: <OUTPUT_CONTRACT_ROOT>/diagnostics/missing-images"
+    ]
+  },
+  "diagnose_environment_ok": {
+    "checks": [
+      {
+        "code": "albumentationsx_import",
+        "details": {
+          "module_version": "<albumentationsx-version>",
+          "package_version": "<albumentationsx-version>"
+        },
+        "message": "AlbumentationsX is importable.",
+        "severity": "info",
+        "status": "ok"
+      },
+      {
+        "code": "allowed_root_accessible",
+        "details": {
+          "path": "<OUTPUT_CONTRACT_ROOT>/diagnostics/images"
+        },
+        "message": "Allowed root is accessible: <OUTPUT_CONTRACT_ROOT>/diagnostics/images",
+        "severity": "info",
+        "status": "ok"
+      },
+      {
+        "code": "artifact_root_accessible",
+        "details": {
+          "path": "<OUTPUT_CONTRACT_ROOT>/diagnostics/artifacts"
+        },
+        "message": "Artifact root is accessible: <OUTPUT_CONTRACT_ROOT>/diagnostics/artifacts",
+        "severity": "info",
+        "status": "ok"
+      },
+      {
+        "code": "artifact_root_write_probe",
+        "details": {
+          "path": "<OUTPUT_CONTRACT_ROOT>/diagnostics/artifacts/.albumentationsx-mcp-diagnostics-probe"
+        },
+        "message": "Artifact root write probe passed.",
+        "severity": "info",
+        "status": "ok"
+      },
+      {
+        "code": "required_tools_available",
+        "details": {
+          "required": [
+            "compare_preview_runs",
+            "diagnose_environment",
+            "export_preview_report",
+            "recommend_recipe",
+            "render_preview_batch",
+            "validate_pipeline"
+          ]
+        },
+        "message": "Required diagnostics tools are available.",
+        "severity": "info",
+        "status": "ok"
+      },
+      {
+        "code": "required_prompts_available",
+        "details": {
+          "required": [
+            "build_robustness_augmentation_session",
+            "compare_preview_runs_for_feedback"
+          ]
+        },
+        "message": "Required workflow prompts are available.",
+        "severity": "info",
+        "status": "ok"
+      },
+      {
+        "code": "required_workflow_resources_available",
+        "details": {
+          "required": [
+            "albumentationsx://diagnostics/guide",
+            "albumentationsx://examples/client-smoke",
+            "albumentationsx://recipes/catalog",
+            "albumentationsx://workflows/preview-tuning"
+          ]
+        },
+        "message": "Required workflow resources are available.",
+        "severity": "info",
+        "status": "ok"
+      }
+    ],
+    "environment": {
+      "albumentationsx_version": "<albumentationsx-version>",
+      "allowed_roots": [
+        "<OUTPUT_CONTRACT_ROOT>/diagnostics/images"
+      ],
+      "artifact_root": "<OUTPUT_CONTRACT_ROOT>/diagnostics/artifacts",
+      "max_preview_runs": 7,
+      "write_probe": "passed"
+    },
+    "next_actions": [
+      "Proceed with `recommend_recipe`, `validate_pipeline`, and a small `render_preview_batch`."
+    ],
+    "remediation_actions": [
+      {
+        "check_codes": [],
+        "code": "proceed_with_preview_smoke",
+        "command_hint": null,
+        "docs_uri": "albumentationsx://diagnostics/guide",
+        "severity": "info",
+        "summary": "Proceed with `recommend_recipe`, `validate_pipeline`, and a small `render_preview_batch`."
+      }
+    ],
+    "status": "ok",
+    "warnings": []
+  },
   "export_preview_report": {
     "artifact": {
       "kind": "report",

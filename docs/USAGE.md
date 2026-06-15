@@ -64,9 +64,12 @@ retention limit for long-running MCP hosts.
 ## Diagnostics
 
 Use `diagnose_environment` before preview rendering when a host has stale tool discovery, rejected local paths, or missing
-artifacts. The response includes `status`, ordered `checks`, `warnings`, `next_actions`, and normalized environment
-details. The tool does not inspect datasets; with `include_write_probe=true`, it writes and removes one small probe file
-under `artifact_root`.
+artifacts. The response includes `status`, ordered `checks`, check-level `severity`, `warnings`, structured
+`remediation_actions`, text `next_actions`, and normalized environment details. The tool does not inspect datasets; with
+`include_write_probe=true`, it writes and removes one small probe file under `artifact_root`.
+
+Prefer `remediation_actions` for automation. Stable action codes include `fix_allowed_root`, `fix_artifact_root`,
+`fix_artifact_permissions`, `refresh_host_surface`, `reinstall_package`, and `proceed_with_preview_smoke`.
 
 Read `albumentationsx://diagnostics/guide` for the canonical troubleshooting flow and
 `albumentationsx://examples/diagnostics` for a host example. Common findings include `allowed_root_missing`,
