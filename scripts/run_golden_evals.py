@@ -15,6 +15,7 @@ import yaml
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from PIL import Image
+from pydantic import AnyUrl
 
 _RANKING_CANDIDATE_COUNT = 2
 
@@ -77,6 +78,8 @@ def _prepare_work_dirs(work_dir: Path) -> tuple[Path, Path]:
 async def _run_scenario(session: ClientSession, scenario: dict[str, Any], images_dir: Path) -> None:
     task = scenario["task"]
     targets = scenario["targets"]
+    if scenario.get("client_smoke"):
+        await _run_client_smoke(session, scenario)
     if scenario.get("recommend_recipe"):
         await _run_recipe_recommendation(session, scenario)
     recommended = await _call_tool_json(
@@ -372,6 +375,61 @@ async def _run_recipe_recommendation(session: ClientSession, scenario: dict[str,
             raise AssertionError(f"{scenario['name']} recipe did not include {tool_name}: {recipe}")
 
 
+async def _run_client_smoke(session: ClientSession, scenario: dict[str, Any]) -> None:
+    smoke_resources = scenario.get("smoke_resources", [])
+    expected_resources = {
+        "albumentationsx://examples/client-smoke",
+        "albumentationsx://capabilities",
+        "albumentationsx://recipes/catalog",
+    }
+    if set(smoke_resources) != expected_resources:
+        raise AssertionError(f"{scenario['name']} declares wrong smoke resources: {smoke_resources}")
+
+    playbook = await _read_resource_json(session, "albumentationsx://examples/client-smoke")
+    step_tools = [step["tool"] for step in playbook["steps"]]
+    expected_steps = [
+        "albumentationsx://capabilities",
+        "albumentationsx://recipes/catalog",
+        "recommend_recipe",
+        "validate_pipeline",
+    ]
+    if playbook["trigger_phrase"] != "is AlbumentationsX MCP connected?":
+        raise AssertionError(f"{scenario['name']} returned wrong smoke trigger phrase: {playbook}")
+    if step_tools != expected_steps:
+        raise AssertionError(f"{scenario['name']} returned wrong smoke step tools: {playbook}")
+
+    capabilities = await _read_resource_json(session, "albumentationsx://capabilities")
+    for resource_uri in ("albumentationsx://examples/client-smoke", "albumentationsx://recipes/catalog"):
+        if resource_uri not in capabilities["workflow_resources"]:
+            raise AssertionError(f"{scenario['name']} capabilities did not include {resource_uri}: {capabilities}")
+    for tool_name in ("recommend_recipe", "validate_pipeline"):
+        if tool_name not in capabilities["tools"]:
+            raise AssertionError(f"{scenario['name']} capabilities did not include {tool_name}: {capabilities}")
+
+    recipes = await _read_resource_json(session, "albumentationsx://recipes/catalog")
+    if "classification" not in {recipe["name"] for recipe in recipes}:
+        raise AssertionError(f"{scenario['name']} recipes catalog did not include classification: {recipes}")
+
+    recipe = await _call_tool_json(
+        session,
+        "recommend_recipe",
+        {
+            "task": scenario["task"],
+            "intensity": scenario.get("intensity", "medium"),
+            "targets": scenario["targets"],
+        },
+    )
+    if recipe["quality_profile"] != "classification":
+        raise AssertionError(f"{scenario['name']} recipe returned wrong quality profile: {recipe}")
+    validation = await _call_tool_json(
+        session,
+        "validate_pipeline",
+        {"pipeline": recipe["pipeline"], "target": {"targets": scenario["targets"]}},
+    )
+    if validation["valid"] is not True:
+        raise AssertionError(f"{scenario['name']} smoke validation failed: {validation}")
+
+
 async def _run_dataset_scoring_and_preview_report(
     session: ClientSession,
     scenario: dict[str, Any],
@@ -501,6 +559,15 @@ async def _call_tool_json(session: ClientSession, name: str, arguments: dict[str
             if isinstance(text, str):
                 return json.loads(text)
     raise AssertionError(f"{name} returned no JSON content: {result.content}")
+
+
+async def _read_resource_json(session: ClientSession, uri: str) -> Any:
+    result = await session.read_resource(AnyUrl(uri))
+    for content in result.contents:
+        text = getattr(content, "text", None)
+        if isinstance(text, str):
+            return json.loads(text)
+    raise AssertionError(f"{uri} returned no JSON text content: {result.contents}")
 
 
 if __name__ == "__main__":

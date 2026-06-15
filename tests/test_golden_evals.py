@@ -18,16 +18,28 @@ def test_golden_eval_assets_are_present() -> None:
     quality_scenario = next(
         scenario for scenario in scenarios["scenarios"] if scenario["name"] == "preview_quality_tuning_summary"
     )
+    smoke_scenario = next(
+        scenario for scenario in scenarios["scenarios"] if scenario["name"] == "client_smoke_resource_flow"
+    )
 
     assert {scenario["name"] for scenario in scenarios["scenarios"]} == {
+        "client_smoke_resource_flow",
         "classification_recommend_validate_explain_export",
         "preview_lifecycle",
         "preview_batch_compare",
         "preview_quality_tuning_summary",
     }
+    assert smoke_scenario["client_smoke"] is True
+    assert smoke_scenario["smoke_resources"] == [
+        "albumentationsx://examples/client-smoke",
+        "albumentationsx://capabilities",
+        "albumentationsx://recipes/catalog",
+    ]
     assert quality_scenario["record_preview_feedback"] is True
     assert quality_scenario["feedback_image_index"] == 7
     assert quality_scenario["assert_preview_report_feedback"] is True
+    assert "_run_client_smoke" in runner_source
+    assert "_read_resource_json" in runner_source
     assert "record_preview_feedback" in runner_source
     assert "assert_preview_report_feedback" in runner_source
 
@@ -48,6 +60,7 @@ def test_golden_eval_runner_executes_scenarios_over_stdio(tmp_path: Path) -> Non
     )
 
     assert completed.returncode == 0, completed.stderr
+    assert "client_smoke_resource_flow: ok" in completed.stdout
     assert "classification_recommend_validate_explain_export: ok" in completed.stdout
     assert "preview_lifecycle: ok" in completed.stdout
     assert "preview_batch_compare: ok" in completed.stdout
