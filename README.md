@@ -239,6 +239,13 @@ counts, contact sheets, and warnings.
   `preview_request_template` for the first safe `render_preview_batch` call.
 - Client smoke golden evals now verify `run_host_smoke_check` through stdio before preview scenarios.
 
+## What Changed In 1.5
+
+- Golden MCP evals now include a real sample first-preview smoke through stdio.
+- The smoke fills `run_host_smoke_check.preview_request_template`, renders deterministic sample PNGs with
+  `render_preview_batch`, reads the manifest, adjusts the pipeline, compares a candidate run, verifies quality metrics,
+  and deletes both runs.
+
 ## V1 Readiness
 
 `v1.0.0` freezes public tool/resource names, response fields, package metadata, and host workflows. `v0.11.0` added
@@ -250,15 +257,16 @@ tool/resource/prompt snapshots and compatibility rules; `v0.12.0` added represen
 
 1. Use `recommend_recipe` to choose the starter pipeline, quality profile, feedback tags, explanations, and next tools.
 2. Call `validate_pipeline` for the recommended pipeline.
-3. Call `render_preview_batch` on a small local image set.
-4. Adjust with structured feedback such as `too_noisy`, `too_noisy:high`, or `too_distorted`.
-5. Render one or more candidate preview batches with the same inputs.
-6. Call `compare_preview_runs` before accepting a candidate and inspect `quality_summary.findings`.
-7. Call `record_preview_feedback` when the user points to a concrete example such as "example 8 is too noisy".
-8. Call `list_preview_feedback` and reuse `aggregated_feedback_tags` for the next `adjust_pipeline` call.
-9. Call `rank_preview_candidates` and `score_dataset_preview_candidates` with the matching quality profile.
-10. Call `record_tuning_decision` for accepted or rejected candidates.
-11. Call `export_preview_report` for visual handoff with contact sheet thumbnails and concrete feedback,
+3. Call `run_host_smoke_check` and replace the template input path with one small image under an allowed root.
+4. Call `render_preview_batch` on a small local image set.
+5. Adjust with structured feedback such as `too_noisy`, `too_noisy:high`, or `too_distorted`.
+6. Render one or more candidate preview batches with the same inputs.
+7. Call `compare_preview_runs` before accepting a candidate and inspect `quality_summary.findings`.
+8. Call `record_preview_feedback` when the user points to a concrete example such as "example 8 is too noisy".
+9. Call `list_preview_feedback` and reuse `aggregated_feedback_tags` for the next `adjust_pipeline` call.
+10. Call `rank_preview_candidates` and `score_dataset_preview_candidates` with the matching quality profile.
+11. Call `record_tuning_decision` for accepted or rejected candidates.
+12. Call `export_preview_report` for visual handoff with contact sheet thumbnails and concrete feedback,
     `export_tuning_report` for decision history, then `export_pipeline`.
 
 See [docs/INSTALL.md](docs/INSTALL.md) for host setup, [docs/USAGE.md](docs/USAGE.md) for an end-to-end MCP host

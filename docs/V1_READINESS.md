@@ -31,10 +31,14 @@ fixtures.
 
 `evals/golden_mcp_scenarios.yaml` covers the host workflows that motivated the project:
 
+- client smoke resource discovery and host preflight;
+- diagnostics resource discovery and remediation checks;
 - recipe recommendation, validation, explanation, and export;
 - preview lifecycle operations;
 - batch preview comparison;
-- quality tuning session summary.
+- quality tuning session summary;
+- real sample first-preview smoke using `run_host_smoke_check`, `render_preview_batch`, manifest reads, candidate
+  comparison, quality metrics, and cleanup.
 
 Run `uv run python scripts/run_golden_evals.py` before every release.
 

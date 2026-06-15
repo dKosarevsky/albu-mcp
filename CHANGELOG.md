@@ -6,6 +6,11 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 - No unreleased changes yet.
 
+## 1.5.0 - 2026-06-15
+
+- Added a real sample preview golden smoke that verifies the `run_host_smoke_check` template can render deterministic
+  local image previews, read manifests, adjust a candidate, compare quality metrics, and clean up runs over MCP stdio.
+
 ## 1.4.0 - 2026-06-15
 
 - Added `run_host_smoke_check` as a read-only host preflight that combines diagnostics, recipe recommendation, pipeline
