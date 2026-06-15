@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 
 from albumentationsx_mcp.diagnostics import DiagnosticsService, PublicSurface, build_diagnostics_guide
 
@@ -75,7 +76,7 @@ def test_diagnostics_guide_is_agent_legible() -> None:
 
 
 def test_public_surface_rejects_unknown_fields() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValidationError, match="Extra inputs"):
         PublicSurface.model_validate(
             {
                 "tools": [],
