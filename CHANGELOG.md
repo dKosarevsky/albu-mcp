@@ -4,6 +4,10 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 ## Unreleased
 
+- No unreleased changes yet.
+
+## 1.3.0 - 2026-06-15
+
 - Added machine-readable `severity` to each `diagnose_environment` check.
 - Added structured `remediation_actions` with stable codes, affected check codes, command hints, and diagnostics guide
   links while preserving text `next_actions`.
