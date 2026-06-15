@@ -14,6 +14,7 @@ from albumentationsx_mcp.advisor import explain_pipeline, list_feedback_tags
 from albumentationsx_mcp.catalog import TransformCatalog
 from albumentationsx_mcp.dataset import score_dataset_preview_candidates as score_dataset_candidates
 from albumentationsx_mcp.diagnostics import DiagnosticsService, PublicSurface, build_diagnostics_guide
+from albumentationsx_mcp.host_smoke import build_host_smoke_report
 from albumentationsx_mcp.models import (
     ComposeSpec,
     PreviewFeedbackRecord,
@@ -77,6 +78,7 @@ _PUBLIC_TOOLS = [
     "cleanup_preview_runs",
     "export_pipeline",
     "diagnose_environment",
+    "run_host_smoke_check",
 ]
 _PUBLIC_PROMPTS = [
     "build_robustness_augmentation_session",
@@ -335,6 +337,23 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
     def diagnose_environment_tool(include_write_probe: bool = True) -> dict[str, Any]:  # noqa: FBT001, FBT002
         """Diagnose local MCP setup, root access, artifact writes, and public surface discovery."""
         return diagnostics_service.diagnose(include_write_probe=include_write_probe).model_dump(mode="json")
+
+    @mcp.tool(name="run_host_smoke_check")
+    def run_host_smoke_check_tool(
+        include_write_probe: bool = True,  # noqa: FBT001, FBT002
+        task: str = "classification",
+        intensity: Intensity = "low",
+        targets: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Run a read-only host preflight before rendering local previews."""
+        diagnostics = diagnostics_service.diagnose(include_write_probe=include_write_probe)
+        recipe = recommend_recipe(task=task, intensity=intensity, targets=targets)
+        validation = pipeline_service.validate_pipeline(recipe.pipeline, TargetSpec(targets=recipe.targets))
+        return build_host_smoke_report(
+            diagnostics=diagnostics,
+            recipe=recipe,
+            validation=validation,
+        ).model_dump(mode="json")
 
     @mcp.tool()
     def render_preview(request: dict[str, Any]) -> dict[str, Any]:

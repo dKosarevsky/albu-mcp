@@ -18,6 +18,7 @@ WriteProbeStatus = Literal["not_run", "passed", "failed"]
 _PROBE_FILENAME = ".albumentationsx-mcp-diagnostics-probe"
 _REQUIRED_TOOLS = {
     "diagnose_environment",
+    "run_host_smoke_check",
     "recommend_recipe",
     "validate_pipeline",
     "render_preview_batch",

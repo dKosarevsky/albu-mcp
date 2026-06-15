@@ -247,6 +247,7 @@ def _diagnostics_public_surface() -> PublicSurface:
             "cleanup_preview_runs",
             "export_pipeline",
             "diagnose_environment",
+            "run_host_smoke_check",
         ],
         prompts=[
             "build_robustness_augmentation_session",
