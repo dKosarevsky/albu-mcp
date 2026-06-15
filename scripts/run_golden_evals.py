@@ -14,7 +14,7 @@ import numpy as np
 import yaml
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-from PIL import Image
+from PIL import Image, ImageDraw
 from pydantic import AnyUrl
 
 _RANKING_CANDIDATE_COUNT = 2
@@ -84,6 +84,9 @@ async def _run_scenario(session: ClientSession, scenario: dict[str, Any], images
         await _run_diagnostics_smoke(session, scenario)
     if scenario.get("recommend_recipe"):
         await _run_recipe_recommendation(session, scenario)
+    if scenario.get("real_sample_smoke"):
+        await _run_real_sample_smoke(session, scenario, images_dir)
+        return
     recommended = await _call_tool_json(
         session,
         "recommend_pipeline",
@@ -160,6 +163,158 @@ def _write_preview_inputs(images_dir: Path, scenario: dict[str, Any]) -> list[Pa
         Image.fromarray(np.full((32, 32, 3), 180 + index, dtype=np.uint8)).save(image_path)
         paths.append(image_path)
     return paths
+
+
+async def _run_real_sample_smoke(session: ClientSession, scenario: dict[str, Any], images_dir: Path) -> None:
+    image_paths = _write_real_sample_inputs(images_dir, scenario)
+    smoke_report = await _call_tool_json(
+        session,
+        "run_host_smoke_check",
+        {
+            "include_write_probe": True,
+            "task": scenario["task"],
+            "intensity": scenario.get("intensity", "medium"),
+            "targets": scenario["targets"],
+        },
+    )
+    if smoke_report["status"] != "ok" or smoke_report["preview_ready"] is not True:
+        raise AssertionError(f"{scenario['name']} host smoke was not preview-ready: {smoke_report}")
+    template = smoke_report.get("preview_request_template")
+    if template is None or template["tool"] != "render_preview_batch":
+        raise AssertionError(f"{scenario['name']} host smoke returned no preview template: {smoke_report}")
+
+    baseline_request = _real_sample_preview_request(template["request"], scenario, image_paths)
+    baseline = await _call_tool_json(session, "render_preview_batch", {"request": baseline_request})
+    baseline_manifest = await _assert_real_sample_preview_manifest(
+        session,
+        scenario,
+        baseline["run_id"],
+        expected_input_count=len(image_paths),
+    )
+
+    candidate_pipeline = await _call_tool_json(
+        session,
+        "adjust_pipeline",
+        {"pipeline": baseline_request["pipeline"], "feedback_tags": scenario.get("feedback_tags", ["too_noisy"])},
+    )
+    candidate_request = {
+        **baseline_request,
+        "pipeline": candidate_pipeline,
+        "seed": int(scenario.get("seed", 0)) + 10,
+    }
+    candidate = await _call_tool_json(session, "render_preview_batch", {"request": candidate_request})
+    candidate_manifest = await _assert_real_sample_preview_manifest(
+        session,
+        scenario,
+        candidate["run_id"],
+        expected_input_count=len(image_paths),
+    )
+
+    comparison = await _call_tool_json(
+        session,
+        "compare_preview_runs",
+        {
+            "baseline_run_id": baseline["run_id"],
+            "candidate_run_id": candidate["run_id"],
+            "quality_profile": scenario.get("quality_profile", "classification"),
+        },
+    )
+    if comparison["baseline"]["run_id"] != baseline_manifest["run_id"]:
+        raise AssertionError(f"{scenario['name']} comparison returned wrong baseline: {comparison}")
+    if comparison["candidate"]["run_id"] != candidate_manifest["run_id"]:
+        raise AssertionError(f"{scenario['name']} comparison returned wrong candidate: {comparison}")
+    if scenario.get("assert_quality_summary"):
+        quality_summary = comparison.get("quality_summary")
+        if quality_summary is None:
+            raise AssertionError(f"{scenario['name']} comparison returned no quality summary: {comparison}")
+        expected_count = len(image_paths) * int(scenario.get("variants_per_image", 1))
+        if quality_summary["baseline"]["image_count"] != expected_count:
+            raise AssertionError(f"{scenario['name']} baseline quality count mismatch: {comparison}")
+        if quality_summary["candidate"]["image_count"] != expected_count:
+            raise AssertionError(f"{scenario['name']} candidate quality count mismatch: {comparison}")
+
+    await _delete_preview_run(session, scenario, candidate["run_id"])
+    await _delete_preview_run(session, scenario, baseline["run_id"])
+
+
+def _write_real_sample_inputs(images_dir: Path, scenario: dict[str, Any]) -> list[Path]:
+    sample_dir = images_dir / str(scenario["name"]).replace("_", "-")
+    sample_dir.mkdir(parents=True, exist_ok=True)
+    paths: list[Path] = []
+    for index in range(int(scenario.get("input_count", 3))):
+        image = _build_real_sample_image(index)
+        image_path = sample_dir / f"sample-{index:02d}.png"
+        image.save(image_path)
+        paths.append(image_path)
+    return paths
+
+
+def _build_real_sample_image(index: int) -> Image.Image:
+    width, height = 128, 96
+    x = np.linspace(0, 1, width, dtype=np.float32)
+    y = np.linspace(0, 1, height, dtype=np.float32)[:, None]
+    red = np.clip((x * 160) + 40 + index * 12, 0, 255)
+    green = np.clip((y * 150) + 55 + index * 7, 0, 255)
+    blue = np.clip(((1 - x) * 120) + (y * 80) + 30, 0, 255)
+    image_array = np.dstack(
+        [
+            np.tile(red, (height, 1)),
+            np.tile(green, (1, width)),
+            blue,
+        ],
+    ).astype(np.uint8)
+    image = Image.fromarray(image_array)
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((18 + index * 8, 20, 72 + index * 8, 70), outline=(20, 45, 90), width=3)
+    draw.ellipse((54, 28 + index * 4, 96, 70 + index * 4), outline=(170, 45, 45), width=3)
+    draw.line((8, 86 - index * 5, 120, 78 - index * 3), fill=(245, 245, 245), width=2)
+    return image
+
+
+def _real_sample_preview_request(
+    template_request: dict[str, Any],
+    scenario: dict[str, Any],
+    image_paths: list[Path],
+) -> dict[str, Any]:
+    request = dict(template_request)
+    request["input_paths"] = [str(path) for path in image_paths]
+    request["variants_per_image"] = int(scenario.get("variants_per_image", 1))
+    request["seed"] = int(scenario.get("seed", 0))
+    request["max_side"] = int(scenario.get("max_side", 160))
+    return request
+
+
+async def _assert_real_sample_preview_manifest(
+    session: ClientSession,
+    scenario: dict[str, Any],
+    run_id: str,
+    *,
+    expected_input_count: int,
+) -> dict[str, Any]:
+    manifest = await _call_tool_json(session, "get_preview_manifest", {"run_id": run_id})
+    summary = manifest.get("summary", {})
+    expected_image_count = expected_input_count * int(scenario.get("variants_per_image", 1))
+    if manifest["run_id"] != run_id:
+        raise AssertionError(f"{scenario['name']} returned wrong manifest: {manifest}")
+    if summary.get("input_count") != expected_input_count:
+        raise AssertionError(f"{scenario['name']} manifest input count mismatch: {manifest}")
+    if summary.get("artifact_counts", {}).get("image") != expected_image_count:
+        raise AssertionError(f"{scenario['name']} manifest image artifact count mismatch: {manifest}")
+    if summary.get("artifact_counts", {}).get("contact_sheet") != 1:
+        raise AssertionError(f"{scenario['name']} manifest contact sheet count mismatch: {manifest}")
+    contact_sheet_paths = [Path(path) for path in summary.get("contact_sheet_paths", [])]
+    if not contact_sheet_paths:
+        raise AssertionError(f"{scenario['name']} manifest has no contact sheet paths: {manifest}")
+    for contact_sheet_path in contact_sheet_paths:
+        if not contact_sheet_path.exists() or contact_sheet_path.stat().st_size <= 0:
+            raise AssertionError(f"{scenario['name']} contact sheet artifact is missing: {manifest}")
+    return manifest
+
+
+async def _delete_preview_run(session: ClientSession, scenario: dict[str, Any], run_id: str) -> None:
+    deleted = await _call_tool_json(session, "delete_preview_run", {"run_id": run_id})
+    if deleted["deleted"]["run_id"] != run_id:
+        raise AssertionError(f"{scenario['name']} did not delete preview run {run_id}: {deleted}")
 
 
 async def _run_preview_comparison(
