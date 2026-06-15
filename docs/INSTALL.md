@@ -233,8 +233,9 @@ usage: albumentationsx-mcp [-h] [--transport {stdio,streamable-http}]
 ```
 
 After wiring a host, ask it to read `albumentationsx://examples/client-smoke`. The client smoke playbook checks that the
-host can read capabilities, read the recipe catalog, call `recommend_recipe`, and validate the returned pipeline before
-preview rendering touches local images.
+host can read capabilities, read the recipe catalog, call `recommend_recipe`, validate the returned pipeline, and call
+`run_host_smoke_check` before preview rendering touches local images. A healthy host smoke report returns
+`preview_ready: true` and a `preview_request_template` for a small `render_preview_batch`.
 
 If the host connects but previews fail, ask it to read `albumentationsx://diagnostics/guide` and call
 `diagnose_environment`. The report checks AlbumentationsX import/version, `--allowed-root`, `--artifact-root`,
@@ -243,7 +244,8 @@ structured `remediation_actions` plus text `next_actions`.
 
 ## Troubleshooting
 
-- If the host connects but preview rendering fails, call `diagnose_environment` before changing pipelines.
+- If the host connects but preview rendering fails, call `run_host_smoke_check` first, then inspect
+  `diagnose_environment` details if `preview_ready` is false.
 - If the host cannot start the server, run the same `uvx` or `uv run` command manually and fix terminal errors first.
 - If a local image path is rejected, confirm it is under `--allowed-root` or `ALBU_MCP_ALLOWED_ROOTS`.
 - If `diagnose_environment` reports remediation code `fix_allowed_root`, restart the host with an existing absolute

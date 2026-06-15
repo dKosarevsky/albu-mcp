@@ -113,6 +113,8 @@ See [examples/claude_desktop_pypi_config.json](examples/claude_desktop_pypi_conf
 - `export_pipeline`: export a pipeline as Python, JSON, or YAML.
 - `diagnose_environment`: check package import, local roots, artifact writeability, and public MCP discovery with
   machine-readable severity and remediation actions.
+- `run_host_smoke_check`: run a read-only host preflight and return `preview_ready` plus a
+  `preview_request_template` for `render_preview_batch`.
 
 `render_preview` and `render_preview_batch` support optional bboxes, keypoints, and mask paths for annotation overlay
 previews. Preview manifests include an agent-legible `summary` block with input counts, seeds, transform names, artifact
@@ -229,6 +231,13 @@ counts, contact sheets, and warnings.
 - Diagnostics reports now include structured `remediation_actions` with stable codes such as `fix_allowed_root`,
   `fix_artifact_root`, `refresh_host_surface`, and `proceed_with_preview_smoke`.
 - Representative output snapshots now cover healthy and missing-root diagnostics reports.
+
+## What Changed In 1.4
+
+- Added `run_host_smoke_check` as a read-only host preflight before local preview rendering.
+- Host smoke reports include `preview_ready`, ordered checks, diagnostics passthrough, remediation actions, and a
+  `preview_request_template` for the first safe `render_preview_batch` call.
+- Client smoke golden evals now verify `run_host_smoke_check` through stdio before preview scenarios.
 
 ## V1 Readiness
 

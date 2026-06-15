@@ -93,12 +93,17 @@ def test_install_guide_covers_host_setup_and_examples() -> None:
 
 
 def test_docs_link_client_smoke_playbook_resource() -> None:
+    readme = Path("README.md").read_text(encoding="utf-8")
     install = Path("docs/INSTALL.md").read_text(encoding="utf-8")
     usage = Path("docs/USAGE.md").read_text(encoding="utf-8")
     recipes = Path("docs/RECIPES.md").read_text(encoding="utf-8")
 
     for content in [install, usage, recipes]:
         assert "albumentationsx://examples/client-smoke" in content
+    for content in [readme, install, usage, recipes]:
+        assert "run_host_smoke_check" in content
+        assert "preview_ready" in content
+        assert "preview_request_template" in content
     assert "client smoke" in install.lower()
     assert "client-smoke" in usage
     assert "client-smoke" in recipes

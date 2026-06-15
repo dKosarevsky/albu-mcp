@@ -86,6 +86,8 @@ MCP hosts can read:
 - `albumentationsx://examples/report-handoff`
 
 Use `albumentationsx://examples/client-smoke` immediately after adding the server to a host. It verifies resource
-discovery, recipe discovery, `recommend_recipe`, and `validate_pipeline` without reading or writing user image data.
+discovery, recipe discovery, `recommend_recipe`, `validate_pipeline`, and `run_host_smoke_check` without reading user
+image data. A healthy `run_host_smoke_check` response returns `preview_ready: true` and a `preview_request_template` for
+the first small `render_preview_batch`.
 Use `albumentationsx://diagnostics/guide` plus `diagnose_environment` when preview setup fails, local paths are rejected,
 or host-side tool discovery looks stale.

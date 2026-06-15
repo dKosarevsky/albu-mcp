@@ -12,6 +12,7 @@ After connecting a new host, read `albumentationsx://examples/client-smoke` for 
 local previews.
 When preview setup is unclear, read `albumentationsx://diagnostics/guide` and call `diagnose_environment` before
 changing augmentation pipelines.
+For a single read-only preflight, call `run_host_smoke_check` and continue only when `preview_ready` is true.
 
 Use `examples/claude_desktop_config.json` as a starting point and replace `/path/to/albu-mcp` with the repository path:
 
@@ -43,23 +44,25 @@ retention limit for long-running MCP hosts.
 1. Call `recommend_recipe` for the target task, intensity, quality profile, feedback tags, explanations, and next tools.
 2. Call `diagnose_environment` if roots, artifacts, or host discovery are uncertain.
 3. Call `validate_pipeline` before rendering or exporting.
-4. Call `explain_pipeline` to identify likely preview risks and feedback tags.
-5. Call `render_preview_batch` on a small local image set.
-6. Review the generated `contact_sheet` artifact.
-7. Use `compare_preview_runs` when comparing a baseline preview to an adjusted candidate preview.
-8. Review `suggested_feedback_tags` as candidates, then ask the user which tags match the contact sheets.
-9. Call `adjust_pipeline` with tags from `list_feedback_tags`, for example `too_noisy`, `too_noisy:high`, or
+4. Call `run_host_smoke_check`; when `preview_ready` is true, replace the placeholder path in
+   `preview_request_template.request`.
+5. Call `explain_pipeline` to identify likely preview risks and feedback tags.
+6. Call `render_preview_batch` on a small local image set.
+7. Review the generated `contact_sheet` artifact.
+8. Use `compare_preview_runs` when comparing a baseline preview to an adjusted candidate preview.
+9. Review `suggested_feedback_tags` as candidates, then ask the user which tags match the contact sheets.
+10. Call `adjust_pipeline` with tags from `list_feedback_tags`, for example `too_noisy`, `too_noisy:high`, or
    `too_distorted`.
-10. Re-render one or more candidates with the same input set.
-11. Call `rank_preview_candidates` when multiple candidates need comparison.
-12. Call `score_dataset_preview_candidates` to inspect cross-candidate metric ranges and finding counts.
-13. Call `record_preview_feedback` when the user points to a concrete image and variant, for example
+11. Re-render one or more candidates with the same input set.
+12. Call `rank_preview_candidates` when multiple candidates need comparison.
+13. Call `score_dataset_preview_candidates` to inspect cross-candidate metric ranges and finding counts.
+14. Call `record_preview_feedback` when the user points to a concrete image and variant, for example
     "example 8 is too noisy".
-14. Call `list_preview_feedback` and reuse `aggregated_feedback_tags` for the next `adjust_pipeline` call.
-15. Call `summarize_tuning_session` to inspect `quality_score`, `quality_risk`, and `export_ready`.
-16. Call `record_tuning_decision` to persist the accepted or rejected candidate.
-17. Call `export_preview_report` for a visual Markdown or HTML handoff that includes matching concrete feedback.
-18. Call `export_tuning_report` for a decision journal handoff, then `export_pipeline` once the preview set is acceptable.
+15. Call `list_preview_feedback` and reuse `aggregated_feedback_tags` for the next `adjust_pipeline` call.
+16. Call `summarize_tuning_session` to inspect `quality_score`, `quality_risk`, and `export_ready`.
+17. Call `record_tuning_decision` to persist the accepted or rejected candidate.
+18. Call `export_preview_report` for a visual Markdown or HTML handoff that includes matching concrete feedback.
+19. Call `export_tuning_report` for a decision journal handoff, then `export_pipeline` once the preview set is acceptable.
 
 ## Diagnostics
 
@@ -74,6 +77,13 @@ Prefer `remediation_actions` for automation. Stable action codes include `fix_al
 Read `albumentationsx://diagnostics/guide` for the canonical troubleshooting flow and
 `albumentationsx://examples/diagnostics` for a host example. Common findings include `allowed_root_missing`,
 `artifact_root_write_probe_failed`, and missing public MCP surface entries after a host upgrade.
+
+## Host Smoke
+
+Use `run_host_smoke_check` after connecting a host and before the first local preview. It combines
+`diagnose_environment`, `recommend_recipe`, and `validate_pipeline` into one read-only report. When `preview_ready` is
+true, copy `preview_request_template.request`, replace the placeholder input path with one small image under an allowed
+root, and call `render_preview_batch`. When `preview_ready` is false, follow `remediation_actions` before rendering.
 
 ## Preview Artifacts
 
