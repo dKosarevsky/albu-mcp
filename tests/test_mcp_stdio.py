@@ -56,4 +56,5 @@ def test_mcp_stdio_lists_documented_tools(tmp_path: Path) -> None:
         "get_preview_manifest",
         "delete_preview_run",
         "cleanup_preview_runs",
+        "diagnose_environment",
     }.issubset(tool_names)

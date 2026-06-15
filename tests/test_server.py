@@ -41,6 +41,7 @@ def test_server_exposes_documented_tool_names() -> None:
         "delete_preview_run",
         "cleanup_preview_runs",
         "export_pipeline",
+        "diagnose_environment",
     }.issubset(tool_names)
 
 
@@ -66,7 +67,9 @@ def test_server_exposes_agent_workflow_resources() -> None:
     task_profiles = cast("Any", resources["albumentationsx://workflows/task-profiles"]).fn()
     quality_profiles = cast("Any", resources["albumentationsx://quality-profiles"]).fn()
     recipes_catalog = cast("Any", resources["albumentationsx://recipes/catalog"]).fn()
+    diagnostics_guide = cast("Any", resources["albumentationsx://diagnostics/guide"]).fn()
     client_smoke_example = cast("Any", resources["albumentationsx://examples/client-smoke"]).fn()
+    diagnostics_example = cast("Any", resources["albumentationsx://examples/diagnostics"]).fn()
     review_loop_example = cast("Any", resources["albumentationsx://examples/review-loop"]).fn()
     report_handoff_example = cast("Any", resources["albumentationsx://examples/report-handoff"]).fn()
     capabilities = cast("Any", resources["albumentationsx://capabilities"]).fn()
@@ -76,7 +79,9 @@ def test_server_exposes_agent_workflow_resources() -> None:
     assert "classification-robustness" in task_profiles
     assert "segmentation" in quality_profiles
     assert "object_detection" in recipes_catalog
+    assert "diagnose_environment" in diagnostics_guide
     assert "is AlbumentationsX MCP connected?" in client_smoke_example
+    assert "why does AlbumentationsX MCP preview not work?" in diagnostics_example
     assert "record_preview_feedback" in review_loop_example
     assert "export_preview_report" in report_handoff_example
     assert "adjust_pipeline" in preview_tuning
@@ -92,8 +97,11 @@ def test_server_exposes_agent_workflow_resources() -> None:
     assert "record_tuning_decision" in capabilities
     assert "export_tuning_report" in capabilities
     assert "export_preview_report" in capabilities
+    assert "diagnose_environment" in capabilities
+    assert "albumentationsx://diagnostics/guide" in capabilities
     assert "albumentationsx://recipes/catalog" in capabilities
     assert "albumentationsx://examples/client-smoke" in capabilities
+    assert "albumentationsx://examples/diagnostics" in capabilities
     assert "albumentationsx://examples/review-loop" in capabilities
     assert "albumentationsx://examples/report-handoff" in capabilities
     assert "albumentationsx://workflows/task-profiles" in capabilities

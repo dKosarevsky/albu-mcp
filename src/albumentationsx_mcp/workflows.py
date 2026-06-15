@@ -254,6 +254,36 @@ _HOST_EXAMPLES = {
             "The next candidate is rendered against the same inputs before comparison.",
         ],
     ),
+    "diagnostics": HostExample(
+        name="diagnostics",
+        goal="Diagnose AlbumentationsX MCP setup before rendering local previews.",
+        trigger_phrase="why does AlbumentationsX MCP preview not work?",
+        steps=[
+            HostExampleStep(
+                order=1,
+                tool="albumentationsx://diagnostics/guide",
+                instruction="Read the diagnostics guide before interpreting setup checks.",
+                expected_result="A machine-readable playbook with checks, success criteria, and failure actions.",
+            ),
+            HostExampleStep(
+                order=2,
+                tool="diagnose_environment",
+                instruction="Call diagnose_environment with include_write_probe=true.",
+                expected_result="A structured status report with checks, warnings, environment, and next actions.",
+            ),
+            HostExampleStep(
+                order=3,
+                tool="albumentationsx://capabilities",
+                instruction="Confirm local roots, preview limits, tools, prompts, and workflow resources.",
+                expected_result="The configured roots and public MCP surface match the expected setup.",
+            ),
+        ],
+        success_criteria=[
+            "diagnose_environment returns status ok before preview rendering begins.",
+            "Every warning or error is mapped to a concrete next action.",
+            "The host confirms allowed_roots and artifact_root match the user's intended review folder.",
+        ],
+    ),
     "report-handoff": HostExample(
         name="report-handoff",
         goal="Create a visual handoff after ranking candidates and recording decisions.",

@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from albumentationsx_mcp.advisor import explain_pipeline, list_feedback_tags
 from albumentationsx_mcp.catalog import TransformCatalog
 from albumentationsx_mcp.dataset import score_dataset_preview_candidates as score_dataset_candidates
+from albumentationsx_mcp.diagnostics import DiagnosticsService, PublicSurface, build_diagnostics_guide
 from albumentationsx_mcp.models import (
     ComposeSpec,
     PreviewFeedbackRecord,
@@ -47,6 +48,54 @@ from albumentationsx_mcp.workflows import (
     list_agent_workflows,
     list_task_profiles,
 )
+
+_PUBLIC_TOOLS = [
+    "search_transforms",
+    "get_transform_schema",
+    "validate_pipeline",
+    "recommend_pipeline",
+    "adjust_pipeline",
+    "explain_pipeline",
+    "list_feedback_tags",
+    "render_preview",
+    "render_preview_batch",
+    "compare_preview_runs",
+    "summarize_tuning_session",
+    "rank_preview_candidates",
+    "score_dataset_preview_candidates",
+    "list_quality_profiles",
+    "recommend_recipe",
+    "record_preview_feedback",
+    "list_preview_feedback",
+    "record_tuning_decision",
+    "list_tuning_decisions",
+    "export_tuning_report",
+    "export_preview_report",
+    "list_preview_runs",
+    "get_preview_manifest",
+    "delete_preview_run",
+    "cleanup_preview_runs",
+    "export_pipeline",
+    "diagnose_environment",
+]
+_PUBLIC_PROMPTS = [
+    "build_robustness_augmentation_session",
+    "compare_preview_runs_for_feedback",
+    "tune_pipeline_from_preview_feedback",
+    "export_reproducible_pipeline",
+]
+_PUBLIC_WORKFLOW_RESOURCES = [
+    "albumentationsx://workflows/catalog",
+    "albumentationsx://workflows/preview-tuning",
+    "albumentationsx://workflows/annotation-preview",
+    "albumentationsx://workflows/task-profiles",
+    "albumentationsx://recipes/catalog",
+    "albumentationsx://diagnostics/guide",
+    "albumentationsx://examples/client-smoke",
+    "albumentationsx://examples/diagnostics",
+    "albumentationsx://examples/review-loop",
+    "albumentationsx://examples/report-handoff",
+]
 
 
 class ServerSettings(BaseModel):
@@ -85,6 +134,17 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
     tuning_store = TuningDecisionStore(settings.artifact_root)
     feedback_store = PreviewFeedbackStore(settings.artifact_root)
     report_service = PreviewReportService(settings.artifact_root)
+    public_surface = PublicSurface(
+        tools=_PUBLIC_TOOLS,
+        prompts=_PUBLIC_PROMPTS,
+        workflow_resources=_PUBLIC_WORKFLOW_RESOURCES,
+    )
+    diagnostics_service = DiagnosticsService(
+        allowed_roots=settings.allowed_roots,
+        artifact_root=settings.artifact_root,
+        max_preview_runs=settings.max_preview_runs,
+        public_surface=public_surface,
+    )
     mcp = FastMCP("AlbumentationsX MCP")
 
     @mcp.resource("albumentationsx://transforms/catalog")
@@ -134,53 +194,17 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
                     "max_side": 4096,
                     "max_preview_runs": settings.max_preview_runs,
                 },
-                "tools": [
-                    "search_transforms",
-                    "get_transform_schema",
-                    "validate_pipeline",
-                    "recommend_pipeline",
-                    "adjust_pipeline",
-                    "explain_pipeline",
-                    "list_feedback_tags",
-                    "render_preview",
-                    "render_preview_batch",
-                    "compare_preview_runs",
-                    "summarize_tuning_session",
-                    "rank_preview_candidates",
-                    "score_dataset_preview_candidates",
-                    "list_quality_profiles",
-                    "recommend_recipe",
-                    "record_preview_feedback",
-                    "list_preview_feedback",
-                    "record_tuning_decision",
-                    "list_tuning_decisions",
-                    "export_tuning_report",
-                    "export_preview_report",
-                    "list_preview_runs",
-                    "get_preview_manifest",
-                    "delete_preview_run",
-                    "cleanup_preview_runs",
-                    "export_pipeline",
-                ],
-                "prompts": [
-                    "build_robustness_augmentation_session",
-                    "compare_preview_runs_for_feedback",
-                    "tune_pipeline_from_preview_feedback",
-                    "export_reproducible_pipeline",
-                ],
-                "workflow_resources": [
-                    "albumentationsx://workflows/catalog",
-                    "albumentationsx://workflows/preview-tuning",
-                    "albumentationsx://workflows/annotation-preview",
-                    "albumentationsx://workflows/task-profiles",
-                    "albumentationsx://recipes/catalog",
-                    "albumentationsx://examples/client-smoke",
-                    "albumentationsx://examples/review-loop",
-                    "albumentationsx://examples/report-handoff",
-                ],
+                "tools": _PUBLIC_TOOLS,
+                "prompts": _PUBLIC_PROMPTS,
+                "workflow_resources": _PUBLIC_WORKFLOW_RESOURCES,
             },
             sort_keys=True,
         )
+
+    @mcp.resource("albumentationsx://diagnostics/guide")
+    def diagnostics_guide_resource() -> str:
+        """Return the MCP host diagnostics playbook."""
+        return build_diagnostics_guide().model_dump_json()
 
     @mcp.resource("albumentationsx://workflows/catalog")
     def workflows_catalog() -> str:
@@ -208,6 +232,11 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
     def client_smoke_example() -> str:
         """Return the MCP host smoke-check example."""
         return get_host_example("client-smoke").model_dump_json()
+
+    @mcp.resource("albumentationsx://examples/diagnostics")
+    def diagnostics_example() -> str:
+        """Return the MCP host diagnostics example."""
+        return get_host_example("diagnostics").model_dump_json()
 
     @mcp.resource("albumentationsx://examples/review-loop")
     def review_loop_example() -> str:
@@ -301,6 +330,11 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
         """Export a validated pipeline as Python, JSON, or YAML."""
         spec = ComposeSpec.model_validate(pipeline)
         return pipeline_service.export_pipeline(spec, output_format=output_format).model_dump(mode="json")
+
+    @mcp.tool(name="diagnose_environment")
+    def diagnose_environment_tool(include_write_probe: bool = True) -> dict[str, Any]:  # noqa: FBT001, FBT002
+        """Diagnose local MCP setup, root access, artifact writes, and public surface discovery."""
+        return diagnostics_service.diagnose(include_write_probe=include_write_probe).model_dump(mode="json")
 
     @mcp.tool()
     def render_preview(request: dict[str, Any]) -> dict[str, Any]:
