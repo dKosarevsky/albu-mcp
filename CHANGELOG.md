@@ -4,6 +4,10 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 ## Unreleased
 
+- No unreleased changes yet.
+
+## 1.2.0 - 2026-06-15
+
 - Added `diagnose_environment` for structured local setup diagnostics covering AlbumentationsX import/version,
   configured roots, artifact writeability, and public MCP discovery.
 - Added `albumentationsx://diagnostics/guide` and `albumentationsx://examples/diagnostics` for host troubleshooting.
