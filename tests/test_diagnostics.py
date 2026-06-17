@@ -153,6 +153,7 @@ def _complete_public_surface() -> PublicSurface:
             "export_pipeline",
             "diagnose_environment",
             "run_host_smoke_check",
+            "validate_preview_request",
         ],
         prompts=[
             "build_robustness_augmentation_session",

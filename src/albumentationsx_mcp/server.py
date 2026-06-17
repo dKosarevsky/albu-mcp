@@ -25,6 +25,7 @@ from albumentationsx_mcp.models import (
 from albumentationsx_mcp.pipeline import PipelineService
 from albumentationsx_mcp.presets import Intensity, adjust_pipeline, recommend_pipeline
 from albumentationsx_mcp.preview import ArtifactStore, PathPolicy, PreviewService
+from albumentationsx_mcp.preview_validation import PreviewRequestValidator
 from albumentationsx_mcp.prompts import (
     build_robustness_augmentation_session as build_robustness_prompt,
 )
@@ -79,6 +80,7 @@ _PUBLIC_TOOLS = [
     "export_pipeline",
     "diagnose_environment",
     "run_host_smoke_check",
+    "validate_preview_request",
 ]
 _PUBLIC_PROMPTS = [
     "build_robustness_augmentation_session",
@@ -132,6 +134,10 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
         pipeline_service,
         PathPolicy(settings.allowed_roots),
         ArtifactStore(settings.artifact_root, max_runs=settings.max_preview_runs),
+    )
+    preview_validator = PreviewRequestValidator(
+        pipeline_service=pipeline_service,
+        path_policy=PathPolicy(settings.allowed_roots),
     )
     tuning_store = TuningDecisionStore(settings.artifact_root)
     feedback_store = PreviewFeedbackStore(settings.artifact_root)
@@ -354,6 +360,12 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
             recipe=recipe,
             validation=validation,
         ).model_dump(mode="json")
+
+    @mcp.tool(name="validate_preview_request")
+    def validate_preview_request_tool(request: dict[str, Any], target: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Validate a preview request before rendering local preview artifacts."""
+        target_spec = TargetSpec.model_validate(target or {})
+        return preview_validator.validate(request, target=target_spec).model_dump(mode="json")
 
     @mcp.tool()
     def render_preview(request: dict[str, Any]) -> dict[str, Any]:

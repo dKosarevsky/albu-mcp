@@ -43,6 +43,7 @@ def test_server_exposes_documented_tool_names() -> None:
         "export_pipeline",
         "diagnose_environment",
         "run_host_smoke_check",
+        "validate_preview_request",
     }.issubset(tool_names)
 
 
@@ -100,6 +101,7 @@ def test_server_exposes_agent_workflow_resources() -> None:
     assert "export_preview_report" in capabilities
     assert "diagnose_environment" in capabilities
     assert "run_host_smoke_check" in capabilities
+    assert "validate_preview_request" in capabilities
     assert "albumentationsx://diagnostics/guide" in capabilities
     assert "albumentationsx://recipes/catalog" in capabilities
     assert "albumentationsx://examples/client-smoke" in capabilities
