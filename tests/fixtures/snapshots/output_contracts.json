@@ -725,6 +725,7 @@
     },
     "next_actions": [
       "Replace the placeholder input path with one small image under an allowed root.",
+      "Call `validate_preview_request` with `preview_request_template.request`.",
       "Call `render_preview_batch` with `preview_request_template.request`.",
       "Inspect the contact sheet before increasing variants, intensity, or batch size."
     ],
@@ -732,6 +733,7 @@
     "preview_request_template": {
       "instructions": [
         "Replace the placeholder input path with one small image under an allowed root.",
+        "Call `validate_preview_request` with this request before rendering.",
         "Keep variants_per_image at 1 until the first contact sheet is readable.",
         "Inspect the contact sheet before increasing intensity or rendering larger batches."
       ],
