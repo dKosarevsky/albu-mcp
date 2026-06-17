@@ -53,6 +53,27 @@
         {
           "description": null,
           "name": "task",
+          "required": false
+        },
+        {
+          "description": null,
+          "name": "input_path",
+          "required": false
+        },
+        {
+          "description": null,
+          "name": "targets",
+          "required": false
+        }
+      ],
+      "description": "Guide an assistant through a first local preview with request validation.",
+      "name": "run_first_preview_review"
+    },
+    {
+      "arguments": [
+        {
+          "description": null,
+          "name": "task",
           "required": true
         },
         {
@@ -115,6 +136,12 @@
       "mime_type": "text/plain",
       "name": "diagnostics_example",
       "uri": "albumentationsx://examples/diagnostics"
+    },
+    {
+      "description": "Return the MCP first local preview host example.",
+      "mime_type": "text/plain",
+      "name": "first_preview_example",
+      "uri": "albumentationsx://examples/first-preview"
     },
     {
       "description": "Return the visual report handoff host example.",

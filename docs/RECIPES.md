@@ -81,6 +81,7 @@ MCP hosts can read:
 - `albumentationsx://workflows/annotation-preview`
 - `albumentationsx://recipes/catalog`
 - `albumentationsx://examples/client-smoke`
+- `albumentationsx://examples/first-preview`
 - `albumentationsx://examples/diagnostics`
 - `albumentationsx://examples/review-loop`
 - `albumentationsx://examples/report-handoff`

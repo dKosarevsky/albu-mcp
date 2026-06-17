@@ -58,4 +58,5 @@ def test_mcp_stdio_lists_documented_tools(tmp_path: Path) -> None:
         "cleanup_preview_runs",
         "diagnose_environment",
         "run_host_smoke_check",
+        "validate_preview_request",
     }.issubset(tool_names)

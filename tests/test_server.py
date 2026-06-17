@@ -54,6 +54,7 @@ def test_server_exposes_agent_workflow_prompts() -> None:
 
     assert {
         "build_robustness_augmentation_session",
+        "run_first_preview_review",
         "compare_preview_runs_for_feedback",
         "tune_pipeline_from_preview_feedback",
         "export_reproducible_pipeline",
@@ -71,6 +72,7 @@ def test_server_exposes_agent_workflow_resources() -> None:
     recipes_catalog = cast("Any", resources["albumentationsx://recipes/catalog"]).fn()
     diagnostics_guide = cast("Any", resources["albumentationsx://diagnostics/guide"]).fn()
     client_smoke_example = cast("Any", resources["albumentationsx://examples/client-smoke"]).fn()
+    first_preview_example = cast("Any", resources["albumentationsx://examples/first-preview"]).fn()
     diagnostics_example = cast("Any", resources["albumentationsx://examples/diagnostics"]).fn()
     review_loop_example = cast("Any", resources["albumentationsx://examples/review-loop"]).fn()
     report_handoff_example = cast("Any", resources["albumentationsx://examples/report-handoff"]).fn()
@@ -83,12 +85,14 @@ def test_server_exposes_agent_workflow_resources() -> None:
     assert "object_detection" in recipes_catalog
     assert "diagnose_environment" in diagnostics_guide
     assert "is AlbumentationsX MCP connected?" in client_smoke_example
+    assert "run the first AlbumentationsX preview" in first_preview_example
     assert "why does AlbumentationsX MCP preview not work?" in diagnostics_example
     assert "record_preview_feedback" in review_loop_example
     assert "export_preview_report" in report_handoff_example
     assert "adjust_pipeline" in preview_tuning
     assert "workflow_resources" in capabilities
     assert "compare_preview_runs_for_feedback" in capabilities
+    assert "run_first_preview_review" in capabilities
     assert "summarize_tuning_session" in capabilities
     assert "rank_preview_candidates" in capabilities
     assert "score_dataset_preview_candidates" in capabilities
@@ -105,6 +109,7 @@ def test_server_exposes_agent_workflow_resources() -> None:
     assert "albumentationsx://diagnostics/guide" in capabilities
     assert "albumentationsx://recipes/catalog" in capabilities
     assert "albumentationsx://examples/client-smoke" in capabilities
+    assert "albumentationsx://examples/first-preview" in capabilities
     assert "albumentationsx://examples/diagnostics" in capabilities
     assert "albumentationsx://examples/review-loop" in capabilities
     assert "albumentationsx://examples/report-handoff" in capabilities

@@ -26,6 +26,9 @@ def test_golden_eval_assets_are_present() -> None:
     diagnostics_scenario = next(
         scenario for scenario in scenarios["scenarios"] if scenario["name"] == "diagnostics_resource_flow"
     )
+    first_preview_scenario = next(
+        scenario for scenario in scenarios["scenarios"] if scenario["name"] == "first_preview_resource_prompt_flow"
+    )
     real_sample_scenario = next(
         scenario for scenario in scenarios["scenarios"] if scenario["name"] == "real_sample_preview_smoke"
     )
@@ -36,6 +39,7 @@ def test_golden_eval_assets_are_present() -> None:
     assert {scenario["name"] for scenario in scenarios["scenarios"]} == {
         "client_smoke_resource_flow",
         "diagnostics_resource_flow",
+        "first_preview_resource_prompt_flow",
         "classification_recommend_validate_explain_export",
         "preview_lifecycle",
         "preview_batch_compare",
@@ -55,6 +59,7 @@ def test_golden_eval_assets_are_present() -> None:
         "albumentationsx://diagnostics/guide",
         "albumentationsx://capabilities",
     ]
+    assert first_preview_scenario["first_preview_smoke"] is True
     assert real_sample_scenario["real_sample_smoke"] is True
     assert real_sample_scenario["input_count"] == 3
     assert real_sample_scenario["compare_preview"] is True
@@ -64,6 +69,7 @@ def test_golden_eval_assets_are_present() -> None:
     assert quality_scenario["assert_preview_report_feedback"] is True
     assert "_run_client_smoke" in runner_source
     assert "_run_diagnostics_smoke" in runner_source
+    assert "_run_first_preview_smoke" in runner_source
     assert "_run_real_sample_smoke" in runner_source
     assert "_run_preview_request_troubleshooting" in runner_source
     assert "run_host_smoke_check" in runner_source
@@ -120,6 +126,7 @@ def test_golden_eval_runner_executes_scenarios_over_stdio(tmp_path: Path) -> Non
     assert "diagnostics_resource_flow: ok" in completed.stdout
     assert "classification_recommend_validate_explain_export: ok" in completed.stdout
     assert "preview_lifecycle: ok" in completed.stdout
+    assert "first_preview_resource_prompt_flow: ok" in completed.stdout
     assert "preview_batch_compare: ok" in completed.stdout
     assert "preview_quality_tuning_summary: ok" in completed.stdout
     assert "real_sample_preview_smoke: ok" in completed.stdout

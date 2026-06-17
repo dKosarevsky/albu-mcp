@@ -262,8 +262,9 @@ uv run python scripts/run_golden_evals.py
 ```
 
 The golden suite includes a real sample first-preview smoke and a preview-request troubleshooting scenario. They call
-`run_host_smoke_check`, validate filled preview requests, render deterministic local sample PNGs, read preview
-manifests, compare runs with `quality_summary`, and delete generated runs through MCP stdio.
+`run_host_smoke_check`, read `albumentationsx://examples/first-preview`, validate filled preview requests, render
+deterministic local sample PNGs, read preview manifests, compare runs with `quality_summary`, and delete generated runs
+through MCP stdio.
 
 Public MCP contract changes should also follow [docs/COMPATIBILITY.md](COMPATIBILITY.md) and update the contract snapshot
 when tool, resource, prompt, or representative output schemas change:
@@ -291,6 +292,8 @@ uv run pytest tests/test_output_contract_snapshots.py -q
 - `albumentationsx://workflows/annotation-preview`: annotation-aware preview workflow.
 - `albumentationsx://examples/client-smoke`: post-install host smoke playbook for capabilities, recipes, recommendation,
   and validation.
+- `albumentationsx://examples/first-preview`: first local preview playbook with host smoke, request validation, and
+  bounded rendering.
 - `albumentationsx://examples/diagnostics`: troubleshooting playbook for preview setup and local root issues.
 - `albumentationsx://examples/review-loop`: concrete example feedback loop for prompts like "example 8 is too noisy".
 - `albumentationsx://examples/report-handoff`: visual report handoff loop after ranking and decisions.
@@ -298,6 +301,7 @@ uv run pytest tests/test_output_contract_snapshots.py -q
 ## Prompts
 
 - `build_robustness_augmentation_session`: guide preview-driven robustness augmentation work.
+- `run_first_preview_review`: guide the first local preview through host smoke and request validation.
 - `compare_preview_runs_for_feedback`: compare two preview runs before choosing feedback tags.
 - `tune_pipeline_from_preview_feedback`: adjust and re-render from a concrete preview run.
 - `export_reproducible_pipeline`: export an accepted run with reproducibility context.

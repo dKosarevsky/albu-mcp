@@ -33,7 +33,7 @@ The Python package is published as
 Pin a version when debugging or reproducing a release:
 
 ```bash
-uvx --from albumentationsx-mcp==1.6.0 albumentationsx-mcp --help
+uvx --from albumentationsx-mcp==1.7.0 albumentationsx-mcp --help
 ```
 
 ## MCP Registry
@@ -202,6 +202,7 @@ After configuring Claude Desktop, Claude Code, Cursor, or Codex, use the same fi
 6. Call `render_preview_batch` only when the request is valid.
 
 The copyable prompt is in [examples/first_preview_workflow.md](../examples/first_preview_workflow.md).
+MCP-native hosts can also read `albumentationsx://examples/first-preview` or use the `run_first_preview_review` prompt.
 
 ## Local Checkout
 
@@ -239,7 +240,7 @@ uvx --from albumentationsx-mcp albumentationsx-mcp --help
 For a pinned release:
 
 ```bash
-uvx --from albumentationsx-mcp==1.6.0 albumentationsx-mcp --help
+uvx --from albumentationsx-mcp==1.7.0 albumentationsx-mcp --help
 ```
 
 For local development:

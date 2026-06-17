@@ -36,6 +36,9 @@ from albumentationsx_mcp.prompts import (
     export_reproducible_pipeline as export_pipeline_prompt,
 )
 from albumentationsx_mcp.prompts import (
+    run_first_preview_review as first_preview_prompt,
+)
+from albumentationsx_mcp.prompts import (
     tune_pipeline_from_preview_feedback as tune_feedback_prompt,
 )
 from albumentationsx_mcp.quality import list_quality_profiles
@@ -84,6 +87,7 @@ _PUBLIC_TOOLS = [
 ]
 _PUBLIC_PROMPTS = [
     "build_robustness_augmentation_session",
+    "run_first_preview_review",
     "compare_preview_runs_for_feedback",
     "tune_pipeline_from_preview_feedback",
     "export_reproducible_pipeline",
@@ -96,6 +100,7 @@ _PUBLIC_WORKFLOW_RESOURCES = [
     "albumentationsx://recipes/catalog",
     "albumentationsx://diagnostics/guide",
     "albumentationsx://examples/client-smoke",
+    "albumentationsx://examples/first-preview",
     "albumentationsx://examples/diagnostics",
     "albumentationsx://examples/review-loop",
     "albumentationsx://examples/report-handoff",
@@ -240,6 +245,11 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
     def client_smoke_example() -> str:
         """Return the MCP host smoke-check example."""
         return get_host_example("client-smoke").model_dump_json()
+
+    @mcp.resource("albumentationsx://examples/first-preview")
+    def first_preview_example() -> str:
+        """Return the MCP first local preview host example."""
+        return get_host_example("first-preview").model_dump_json()
 
     @mcp.resource("albumentationsx://examples/diagnostics")
     def diagnostics_example() -> str:
@@ -631,6 +641,15 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
     def compare_preview_runs_for_feedback(baseline_run_id: str, candidate_run_id: str) -> str:
         """Guide an assistant through preview run comparison before adjustment."""
         return compare_preview_runs_prompt(baseline_run_id, candidate_run_id)
+
+    @mcp.prompt()
+    def run_first_preview_review(
+        task: str = "classification",
+        input_path: str = "/absolute/path/to/images/sample.jpg",
+        targets: str = "image",
+    ) -> str:
+        """Guide an assistant through a first local preview with request validation."""
+        return first_preview_prompt(task, input_path, targets)
 
     @mcp.prompt()
     def tune_pipeline_from_preview_feedback(task: str, run_id: str, feedback_tags: str) -> str:

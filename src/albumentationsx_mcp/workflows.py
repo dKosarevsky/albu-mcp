@@ -218,6 +218,48 @@ _HOST_EXAMPLES = {
             "run_host_smoke_check returns preview_ready=true and a small render_preview_batch template.",
         ],
     ),
+    "first-preview": HostExample(
+        name="first-preview",
+        goal="Run the first local preview only after host smoke and preview request validation pass.",
+        trigger_phrase="run the first AlbumentationsX preview",
+        steps=[
+            HostExampleStep(
+                order=1,
+                tool="albumentationsx://examples/client-smoke",
+                instruction="Read the client smoke playbook so the host follows the supported setup flow.",
+                expected_result="A playbook that starts with capability checks and ends with run_host_smoke_check.",
+            ),
+            HostExampleStep(
+                order=2,
+                tool="run_host_smoke_check",
+                instruction=(
+                    "Call run_host_smoke_check for the user's task and continue only when preview_ready is true."
+                ),
+                expected_result="A report with preview_ready=true and a preview_request_template.",
+            ),
+            HostExampleStep(
+                order=3,
+                tool="validate_preview_request",
+                instruction=(
+                    "Copy preview_request_template.request, replace the placeholder input path with one small image "
+                    "under an allowed root, and validate the filled request."
+                ),
+                expected_result="A valid request with normalized_request and no remediation_actions.",
+            ),
+            HostExampleStep(
+                order=4,
+                tool="render_preview_batch",
+                instruction="Render the validated request and show the contact sheet before increasing scope.",
+                expected_result="A preview run with contact sheet artifacts and a readable manifest.",
+            ),
+        ],
+        success_criteria=[
+            "The host does not render until run_host_smoke_check returns preview_ready=true.",
+            "validate_preview_request returns valid=true for the filled local image path.",
+            "render_preview_batch uses the validated request and writes artifacts under the artifact root.",
+            "The user reviews the first contact sheet before changing intensity, batch size, or variants.",
+        ],
+    ),
     "review-loop": HostExample(
         name="review-loop",
         goal="Turn concrete user feedback about one preview example into structured tags and a safer next render.",

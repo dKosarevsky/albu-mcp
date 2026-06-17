@@ -6,6 +6,12 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 - No unreleased changes yet.
 
+## 1.7.0 - 2026-06-17
+
+- Added `albumentationsx://examples/first-preview` as an MCP-native first-preview host playbook.
+- Added `run_first_preview_review` as a prompt for safe first local preview setup across MCP hosts.
+- Extended golden stdio evals so the first-preview flow reads the resource and validates requests before rendering.
+
 ## 1.6.0 - 2026-06-17
 
 - Added read-only `validate_preview_request` for schema, pipeline, path, mask, and annotation troubleshooting before

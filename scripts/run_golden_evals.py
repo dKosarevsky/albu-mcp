@@ -82,6 +82,9 @@ async def _run_scenario(session: ClientSession, scenario: dict[str, Any], images
         await _run_client_smoke(session, scenario)
     if scenario.get("diagnostics_smoke"):
         await _run_diagnostics_smoke(session, scenario)
+    if scenario.get("first_preview_smoke"):
+        await _run_first_preview_smoke(session, scenario, images_dir)
+        return
     if scenario.get("recommend_recipe"):
         await _run_recipe_recommendation(session, scenario)
     if scenario.get("real_sample_smoke"):
@@ -294,6 +297,49 @@ async def _run_preview_request_troubleshooting(
     if valid_report["valid"] is not True or valid_report["status"] != "ok":
         raise AssertionError(f"{scenario['name']} valid preview request did not pass: {valid_report}")
 
+    preview = await _call_tool_json(session, "render_preview_batch", {"request": valid_request})
+    await _delete_preview_run(session, scenario, preview["run_id"])
+
+
+async def _run_first_preview_smoke(session: ClientSession, scenario: dict[str, Any], images_dir: Path) -> None:
+    image_paths = _write_preview_inputs(images_dir, scenario)
+    playbook = await _read_resource_json(session, "albumentationsx://examples/first-preview")
+    if playbook["trigger_phrase"] != "run the first AlbumentationsX preview":
+        raise AssertionError(f"{scenario['name']} returned wrong first-preview trigger phrase: {playbook}")
+    step_tools = [step["tool"] for step in playbook["steps"]]
+    expected_steps = [
+        "albumentationsx://examples/client-smoke",
+        "run_host_smoke_check",
+        "validate_preview_request",
+        "render_preview_batch",
+    ]
+    if step_tools != expected_steps:
+        raise AssertionError(f"{scenario['name']} returned wrong first-preview steps: {playbook}")
+
+    capabilities = await _read_resource_json(session, "albumentationsx://capabilities")
+    if "albumentationsx://examples/first-preview" not in capabilities["workflow_resources"]:
+        raise AssertionError(f"{scenario['name']} capabilities did not include first-preview resource: {capabilities}")
+    if "run_first_preview_review" not in capabilities["prompts"]:
+        raise AssertionError(f"{scenario['name']} capabilities did not include first-preview prompt: {capabilities}")
+
+    smoke_report = await _call_tool_json(
+        session,
+        "run_host_smoke_check",
+        {
+            "include_write_probe": True,
+            "task": scenario["task"],
+            "intensity": scenario.get("intensity", "medium"),
+            "targets": scenario["targets"],
+        },
+    )
+    template = smoke_report.get("preview_request_template")
+    if smoke_report["preview_ready"] is not True or template is None:
+        raise AssertionError(f"{scenario['name']} host smoke returned no usable template: {smoke_report}")
+    valid_request = await _validate_preview_request_or_fail(
+        session,
+        scenario,
+        _real_sample_preview_request(template["request"], scenario, image_paths),
+    )
     preview = await _call_tool_json(session, "render_preview_batch", {"request": valid_request})
     await _delete_preview_run(session, scenario, preview["run_id"])
 

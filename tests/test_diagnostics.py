@@ -157,6 +157,7 @@ def _complete_public_surface() -> PublicSurface:
         ],
         prompts=[
             "build_robustness_augmentation_session",
+            "run_first_preview_review",
             "compare_preview_runs_for_feedback",
             "tune_pipeline_from_preview_feedback",
             "export_reproducible_pipeline",
@@ -169,6 +170,7 @@ def _complete_public_surface() -> PublicSurface:
             "albumentationsx://recipes/catalog",
             "albumentationsx://diagnostics/guide",
             "albumentationsx://examples/client-smoke",
+            "albumentationsx://examples/first-preview",
             "albumentationsx://examples/diagnostics",
             "albumentationsx://examples/review-loop",
             "albumentationsx://examples/report-handoff",

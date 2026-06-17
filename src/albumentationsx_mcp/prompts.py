@@ -24,6 +24,23 @@ def compare_preview_runs_for_feedback(baseline_run_id: str, candidate_run_id: st
     )
 
 
+def run_first_preview_review(
+    task: str = "classification",
+    input_path: str = "/absolute/path/to/images/sample.jpg",
+    targets: str = "image",
+) -> str:
+    """Guide an assistant through the first local preview with pre-render validation."""
+    return (
+        "Use AlbumentationsX MCP to run the first local preview safely. "
+        "Read albumentationsx://examples/client-smoke, then call run_host_smoke_check "
+        f"for task {task!r} with targets {targets!r}. Continue only when preview_ready is true. "
+        "Copy preview_request_template.request, replace its input_paths value with "
+        f"{input_path!r}, call validate_preview_request, and call render_preview_batch only when "
+        "the validation report has valid=true. Show the contact sheet before increasing intensity, "
+        "batch size, or variants."
+    )
+
+
 def tune_pipeline_from_preview_feedback(task: str, run_id: str, feedback_tags: str) -> str:
     """Guide adjustment from a concrete preview run and user feedback tags."""
     return (
