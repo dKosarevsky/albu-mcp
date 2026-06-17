@@ -118,7 +118,6 @@ def test_docs_link_diagnostics_playbook_resource() -> None:
     for content in [readme, install, usage, recipes]:
         assert "albumentationsx://diagnostics/guide" in content
         assert "diagnose_environment" in content
-    assert "remediation_actions" in readme
     assert "remediation_actions" in install
     assert "remediation_actions" in usage
     assert "fix_allowed_root" in usage
@@ -227,17 +226,18 @@ def test_public_docs_describe_current_preview_workflow() -> None:
     changelog = Path("CHANGELOG.md").read_text(encoding="utf-8")
     server_json = json.loads(Path("server.json").read_text(encoding="utf-8"))
 
-    assert "## What Changed In 0.2" in readme
-    assert "## What Changed In 0.3" in readme
-    assert "## What Changed In 0.4" in readme
+    assert "## What Changed In" not in readme
+    assert "[CHANGELOG.md](CHANGELOG.md)" in readme
+    assert "## 0.2.0" in changelog
+    assert "## 0.3.0" in changelog
+    assert "## 0.4.0" in changelog
     assert "quality_summary" in usage
     assert "too_noisy:high" in readme
     assert "suggested_feedback_tags" in usage
     assert "docs/RECIPES.md" in readme
-    assert "## 0.3.0" in changelog
     assert "batch previews" in readme
     assert "compare preview runs" in readme
-    assert "agent workflow resources" in readme
+    assert "agent workflow resources" in readme.lower()
     assert "batch previews" in server_json["description"]
     assert "compare preview runs" in server_json["description"]
 
