@@ -8,6 +8,8 @@ Python code.
 
 For copyable host snippets, PyPI install, bounded local access, and troubleshooting, start with
 [INSTALL.md](INSTALL.md). This page focuses on the augmentation workflow after the server is connected.
+For a copyable host prompt that works across Claude Desktop, Claude Code, Cursor, and Codex, see
+[examples/first_preview_workflow.md](../examples/first_preview_workflow.md).
 After connecting a new host, read `albumentationsx://examples/client-smoke` for a short smoke playbook before rendering
 local previews.
 When preview setup is unclear, read `albumentationsx://diagnostics/guide` and call `diagnose_environment` before

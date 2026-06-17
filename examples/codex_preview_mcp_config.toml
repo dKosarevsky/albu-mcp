@@ -1,0 +1,11 @@
+[mcp_servers.albumentationsx]
+command = "uvx"
+args = [
+  "--from",
+  "albumentationsx-mcp",
+  "albumentationsx-mcp",
+  "--allowed-root",
+  "/absolute/path/to/images",
+  "--artifact-root",
+  "/absolute/path/to/albu-artifacts",
+]

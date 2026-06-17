@@ -37,8 +37,8 @@ fixtures.
 - preview lifecycle operations;
 - batch preview comparison;
 - quality tuning session summary;
-- real sample first-preview smoke using `run_host_smoke_check`, `render_preview_batch`, manifest reads, candidate
-  comparison, quality metrics, and cleanup.
+- real sample first-preview smoke using `run_host_smoke_check`, `validate_preview_request`, `render_preview_batch`,
+  manifest reads, candidate comparison, quality metrics, and cleanup.
 
 Run `uv run python scripts/run_golden_evals.py` before every release.
 
@@ -57,8 +57,8 @@ The canonical install path is:
 uvx --from albumentationsx-mcp albumentationsx-mcp
 ```
 
-`docs/INSTALL.md` documents PyPI, MCP Registry, Claude Desktop, Claude Code, Cursor, Codex, bounded local roots, smoke
-checks, troubleshooting, and safety notes.
+`docs/INSTALL.md` documents PyPI, MCP Registry, Claude Desktop, Claude Code, Cursor, Codex, bounded local roots, first
+preview validation, smoke checks, troubleshooting, and safety notes.
 
 ## Compatibility Policy
 

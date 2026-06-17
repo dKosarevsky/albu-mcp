@@ -129,18 +129,21 @@ async def _run_preview_lifecycle(
     pipeline: dict[str, Any],
 ) -> None:
     image_paths = _write_preview_inputs(images_dir, scenario)
+    preview_request = await _validate_preview_request_or_fail(
+        session,
+        scenario,
+        {
+            "input_paths": [str(path) for path in image_paths],
+            "pipeline": pipeline,
+            "variants_per_image": scenario.get("variants_per_image", 1),
+            "seed": scenario.get("seed", 137),
+            "max_side": 128,
+        },
+    )
     preview = await _call_tool_json(
         session,
         scenario.get("preview_tool", "render_preview"),
-        {
-            "request": {
-                "input_paths": [str(path) for path in image_paths],
-                "pipeline": pipeline,
-                "variants_per_image": scenario.get("variants_per_image", 1),
-                "seed": scenario.get("seed", 137),
-                "max_side": 128,
-            },
-        },
+        {"request": preview_request},
     )
     run_id = preview["run_id"]
     runs = await _call_tool_json(session, "list_preview_runs", {"limit": 5})
@@ -186,7 +189,11 @@ async def _run_real_sample_smoke(session: ClientSession, scenario: dict[str, Any
     if template is None or template["tool"] != "render_preview_batch":
         raise AssertionError(f"{scenario['name']} host smoke returned no preview template: {smoke_report}")
 
-    baseline_request = _real_sample_preview_request(template["request"], scenario, image_paths)
+    baseline_request = await _validate_preview_request_or_fail(
+        session,
+        scenario,
+        _real_sample_preview_request(template["request"], scenario, image_paths),
+    )
     baseline = await _call_tool_json(session, "render_preview_batch", {"request": baseline_request})
     baseline_manifest = await _assert_real_sample_preview_manifest(
         session,
@@ -205,6 +212,7 @@ async def _run_real_sample_smoke(session: ClientSession, scenario: dict[str, Any
         "pipeline": candidate_pipeline,
         "seed": int(scenario.get("seed", 0)) + 10,
     }
+    candidate_request = await _validate_preview_request_or_fail(session, scenario, candidate_request)
     candidate = await _call_tool_json(session, "render_preview_batch", {"request": candidate_request})
     candidate_manifest = await _assert_real_sample_preview_manifest(
         session,
@@ -370,6 +378,24 @@ async def _delete_preview_run(session: ClientSession, scenario: dict[str, Any], 
         raise AssertionError(f"{scenario['name']} did not delete preview run {run_id}: {deleted}")
 
 
+async def _validate_preview_request_or_fail(
+    session: ClientSession,
+    scenario: dict[str, Any],
+    request: dict[str, Any],
+) -> dict[str, Any]:
+    report = await _call_tool_json(
+        session,
+        "validate_preview_request",
+        {"request": request, "target": {"targets": scenario["targets"]}},
+    )
+    if report["status"] != "ok" or report["valid"] is not True:
+        raise AssertionError(f"{scenario['name']} preview request validation failed: {report}")
+    normalized_request = report.get("normalized_request")
+    if not isinstance(normalized_request, dict):
+        raise TypeError(f"{scenario['name']} preview validation returned no normalized request: {report}")
+    return normalized_request
+
+
 async def _run_preview_comparison(
     session: ClientSession,
     scenario: dict[str, Any],
@@ -383,18 +409,21 @@ async def _run_preview_comparison(
         "adjust_pipeline",
         {"pipeline": pipeline, "feedback_tags": scenario.get("feedback_tags", ["too_noisy"])},
     )
+    candidate_request = await _validate_preview_request_or_fail(
+        session,
+        scenario,
+        {
+            "input_paths": [str(path) for path in image_paths],
+            "pipeline": candidate_pipeline,
+            "variants_per_image": scenario.get("variants_per_image", 1),
+            "seed": int(scenario.get("seed", 137)) + 10,
+            "max_side": 128,
+        },
+    )
     candidate = await _call_tool_json(
         session,
         "render_preview_batch",
-        {
-            "request": {
-                "input_paths": [str(path) for path in image_paths],
-                "pipeline": candidate_pipeline,
-                "variants_per_image": scenario.get("variants_per_image", 1),
-                "seed": int(scenario.get("seed", 137)) + 10,
-                "max_side": 128,
-            },
-        },
+        {"request": candidate_request},
     )
     comparison = await _call_tool_json(
         session,
@@ -481,18 +510,21 @@ async def _run_candidate_ranking(  # noqa: PLR0913
         "adjust_pipeline",
         {"pipeline": pipeline, "feedback_tags": alternate_tags},
     )
+    alternate_request = await _validate_preview_request_or_fail(
+        session,
+        scenario,
+        {
+            "input_paths": [str(path) for path in image_paths],
+            "pipeline": alternate_pipeline,
+            "variants_per_image": scenario.get("variants_per_image", 1),
+            "seed": int(scenario.get("seed", 137)) + 20,
+            "max_side": 128,
+        },
+    )
     alternate = await _call_tool_json(
         session,
         "render_preview_batch",
-        {
-            "request": {
-                "input_paths": [str(path) for path in image_paths],
-                "pipeline": alternate_pipeline,
-                "variants_per_image": scenario.get("variants_per_image", 1),
-                "seed": int(scenario.get("seed", 137)) + 20,
-                "max_side": 128,
-            },
-        },
+        {"request": alternate_request},
     )
     ranking = await _call_tool_json(
         session,

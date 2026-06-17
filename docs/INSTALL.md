@@ -108,6 +108,9 @@ For preview work, add bounded roots:
 }
 ```
 
+The same preview-ready shape is available in
+[examples/claude_desktop_preview_config.json](../examples/claude_desktop_preview_config.json).
+
 Restart the host after editing its MCP configuration.
 
 ## Claude Code
@@ -125,6 +128,9 @@ With bounded roots:
 claude mcp add-json albumentationsx \
   '{"type":"stdio","command":"uvx","args":["--from","albumentationsx-mcp","albumentationsx-mcp","--allowed-root","/absolute/path/to/images","--artifact-root","/absolute/path/to/albu-artifacts"]}'
 ```
+
+The same command is available in
+[examples/claude_code_preview_command.md](../examples/claude_code_preview_command.md).
 
 Then verify from Claude Code:
 
@@ -152,6 +158,9 @@ Cursor-style MCP JSON can use the same published package command. Start with
 If the host supports project-level MCP configs, commit only non-secret config. Keep local machine paths in a user-level or
 ignored config when they are specific to your workstation.
 
+For preview work, use
+[examples/cursor_preview_mcp_config.json](../examples/cursor_preview_mcp_config.json) and replace the placeholder roots.
+
 ## Codex
 
 Codex-style TOML configs can use [examples/codex_mcp_config.toml](../examples/codex_mcp_config.toml):
@@ -177,6 +186,22 @@ args = [
   "/absolute/path/to/albu-artifacts",
 ]
 ```
+
+The same preview-ready shape is available in
+[examples/codex_preview_mcp_config.toml](../examples/codex_preview_mcp_config.toml).
+
+## First Preview Workflow
+
+After configuring Claude Desktop, Claude Code, Cursor, or Codex, use the same first-preview flow:
+
+1. Read `albumentationsx://examples/client-smoke`.
+2. Call `run_host_smoke_check`.
+3. Continue only when `preview_ready` is true.
+4. Copy `preview_request_template.request` and replace the placeholder image path.
+5. Call `validate_preview_request`.
+6. Call `render_preview_batch` only when the request is valid.
+
+The copyable prompt is in [examples/first_preview_workflow.md](../examples/first_preview_workflow.md).
 
 ## Local Checkout
 

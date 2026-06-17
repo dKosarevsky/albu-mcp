@@ -52,8 +52,13 @@ def test_usage_docs_and_examples_are_present() -> None:
     assert Path("server.json").exists()
     assert Path("examples/claude_desktop_config.json").exists()
     assert Path("examples/claude_desktop_pypi_config.json").exists()
+    assert Path("examples/claude_desktop_preview_config.json").exists()
+    assert Path("examples/claude_code_preview_command.md").exists()
     assert Path("examples/cursor_mcp_config.json").exists()
+    assert Path("examples/cursor_preview_mcp_config.json").exists()
     assert Path("examples/codex_mcp_config.toml").exists()
+    assert Path("examples/codex_preview_mcp_config.toml").exists()
+    assert Path("examples/first_preview_workflow.md").exists()
     assert Path("examples/classification_pipeline.json").exists()
     assert Path("scripts/render_demo_assets.py").exists()
     assert Path("docs/DEMO.md").exists()
@@ -64,8 +69,12 @@ def test_install_guide_covers_host_setup_and_examples() -> None:
     usage = Path("docs/USAGE.md").read_text(encoding="utf-8")
     install = Path("docs/INSTALL.md").read_text(encoding="utf-8")
     claude_pypi = json.loads(Path("examples/claude_desktop_pypi_config.json").read_text(encoding="utf-8"))
+    claude_preview = json.loads(Path("examples/claude_desktop_preview_config.json").read_text(encoding="utf-8"))
     cursor = json.loads(Path("examples/cursor_mcp_config.json").read_text(encoding="utf-8"))
+    cursor_preview = json.loads(Path("examples/cursor_preview_mcp_config.json").read_text(encoding="utf-8"))
     codex = Path("examples/codex_mcp_config.toml").read_text(encoding="utf-8")
+    codex_preview = Path("examples/codex_preview_mcp_config.toml").read_text(encoding="utf-8")
+    workflow = Path("examples/first_preview_workflow.md").read_text(encoding="utf-8")
 
     required_terms = [
         "PyPI",
@@ -84,12 +93,23 @@ def test_install_guide_covers_host_setup_and_examples() -> None:
     assert "[INSTALL.md](INSTALL.md)" in usage
     for term in required_terms:
         assert term in install
-    for config in [claude_pypi, cursor]:
+    for config in [claude_pypi, claude_preview, cursor, cursor_preview]:
         server = config["mcpServers"]["albumentationsx"]
         assert server["command"] == "uvx"
         assert server["args"][:3] == ["--from", "albumentationsx-mcp", "albumentationsx-mcp"]
+    for config in [claude_preview, cursor_preview]:
+        args = config["mcpServers"]["albumentationsx"]["args"]
+        assert "--allowed-root" in args
+        assert "--artifact-root" in args
     assert 'command = "uvx"' in codex
     assert 'args = ["--from", "albumentationsx-mcp", "albumentationsx-mcp"]' in codex
+    assert "--allowed-root" in codex_preview
+    assert "--artifact-root" in codex_preview
+    assert "Claude Desktop" in workflow
+    assert "Claude Code" in workflow
+    assert "Cursor" in workflow
+    assert "Codex" in workflow
+    assert "validate_preview_request" in workflow
 
 
 def test_docs_link_client_smoke_playbook_resource() -> None:
@@ -100,6 +120,7 @@ def test_docs_link_client_smoke_playbook_resource() -> None:
 
     for content in [install, usage, recipes]:
         assert "albumentationsx://examples/client-smoke" in content
+        assert "validate_preview_request" in content
     for content in [readme, install, usage, recipes]:
         assert "run_host_smoke_check" in content
         assert "preview_ready" in content

@@ -68,6 +68,16 @@ def test_golden_eval_assets_are_present() -> None:
     assert "_run_preview_request_troubleshooting" in runner_source
     assert "run_host_smoke_check" in runner_source
     assert "validate_preview_request" in runner_source
+    real_sample_source = runner_source.split("async def _run_real_sample_smoke", maxsplit=1)[1].split(
+        "async def _run_preview_request_troubleshooting",
+        maxsplit=1,
+    )[0]
+    preview_comparison_source = runner_source.split("async def _run_preview_comparison", maxsplit=1)[1].split(
+        "async def _run_candidate_ranking",
+        maxsplit=1,
+    )[0]
+    assert "_validate_preview_request_or_fail" in real_sample_source
+    assert "_validate_preview_request_or_fail" in preview_comparison_source
     assert "_read_resource_json" in runner_source
     assert "record_preview_feedback" in runner_source
     assert "assert_preview_report_feedback" in runner_source
