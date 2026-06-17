@@ -36,6 +36,10 @@ def test_host_smoke_report_is_preview_ready_when_diagnostics_and_validation_pass
     assert report.preview_request_template.request["variants_per_image"] == 1
     assert report.preview_request_template.request["seed"] == 0
     assert report.preview_request_template.request["input_paths"] == [str(tmp_path.resolve() / "example.jpg")]
+    assert any("validate_preview_request" in action for action in report.next_actions)
+    assert any(
+        "validate_preview_request" in instruction for instruction in report.preview_request_template.instructions
+    )
     assert any("render_preview_batch" in action for action in report.next_actions)
 
 
@@ -74,6 +78,7 @@ def _complete_public_surface_with_host_smoke() -> PublicSurface:
             "list_feedback_tags",
             "render_preview",
             "render_preview_batch",
+            "validate_preview_request",
             "compare_preview_runs",
             "summarize_tuning_session",
             "rank_preview_candidates",

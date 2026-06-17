@@ -304,9 +304,7 @@ def _remediation_actions(checks: list[PreviewRequestCheck]) -> list[PreviewReque
             )
         )
     mask_path_codes = [
-        code
-        for code in ("mask_path_missing", "mask_path_not_file", "mask_path_outside_allowed_root")
-        if code in codes
+        code for code in ("mask_path_missing", "mask_path_not_file", "mask_path_outside_allowed_root") if code in codes
     ]
     if mask_path_codes:
         actions.append(
