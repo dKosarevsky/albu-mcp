@@ -1171,6 +1171,37 @@
         "title": "validate_pipelineArguments",
         "type": "object"
       }
+    },
+    {
+      "description": "Validate a preview request before rendering local preview artifacts.",
+      "name": "validate_preview_request",
+      "parameters": {
+        "properties": {
+          "request": {
+            "additionalProperties": true,
+            "title": "Request",
+            "type": "object"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Target"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "validate_preview_request_toolArguments",
+        "type": "object"
+      }
     }
   ]
 }

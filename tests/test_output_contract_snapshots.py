@@ -44,3 +44,19 @@ def test_output_contract_snapshot_includes_host_smoke_examples() -> None:
     assert ready["preview_request_template"]["request"]["variants_per_image"] == 1
     assert blocked["preview_ready"] is False
     assert blocked["preview_request_template"] is None
+
+
+def test_output_contract_snapshot_includes_preview_request_validation_examples() -> None:
+    snapshot = json.loads(_SNAPSHOT_PATH.read_text(encoding="utf-8"))
+
+    assert "validate_preview_request_ready" in snapshot
+    assert "validate_preview_request_missing_input" in snapshot
+    assert "validate_preview_request_outside_allowed_root" in snapshot
+    ready = snapshot["validate_preview_request_ready"]
+    missing = snapshot["validate_preview_request_missing_input"]
+    outside = snapshot["validate_preview_request_outside_allowed_root"]
+    assert ready["valid"] is True
+    assert missing["valid"] is False
+    assert outside["valid"] is False
+    assert "input_path_missing" in {check["code"] for check in missing["checks"]}
+    assert "input_path_outside_allowed_root" in {check["code"] for check in outside["checks"]}

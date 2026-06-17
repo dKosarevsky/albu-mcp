@@ -27,6 +27,8 @@ from albumentationsx_mcp.models import (
     TuningSessionSummary,
 )
 from albumentationsx_mcp.pipeline import PipelineService
+from albumentationsx_mcp.preview import PathPolicy
+from albumentationsx_mcp.preview_validation import PreviewRequestValidator
 from albumentationsx_mcp.recipes import recommend_recipe
 from albumentationsx_mcp.reports import PreviewReportService
 from albumentationsx_mcp.review import PreviewFeedbackStore
@@ -63,6 +65,9 @@ def build_output_contract_snapshot(root: Path) -> dict[str, Any]:
         "diagnose_environment_missing_allowed_root": _diagnostics_missing_allowed_root(root),
         "run_host_smoke_check_ready": _host_smoke_ready(root),
         "run_host_smoke_check_missing_allowed_root": _host_smoke_missing_allowed_root(root),
+        "validate_preview_request_ready": _preview_request_ready(root),
+        "validate_preview_request_missing_input": _preview_request_missing_input(root),
+        "validate_preview_request_outside_allowed_root": _preview_request_outside_allowed_root(root),
         "score_dataset_preview_candidates": _dataset_score().model_dump(mode="json"),
         "record_preview_feedback": _normalize_feedback_record(feedback),
         "list_preview_feedback": {
@@ -253,6 +258,53 @@ def _host_smoke_report(diagnostics_report: DiagnosticsReport) -> HostSmokeReport
     return build_host_smoke_report(diagnostics=diagnostics_report, recipe=recipe, validation=validation)
 
 
+def _preview_request_ready(root: Path) -> dict[str, Any]:
+    validator, images_root = _preview_request_validator(root)
+    image_path = images_root / "sample.png"
+    image_path.write_bytes(b"placeholder image")
+    report = validator.validate(_preview_request(image_path), target=TargetSpec(targets=["image"]))
+    return _normalize_paths(report.model_dump(mode="json"), root)
+
+
+def _preview_request_missing_input(root: Path) -> dict[str, Any]:
+    validator, images_root = _preview_request_validator(root)
+    report = validator.validate(_preview_request(images_root / "missing.png"), target=TargetSpec(targets=["image"]))
+    return _normalize_paths(report.model_dump(mode="json"), root)
+
+
+def _preview_request_outside_allowed_root(root: Path) -> dict[str, Any]:
+    validator, _images_root = _preview_request_validator(root)
+    outside_path = root / "preview-request" / "outside" / "sample.png"
+    outside_path.parent.mkdir(parents=True, exist_ok=True)
+    outside_path.write_bytes(b"placeholder image")
+    report = validator.validate(_preview_request(outside_path), target=TargetSpec(targets=["image"]))
+    return _normalize_paths(report.model_dump(mode="json"), root)
+
+
+def _preview_request_validator(root: Path) -> tuple[PreviewRequestValidator, Path]:
+    images_root = root / "preview-request" / "images"
+    images_root.mkdir(parents=True, exist_ok=True)
+    catalog = TransformCatalog()
+    return (
+        PreviewRequestValidator(
+            pipeline_service=PipelineService(catalog),
+            path_policy=PathPolicy([images_root]),
+        ),
+        images_root,
+    )
+
+
+def _preview_request(image_path: Path) -> dict[str, Any]:
+    recipe = recommend_recipe("classification", intensity="low", targets=["image"])
+    return {
+        "input_paths": [str(image_path)],
+        "pipeline": recipe.pipeline.model_dump(mode="json", exclude_none=True),
+        "variants_per_image": 1,
+        "seed": 137,
+        "max_side": 128,
+    }
+
+
 def _diagnostics_public_surface() -> PublicSurface:
     return PublicSurface(
         tools=[
@@ -284,6 +336,7 @@ def _diagnostics_public_surface() -> PublicSurface:
             "export_pipeline",
             "diagnose_environment",
             "run_host_smoke_check",
+            "validate_preview_request",
         ],
         prompts=[
             "build_robustness_augmentation_session",

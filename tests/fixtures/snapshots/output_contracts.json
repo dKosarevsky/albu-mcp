@@ -39,7 +39,8 @@
             "recommend_recipe",
             "render_preview_batch",
             "run_host_smoke_check",
-            "validate_pipeline"
+            "validate_pipeline",
+            "validate_preview_request"
           ]
         },
         "message": "Required diagnostics tools are available.",
@@ -151,7 +152,8 @@
             "recommend_recipe",
             "render_preview_batch",
             "run_host_smoke_check",
-            "validate_pipeline"
+            "validate_pipeline",
+            "validate_preview_request"
           ]
         },
         "message": "Required diagnostics tools are available.",
@@ -467,7 +469,8 @@
               "recommend_recipe",
               "render_preview_batch",
               "run_host_smoke_check",
-              "validate_pipeline"
+              "validate_pipeline",
+              "validate_preview_request"
             ]
           },
           "message": "Required diagnostics tools are available.",
@@ -660,7 +663,8 @@
               "recommend_recipe",
               "render_preview_batch",
               "run_host_smoke_check",
-              "validate_pipeline"
+              "validate_pipeline",
+              "validate_preview_request"
             ]
           },
           "message": "Required diagnostics tools are available.",
@@ -923,5 +927,328 @@
   },
   "snapshot": {
     "version": 1
+  },
+  "validate_preview_request_missing_input": {
+    "checks": [
+      {
+        "code": "preview_request_schema_valid",
+        "details": {
+          "input_count": 1,
+          "max_side": 128,
+          "variants_per_image": 1
+        },
+        "message": "Preview request schema is valid.",
+        "severity": "info",
+        "status": "ok"
+      },
+      {
+        "code": "pipeline_valid",
+        "details": {
+          "warning_count": 0
+        },
+        "message": "Preview request pipeline is valid for the requested target.",
+        "severity": "info",
+        "status": "ok"
+      },
+      {
+        "code": "input_path_missing",
+        "details": {
+          "allowed_roots": [
+            "<OUTPUT_CONTRACT_ROOT>/preview-request/images"
+          ],
+          "path": "<OUTPUT_CONTRACT_ROOT>/preview-request/images/missing.png"
+        },
+        "message": "Input path 1 does not exist: <OUTPUT_CONTRACT_ROOT>/preview-request/images/missing.png",
+        "severity": "high",
+        "status": "error"
+      },
+      {
+        "code": "annotation_count_matches",
+        "details": {
+          "annotation_count": 0,
+          "input_count": 1
+        },
+        "message": "No annotations were provided for this preview request.",
+        "severity": "info",
+        "status": "ok"
+      }
+    ],
+    "next_actions": [
+      "Input path 1 does not exist: <OUTPUT_CONTRACT_ROOT>/preview-request/images/missing.png"
+    ],
+    "normalized_request": {
+      "input_paths": [
+        "<OUTPUT_CONTRACT_ROOT>/preview-request/images/missing.png"
+      ],
+      "max_side": 128,
+      "pipeline": {
+        "additional_targets": {},
+        "is_check_shapes": true,
+        "seed": 137,
+        "strict": true,
+        "transforms": [
+          {
+            "name": "HorizontalFlip",
+            "p": 0.2,
+            "params": {}
+          },
+          {
+            "name": "RandomBrightnessContrast",
+            "p": 0.2,
+            "params": {}
+          },
+          {
+            "name": "GaussNoise",
+            "p": 0.1,
+            "params": {
+              "std_range": [
+                0.02,
+                0.1
+              ]
+            }
+          },
+          {
+            "name": "MotionBlur",
+            "p": 0.06666666666666667,
+            "params": {
+              "blur_range": [
+                3,
+                5
+              ]
+            }
+          }
+        ]
+      },
+      "seed": 137,
+      "variants_per_image": 1
+    },
+    "remediation_actions": [
+      {
+        "check_codes": [
+          "input_path_missing"
+        ],
+        "code": "fix_input_paths",
+        "command_hint": null,
+        "docs_uri": null,
+        "severity": "high",
+        "summary": "Replace missing or non-file preview inputs with existing image files."
+      }
+    ],
+    "status": "error",
+    "valid": false,
+    "warnings": [
+      "Input path 1 does not exist: <OUTPUT_CONTRACT_ROOT>/preview-request/images/missing.png"
+    ]
+  },
+  "validate_preview_request_outside_allowed_root": {
+    "checks": [
+      {
+        "code": "preview_request_schema_valid",
+        "details": {
+          "input_count": 1,
+          "max_side": 128,
+          "variants_per_image": 1
+        },
+        "message": "Preview request schema is valid.",
+        "severity": "info",
+        "status": "ok"
+      },
+      {
+        "code": "pipeline_valid",
+        "details": {
+          "warning_count": 0
+        },
+        "message": "Preview request pipeline is valid for the requested target.",
+        "severity": "info",
+        "status": "ok"
+      },
+      {
+        "code": "input_path_outside_allowed_root",
+        "details": {
+          "allowed_roots": [
+            "<OUTPUT_CONTRACT_ROOT>/preview-request/images"
+          ],
+          "path": "<OUTPUT_CONTRACT_ROOT>/preview-request/outside/sample.png"
+        },
+        "message": "Input path 1 is outside allowed roots: <OUTPUT_CONTRACT_ROOT>/preview-request/outside/sample.png",
+        "severity": "high",
+        "status": "error"
+      },
+      {
+        "code": "annotation_count_matches",
+        "details": {
+          "annotation_count": 0,
+          "input_count": 1
+        },
+        "message": "No annotations were provided for this preview request.",
+        "severity": "info",
+        "status": "ok"
+      }
+    ],
+    "next_actions": [
+      "Input path 1 is outside allowed roots: <OUTPUT_CONTRACT_ROOT>/preview-request/outside/sample.png"
+    ],
+    "normalized_request": {
+      "input_paths": [
+        "<OUTPUT_CONTRACT_ROOT>/preview-request/outside/sample.png"
+      ],
+      "max_side": 128,
+      "pipeline": {
+        "additional_targets": {},
+        "is_check_shapes": true,
+        "seed": 137,
+        "strict": true,
+        "transforms": [
+          {
+            "name": "HorizontalFlip",
+            "p": 0.2,
+            "params": {}
+          },
+          {
+            "name": "RandomBrightnessContrast",
+            "p": 0.2,
+            "params": {}
+          },
+          {
+            "name": "GaussNoise",
+            "p": 0.1,
+            "params": {
+              "std_range": [
+                0.02,
+                0.1
+              ]
+            }
+          },
+          {
+            "name": "MotionBlur",
+            "p": 0.06666666666666667,
+            "params": {
+              "blur_range": [
+                3,
+                5
+              ]
+            }
+          }
+        ]
+      },
+      "seed": 137,
+      "variants_per_image": 1
+    },
+    "remediation_actions": [
+      {
+        "check_codes": [
+          "input_path_outside_allowed_root"
+        ],
+        "code": "move_inputs_under_allowed_root",
+        "command_hint": "--allowed-root /absolute/path/to/images",
+        "docs_uri": null,
+        "severity": "high",
+        "summary": "Move preview inputs under an allowed root or restart the server with a narrower correct root."
+      }
+    ],
+    "status": "error",
+    "valid": false,
+    "warnings": [
+      "Input path 1 is outside allowed roots: <OUTPUT_CONTRACT_ROOT>/preview-request/outside/sample.png"
+    ]
+  },
+  "validate_preview_request_ready": {
+    "checks": [
+      {
+        "code": "preview_request_schema_valid",
+        "details": {
+          "input_count": 1,
+          "max_side": 128,
+          "variants_per_image": 1
+        },
+        "message": "Preview request schema is valid.",
+        "severity": "info",
+        "status": "ok"
+      },
+      {
+        "code": "pipeline_valid",
+        "details": {
+          "warning_count": 0
+        },
+        "message": "Preview request pipeline is valid for the requested target.",
+        "severity": "info",
+        "status": "ok"
+      },
+      {
+        "code": "input_path_accessible",
+        "details": {
+          "allowed_roots": [
+            "<OUTPUT_CONTRACT_ROOT>/preview-request/images"
+          ],
+          "path": "<OUTPUT_CONTRACT_ROOT>/preview-request/images/sample.png"
+        },
+        "message": "Input path 1 is accessible: <OUTPUT_CONTRACT_ROOT>/preview-request/images/sample.png",
+        "severity": "info",
+        "status": "ok"
+      },
+      {
+        "code": "annotation_count_matches",
+        "details": {
+          "annotation_count": 0,
+          "input_count": 1
+        },
+        "message": "No annotations were provided for this preview request.",
+        "severity": "info",
+        "status": "ok"
+      }
+    ],
+    "next_actions": [
+      "Call `render_preview_batch` with the validated request."
+    ],
+    "normalized_request": {
+      "input_paths": [
+        "<OUTPUT_CONTRACT_ROOT>/preview-request/images/sample.png"
+      ],
+      "max_side": 128,
+      "pipeline": {
+        "additional_targets": {},
+        "is_check_shapes": true,
+        "seed": 137,
+        "strict": true,
+        "transforms": [
+          {
+            "name": "HorizontalFlip",
+            "p": 0.2,
+            "params": {}
+          },
+          {
+            "name": "RandomBrightnessContrast",
+            "p": 0.2,
+            "params": {}
+          },
+          {
+            "name": "GaussNoise",
+            "p": 0.1,
+            "params": {
+              "std_range": [
+                0.02,
+                0.1
+              ]
+            }
+          },
+          {
+            "name": "MotionBlur",
+            "p": 0.06666666666666667,
+            "params": {
+              "blur_range": [
+                3,
+                5
+              ]
+            }
+          }
+        ]
+      },
+      "seed": 137,
+      "variants_per_image": 1
+    },
+    "remediation_actions": [],
+    "status": "ok",
+    "valid": true,
+    "warnings": []
   }
 }
