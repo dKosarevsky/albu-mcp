@@ -6,6 +6,10 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 - No unreleased changes yet.
 
+## 1.7.1 - 2026-06-17
+
+- Improved MCP Registry card metadata with a project homepage URL, repository ID, and PNG icons.
+
 ## 1.7.0 - 2026-06-17
 
 - Added `albumentationsx://examples/first-preview` as an MCP-native first-preview host playbook.

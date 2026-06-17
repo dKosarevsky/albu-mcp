@@ -288,7 +288,20 @@ def test_mcp_registry_metadata_is_ready_for_pypi_distribution() -> None:
     readme = Path("README.md").read_text(encoding="utf-8")
 
     assert server_json["name"] == "io.github.dKosarevsky/albu-mcp"
+    assert server_json["websiteUrl"] == "https://github.com/dKosarevsky/albu-mcp#readme"
     assert len(server_json["description"]) <= 100
+    assert server_json["repository"] == {
+        "url": "https://github.com/dKosarevsky/albu-mcp",
+        "source": "github",
+        "id": "1268159067",
+    }
+    assert server_json["icons"] == [
+        {
+            "src": "https://avatars.githubusercontent.com/u/57894582?s=200&v=4",
+            "mimeType": "image/png",
+            "sizes": ["200x200"],
+        },
+    ]
     assert server_json["packages"][0]["registryType"] == "pypi"
     assert server_json["packages"][0]["identifier"] == "albumentationsx-mcp"
     assert server_json["packages"][0]["transport"]["type"] == "stdio"
