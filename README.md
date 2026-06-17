@@ -57,8 +57,9 @@ After connecting an MCP host:
 2. Call `run_host_smoke_check`.
 3. Continue only when `preview_ready` is true.
 4. Replace the path in `preview_request_template.request`.
-5. Call `render_preview_batch` on a small local image set.
-6. Inspect the contact sheet, then use `adjust_pipeline`, `compare_preview_runs`, and `export_pipeline`.
+5. Call `validate_preview_request` before rendering user-provided paths.
+6. Call `render_preview_batch` on a small local image set.
+7. Inspect the contact sheet, then use `adjust_pipeline`, `compare_preview_runs`, and `export_pipeline`.
 
 If preview setup fails, read `albumentationsx://diagnostics/guide` and call `diagnose_environment`. Troubleshooting
 details and `remediation_actions` are documented in [docs/USAGE.md](docs/USAGE.md) and [docs/INSTALL.md](docs/INSTALL.md).
@@ -68,6 +69,7 @@ details and `remediation_actions` are documented in [docs/USAGE.md](docs/USAGE.m
 - Transform search and schema inspection.
 - Recipe and pipeline recommendation for classification, detection, segmentation, OCR, and balanced workflows.
 - Pipeline validation and explanation before rendering.
+- Preview request validation for missing files, outside-root paths, masks, and annotation counts.
 - Deterministic single-image and batch previews with contact sheets.
 - Preview comparison with `quality_summary` and suggested feedback tags.
 - Concrete preview feedback, tuning decisions, ranking, dataset scoring, and visual reports.

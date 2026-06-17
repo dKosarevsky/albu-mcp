@@ -6,6 +6,13 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 - No unreleased changes yet.
 
+## 1.6.0 - 2026-06-17
+
+- Added read-only `validate_preview_request` for schema, pipeline, path, mask, and annotation troubleshooting before
+  preview rendering.
+- Added representative output contract snapshots and a golden stdio scenario for preview request troubleshooting.
+- Streamlined README into a concise entry point and moved release history to this changelog.
+
 ## 1.5.0 - 2026-06-15
 
 - Added a real sample preview golden smoke that verifies the `run_host_smoke_check` template can render deterministic

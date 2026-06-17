@@ -46,23 +46,24 @@ retention limit for long-running MCP hosts.
 3. Call `validate_pipeline` before rendering or exporting.
 4. Call `run_host_smoke_check`; when `preview_ready` is true, replace the placeholder path in
    `preview_request_template.request`.
-5. Call `explain_pipeline` to identify likely preview risks and feedback tags.
-6. Call `render_preview_batch` on a small local image set.
-7. Review the generated `contact_sheet` artifact.
-8. Use `compare_preview_runs` when comparing a baseline preview to an adjusted candidate preview.
-9. Review `suggested_feedback_tags` as candidates, then ask the user which tags match the contact sheets.
-10. Call `adjust_pipeline` with tags from `list_feedback_tags`, for example `too_noisy`, `too_noisy:high`, or
+5. Call `validate_preview_request` after filling local image paths and before rendering.
+6. Call `explain_pipeline` to identify likely preview risks and feedback tags.
+7. Call `render_preview_batch` on a small local image set.
+8. Review the generated `contact_sheet` artifact.
+9. Use `compare_preview_runs` when comparing a baseline preview to an adjusted candidate preview.
+10. Review `suggested_feedback_tags` as candidates, then ask the user which tags match the contact sheets.
+11. Call `adjust_pipeline` with tags from `list_feedback_tags`, for example `too_noisy`, `too_noisy:high`, or
    `too_distorted`.
-11. Re-render one or more candidates with the same input set.
-12. Call `rank_preview_candidates` when multiple candidates need comparison.
-13. Call `score_dataset_preview_candidates` to inspect cross-candidate metric ranges and finding counts.
-14. Call `record_preview_feedback` when the user points to a concrete image and variant, for example
+12. Re-render one or more candidates with the same input set.
+13. Call `rank_preview_candidates` when multiple candidates need comparison.
+14. Call `score_dataset_preview_candidates` to inspect cross-candidate metric ranges and finding counts.
+15. Call `record_preview_feedback` when the user points to a concrete image and variant, for example
     "example 8 is too noisy".
-15. Call `list_preview_feedback` and reuse `aggregated_feedback_tags` for the next `adjust_pipeline` call.
-16. Call `summarize_tuning_session` to inspect `quality_score`, `quality_risk`, and `export_ready`.
-17. Call `record_tuning_decision` to persist the accepted or rejected candidate.
-18. Call `export_preview_report` for a visual Markdown or HTML handoff that includes matching concrete feedback.
-19. Call `export_tuning_report` for a decision journal handoff, then `export_pipeline` once the preview set is acceptable.
+16. Call `list_preview_feedback` and reuse `aggregated_feedback_tags` for the next `adjust_pipeline` call.
+17. Call `summarize_tuning_session` to inspect `quality_score`, `quality_risk`, and `export_ready`.
+18. Call `record_tuning_decision` to persist the accepted or rejected candidate.
+19. Call `export_preview_report` for a visual Markdown or HTML handoff that includes matching concrete feedback.
+20. Call `export_tuning_report` for a decision journal handoff, then `export_pipeline` once the preview set is acceptable.
 
 ## Diagnostics
 
@@ -83,7 +84,19 @@ Read `albumentationsx://diagnostics/guide` for the canonical troubleshooting flo
 Use `run_host_smoke_check` after connecting a host and before the first local preview. It combines
 `diagnose_environment`, `recommend_recipe`, and `validate_pipeline` into one read-only report. When `preview_ready` is
 true, copy `preview_request_template.request`, replace the placeholder input path with one small image under an allowed
-root, and call `render_preview_batch`. When `preview_ready` is false, follow `remediation_actions` before rendering.
+root, call `validate_preview_request`, then call `render_preview_batch`. When `preview_ready` is false, follow
+`remediation_actions` before rendering.
+
+## Preview Request Validation
+
+Use `validate_preview_request` after filling `preview_request_template.request` and before rendering user-provided paths.
+The tool is read-only: it validates request schema, pipeline compatibility, input files, mask files, allowed-root
+membership, and annotation count without reading image bytes or writing artifacts.
+
+The response includes `status`, `valid`, ordered `checks`, `warnings`, `next_actions`, `remediation_actions`, and
+`normalized_request` when schema validation succeeds. Stable check codes include `input_path_missing`,
+`input_path_outside_allowed_root`, `mask_path_missing`, `mask_path_outside_allowed_root`, and
+`annotation_count_mismatch`.
 
 ## Preview Artifacts
 
@@ -246,9 +259,9 @@ Run executable MCP scenarios locally before changing tool contracts:
 uv run python scripts/run_golden_evals.py
 ```
 
-The golden suite includes a real sample first-preview smoke. It calls `run_host_smoke_check`, fills the returned
-`render_preview_batch` template with deterministic local sample PNGs, reads the preview manifest, adjusts the pipeline,
-renders a candidate, compares both runs with `quality_summary`, and deletes the generated runs through MCP stdio.
+The golden suite includes a real sample first-preview smoke and a preview-request troubleshooting scenario. They call
+`run_host_smoke_check`, validate filled preview requests, render deterministic local sample PNGs, read preview
+manifests, compare runs with `quality_summary`, and delete generated runs through MCP stdio.
 
 Public MCP contract changes should also follow [docs/COMPATIBILITY.md](COMPATIBILITY.md) and update the contract snapshot
 when tool, resource, prompt, or representative output schemas change:

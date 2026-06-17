@@ -33,7 +33,7 @@ The Python package is published as
 Pin a version when debugging or reproducing a release:
 
 ```bash
-uvx --from albumentationsx-mcp==1.5.0 albumentationsx-mcp --help
+uvx --from albumentationsx-mcp==1.6.0 albumentationsx-mcp --help
 ```
 
 ## MCP Registry
@@ -214,7 +214,7 @@ uvx --from albumentationsx-mcp albumentationsx-mcp --help
 For a pinned release:
 
 ```bash
-uvx --from albumentationsx-mcp==1.5.0 albumentationsx-mcp --help
+uvx --from albumentationsx-mcp==1.6.0 albumentationsx-mcp --help
 ```
 
 For local development:
@@ -235,7 +235,8 @@ usage: albumentationsx-mcp [-h] [--transport {stdio,streamable-http}]
 After wiring a host, ask it to read `albumentationsx://examples/client-smoke`. The client smoke playbook checks that the
 host can read capabilities, read the recipe catalog, call `recommend_recipe`, validate the returned pipeline, and call
 `run_host_smoke_check` before preview rendering touches local images. A healthy host smoke report returns
-`preview_ready: true` and a `preview_request_template` for a small `render_preview_batch`.
+`preview_ready: true` and a `preview_request_template`. After replacing the sample path, call
+`validate_preview_request` before `render_preview_batch`.
 
 If the host connects but previews fail, ask it to read `albumentationsx://diagnostics/guide` and call
 `diagnose_environment`. The report checks AlbumentationsX import/version, `--allowed-root`, `--artifact-root`,
@@ -247,6 +248,7 @@ structured `remediation_actions` plus text `next_actions`.
 - If the host connects but preview rendering fails, call `run_host_smoke_check` first, then inspect
   `diagnose_environment` details if `preview_ready` is false.
 - If the host cannot start the server, run the same `uvx` or `uv run` command manually and fix terminal errors first.
+- If a filled preview request fails, call `validate_preview_request` and follow its `remediation_actions`.
 - If a local image path is rejected, confirm it is under `--allowed-root` or `ALBU_MCP_ALLOWED_ROOTS`.
 - If `diagnose_environment` reports remediation code `fix_allowed_root`, restart the host with an existing absolute
   `--allowed-root`.

@@ -226,6 +226,7 @@ def test_public_docs_describe_current_preview_workflow() -> None:
     changelog = Path("CHANGELOG.md").read_text(encoding="utf-8")
     server_json = json.loads(Path("server.json").read_text(encoding="utf-8"))
 
+    assert len(readme.splitlines()) <= 130
     assert "## What Changed In" not in readme
     assert "[CHANGELOG.md](CHANGELOG.md)" in readme
     assert "## 0.2.0" in changelog
@@ -234,6 +235,8 @@ def test_public_docs_describe_current_preview_workflow() -> None:
     assert "quality_summary" in usage
     assert "too_noisy:high" in readme
     assert "suggested_feedback_tags" in usage
+    assert "validate_preview_request" in readme
+    assert "validate_preview_request" in usage
     assert "docs/RECIPES.md" in readme
     assert "batch previews" in readme
     assert "compare preview runs" in readme
