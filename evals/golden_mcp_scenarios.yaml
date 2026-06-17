@@ -97,3 +97,15 @@ scenarios:
     compare_preview: true
     assert_quality_summary: true
     feedback_tags: ["too_noisy:low"]
+
+  - name: preview_request_troubleshooting
+    task: classification
+    intensity: low
+    targets: ["image"]
+    export_format: json
+    preview: false
+    preview_request_troubleshooting: true
+    input_count: 1
+    variants_per_image: 1
+    seed: 313
+    max_side: 128

@@ -29,6 +29,9 @@ def test_golden_eval_assets_are_present() -> None:
     real_sample_scenario = next(
         scenario for scenario in scenarios["scenarios"] if scenario["name"] == "real_sample_preview_smoke"
     )
+    preview_request_scenario = next(
+        scenario for scenario in scenarios["scenarios"] if scenario["name"] == "preview_request_troubleshooting"
+    )
 
     assert {scenario["name"] for scenario in scenarios["scenarios"]} == {
         "client_smoke_resource_flow",
@@ -38,6 +41,7 @@ def test_golden_eval_assets_are_present() -> None:
         "preview_batch_compare",
         "preview_quality_tuning_summary",
         "real_sample_preview_smoke",
+        "preview_request_troubleshooting",
     }
     assert smoke_scenario["client_smoke"] is True
     assert smoke_scenario["smoke_resources"] == [
@@ -54,13 +58,16 @@ def test_golden_eval_assets_are_present() -> None:
     assert real_sample_scenario["real_sample_smoke"] is True
     assert real_sample_scenario["input_count"] == 3
     assert real_sample_scenario["compare_preview"] is True
+    assert preview_request_scenario["preview_request_troubleshooting"] is True
     assert quality_scenario["record_preview_feedback"] is True
     assert quality_scenario["feedback_image_index"] == 7
     assert quality_scenario["assert_preview_report_feedback"] is True
     assert "_run_client_smoke" in runner_source
     assert "_run_diagnostics_smoke" in runner_source
     assert "_run_real_sample_smoke" in runner_source
+    assert "_run_preview_request_troubleshooting" in runner_source
     assert "run_host_smoke_check" in runner_source
+    assert "validate_preview_request" in runner_source
     assert "_read_resource_json" in runner_source
     assert "record_preview_feedback" in runner_source
     assert "assert_preview_report_feedback" in runner_source
@@ -106,3 +113,4 @@ def test_golden_eval_runner_executes_scenarios_over_stdio(tmp_path: Path) -> Non
     assert "preview_batch_compare: ok" in completed.stdout
     assert "preview_quality_tuning_summary: ok" in completed.stdout
     assert "real_sample_preview_smoke: ok" in completed.stdout
+    assert "preview_request_troubleshooting: ok" in completed.stdout

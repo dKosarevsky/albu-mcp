@@ -87,6 +87,9 @@ async def _run_scenario(session: ClientSession, scenario: dict[str, Any], images
     if scenario.get("real_sample_smoke"):
         await _run_real_sample_smoke(session, scenario, images_dir)
         return
+    if scenario.get("preview_request_troubleshooting"):
+        await _run_preview_request_troubleshooting(session, scenario, images_dir)
+        return
     recommended = await _call_tool_json(
         session,
         "recommend_pipeline",
@@ -235,6 +238,56 @@ async def _run_real_sample_smoke(session: ClientSession, scenario: dict[str, Any
 
     await _delete_preview_run(session, scenario, candidate["run_id"])
     await _delete_preview_run(session, scenario, baseline["run_id"])
+
+
+async def _run_preview_request_troubleshooting(
+    session: ClientSession,
+    scenario: dict[str, Any],
+    images_dir: Path,
+) -> None:
+    image_paths = _write_preview_inputs(images_dir, scenario)
+    smoke_report = await _call_tool_json(
+        session,
+        "run_host_smoke_check",
+        {
+            "include_write_probe": True,
+            "task": scenario["task"],
+            "intensity": scenario.get("intensity", "medium"),
+            "targets": scenario["targets"],
+        },
+    )
+    template = smoke_report.get("preview_request_template")
+    if smoke_report["preview_ready"] is not True or template is None:
+        raise AssertionError(f"{scenario['name']} host smoke returned no usable template: {smoke_report}")
+
+    missing_request = _real_sample_preview_request(
+        template["request"],
+        scenario,
+        [images_dir / "preview-request-missing.png"],
+    )
+    missing_report = await _call_tool_json(
+        session,
+        "validate_preview_request",
+        {"request": missing_request, "target": {"targets": scenario["targets"]}},
+    )
+    missing_codes = {check["code"] for check in missing_report["checks"]}
+    missing_actions = {action["code"] for action in missing_report["remediation_actions"]}
+    if missing_report["valid"] is not False or "input_path_missing" not in missing_codes:
+        raise AssertionError(f"{scenario['name']} did not report missing input: {missing_report}")
+    if "fix_input_paths" not in missing_actions:
+        raise AssertionError(f"{scenario['name']} did not return input path remediation: {missing_report}")
+
+    valid_request = _real_sample_preview_request(template["request"], scenario, image_paths)
+    valid_report = await _call_tool_json(
+        session,
+        "validate_preview_request",
+        {"request": valid_request, "target": {"targets": scenario["targets"]}},
+    )
+    if valid_report["valid"] is not True or valid_report["status"] != "ok":
+        raise AssertionError(f"{scenario['name']} valid preview request did not pass: {valid_report}")
+
+    preview = await _call_tool_json(session, "render_preview_batch", {"request": valid_request})
+    await _delete_preview_run(session, scenario, preview["run_id"])
 
 
 def _write_real_sample_inputs(images_dir: Path, scenario: dict[str, Any]) -> list[Path]:
