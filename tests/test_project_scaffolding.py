@@ -139,9 +139,14 @@ def test_host_acceptance_checklist_covers_registry_and_hosts() -> None:
     readme = Path("README.md").read_text(encoding="utf-8")
     checklist = Path("docs/HOST_ACCEPTANCE.md").read_text(encoding="utf-8")
     matrix = Path("docs/HOST_MATRIX.md").read_text(encoding="utf-8")
+    evidence = Path("docs/HOST_ACCEPTANCE_EVIDENCE.md").read_text(encoding="utf-8")
 
     assert "[docs/HOST_ACCEPTANCE.md](docs/HOST_ACCEPTANCE.md)" in readme
     assert "[docs/HOST_MATRIX.md](docs/HOST_MATRIX.md)" in readme
+    assert "[docs/HOST_ACCEPTANCE_EVIDENCE.md](docs/HOST_ACCEPTANCE_EVIDENCE.md)" in readme
+    assert "export_host_acceptance_report.py" in readme
+    assert "export_host_acceptance_report.py" in checklist
+    assert "export_host_acceptance_report.py" in matrix
     assert "[HOST_MATRIX.md](HOST_MATRIX.md)" in checklist
     assert "MCP Registry card" in checklist
     assert "io.github.dKosarevsky/albu-mcp" in checklist
@@ -161,6 +166,10 @@ def test_host_acceptance_checklist_covers_registry_and_hosts() -> None:
         assert host in matrix
     for term in ["close_tuning_session", "archive_tuning_session", "cleanup_tuning_sessions"]:
         assert term in matrix
+    assert "Manual Host UI: pending" in evidence
+    assert "Manual Host UI: passed" not in evidence
+    release_docs = Path("docs/RELEASE.md").read_text(encoding="utf-8")
+    assert "export_host_acceptance_report.py" in release_docs
 
 
 def test_docs_link_diagnostics_playbook_resource() -> None:

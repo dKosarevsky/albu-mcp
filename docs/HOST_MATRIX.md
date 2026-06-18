@@ -27,3 +27,9 @@ Recorded coverage:
 - Automated: pytest, golden stdio evals, output contract snapshots, release build, PyPI publish check, and MCP Registry
   metadata publish check.
 - Manual host UI: pending per host unless a dated run note is added below this matrix.
+
+To produce a reviewable evidence artifact without overstating manual coverage:
+
+```bash
+uv run python scripts/export_host_acceptance_report.py --output docs/HOST_ACCEPTANCE_EVIDENCE.md
+```

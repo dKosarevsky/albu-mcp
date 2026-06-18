@@ -3,6 +3,15 @@
 Use this checklist after each public release that changes installation, host workflow, or MCP Registry metadata.
 Use [HOST_MATRIX.md](HOST_MATRIX.md) for per-host manual acceptance details.
 
+Generate a reviewable local evidence artifact before and after manual host runs:
+
+```bash
+uv run python scripts/export_host_acceptance_report.py --output docs/HOST_ACCEPTANCE_EVIDENCE.md
+```
+
+The generated report records automated coverage and keeps host UI status `pending` until a dated manual run note is
+added by a reviewer.
+
 ## MCP Registry card
 
 - Latest Registry entry resolves as `io.github.dKosarevsky/albu-mcp`.

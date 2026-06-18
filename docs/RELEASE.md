@@ -109,3 +109,12 @@ Verify MCP Registry metadata:
 ```bash
 curl "https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.dKosarevsky/albu-mcp"
 ```
+
+Export reviewable host acceptance evidence:
+
+```bash
+uv run python scripts/export_host_acceptance_report.py --output docs/HOST_ACCEPTANCE_EVIDENCE.md
+```
+
+This artifact records automated release coverage and keeps manual host UI status pending until a reviewer adds dated
+host-specific evidence.

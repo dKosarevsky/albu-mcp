@@ -4,7 +4,8 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 ## Unreleased
 
-- No unreleased changes yet.
+- Added a host acceptance evidence exporter and generated evidence snapshot that keeps manual host UI checks pending until
+  dated reviewer evidence is recorded.
 
 ## 1.10.0 - 2026-06-19
 

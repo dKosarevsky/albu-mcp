@@ -83,6 +83,9 @@ The public MCP surface is kept stable through reviewed contract snapshots. Compa
 - [docs/INSTALL.md](docs/INSTALL.md): PyPI, MCP Registry, Claude Desktop, Claude Code, Cursor, Codex, bounded roots.
 - [docs/HOST_ACCEPTANCE.md](docs/HOST_ACCEPTANCE.md): registry card and MCP host acceptance checklist.
 - [docs/HOST_MATRIX.md](docs/HOST_MATRIX.md): per-host acceptance matrix.
+- [docs/HOST_ACCEPTANCE_EVIDENCE.md](docs/HOST_ACCEPTANCE_EVIDENCE.md): generated acceptance evidence snapshot.
+- [scripts/export_host_acceptance_report.py](scripts/export_host_acceptance_report.py): reviewable host acceptance evidence
+  artifact generator.
 - [docs/USAGE.md](docs/USAGE.md): end-to-end MCP host workflow and tool details.
 - [docs/RECIPES.md](docs/RECIPES.md): task-specific host recipes.
 - [docs/DEMO.md](docs/DEMO.md): generated preview comparison demo.
