@@ -95,6 +95,63 @@ def test_interactive_tuning_session_store_exports_markdown_and_json(tmp_path: Pa
     assert payload["step_count"] == 2
 
 
+def test_interactive_tuning_session_store_closes_rejected_session(tmp_path: Path) -> None:
+    store = InteractiveTuningSessionStore(tmp_path)
+    session = store.start_session(task="classification", targets=["image"], baseline_run_id="baseline-a")
+    store.record_step(session.session_id, summary=_summary(candidate_run_id="candidate-a", accepted=False))
+
+    rejected = store.close_session(session.session_id, status="rejected", note="no candidate stayed readable")
+    listed = store.list_sessions(status="rejected")
+    markdown_report = store.export_session(session.session_id, output_format="markdown")
+
+    assert rejected.status == "rejected"
+    assert rejected.closed_at is not None
+    assert rejected.archived_at is None
+    assert rejected.status_note == "no candidate stayed readable"
+    assert rejected.accepted_candidate_run_id is None
+    assert rejected.next_actions == ["Session closed as rejected. Call `export_tuning_session` for audit."]
+    assert listed.rejected_count == 1
+    assert listed.sessions[0].session_id == session.session_id
+    assert "no candidate stayed readable" in markdown_report.content
+
+
+def test_interactive_tuning_session_store_archives_session(tmp_path: Path) -> None:
+    store = InteractiveTuningSessionStore(tmp_path)
+    session = store.start_session(task="classification", targets=["image"], baseline_run_id="baseline-a")
+
+    archived = store.archive_session(session.session_id, note="superseded by a later dataset review")
+    listed = store.list_sessions(status="archived")
+
+    assert archived.status == "archived"
+    assert archived.archived_at is not None
+    assert archived.status_note == "superseded by a later dataset review"
+    assert archived.next_actions == ["Session archived."]
+    assert listed.archived_count == 1
+    assert listed.sessions[0].session_id == session.session_id
+
+
+def test_interactive_tuning_session_store_cleanup_preserves_active_sessions(tmp_path: Path) -> None:
+    store = InteractiveTuningSessionStore(tmp_path)
+    old_a = store.start_session(task="classification", targets=["image"], baseline_run_id="baseline-a")
+    store.close_session(old_a.session_id, status="rejected", note="old rejected a")
+    old_b = store.start_session(task="classification", targets=["image"], baseline_run_id="baseline-b")
+    store.close_session(old_b.session_id, status="rejected", note="old rejected b")
+    newest_closed = store.start_session(task="classification", targets=["image"], baseline_run_id="baseline-c")
+    store.close_session(newest_closed.session_id, status="rejected", note="newest closed")
+    active = store.start_session(task="classification", targets=["image"], baseline_run_id="baseline-active")
+
+    cleanup = store.cleanup_sessions(keep_last=1, include_active=False)
+    remaining = store.list_sessions(limit=10)
+    remaining_ids = {session.session_id for session in remaining.sessions}
+
+    assert cleanup.deleted_count == 2
+    assert cleanup.protected_active_count == 1
+    assert {session.session_id for session in cleanup.deleted_sessions} == {old_a.session_id, old_b.session_id}
+    assert active.session_id in remaining_ids
+    assert newest_closed.session_id in remaining_ids
+    assert remaining.total_count == 2
+
+
 def _summary(
     *,
     baseline_run_id: str = "baseline-a",

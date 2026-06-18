@@ -17,6 +17,7 @@ from albumentationsx_mcp.diagnostics import DiagnosticsService, PublicSurface, b
 from albumentationsx_mcp.host_smoke import build_host_smoke_report
 from albumentationsx_mcp.models import (
     ComposeSpec,
+    InteractiveTuningSession,
     PreviewFeedbackRecord,
     PreviewRequest,
     QualityProfileName,
@@ -71,6 +72,9 @@ _PUBLIC_TOOLS = [
     "record_tuning_session_step",
     "list_tuning_sessions",
     "export_tuning_session",
+    "close_tuning_session",
+    "archive_tuning_session",
+    "cleanup_tuning_sessions",
     "rank_preview_candidates",
     "score_dataset_preview_candidates",
     "list_quality_profiles",
@@ -475,7 +479,7 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
     @mcp.tool()
     def list_tuning_sessions(
         limit: int = 20,
-        status: Literal["active", "accepted", "rejected"] | None = None,
+        status: Literal["active", "accepted", "rejected", "archived"] | None = None,
     ) -> dict[str, Any]:
         """List persisted interactive preview tuning sessions."""
         return session_store.list_sessions(limit=limit, status=status).model_dump(mode="json")
@@ -487,6 +491,36 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
     ) -> dict[str, Any]:
         """Export one interactive tuning session as Markdown or JSON."""
         return session_store.export_session(session_id, output_format=output_format).model_dump(mode="json")
+
+    @mcp.tool()
+    def close_tuning_session(
+        session_id: str,
+        status: Literal["accepted", "rejected"],
+        accepted_candidate_run_id: str | None = None,
+        note: str | None = None,
+    ) -> dict[str, Any]:
+        """Close an interactive tuning session as accepted or rejected."""
+        return session_store.close_session(
+            session_id,
+            status=status,
+            accepted_candidate_run_id=accepted_candidate_run_id,
+            note=note,
+        ).model_dump(mode="json")
+
+    @mcp.tool()
+    def archive_tuning_session(session_id: str, note: str | None = None) -> dict[str, Any]:
+        """Archive an interactive tuning session without deleting its audit trail."""
+        return session_store.archive_session(session_id, note=note).model_dump(mode="json")
+
+    @mcp.tool()
+    def cleanup_tuning_sessions(
+        keep_last: int = 100,
+        include_active: bool = False,  # noqa: FBT001, FBT002
+    ) -> dict[str, Any]:
+        """Delete older interactive tuning sessions, protecting active sessions by default."""
+        return session_store.cleanup_sessions(keep_last=keep_last, include_active=include_active).model_dump(
+            mode="json"
+        )
 
     @mcp.tool()
     def rank_preview_candidates(
@@ -670,6 +704,11 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
                 feedback_store,
                 run_ids={baseline_run_id, *bounded_candidate_ids},
             ),
+            tuning_sessions=_matching_tuning_sessions(
+                session_store,
+                baseline_run_id=baseline_run_id,
+                candidate_run_ids=set(bounded_candidate_ids),
+            ),
             output_format=output_format,
         ).model_dump(mode="json")
 
@@ -756,6 +795,24 @@ def _matching_preview_feedback(
     for run_id in sorted(run_ids):
         records.extend(feedback_store.list_feedback(run_id=run_id, limit=100).feedback)
     return sorted(records, key=lambda record: record.created_at, reverse=True)
+
+
+def _matching_tuning_sessions(
+    session_store: InteractiveTuningSessionStore,
+    *,
+    baseline_run_id: str,
+    candidate_run_ids: set[str],
+) -> list[InteractiveTuningSession]:
+    sessions = session_store.list_sessions(limit=100).sessions
+    return [
+        session
+        for session in sessions
+        if session.baseline_run_id == baseline_run_id
+        and (
+            session.accepted_candidate_run_id in candidate_run_ids
+            or any(step.candidate_run_id in candidate_run_ids for step in session.steps)
+        )
+    ]
 
 
 def _validate_feedback_target(manifest: dict[str, Any], *, image_index: int, variant_index: int) -> None:

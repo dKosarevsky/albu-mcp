@@ -70,6 +70,7 @@ def test_golden_eval_assets_are_present() -> None:
     assert preview_request_scenario["preview_request_troubleshooting"] is True
     assert interactive_session_scenario["interactive_tuning_session"] is True
     assert interactive_session_scenario["accepted"] is True
+    assert interactive_session_scenario["export_session_preview_report"] is True
     assert quality_scenario["record_preview_feedback"] is True
     assert quality_scenario["feedback_image_index"] == 7
     assert quality_scenario["assert_preview_report_feedback"] is True

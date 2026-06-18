@@ -75,3 +75,12 @@ def test_output_contract_snapshot_includes_interactive_tuning_session_export() -
     assert export["step_count"] == 1
     assert content["accepted_candidate_run_id"] == "candidate-a"
     assert content["steps"][0]["step_id"] == "<step-id>"
+
+
+def test_output_contract_snapshot_includes_interactive_tuning_session_lifecycle() -> None:
+    snapshot = json.loads(_SNAPSHOT_PATH.read_text(encoding="utf-8"))
+
+    assert snapshot["close_tuning_session_rejected"]["status"] == "rejected"
+    assert snapshot["archive_tuning_session"]["status"] == "archived"
+    assert snapshot["cleanup_tuning_sessions"]["deleted_count"] == 1
+    assert snapshot["cleanup_tuning_sessions"]["protected_active_count"] == 1

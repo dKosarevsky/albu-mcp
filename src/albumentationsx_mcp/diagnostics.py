@@ -28,6 +28,9 @@ _REQUIRED_TOOLS = {
     "record_tuning_session_step",
     "list_tuning_sessions",
     "export_tuning_session",
+    "close_tuning_session",
+    "archive_tuning_session",
+    "cleanup_tuning_sessions",
     "export_preview_report",
 }
 _REQUIRED_PROMPTS = {

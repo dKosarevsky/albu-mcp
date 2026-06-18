@@ -349,6 +349,24 @@ async def _run_interactive_tuning_session(
     if export_payload["accepted_candidate_run_id"] != candidate["run_id"] or export_payload["step_count"] != 1:
         raise AssertionError(f"{scenario['name']} json export returned wrong session: {json_export}")
 
+    if scenario.get("export_session_preview_report"):
+        preview_report = await _call_tool_json(
+            session,
+            "export_preview_report",
+            {
+                "baseline_run_id": baseline["run_id"],
+                "candidate_run_ids": [candidate["run_id"]],
+                "feedback_tags_by_candidate": {candidate["run_id"]: scenario.get("feedback_tags", [])},
+                "accepted_candidate_ids": [candidate["run_id"]],
+                "quality_profile": scenario.get("quality_profile", "balanced"),
+                "output_format": "markdown",
+            },
+        )
+        if "## Interactive Tuning Sessions" not in preview_report["content"]:
+            raise AssertionError(f"{scenario['name']} preview report missed session timeline: {preview_report}")
+        if tuning_session["session_id"] not in preview_report["content"]:
+            raise AssertionError(f"{scenario['name']} preview report missed session id: {preview_report}")
+
     await _delete_preview_run(session, scenario, candidate["run_id"])
     await _delete_preview_run(session, scenario, baseline["run_id"])
 

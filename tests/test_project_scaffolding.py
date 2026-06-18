@@ -47,6 +47,7 @@ def test_usage_docs_and_examples_are_present() -> None:
     assert Path("docs/USAGE.md").exists()
     assert Path("docs/INSTALL.md").exists()
     assert Path("docs/HOST_ACCEPTANCE.md").exists()
+    assert Path("docs/HOST_MATRIX.md").exists()
     assert Path("docs/RELEASE.md").exists()
     assert Path("docs/RECIPES.md").exists()
     assert Path("CHANGELOG.md").exists()
@@ -137,8 +138,11 @@ def test_docs_link_client_smoke_playbook_resource() -> None:
 def test_host_acceptance_checklist_covers_registry_and_hosts() -> None:
     readme = Path("README.md").read_text(encoding="utf-8")
     checklist = Path("docs/HOST_ACCEPTANCE.md").read_text(encoding="utf-8")
+    matrix = Path("docs/HOST_MATRIX.md").read_text(encoding="utf-8")
 
     assert "[docs/HOST_ACCEPTANCE.md](docs/HOST_ACCEPTANCE.md)" in readme
+    assert "[docs/HOST_MATRIX.md](docs/HOST_MATRIX.md)" in readme
+    assert "[HOST_MATRIX.md](HOST_MATRIX.md)" in checklist
     assert "MCP Registry card" in checklist
     assert "io.github.dKosarevsky/albu-mcp" in checklist
     assert "https://avatars.githubusercontent.com/u/57894582?s=200&v=4" in checklist
@@ -151,7 +155,12 @@ def test_host_acceptance_checklist_covers_registry_and_hosts() -> None:
     assert "render_preview_batch" in checklist
     assert "start_tuning_session" in checklist
     assert "record_tuning_session_step" in checklist
+    assert "close_tuning_session" in checklist
     assert "export_tuning_session" in checklist
+    for host in ["Claude Desktop", "Claude Code", "Cursor", "Codex"]:
+        assert host in matrix
+    for term in ["close_tuning_session", "archive_tuning_session", "cleanup_tuning_sessions"]:
+        assert term in matrix
 
 
 def test_docs_link_diagnostics_playbook_resource() -> None:

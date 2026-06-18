@@ -10,6 +10,7 @@ from typing import Literal
 
 from albumentationsx_mcp.models import (
     InteractiveTuningSession,
+    InteractiveTuningSessionCleanup,
     InteractiveTuningSessionExport,
     InteractiveTuningSessionList,
     InteractiveTuningStep,
@@ -94,6 +95,82 @@ class InteractiveTuningSessionStore:
         self._write_sessions(sorted(sessions, key=lambda item: item.updated_at, reverse=True))
         return updated_session
 
+    def close_session(
+        self,
+        session_id: str,
+        *,
+        status: Literal["accepted", "rejected"],
+        accepted_candidate_run_id: str | None = None,
+        note: str | None = None,
+    ) -> InteractiveTuningSession:
+        """Close a session as accepted or rejected without adding another comparison step."""
+        sessions = self._read_sessions()
+        session_index, session = self._find_session(sessions, session_id)
+        now = _utc_now()
+        accepted_candidate = _accepted_candidate_for_close(session, accepted_candidate_run_id)
+        if status == "accepted" and accepted_candidate is None:
+            msg = "accepted sessions require an accepted_candidate_run_id or an accepted recorded step"
+            raise ValueError(msg)
+        updated_session = session.model_copy(
+            update={
+                "updated_at": now,
+                "closed_at": now,
+                "archived_at": None,
+                "status": status,
+                "status_note": note,
+                "accepted_candidate_run_id": accepted_candidate if status == "accepted" else None,
+                "next_actions": _closed_next_actions(status),
+            },
+            deep=True,
+        )
+        sessions[session_index] = updated_session
+        self._write_sessions(sorted(sessions, key=lambda item: item.updated_at, reverse=True))
+        return updated_session
+
+    def archive_session(self, session_id: str, *, note: str | None = None) -> InteractiveTuningSession:
+        """Archive a session so normal active/accepted/rejected lists can ignore it."""
+        sessions = self._read_sessions()
+        session_index, session = self._find_session(sessions, session_id)
+        now = _utc_now()
+        updated_session = session.model_copy(
+            update={
+                "updated_at": now,
+                "archived_at": now,
+                "status": "archived",
+                "status_note": note,
+                "next_actions": ["Session archived."],
+            },
+            deep=True,
+        )
+        sessions[session_index] = updated_session
+        self._write_sessions(sorted(sessions, key=lambda item: item.updated_at, reverse=True))
+        return updated_session
+
+    def cleanup_sessions(
+        self,
+        *,
+        keep_last: int = 100,
+        include_active: bool = False,
+    ) -> InteractiveTuningSessionCleanup:
+        """Delete older persisted sessions while protecting active sessions by default."""
+        sessions = self._read_sessions()
+        bounded_keep = max(0, min(keep_last, 1000))
+        protected = [session for session in sessions if session.status == "active" and not include_active]
+        cleanup_candidates = [session for session in sessions if include_active or session.status != "active"]
+        kept_candidate_ids = {session.session_id for session in cleanup_candidates[:bounded_keep]}
+        deleted = [
+            session for session in cleanup_candidates[bounded_keep:] if session.session_id not in kept_candidate_ids
+        ]
+        deleted_ids = {session.session_id for session in deleted}
+        remaining = [session for session in sessions if session.session_id not in deleted_ids]
+        self._write_sessions(remaining)
+        return InteractiveTuningSessionCleanup(
+            deleted_sessions=deleted,
+            deleted_count=len(deleted),
+            kept_count=len(remaining),
+            protected_active_count=len(protected),
+        )
+
     def list_sessions(
         self,
         *,
@@ -104,6 +181,8 @@ class InteractiveTuningSessionStore:
         sessions = self._read_sessions()
         active_count = sum(session.status == "active" for session in sessions)
         accepted_count = sum(session.status == "accepted" for session in sessions)
+        rejected_count = sum(session.status == "rejected" for session in sessions)
+        archived_count = sum(session.status == "archived" for session in sessions)
         if status is not None:
             sessions = [session for session in sessions if session.status == status]
         bounded_limit = max(1, min(limit, 100))
@@ -112,6 +191,8 @@ class InteractiveTuningSessionStore:
             total_count=len(sessions),
             active_count=active_count,
             accepted_count=accepted_count,
+            rejected_count=rejected_count,
+            archived_count=archived_count,
         )
 
     def export_session(
@@ -186,6 +267,28 @@ def _next_actions(summary: TuningSessionSummary) -> list[str]:
     return ["Ask the user for structured feedback tags before adjusting."]
 
 
+def _closed_next_actions(status: Literal["accepted", "rejected"]) -> list[str]:
+    if status == "accepted":
+        return ["Session closed as accepted. Call `export_pipeline` or `export_tuning_session` for handoff."]
+    return ["Session closed as rejected. Call `export_tuning_session` for audit."]
+
+
+def _accepted_candidate_for_close(
+    session: InteractiveTuningSession,
+    accepted_candidate_run_id: str | None,
+) -> str | None:
+    if accepted_candidate_run_id is not None:
+        known_candidates = {step.candidate_run_id for step in session.steps}
+        if known_candidates and accepted_candidate_run_id not in known_candidates:
+            msg = f"accepted_candidate_run_id {accepted_candidate_run_id!r} does not match a recorded session step"
+            raise ValueError(msg)
+        return accepted_candidate_run_id
+    if session.accepted_candidate_run_id is not None:
+        return session.accepted_candidate_run_id
+    accepted_steps = [step for step in session.steps if step.accepted]
+    return accepted_steps[0].candidate_run_id if accepted_steps else None
+
+
 def _render_markdown_session(session: InteractiveTuningSession) -> str:
     lines = [
         "# Interactive Tuning Session",
@@ -193,6 +296,7 @@ def _render_markdown_session(session: InteractiveTuningSession) -> str:
         f"- Session: {session.session_id}",
         f"- Task: {session.task}",
         f"- Status: {session.status}",
+        f"- Status note: {session.status_note or 'none'}",
         f"- Baseline: {session.baseline_run_id or 'none'}",
         f"- Accepted candidate: {session.accepted_candidate_run_id or 'none'}",
         f"- Steps: {session.step_count}",

@@ -3,6 +3,8 @@ from pathlib import Path
 from albumentationsx_mcp.dataset import score_dataset_preview_candidates
 from albumentationsx_mcp.models import (
     ImageQualityAggregate,
+    InteractiveTuningSession,
+    InteractiveTuningStep,
     PreviewFeedbackRecord,
     PreviewManifestSummary,
     PreviewQualitySummary,
@@ -66,6 +68,26 @@ def test_preview_report_service_exports_markdown_with_concrete_feedback(tmp_path
     assert "adjust_pipeline" in report.content
 
 
+def test_preview_report_service_exports_markdown_with_interactive_session_timeline(tmp_path: Path) -> None:
+    contact_sheet = tmp_path / "candidate-a.png"
+    contact_sheet.write_bytes(b"candidate")
+    session = _session("session-a", "candidate-a")
+
+    report = PreviewReportService(tmp_path / "artifacts").export_report(
+        _score("candidate-a"),
+        baseline_manifest=_manifest("baseline", contact_sheet),
+        candidate_manifests=[_manifest("candidate-a", contact_sheet)],
+        decisions=[],
+        tuning_sessions=[session],
+        output_format="markdown",
+    )
+
+    assert "## Interactive Tuning Sessions" in report.content
+    assert "session-a" in report.content
+    assert "candidate-a" in report.content
+    assert "candidate keeps objects readable" in report.content
+
+
 def test_preview_report_service_exports_html_with_escaped_dynamic_text(tmp_path: Path) -> None:
     contact_sheet = tmp_path / "candidate.png"
     contact_sheet.write_bytes(b"candidate")
@@ -105,6 +127,26 @@ def test_preview_report_service_exports_html_with_escaped_concrete_feedback(tmp_
     assert "candidate-&lt;script&gt;" in report.content
     assert "example 8 has &lt;noise&gt;" in report.content
     assert "<noise>" not in report.content
+
+
+def test_preview_report_service_exports_html_with_escaped_interactive_session_timeline(tmp_path: Path) -> None:
+    contact_sheet = tmp_path / "candidate.png"
+    contact_sheet.write_bytes(b"candidate")
+    session = _session("session-<script>", "candidate-<script>")
+
+    report = PreviewReportService(tmp_path / "artifacts").export_report(
+        _score("candidate-<script>"),
+        baseline_manifest=_manifest("baseline", contact_sheet),
+        candidate_manifests=[_manifest("candidate-<script>", contact_sheet)],
+        decisions=[],
+        tuning_sessions=[session],
+        output_format="html",
+    )
+
+    assert "<h2>Interactive Tuning Sessions</h2>" in report.content
+    assert "session-&lt;script&gt;" in report.content
+    assert "candidate-&lt;script&gt;" in report.content
+    assert "<script>" not in report.content
 
 
 def _score(candidate_run_id: str):
@@ -195,4 +237,46 @@ def _feedback(candidate_run_id: str, *, note: str = "example 8 is too noisy") ->
         accepted=False,
         review_target="example 8 / variant 1",
         recommended_next_tool="adjust_pipeline",
+    )
+
+
+def _session(session_id: str, candidate_run_id: str) -> InteractiveTuningSession:
+    summary = TuningSessionSummary(
+        baseline_run_id="baseline",
+        candidate_run_id=candidate_run_id,
+        feedback_tags=["too_noisy:low"],
+        accepted=True,
+        export_ready=True,
+        recommended_next_tool="export_pipeline",
+        rationale="accepted",
+        quality_score=96.0,
+        quality_risk="low",
+    )
+    return InteractiveTuningSession(
+        session_id=session_id,
+        created_at="2026-06-18T12:00:00Z",
+        updated_at="2026-06-18T12:05:00Z",
+        closed_at="2026-06-18T12:05:00Z",
+        task="classification",
+        targets=["image"],
+        quality_profile="classification",
+        status="accepted",
+        baseline_run_id="baseline",
+        accepted_candidate_run_id=candidate_run_id,
+        status_note="accepted after visual review",
+        steps=[
+            InteractiveTuningStep(
+                step_id="step-a",
+                created_at="2026-06-18T12:04:00Z",
+                baseline_run_id="baseline",
+                candidate_run_id=candidate_run_id,
+                feedback_tags=["too_noisy:low"],
+                accepted=True,
+                reviewer_notes=["candidate keeps objects readable"],
+                recommended_next_tool="export_pipeline",
+                quality_score=96.0,
+                quality_risk="low",
+                summary=summary,
+            )
+        ],
     )

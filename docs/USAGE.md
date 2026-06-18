@@ -150,6 +150,11 @@ candidate id, and next actions in `tuning_sessions.json` under the artifact root
 quality profile. Use `list_tuning_sessions` to resume active or accepted sessions, and `export_tuning_session` to hand off
 a compact Markdown or JSON session record.
 
+Use `close_tuning_session` when the review ends without another candidate render. Set `status="accepted"` with an
+accepted candidate id, or `status="rejected"` when no candidate remains usable. Use `archive_tuning_session` to hide a
+completed session from normal review lists without deleting its audit trail. Use `cleanup_tuning_sessions` to prune older
+session records; active sessions are protected unless `include_active=true`.
+
 `rank_preview_candidates` accepts one baseline id and several candidate ids:
 
 ```json
@@ -180,7 +185,8 @@ Ranking is deterministic: higher `quality_score`, lower `quality_risk`, export-r
 Use `export_preview_report` after scoring or recording a decision. It writes a Markdown or HTML report under
 `artifact_root/reports/` and returns a `report` artifact with the rendered content, ranked candidates, contact sheet
 paths, Markdown image refs or HTML thumbnails, metric ranges, finding counts, matching tuning decisions, and matching
-concrete preview feedback from `record_preview_feedback`.
+concrete preview feedback from `record_preview_feedback`. When matching interactive tuning sessions exist, the report
+also includes their session timeline and reviewer notes.
 
 ## Feedback Severity
 

@@ -1,6 +1,7 @@
 # Host Acceptance Checklist
 
 Use this checklist after each public release that changes installation, host workflow, or MCP Registry metadata.
+Use [HOST_MATRIX.md](HOST_MATRIX.md) for per-host manual acceptance details.
 
 ## MCP Registry card
 
@@ -30,8 +31,9 @@ For every host, use a small local image under `--allowed-root` and a temporary `
 10. Call `adjust_pipeline` and render a candidate from the same input set.
 11. Call `compare_preview_runs`.
 12. Call `start_tuning_session` and `record_tuning_session_step`.
-13. Call `export_tuning_session` and confirm the accepted candidate appears in the exported content.
-14. Call `export_pipeline` for a complete loop.
+13. Call `close_tuning_session` with the final accepted or rejected status.
+14. Call `export_tuning_session` and confirm the accepted candidate appears in the exported content.
+15. Call `export_pipeline` for a complete loop.
 
 ## Host-specific checks
 

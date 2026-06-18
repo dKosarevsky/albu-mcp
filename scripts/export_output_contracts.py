@@ -35,6 +35,7 @@ from albumentationsx_mcp.review import PreviewFeedbackStore
 from albumentationsx_mcp.sessions import InteractiveTuningSessionStore
 
 _REPORT_UUID_PATTERN = re.compile(r"preview-report-baseline-[0-9a-f]{32}\.(md|html)")
+_SESSION_HEADING_PATTERN = re.compile(r"(?m)^### [0-9a-f]{32}$")
 
 
 def build_output_contract_snapshot(root: Path) -> dict[str, Any]:
@@ -51,12 +52,14 @@ def build_output_contract_snapshot(root: Path) -> dict[str, Any]:
         accepted=False,
     )
     listing = feedback_store.list_feedback(run_id="candidate-a", limit=5)
+    session_lifecycle = _interactive_tuning_session_lifecycle(root)
     report = PreviewReportService(root / "artifacts").export_report(
         _dataset_score(),
         baseline_manifest=_manifest(root, "baseline"),
         candidate_manifests=[_manifest(root, "candidate-a"), _manifest(root, "candidate-b")],
         decisions=[_decision()],
         feedback_records=[feedback],
+        tuning_sessions=session_lifecycle["report_sessions"],
         output_format="markdown",
     )
     return {
@@ -76,6 +79,9 @@ def build_output_contract_snapshot(root: Path) -> dict[str, Any]:
             "feedback": [_normalize_feedback_record(item) for item in listing.feedback],
         },
         "export_tuning_session": _interactive_tuning_session_export(root),
+        "close_tuning_session_rejected": session_lifecycle["closed"],
+        "archive_tuning_session": session_lifecycle["archived"],
+        "cleanup_tuning_sessions": session_lifecycle["cleanup"],
         "export_preview_report": _normalize_report_export(report.model_dump(mode="json"), root, feedback),
     }
 
@@ -231,11 +237,52 @@ def _interactive_tuning_session_export(root: Path) -> dict[str, Any]:
     }
 
 
+def _interactive_tuning_session_lifecycle(root: Path) -> dict[str, Any]:
+    lifecycle_store = InteractiveTuningSessionStore(root / "session-lifecycle")
+    closed_session = lifecycle_store.start_session(
+        task="classification",
+        targets=["image"],
+        baseline_run_id="baseline",
+        quality_profile="classification",
+    )
+    closed = lifecycle_store.close_session(
+        closed_session.session_id,
+        status="rejected",
+        note="no candidate stayed readable",
+    )
+    archived_session = lifecycle_store.start_session(
+        task="classification",
+        targets=["image"],
+        baseline_run_id="baseline",
+        quality_profile="classification",
+    )
+    archived = lifecycle_store.archive_session(archived_session.session_id, note="superseded")
+
+    cleanup_store = InteractiveTuningSessionStore(root / "session-cleanup")
+    old_session = cleanup_store.start_session(task="classification", targets=["image"], baseline_run_id="old")
+    cleanup_store.close_session(old_session.session_id, status="rejected", note="old")
+    cleanup_store.start_session(task="classification", targets=["image"], baseline_run_id="active")
+    cleanup = cleanup_store.cleanup_sessions(keep_last=0, include_active=False).model_dump(mode="json")
+    cleanup["deleted_sessions"] = [
+        _normalize_interactive_tuning_session(session) for session in cleanup["deleted_sessions"]
+    ]
+    return {
+        "closed": _normalize_interactive_tuning_session(closed.model_dump(mode="json")),
+        "archived": _normalize_interactive_tuning_session(archived.model_dump(mode="json")),
+        "cleanup": cleanup,
+        "report_sessions": [closed],
+    }
+
+
 def _normalize_interactive_tuning_session(payload: dict[str, Any]) -> dict[str, Any]:
     normalized = dict(payload)
     normalized["session_id"] = "<session-id>"
     normalized["created_at"] = "<created-at>"
     normalized["updated_at"] = "<updated-at>"
+    if normalized.get("closed_at") is not None:
+        normalized["closed_at"] = "<closed-at>"
+    if normalized.get("archived_at") is not None:
+        normalized["archived_at"] = "<archived-at>"
     steps = [
         {
             **step,
@@ -365,6 +412,9 @@ def _diagnostics_public_surface() -> PublicSurface:
             "record_tuning_session_step",
             "list_tuning_sessions",
             "export_tuning_session",
+            "close_tuning_session",
+            "archive_tuning_session",
+            "cleanup_tuning_sessions",
             "rank_preview_candidates",
             "score_dataset_preview_candidates",
             "list_quality_profiles",
@@ -434,6 +484,7 @@ def _normalize_report_export(payload: dict[str, Any], root: Path, feedback: Prev
     normalized = _normalize_paths(payload, root)
     normalized["content"] = normalized["content"].replace(feedback.feedback_id, "<feedback-id>")
     normalized["content"] = _REPORT_UUID_PATTERN.sub(r"preview-report-baseline.<\1>", normalized["content"])
+    normalized["content"] = _SESSION_HEADING_PATTERN.sub("### <session-id>", normalized["content"])
     normalized["artifact"] = {
         **normalized["artifact"],
         "uri": "artifact://reports/preview-report-baseline.<md>",

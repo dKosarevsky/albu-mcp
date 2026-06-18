@@ -1,4 +1,74 @@
 {
+  "archive_tuning_session": {
+    "accepted_candidate_run_id": null,
+    "archived_at": "<archived-at>",
+    "baseline_run_id": "baseline",
+    "closed_at": null,
+    "created_at": "<created-at>",
+    "next_actions": [
+      "Session archived."
+    ],
+    "quality_profile": "classification",
+    "session_id": "<session-id>",
+    "status": "archived",
+    "status_note": "superseded",
+    "step_count": 0,
+    "steps": [],
+    "targets": [
+      "image"
+    ],
+    "task": "classification",
+    "updated_at": "<updated-at>"
+  },
+  "cleanup_tuning_sessions": {
+    "deleted_count": 1,
+    "deleted_sessions": [
+      {
+        "accepted_candidate_run_id": null,
+        "archived_at": null,
+        "baseline_run_id": "old",
+        "closed_at": "<closed-at>",
+        "created_at": "<created-at>",
+        "next_actions": [
+          "Session closed as rejected. Call `export_tuning_session` for audit."
+        ],
+        "quality_profile": "balanced",
+        "session_id": "<session-id>",
+        "status": "rejected",
+        "status_note": "old",
+        "step_count": 0,
+        "steps": [],
+        "targets": [
+          "image"
+        ],
+        "task": "classification",
+        "updated_at": "<updated-at>"
+      }
+    ],
+    "kept_count": 1,
+    "protected_active_count": 1
+  },
+  "close_tuning_session_rejected": {
+    "accepted_candidate_run_id": null,
+    "archived_at": null,
+    "baseline_run_id": "baseline",
+    "closed_at": "<closed-at>",
+    "created_at": "<created-at>",
+    "next_actions": [
+      "Session closed as rejected. Call `export_tuning_session` for audit."
+    ],
+    "quality_profile": "classification",
+    "session_id": "<session-id>",
+    "status": "rejected",
+    "status_note": "no candidate stayed readable",
+    "step_count": 0,
+    "steps": [],
+    "targets": [
+      "image"
+    ],
+    "task": "classification",
+    "updated_at": "<updated-at>"
+  },
   "diagnose_environment_missing_allowed_root": {
     "checks": [
       {
@@ -33,6 +103,9 @@
         "code": "required_tools_available",
         "details": {
           "required": [
+            "archive_tuning_session",
+            "cleanup_tuning_sessions",
+            "close_tuning_session",
             "compare_preview_runs",
             "diagnose_environment",
             "export_preview_report",
@@ -150,6 +223,9 @@
         "code": "required_tools_available",
         "details": {
           "required": [
+            "archive_tuning_session",
+            "cleanup_tuning_sessions",
+            "close_tuning_session",
             "compare_preview_runs",
             "diagnose_environment",
             "export_preview_report",
@@ -232,12 +308,12 @@
     "baseline_run_id": "baseline",
     "best_candidate_run_id": "candidate-a",
     "candidate_count": 2,
-    "content": "# AlbumentationsX MCP Preview Report\n\n- Baseline run: baseline\n- Quality profile: classification\n- Candidates: 2\n- Best candidate: candidate-a\n\n## Contact Sheets\n\n### Baseline\n\n- ![contact sheet](<OUTPUT_CONTRACT_ROOT>/images/baseline-contact.png)\n- <OUTPUT_CONTRACT_ROOT>/images/baseline-contact.png\n\n### Candidates\n\n| Rank | Candidate | Score | Risk | Export Ready | Next Tool | Feedback Tags | Contact Sheets |\n| ---: | --- | ---: | --- | --- | --- | --- | --- |\n| 1 | candidate-a | 100.0 | low | true | export_pipeline | too_noisy:low | ![contact sheet](<OUTPUT_CONTRACT_ROOT>/images/candidate-a-contact.png)<br><OUTPUT_CONTRACT_ROOT>/images/candidate-a-contact.png |\n| 2 | candidate-b | 85.0 | medium | false | adjust_pipeline | too_blurry:high | ![contact sheet](<OUTPUT_CONTRACT_ROOT>/images/candidate-b-contact.png)<br><OUTPUT_CONTRACT_ROOT>/images/candidate-b-contact.png |\n\n## Dataset Metrics\n\n| Metric | Candidates | Min | Max | Mean |\n| --- | ---: | ---: | ---: | ---: |\n| brightness_mean | 2 | 78.0000 | 128.0000 | 103.0000 |\n| clipping_fraction | 2 | 0.0200 | 0.1800 | 0.1000 |\n\n## Finding Counts\n\n| Severity | Code | Count |\n| --- | --- | ---: |\n| medium | candidate_high_clipping | 1 |\n\n## Tuning Decisions\n\n| Decision | Candidate | Accepted | Score | Risk | Notes |\n| --- | --- | --- | ---: | --- | --- |\n| decision-a | candidate-a | true | 100.0 | low | accepted output contract fixture |\n\n## Concrete Preview Feedback\n\n| Feedback | Run | Target | Accepted | Tags | Next Tool | Note |\n| --- | --- | --- | --- | --- | --- | --- |\n| <feedback-id> | candidate-a | example 8 / variant 1 | false | too_noisy:high | adjust_pipeline | example 8 is too noisy |\n",
+    "content": "# AlbumentationsX MCP Preview Report\n\n- Baseline run: baseline\n- Quality profile: classification\n- Candidates: 2\n- Best candidate: candidate-a\n\n## Contact Sheets\n\n### Baseline\n\n- ![contact sheet](<OUTPUT_CONTRACT_ROOT>/images/baseline-contact.png)\n- <OUTPUT_CONTRACT_ROOT>/images/baseline-contact.png\n\n### Candidates\n\n| Rank | Candidate | Score | Risk | Export Ready | Next Tool | Feedback Tags | Contact Sheets |\n| ---: | --- | ---: | --- | --- | --- | --- | --- |\n| 1 | candidate-a | 100.0 | low | true | export_pipeline | too_noisy:low | ![contact sheet](<OUTPUT_CONTRACT_ROOT>/images/candidate-a-contact.png)<br><OUTPUT_CONTRACT_ROOT>/images/candidate-a-contact.png |\n| 2 | candidate-b | 85.0 | medium | false | adjust_pipeline | too_blurry:high | ![contact sheet](<OUTPUT_CONTRACT_ROOT>/images/candidate-b-contact.png)<br><OUTPUT_CONTRACT_ROOT>/images/candidate-b-contact.png |\n\n## Dataset Metrics\n\n| Metric | Candidates | Min | Max | Mean |\n| --- | ---: | ---: | ---: | ---: |\n| brightness_mean | 2 | 78.0000 | 128.0000 | 103.0000 |\n| clipping_fraction | 2 | 0.0200 | 0.1800 | 0.1000 |\n\n## Finding Counts\n\n| Severity | Code | Count |\n| --- | --- | ---: |\n| medium | candidate_high_clipping | 1 |\n\n## Tuning Decisions\n\n| Decision | Candidate | Accepted | Score | Risk | Notes |\n| --- | --- | --- | ---: | --- | --- |\n| decision-a | candidate-a | true | 100.0 | low | accepted output contract fixture |\n\n## Interactive Tuning Sessions\n\n### <session-id>\n\n- Status: rejected\n- Task: classification\n- Accepted candidate: none\n- Status note: no candidate stayed readable\n\n| Step | Candidate | Accepted | Score | Risk | Feedback | Notes |\n| ---: | --- | --- | ---: | --- | --- | --- |\n\n\n## Concrete Preview Feedback\n\n| Feedback | Run | Target | Accepted | Tags | Next Tool | Note |\n| --- | --- | --- | --- | --- | --- | --- |\n| <feedback-id> | candidate-a | example 8 / variant 1 | false | too_noisy:high | adjust_pipeline | example 8 is too noisy |\n",
     "format": "markdown"
   },
   "export_tuning_session": {
     "accepted_candidate_run_id": "candidate-a",
-    "content": "{\n  \"accepted_candidate_run_id\": \"candidate-a\",\n  \"baseline_run_id\": \"baseline\",\n  \"created_at\": \"<created-at>\",\n  \"next_actions\": [\n    \"Call `export_pipeline` or `export_tuning_session` for handoff.\"\n  ],\n  \"quality_profile\": \"classification\",\n  \"session_id\": \"<session-id>\",\n  \"status\": \"accepted\",\n  \"step_count\": 1,\n  \"steps\": [\n    {\n      \"accepted\": true,\n      \"baseline_run_id\": \"baseline\",\n      \"candidate_run_id\": \"candidate-a\",\n      \"created_at\": \"<created-at>\",\n      \"feedback_tags\": [\n        \"too_noisy:low\"\n      ],\n      \"quality_risk\": \"low\",\n      \"quality_score\": 100.0,\n      \"recommended_next_tool\": \"export_pipeline\",\n      \"reviewer_notes\": [\n        \"accepted output contract fixture\"\n      ],\n      \"step_id\": \"<step-id>\",\n      \"summary\": {\n        \"accepted\": true,\n        \"baseline_run_id\": \"baseline\",\n        \"candidate_run_id\": \"candidate-a\",\n        \"export_ready\": true,\n        \"feedback_tags\": [\n          \"too_noisy:low\"\n        ],\n        \"quality_deltas\": {},\n        \"quality_findings\": [],\n        \"quality_risk\": \"low\",\n        \"quality_score\": 100.0,\n        \"rationale\": \"accepted\",\n        \"recommended_next_tool\": \"export_pipeline\",\n        \"review_notes\": [],\n        \"suggested_feedback_tags\": []\n      }\n    }\n  ],\n  \"targets\": [\n    \"image\"\n  ],\n  \"task\": \"classification\",\n  \"updated_at\": \"<updated-at>\"\n}",
+    "content": "{\n  \"accepted_candidate_run_id\": \"candidate-a\",\n  \"archived_at\": null,\n  \"baseline_run_id\": \"baseline\",\n  \"closed_at\": null,\n  \"created_at\": \"<created-at>\",\n  \"next_actions\": [\n    \"Call `export_pipeline` or `export_tuning_session` for handoff.\"\n  ],\n  \"quality_profile\": \"classification\",\n  \"session_id\": \"<session-id>\",\n  \"status\": \"accepted\",\n  \"status_note\": null,\n  \"step_count\": 1,\n  \"steps\": [\n    {\n      \"accepted\": true,\n      \"baseline_run_id\": \"baseline\",\n      \"candidate_run_id\": \"candidate-a\",\n      \"created_at\": \"<created-at>\",\n      \"feedback_tags\": [\n        \"too_noisy:low\"\n      ],\n      \"quality_risk\": \"low\",\n      \"quality_score\": 100.0,\n      \"recommended_next_tool\": \"export_pipeline\",\n      \"reviewer_notes\": [\n        \"accepted output contract fixture\"\n      ],\n      \"step_id\": \"<step-id>\",\n      \"summary\": {\n        \"accepted\": true,\n        \"baseline_run_id\": \"baseline\",\n        \"candidate_run_id\": \"candidate-a\",\n        \"export_ready\": true,\n        \"feedback_tags\": [\n          \"too_noisy:low\"\n        ],\n        \"quality_deltas\": {},\n        \"quality_findings\": [],\n        \"quality_risk\": \"low\",\n        \"quality_score\": 100.0,\n        \"rationale\": \"accepted\",\n        \"recommended_next_tool\": \"export_pipeline\",\n        \"review_notes\": [],\n        \"suggested_feedback_tags\": []\n      }\n    }\n  ],\n  \"targets\": [\n    \"image\"\n  ],\n  \"task\": \"classification\",\n  \"updated_at\": \"<updated-at>\"\n}",
     "format": "json",
     "session_id": "<session-id>",
     "status": "accepted",
@@ -485,6 +561,9 @@
           "code": "required_tools_available",
           "details": {
             "required": [
+              "archive_tuning_session",
+              "cleanup_tuning_sessions",
+              "close_tuning_session",
               "compare_preview_runs",
               "diagnose_environment",
               "export_preview_report",
@@ -683,6 +762,9 @@
           "code": "required_tools_available",
           "details": {
             "required": [
+              "archive_tuning_session",
+              "cleanup_tuning_sessions",
+              "close_tuning_session",
               "compare_preview_runs",
               "diagnose_environment",
               "export_preview_report",

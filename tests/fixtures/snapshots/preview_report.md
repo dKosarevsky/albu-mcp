@@ -38,6 +38,11 @@
 | --- | --- | --- | ---: | --- | --- |
 | decision-a | candidate-a | true | 100.0 | low | accepted snapshot fixture |
 
+## Interactive Tuning Sessions
+
+No interactive tuning sessions matched this report.
+
 ## Concrete Preview Feedback
 
 No concrete preview feedback matched this report.
+

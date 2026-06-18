@@ -241,6 +241,35 @@
       }
     },
     {
+      "description": "Archive an interactive tuning session without deleting its audit trail.",
+      "name": "archive_tuning_session",
+      "parameters": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Note"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id"
+        ],
+        "title": "archive_tuning_sessionArguments",
+        "type": "object"
+      }
+    },
+    {
       "description": "Delete older preview runs beyond a retention count.",
       "name": "cleanup_preview_runs",
       "parameters": {
@@ -259,6 +288,76 @@
           }
         },
         "title": "cleanup_preview_runsArguments",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Delete older interactive tuning sessions, protecting active sessions by default.",
+      "name": "cleanup_tuning_sessions",
+      "parameters": {
+        "properties": {
+          "include_active": {
+            "default": false,
+            "title": "Include Active",
+            "type": "boolean"
+          },
+          "keep_last": {
+            "default": 100,
+            "title": "Keep Last",
+            "type": "integer"
+          }
+        },
+        "title": "cleanup_tuning_sessionsArguments",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Close an interactive tuning session as accepted or rejected.",
+      "name": "close_tuning_session",
+      "parameters": {
+        "properties": {
+          "accepted_candidate_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Accepted Candidate Run Id"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Note"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "accepted",
+              "rejected"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "status"
+        ],
+        "title": "close_tuning_sessionArguments",
         "type": "object"
       }
     },
@@ -671,7 +770,8 @@
                 "enum": [
                   "active",
                   "accepted",
-                  "rejected"
+                  "rejected",
+                  "archived"
                 ],
                 "type": "string"
               },

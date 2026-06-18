@@ -14,6 +14,7 @@ from albumentationsx_mcp.models import (
     DatasetFindingCount,
     DatasetMetricStats,
     DatasetPreviewScore,
+    InteractiveTuningSession,
     PreviewFeedbackRecord,
     PreviewReportExport,
     TuningDecisionRecord,
@@ -48,6 +49,7 @@ class PreviewReportService:
         candidate_manifests: list[dict[str, Any]],
         decisions: list[TuningDecisionRecord],
         feedback_records: list[PreviewFeedbackRecord] | None = None,
+        tuning_sessions: list[InteractiveTuningSession] | None = None,
         output_format: ReportFormat = "markdown",
     ) -> PreviewReportExport:
         """Render a Markdown or HTML preview report and return its artifact metadata."""
@@ -56,9 +58,23 @@ class PreviewReportService:
             raise ValueError(msg)
 
         content = (
-            _render_markdown_report(score, baseline_manifest, candidate_manifests, decisions, feedback_records or [])
+            _render_markdown_report(
+                score,
+                baseline_manifest,
+                candidate_manifests,
+                decisions,
+                feedback_records or [],
+                tuning_sessions or [],
+            )
             if output_format == "markdown"
-            else _render_html_report(score, baseline_manifest, candidate_manifests, decisions, feedback_records or [])
+            else _render_html_report(
+                score,
+                baseline_manifest,
+                candidate_manifests,
+                decisions,
+                feedback_records or [],
+                tuning_sessions or [],
+            )
         )
         path = self._report_path(score.baseline_run_id, output_format)
         path.write_text(content, encoding="utf-8")
@@ -88,12 +104,13 @@ class PreviewReportService:
         )
 
 
-def _render_markdown_report(
+def _render_markdown_report(  # noqa: PLR0913
     score: DatasetPreviewScore,
     baseline_manifest: dict[str, Any],
     candidate_manifests: list[dict[str, Any]],
     decisions: list[TuningDecisionRecord],
     feedback_records: list[PreviewFeedbackRecord],
+    tuning_sessions: list[InteractiveTuningSession],
 ) -> str:
     candidate_contact_sheets = _contact_sheets_by_run_id(candidate_manifests)
     lines = [
@@ -144,6 +161,10 @@ def _render_markdown_report(
             "",
             *_markdown_decisions(decisions),
             "",
+            "## Interactive Tuning Sessions",
+            "",
+            *_markdown_tuning_sessions(tuning_sessions),
+            "",
             "## Concrete Preview Feedback",
             "",
             *_markdown_feedback(feedback_records),
@@ -153,12 +174,13 @@ def _render_markdown_report(
     return "\n".join(lines)
 
 
-def _render_html_report(
+def _render_html_report(  # noqa: PLR0913
     score: DatasetPreviewScore,
     baseline_manifest: dict[str, Any],
     candidate_manifests: list[dict[str, Any]],
     decisions: list[TuningDecisionRecord],
     feedback_records: list[PreviewFeedbackRecord],
+    tuning_sessions: list[InteractiveTuningSession],
 ) -> str:
     candidate_contact_sheets = _contact_sheets_by_run_id(candidate_manifests)
     rows = []
@@ -212,6 +234,8 @@ def _render_html_report(
             _html_finding_counts(score.finding_counts),
             "<h2>Tuning Decisions</h2>",
             _html_decisions(decisions),
+            "<h2>Interactive Tuning Sessions</h2>",
+            _html_tuning_sessions(tuning_sessions),
             "<h2>Concrete Preview Feedback</h2>",
             _html_feedback(feedback_records),
             "</body></html>",
@@ -328,6 +352,41 @@ def _markdown_feedback(feedback_records: list[PreviewFeedbackRecord]) -> list[st
     return lines
 
 
+def _markdown_tuning_sessions(sessions: list[InteractiveTuningSession]) -> list[str]:
+    if not sessions:
+        return ["No interactive tuning sessions matched this report."]
+    lines: list[str] = []
+    for session in sessions:
+        lines.extend(
+            [
+                f"### {session.session_id}",
+                "",
+                f"- Status: {session.status}",
+                f"- Task: {session.task}",
+                f"- Accepted candidate: {session.accepted_candidate_run_id or 'none'}",
+                f"- Status note: {session.status_note or 'none'}",
+                "",
+                "| Step | Candidate | Accepted | Score | Risk | Feedback | Notes |",
+                "| ---: | --- | --- | ---: | --- | --- | --- |",
+            ]
+        )
+        lines.extend(
+            (
+                "| "
+                f"{index} | "
+                f"{step.candidate_run_id} | "
+                f"{str(step.accepted).lower()} | "
+                f"{step.quality_score:.1f} | "
+                f"{step.quality_risk} | "
+                f"{', '.join(step.feedback_tags) or 'none'} | "
+                f"{'; '.join(step.reviewer_notes) or 'none'} |"
+            )
+            for index, step in enumerate(reversed(session.steps), start=1)
+        )
+        lines.append("")
+    return lines
+
+
 def _html_path_list(paths: list[str]) -> str:
     if not paths:
         return "<p>none</p>"
@@ -418,6 +477,40 @@ def _html_feedback(feedback_records: list[PreviewFeedbackRecord]) -> str:
         "<table><thead><tr><th>Feedback</th><th>Run</th><th>Target</th><th>Accepted</th>"
         f"<th>Tags</th><th>Next Tool</th><th>Note</th></tr></thead><tbody>{''.join(rows)}</tbody></table>"
     )
+
+
+def _html_tuning_sessions(sessions: list[InteractiveTuningSession]) -> str:
+    if not sessions:
+        return "<p>No interactive tuning sessions matched this report.</p>"
+    rendered_sessions = []
+    for session in sessions:
+        rows = [
+            "<tr>"
+            f"<td>{index}</td>"
+            f"<td>{html.escape(step.candidate_run_id)}</td>"
+            f"<td>{str(step.accepted).lower()}</td>"
+            f"<td>{step.quality_score:.1f}</td>"
+            f"<td>{html.escape(step.quality_risk)}</td>"
+            f"<td>{html.escape(', '.join(step.feedback_tags) or 'none')}</td>"
+            f"<td>{html.escape('; '.join(step.reviewer_notes) or 'none')}</td>"
+            "</tr>"
+            for index, step in enumerate(reversed(session.steps), start=1)
+        ]
+        rendered_sessions.append(
+            "<section>"
+            f"<h3>{html.escape(session.session_id)}</h3>"
+            "<ul>"
+            f"<li>Status: {html.escape(session.status)}</li>"
+            f"<li>Task: {html.escape(session.task)}</li>"
+            f"<li>Accepted candidate: {html.escape(session.accepted_candidate_run_id or 'none')}</li>"
+            f"<li>Status note: {html.escape(session.status_note or 'none')}</li>"
+            "</ul>"
+            "<table><thead><tr><th>Step</th><th>Candidate</th><th>Accepted</th>"
+            "<th>Score</th><th>Risk</th><th>Feedback</th><th>Notes</th></tr></thead>"
+            f"<tbody>{''.join(rows)}</tbody></table>"
+            "</section>"
+        )
+    return "".join(rendered_sessions)
 
 
 def _file_uri(path: str) -> str:

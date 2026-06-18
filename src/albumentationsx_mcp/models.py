@@ -387,7 +387,7 @@ class TuningDecisionReport(StrictModel):
     best_candidate_run_id: str | None = None
 
 
-TuningSessionStatus = Literal["active", "accepted", "rejected"]
+TuningSessionStatus = Literal["active", "accepted", "rejected", "archived"]
 
 
 class InteractiveTuningStep(StrictModel):
@@ -421,6 +421,9 @@ class InteractiveTuningSession(StrictModel):
     targets: list[str] = Field(default_factory=list)
     quality_profile: QualityProfileName = "balanced"
     status: TuningSessionStatus = "active"
+    closed_at: str | None = None
+    archived_at: str | None = None
+    status_note: str | None = None
     baseline_run_id: str | None = None
     accepted_candidate_run_id: str | None = None
     steps: list[InteractiveTuningStep] = Field(default_factory=list)
@@ -440,6 +443,17 @@ class InteractiveTuningSessionList(StrictModel):
     total_count: int
     active_count: int
     accepted_count: int
+    rejected_count: int = 0
+    archived_count: int = 0
+
+
+class InteractiveTuningSessionCleanup(StrictModel):
+    """Cleanup response for persisted interactive tuning sessions."""
+
+    deleted_sessions: list[InteractiveTuningSession] = Field(default_factory=list)
+    deleted_count: int
+    kept_count: int
+    protected_active_count: int = 0
 
 
 class InteractiveTuningSessionExport(StrictModel):

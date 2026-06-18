@@ -64,12 +64,14 @@ After every accepted or rejected candidate:
 1. Call `record_preview_feedback` for any concrete examples the user named during visual review.
 2. For one-off decisions, call `summarize_tuning_session` and `record_tuning_decision`.
 3. For multi-turn review, call `start_tuning_session` once and `record_tuning_session_step` after each candidate.
-4. Call `list_tuning_sessions` to resume active sessions or inspect accepted sessions.
-5. Call `list_tuning_decisions` with `ranked=true` when choosing the best candidate across several attempts.
-6. Use `accepted_only=true` before final export if the host needs a short list of accepted candidates.
-7. Call `export_preview_report` with `output_format="html"` for visual handoff with contact sheet thumbnails and
+4. Call `close_tuning_session` when the user accepts a final candidate or rejects the whole attempt.
+5. Call `archive_tuning_session` for superseded sessions and `cleanup_tuning_sessions` during long-running host use.
+6. Call `list_tuning_sessions` to resume active sessions or inspect accepted, rejected, and archived sessions.
+7. Call `list_tuning_decisions` with `ranked=true` when choosing the best candidate across several attempts.
+8. Use `accepted_only=true` before final export if the host needs a short list of accepted candidates.
+9. Call `export_preview_report` with `output_format="html"` for visual handoff with contact sheet thumbnails and
    matching concrete feedback.
-8. Call `export_tuning_session` or `export_tuning_report` with `output_format="markdown"` for handoff or `"json"` for
+10. Call `export_tuning_session` or `export_tuning_report` with `output_format="markdown"` for handoff or `"json"` for
    automation.
 
 ## Resource Discovery
