@@ -140,10 +140,12 @@ def test_host_acceptance_checklist_covers_registry_and_hosts() -> None:
     checklist = Path("docs/HOST_ACCEPTANCE.md").read_text(encoding="utf-8")
     matrix = Path("docs/HOST_MATRIX.md").read_text(encoding="utf-8")
     evidence = Path("docs/HOST_ACCEPTANCE_EVIDENCE.md").read_text(encoding="utf-8")
+    manual_runs = Path("docs/HOST_MANUAL_RUNS.json").read_text(encoding="utf-8")
 
     assert "[docs/HOST_ACCEPTANCE.md](docs/HOST_ACCEPTANCE.md)" in readme
     assert "[docs/HOST_MATRIX.md](docs/HOST_MATRIX.md)" in readme
     assert "[docs/HOST_ACCEPTANCE_EVIDENCE.md](docs/HOST_ACCEPTANCE_EVIDENCE.md)" in readme
+    assert "[docs/HOST_MANUAL_RUNS.json](docs/HOST_MANUAL_RUNS.json)" in readme
     assert "export_host_acceptance_report.py" in readme
     assert "export_host_acceptance_report.py" in checklist
     assert "export_host_acceptance_report.py" in matrix
@@ -168,8 +170,12 @@ def test_host_acceptance_checklist_covers_registry_and_hosts() -> None:
         assert term in matrix
     assert "Manual Host UI: pending" in evidence
     assert "Manual Host UI: passed" not in evidence
+    assert '"manual_host_ui": []' in manual_runs
+    assert "HOST_MANUAL_RUNS.json" in checklist
+    assert "HOST_MANUAL_RUNS.json" in matrix
     release_docs = Path("docs/RELEASE.md").read_text(encoding="utf-8")
     assert "export_host_acceptance_report.py" in release_docs
+    assert "HOST_MANUAL_RUNS.json" in release_docs
 
 
 def test_docs_link_diagnostics_playbook_resource() -> None:

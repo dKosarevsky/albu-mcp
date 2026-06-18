@@ -10,7 +10,18 @@ uv run python scripts/export_host_acceptance_report.py --output docs/HOST_ACCEPT
 ```
 
 The generated report records automated coverage and keeps host UI status `pending` until a dated manual run note is
-added by a reviewer.
+added by a reviewer in `docs/HOST_MANUAL_RUNS.json`.
+
+Manual run note format:
+
+```json
+{
+  "host": "Codex",
+  "status": "passed",
+  "date": "2026-06-19",
+  "evidence": "Codex app listed tools, read workflow resources, and ran run_host_smoke_check."
+}
+```
 
 ## MCP Registry card
 

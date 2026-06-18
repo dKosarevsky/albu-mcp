@@ -20,12 +20,12 @@
 
 ## Manual Host UI
 
-| Host | Status | Evidence |
-| --- | --- | --- |
-| Claude Desktop | pending | manual UI run not recorded |
-| Claude Code | pending | manual UI run not recorded |
-| Cursor | pending | manual UI run not recorded |
-| Codex | pending | manual UI run not recorded |
+| Host | Status | Date | Evidence |
+| --- | --- | --- | --- |
+| Claude Desktop | pending | none | manual UI run not recorded |
+| Claude Code | pending | none | manual UI run not recorded |
+| Cursor | pending | none | manual UI run not recorded |
+| Codex | pending | none | manual UI run not recorded |
 
 ## Minimum Release Acceptance
 

@@ -33,3 +33,5 @@ To produce a reviewable evidence artifact without overstating manual coverage:
 ```bash
 uv run python scripts/export_host_acceptance_report.py --output docs/HOST_ACCEPTANCE_EVIDENCE.md
 ```
+
+Add dated manual notes to `docs/HOST_MANUAL_RUNS.json`; supported statuses are `passed`, `blocked`, and `pending`.

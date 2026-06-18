@@ -84,6 +84,7 @@ The public MCP surface is kept stable through reviewed contract snapshots. Compa
 - [docs/HOST_ACCEPTANCE.md](docs/HOST_ACCEPTANCE.md): registry card and MCP host acceptance checklist.
 - [docs/HOST_MATRIX.md](docs/HOST_MATRIX.md): per-host acceptance matrix.
 - [docs/HOST_ACCEPTANCE_EVIDENCE.md](docs/HOST_ACCEPTANCE_EVIDENCE.md): generated acceptance evidence snapshot.
+- [docs/HOST_MANUAL_RUNS.json](docs/HOST_MANUAL_RUNS.json): dated manual host UI evidence records.
 - [scripts/export_host_acceptance_report.py](scripts/export_host_acceptance_report.py): reviewable host acceptance evidence
   artifact generator.
 - [docs/USAGE.md](docs/USAGE.md): end-to-end MCP host workflow and tool details.

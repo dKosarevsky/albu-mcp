@@ -48,21 +48,25 @@ _MANUAL_HOST_UI: tuple[dict[str, str], ...] = (
     {
         "host": "Claude Desktop",
         "status": "pending",
+        "date": "none",
         "evidence": "manual UI run not recorded",
     },
     {
         "host": "Claude Code",
         "status": "pending",
+        "date": "none",
         "evidence": "manual UI run not recorded",
     },
     {
         "host": "Cursor",
         "status": "pending",
+        "date": "none",
         "evidence": "manual UI run not recorded",
     },
     {
         "host": "Codex",
         "status": "pending",
+        "date": "none",
         "evidence": "manual UI run not recorded",
     },
 )
@@ -82,6 +86,7 @@ def build_host_acceptance_report(root: Path) -> dict[str, Any]:
     package = _read_project_fields(root / "pyproject.toml")
     server = json.loads((root / "server.json").read_text(encoding="utf-8"))
     pypi_package = _first_pypi_package(server)
+    manual_host_ui = _manual_host_ui(root)
     return {
         "project": package["name"],
         "version": package["version"],
@@ -92,11 +97,12 @@ def build_host_acceptance_report(root: Path) -> dict[str, Any]:
         "pypi_package_version": pypi_package["version"],
         "summary": {
             "automated_coverage": "recorded",
-            "manual_host_ui": "pending",
+            "manual_host_ui": _manual_summary(manual_host_ui),
         },
         "automated_coverage": [dict(item) for item in _AUTOMATED_COVERAGE],
-        "manual_host_ui": [dict(item) for item in _MANUAL_HOST_UI],
+        "manual_host_ui": manual_host_ui,
         "minimum_release_acceptance": list(_MINIMUM_RELEASE_ACCEPTANCE),
+        "manual_run_records": "docs/HOST_MANUAL_RUNS.json",
         "source_docs": [
             "docs/HOST_ACCEPTANCE.md",
             "docs/HOST_MATRIX.md",
@@ -133,11 +139,14 @@ def dump_host_acceptance_markdown(report: dict[str, Any]) -> str:
             "",
             "## Manual Host UI",
             "",
-            "| Host | Status | Evidence |",
-            "| --- | --- | --- |",
+            "| Host | Status | Date | Evidence |",
+            "| --- | --- | --- | --- |",
         ]
     )
-    lines.extend(f"| {item['host']} | {item['status']} | {item['evidence']} |" for item in report["manual_host_ui"])
+    lines.extend(
+        f"| {item['host']} | {item['status']} | {item['date']} | {item['evidence']} |"
+        for item in report["manual_host_ui"]
+    )
     lines.extend(
         [
             "",
@@ -179,6 +188,54 @@ def _read_project_fields(path: Path) -> dict[str, str]:
         msg = f"Could not read project name and version from {path}"
         raise ValueError(msg)
     return fields
+
+
+def _manual_host_ui(root: Path) -> list[dict[str, str]]:
+    records = _read_manual_records(root / "docs" / "HOST_MANUAL_RUNS.json")
+    by_host = {record["host"]: record for record in records}
+    return [{**item, **by_host.get(item["host"], {})} for item in _MANUAL_HOST_UI]
+
+
+def _read_manual_records(path: Path) -> list[dict[str, str]]:
+    if not path.exists():
+        return []
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    records: list[dict[str, str]] = []
+    known_hosts = {item["host"] for item in _MANUAL_HOST_UI}
+    for item in payload.get("manual_host_ui", []):
+        record = _manual_record(item, known_hosts=known_hosts, path=path)
+        records.append(record)
+    return records
+
+
+def _manual_record(item: dict[str, Any], *, known_hosts: set[str], path: Path) -> dict[str, str]:
+    host = str(item.get("host", "")).strip()
+    status = str(item.get("status", "")).strip()
+    if host not in known_hosts:
+        msg = f"Unknown host {host!r} in {path}"
+        raise ValueError(msg)
+    if status not in {"passed", "blocked", "pending"}:
+        msg = f"Unsupported manual host UI status {status!r} in {path}"
+        raise ValueError(msg)
+    date = str(item.get("date", "")).strip() or "none"
+    evidence = str(item.get("evidence", "")).strip() or "manual UI run not recorded"
+    return {
+        "host": host,
+        "status": status,
+        "date": date,
+        "evidence": evidence,
+    }
+
+
+def _manual_summary(manual_host_ui: list[dict[str, str]]) -> str:
+    statuses = {item["status"] for item in manual_host_ui}
+    if statuses == {"passed"}:
+        return "passed"
+    if statuses == {"pending"}:
+        return "pending"
+    if "blocked" in statuses:
+        return "blocked"
+    return "partial"
 
 
 def _first_pypi_package(server: dict[str, Any]) -> dict[str, Any]:
