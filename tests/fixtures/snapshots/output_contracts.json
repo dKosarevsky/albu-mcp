@@ -36,9 +36,13 @@
             "compare_preview_runs",
             "diagnose_environment",
             "export_preview_report",
+            "export_tuning_session",
+            "list_tuning_sessions",
             "recommend_recipe",
+            "record_tuning_session_step",
             "render_preview_batch",
             "run_host_smoke_check",
+            "start_tuning_session",
             "validate_pipeline",
             "validate_preview_request"
           ]
@@ -149,9 +153,13 @@
             "compare_preview_runs",
             "diagnose_environment",
             "export_preview_report",
+            "export_tuning_session",
+            "list_tuning_sessions",
             "recommend_recipe",
+            "record_tuning_session_step",
             "render_preview_batch",
             "run_host_smoke_check",
+            "start_tuning_session",
             "validate_pipeline",
             "validate_preview_request"
           ]
@@ -227,6 +235,14 @@
     "content": "# AlbumentationsX MCP Preview Report\n\n- Baseline run: baseline\n- Quality profile: classification\n- Candidates: 2\n- Best candidate: candidate-a\n\n## Contact Sheets\n\n### Baseline\n\n- ![contact sheet](<OUTPUT_CONTRACT_ROOT>/images/baseline-contact.png)\n- <OUTPUT_CONTRACT_ROOT>/images/baseline-contact.png\n\n### Candidates\n\n| Rank | Candidate | Score | Risk | Export Ready | Next Tool | Feedback Tags | Contact Sheets |\n| ---: | --- | ---: | --- | --- | --- | --- | --- |\n| 1 | candidate-a | 100.0 | low | true | export_pipeline | too_noisy:low | ![contact sheet](<OUTPUT_CONTRACT_ROOT>/images/candidate-a-contact.png)<br><OUTPUT_CONTRACT_ROOT>/images/candidate-a-contact.png |\n| 2 | candidate-b | 85.0 | medium | false | adjust_pipeline | too_blurry:high | ![contact sheet](<OUTPUT_CONTRACT_ROOT>/images/candidate-b-contact.png)<br><OUTPUT_CONTRACT_ROOT>/images/candidate-b-contact.png |\n\n## Dataset Metrics\n\n| Metric | Candidates | Min | Max | Mean |\n| --- | ---: | ---: | ---: | ---: |\n| brightness_mean | 2 | 78.0000 | 128.0000 | 103.0000 |\n| clipping_fraction | 2 | 0.0200 | 0.1800 | 0.1000 |\n\n## Finding Counts\n\n| Severity | Code | Count |\n| --- | --- | ---: |\n| medium | candidate_high_clipping | 1 |\n\n## Tuning Decisions\n\n| Decision | Candidate | Accepted | Score | Risk | Notes |\n| --- | --- | --- | ---: | --- | --- |\n| decision-a | candidate-a | true | 100.0 | low | accepted output contract fixture |\n\n## Concrete Preview Feedback\n\n| Feedback | Run | Target | Accepted | Tags | Next Tool | Note |\n| --- | --- | --- | --- | --- | --- | --- |\n| <feedback-id> | candidate-a | example 8 / variant 1 | false | too_noisy:high | adjust_pipeline | example 8 is too noisy |\n",
     "format": "markdown"
   },
+  "export_tuning_session": {
+    "accepted_candidate_run_id": "candidate-a",
+    "content": "{\n  \"accepted_candidate_run_id\": \"candidate-a\",\n  \"baseline_run_id\": \"baseline\",\n  \"created_at\": \"<created-at>\",\n  \"next_actions\": [\n    \"Call `export_pipeline` or `export_tuning_session` for handoff.\"\n  ],\n  \"quality_profile\": \"classification\",\n  \"session_id\": \"<session-id>\",\n  \"status\": \"accepted\",\n  \"step_count\": 1,\n  \"steps\": [\n    {\n      \"accepted\": true,\n      \"baseline_run_id\": \"baseline\",\n      \"candidate_run_id\": \"candidate-a\",\n      \"created_at\": \"<created-at>\",\n      \"feedback_tags\": [\n        \"too_noisy:low\"\n      ],\n      \"quality_risk\": \"low\",\n      \"quality_score\": 100.0,\n      \"recommended_next_tool\": \"export_pipeline\",\n      \"reviewer_notes\": [\n        \"accepted output contract fixture\"\n      ],\n      \"step_id\": \"<step-id>\",\n      \"summary\": {\n        \"accepted\": true,\n        \"baseline_run_id\": \"baseline\",\n        \"candidate_run_id\": \"candidate-a\",\n        \"export_ready\": true,\n        \"feedback_tags\": [\n          \"too_noisy:low\"\n        ],\n        \"quality_deltas\": {},\n        \"quality_findings\": [],\n        \"quality_risk\": \"low\",\n        \"quality_score\": 100.0,\n        \"rationale\": \"accepted\",\n        \"recommended_next_tool\": \"export_pipeline\",\n        \"review_notes\": [],\n        \"suggested_feedback_tags\": []\n      }\n    }\n  ],\n  \"targets\": [\n    \"image\"\n  ],\n  \"task\": \"classification\",\n  \"updated_at\": \"<updated-at>\"\n}",
+    "format": "json",
+    "session_id": "<session-id>",
+    "status": "accepted",
+    "step_count": 1
+  },
   "list_preview_feedback": {
     "accepted_count": 0,
     "accepted_only": false,
@@ -282,6 +298,9 @@
           "render_preview_batch",
           "rank_preview_candidates",
           "score_dataset_preview_candidates",
+          "start_tuning_session",
+          "record_tuning_session_step",
+          "export_tuning_session",
           "export_preview_report",
           "record_tuning_decision",
           "export_pipeline"
@@ -341,6 +360,9 @@
       "render_preview_batch",
       "rank_preview_candidates",
       "score_dataset_preview_candidates",
+      "start_tuning_session",
+      "record_tuning_session_step",
+      "export_tuning_session",
       "export_preview_report",
       "record_tuning_decision",
       "export_pipeline"
@@ -466,9 +488,13 @@
               "compare_preview_runs",
               "diagnose_environment",
               "export_preview_report",
+              "export_tuning_session",
+              "list_tuning_sessions",
               "recommend_recipe",
+              "record_tuning_session_step",
               "render_preview_batch",
               "run_host_smoke_check",
+              "start_tuning_session",
               "validate_pipeline",
               "validate_preview_request"
             ]
@@ -660,9 +686,13 @@
               "compare_preview_runs",
               "diagnose_environment",
               "export_preview_report",
+              "export_tuning_session",
+              "list_tuning_sessions",
               "recommend_recipe",
+              "record_tuning_session_step",
               "render_preview_batch",
               "run_host_smoke_check",
+              "start_tuning_session",
               "validate_pipeline",
               "validate_preview_request"
             ]

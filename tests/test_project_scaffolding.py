@@ -149,6 +149,9 @@ def test_host_acceptance_checklist_covers_registry_and_hosts() -> None:
     assert "run_host_smoke_check" in checklist
     assert "validate_preview_request" in checklist
     assert "render_preview_batch" in checklist
+    assert "start_tuning_session" in checklist
+    assert "record_tuning_session_step" in checklist
+    assert "export_tuning_session" in checklist
 
 
 def test_docs_link_diagnostics_playbook_resource() -> None:

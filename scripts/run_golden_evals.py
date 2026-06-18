@@ -93,6 +93,9 @@ async def _run_scenario(session: ClientSession, scenario: dict[str, Any], images
     if scenario.get("preview_request_troubleshooting"):
         await _run_preview_request_troubleshooting(session, scenario, images_dir)
         return
+    if scenario.get("interactive_tuning_session"):
+        await _run_interactive_tuning_session(session, scenario, images_dir)
+        return
     recommended = await _call_tool_json(
         session,
         "recommend_pipeline",
@@ -246,6 +249,105 @@ async def _run_real_sample_smoke(session: ClientSession, scenario: dict[str, Any
             raise AssertionError(f"{scenario['name']} baseline quality count mismatch: {comparison}")
         if quality_summary["candidate"]["image_count"] != expected_count:
             raise AssertionError(f"{scenario['name']} candidate quality count mismatch: {comparison}")
+
+    await _delete_preview_run(session, scenario, candidate["run_id"])
+    await _delete_preview_run(session, scenario, baseline["run_id"])
+
+
+async def _run_interactive_tuning_session(
+    session: ClientSession,
+    scenario: dict[str, Any],
+    images_dir: Path,
+) -> None:
+    image_paths = _write_real_sample_inputs(images_dir, scenario)
+    smoke_report = await _call_tool_json(
+        session,
+        "run_host_smoke_check",
+        {
+            "include_write_probe": True,
+            "task": scenario["task"],
+            "intensity": scenario.get("intensity", "medium"),
+            "targets": scenario["targets"],
+        },
+    )
+    template = smoke_report.get("preview_request_template")
+    if smoke_report["preview_ready"] is not True or template is None:
+        raise AssertionError(f"{scenario['name']} host smoke returned no usable template: {smoke_report}")
+
+    baseline_request = await _validate_preview_request_or_fail(
+        session,
+        scenario,
+        _real_sample_preview_request(template["request"], scenario, image_paths),
+    )
+    baseline = await _call_tool_json(session, "render_preview_batch", {"request": baseline_request})
+    candidate_pipeline = await _call_tool_json(
+        session,
+        "adjust_pipeline",
+        {"pipeline": baseline_request["pipeline"], "feedback_tags": scenario.get("feedback_tags", [])},
+    )
+    candidate_request = await _validate_preview_request_or_fail(
+        session,
+        scenario,
+        {
+            **baseline_request,
+            "pipeline": candidate_pipeline,
+            "seed": int(scenario.get("seed", 0)) + 10,
+        },
+    )
+    candidate = await _call_tool_json(session, "render_preview_batch", {"request": candidate_request})
+
+    tuning_session = await _call_tool_json(
+        session,
+        "start_tuning_session",
+        {
+            "task": scenario["task"],
+            "targets": scenario["targets"],
+            "baseline_run_id": baseline["run_id"],
+            "quality_profile": scenario.get("quality_profile", "balanced"),
+        },
+    )
+    if tuning_session["status"] != "active" or tuning_session["step_count"] != 0:
+        raise AssertionError(f"{scenario['name']} session did not start cleanly: {tuning_session}")
+
+    updated_session = await _call_tool_json(
+        session,
+        "record_tuning_session_step",
+        {
+            "session_id": tuning_session["session_id"],
+            "baseline_run_id": baseline["run_id"],
+            "candidate_run_id": candidate["run_id"],
+            "feedback_tags": scenario.get("feedback_tags", []),
+            "accepted": bool(scenario.get("accepted", False)),
+            "reviewer_notes": scenario.get("reviewer_notes", []),
+            "quality_profile": scenario.get("quality_profile", "balanced"),
+        },
+    )
+    if updated_session["step_count"] != 1:
+        raise AssertionError(f"{scenario['name']} session did not record a step: {updated_session}")
+    if scenario.get("accepted") and updated_session["status"] != "accepted":
+        raise AssertionError(f"{scenario['name']} session did not close as accepted: {updated_session}")
+    if updated_session["accepted_candidate_run_id"] != candidate["run_id"]:
+        raise AssertionError(f"{scenario['name']} session returned wrong accepted candidate: {updated_session}")
+
+    listed = await _call_tool_json(session, "list_tuning_sessions", {"status": "accepted", "limit": 5})
+    if tuning_session["session_id"] not in {item["session_id"] for item in listed["sessions"]}:
+        raise AssertionError(f"{scenario['name']} accepted session was not listed: {listed}")
+
+    markdown_export = await _call_tool_json(
+        session,
+        "export_tuning_session",
+        {"session_id": tuning_session["session_id"], "output_format": "markdown"},
+    )
+    if candidate["run_id"] not in markdown_export["content"]:
+        raise AssertionError(f"{scenario['name']} markdown export missed candidate: {markdown_export}")
+    json_export = await _call_tool_json(
+        session,
+        "export_tuning_session",
+        {"session_id": tuning_session["session_id"], "output_format": "json"},
+    )
+    export_payload = json.loads(json_export["content"])
+    if export_payload["accepted_candidate_run_id"] != candidate["run_id"] or export_payload["step_count"] != 1:
+        raise AssertionError(f"{scenario['name']} json export returned wrong session: {json_export}")
 
     await _delete_preview_run(session, scenario, candidate["run_id"])
     await _delete_preview_run(session, scenario, baseline["run_id"])

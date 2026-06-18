@@ -72,7 +72,7 @@ details and `remediation_actions` are documented in [docs/USAGE.md](docs/USAGE.m
 - Preview request validation for missing files, outside-root paths, masks, and annotation counts.
 - Deterministic single-image and batch previews with contact sheets.
 - Preview comparison with `quality_summary` and suggested feedback tags.
-- Concrete preview feedback, tuning decisions, ranking, dataset scoring, and visual reports.
+- Concrete preview feedback, interactive tuning sessions, ranking, dataset scoring, and visual reports.
 - Agent workflow resources, prompts, smoke checks, diagnostics, and release-safe contract snapshots.
 
 The public MCP surface is kept stable through reviewed contract snapshots. Compatibility rules are in

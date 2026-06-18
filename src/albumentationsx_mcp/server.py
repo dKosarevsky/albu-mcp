@@ -46,6 +46,7 @@ from albumentationsx_mcp.ranking import rank_preview_candidates as rank_candidat
 from albumentationsx_mcp.recipes import list_recipe_catalog, recommend_recipe
 from albumentationsx_mcp.reports import PreviewReportService
 from albumentationsx_mcp.review import PreviewFeedbackStore
+from albumentationsx_mcp.sessions import InteractiveTuningSessionStore
 from albumentationsx_mcp.tuning import TuningDecisionStore, build_tuning_session_summary
 from albumentationsx_mcp.workflows import (
     get_agent_workflow,
@@ -66,6 +67,10 @@ _PUBLIC_TOOLS = [
     "render_preview_batch",
     "compare_preview_runs",
     "summarize_tuning_session",
+    "start_tuning_session",
+    "record_tuning_session_step",
+    "list_tuning_sessions",
+    "export_tuning_session",
     "rank_preview_candidates",
     "score_dataset_preview_candidates",
     "list_quality_profiles",
@@ -145,6 +150,7 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
         path_policy=PathPolicy(settings.allowed_roots),
     )
     tuning_store = TuningDecisionStore(settings.artifact_root)
+    session_store = InteractiveTuningSessionStore(settings.artifact_root)
     feedback_store = PreviewFeedbackStore(settings.artifact_root)
     report_service = PreviewReportService(settings.artifact_root)
     public_surface = PublicSurface(
@@ -421,6 +427,66 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
             feedback_tags=feedback_tags or [],
             accepted=accepted,
         ).model_dump(mode="json")
+
+    @mcp.tool()
+    def start_tuning_session(
+        task: str,
+        targets: list[str] | None = None,
+        baseline_run_id: str | None = None,
+        quality_profile: QualityProfileName = "balanced",
+    ) -> dict[str, Any]:
+        """Start a persistent multi-step preview tuning session."""
+        if baseline_run_id is not None:
+            preview_service.artifact_store.read_manifest(baseline_run_id)
+        return session_store.start_session(
+            task=task,
+            targets=targets or ["image"],
+            baseline_run_id=baseline_run_id,
+            quality_profile=quality_profile,
+        ).model_dump(mode="json")
+
+    @mcp.tool()
+    def record_tuning_session_step(  # noqa: PLR0913
+        session_id: str,
+        baseline_run_id: str,
+        candidate_run_id: str,
+        feedback_tags: list[str] | None = None,
+        accepted: bool = False,  # noqa: FBT001, FBT002
+        reviewer_notes: list[str] | None = None,
+        quality_profile: QualityProfileName = "balanced",
+    ) -> dict[str, Any]:
+        """Record one candidate comparison inside an interactive tuning session."""
+        comparison = preview_service.compare_preview_runs(
+            baseline_run_id,
+            candidate_run_id,
+            quality_profile=quality_profile,
+        )
+        summary = build_tuning_session_summary(
+            comparison,
+            feedback_tags=feedback_tags or [],
+            accepted=accepted,
+        )
+        return session_store.record_step(
+            session_id,
+            summary=summary,
+            reviewer_notes=reviewer_notes,
+        ).model_dump(mode="json")
+
+    @mcp.tool()
+    def list_tuning_sessions(
+        limit: int = 20,
+        status: Literal["active", "accepted", "rejected"] | None = None,
+    ) -> dict[str, Any]:
+        """List persisted interactive preview tuning sessions."""
+        return session_store.list_sessions(limit=limit, status=status).model_dump(mode="json")
+
+    @mcp.tool()
+    def export_tuning_session(
+        session_id: str,
+        output_format: Literal["markdown", "json"] = "markdown",
+    ) -> dict[str, Any]:
+        """Export one interactive tuning session as Markdown or JSON."""
+        return session_store.export_session(session_id, output_format=output_format).model_dump(mode="json")
 
     @mcp.tool()
     def rank_preview_candidates(

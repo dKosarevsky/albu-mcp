@@ -121,3 +121,20 @@ scenarios:
     variants_per_image: 1
     seed: 313
     max_side: 128
+
+  - name: interactive_tuning_session_flow
+    task: classification
+    intensity: low
+    targets: ["image"]
+    export_format: json
+    preview: false
+    interactive_tuning_session: true
+    input_count: 3
+    variants_per_image: 1
+    seed: 401
+    max_side: 160
+    quality_profile: classification
+    feedback_tags: ["too_noisy:low"]
+    accepted: true
+    reviewer_notes:
+      - "candidate keeps objects readable"

@@ -24,6 +24,10 @@ _REQUIRED_TOOLS = {
     "validate_pipeline",
     "render_preview_batch",
     "compare_preview_runs",
+    "start_tuning_session",
+    "record_tuning_session_step",
+    "list_tuning_sessions",
+    "export_tuning_session",
     "export_preview_report",
 }
 _REQUIRED_PROMPTS = {

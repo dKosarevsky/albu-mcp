@@ -66,7 +66,10 @@ _WORKFLOWS = {
             "explain_pipeline",
             "render_preview",
             "list_feedback_tags",
+            "start_tuning_session",
             "adjust_pipeline",
+            "record_tuning_session_step",
+            "export_tuning_session",
             "export_pipeline",
         ],
         steps=[
@@ -104,6 +107,14 @@ _WORKFLOWS = {
             ),
             WorkflowStep(
                 order=6,
+                tool="start_tuning_session",
+                instruction="Start an interactive tuning session linked to the baseline preview run.",
+                expected_result=(
+                    "A persistent session id with task, targets, baseline run id, quality profile, and next actions."
+                ),
+            ),
+            WorkflowStep(
+                order=7,
                 tool="adjust_pipeline",
                 instruction=(
                     "Apply structured feedback tags, revalidate, and re-render until the user accepts the preview set."
@@ -111,7 +122,23 @@ _WORKFLOWS = {
                 expected_result="An adjusted pipeline that reduces the observed preview issue.",
             ),
             WorkflowStep(
-                order=7,
+                order=8,
+                tool="record_tuning_session_step",
+                instruction="Record each candidate comparison, feedback tags, reviewer notes, and acceptance state.",
+                expected_result=(
+                    "The tuning session contains an ordered step and points to the accepted candidate when accepted."
+                ),
+            ),
+            WorkflowStep(
+                order=9,
+                tool="export_tuning_session",
+                instruction="Export the interactive session as Markdown for handoff or JSON for automation.",
+                expected_result=(
+                    "A compact session record with baseline, candidates, feedback, score, risk, and final status."
+                ),
+            ),
+            WorkflowStep(
+                order=10,
                 tool="export_pipeline",
                 instruction="Export the accepted pipeline in the requested format with the preview manifest run id.",
                 expected_result="Reproducible Python, JSON, or YAML pipeline content.",

@@ -60,3 +60,18 @@ def test_output_contract_snapshot_includes_preview_request_validation_examples()
     assert outside["valid"] is False
     assert "input_path_missing" in {check["code"] for check in missing["checks"]}
     assert "input_path_outside_allowed_root" in {check["code"] for check in outside["checks"]}
+
+
+def test_output_contract_snapshot_includes_interactive_tuning_session_export() -> None:
+    snapshot = json.loads(_SNAPSHOT_PATH.read_text(encoding="utf-8"))
+
+    assert "export_tuning_session" in snapshot
+    export = snapshot["export_tuning_session"]
+    content = json.loads(export["content"])
+
+    assert export["format"] == "json"
+    assert export["session_id"] == "<session-id>"
+    assert export["status"] == "accepted"
+    assert export["step_count"] == 1
+    assert content["accepted_candidate_run_id"] == "candidate-a"
+    assert content["steps"][0]["step_id"] == "<step-id>"

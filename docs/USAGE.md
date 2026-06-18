@@ -62,10 +62,11 @@ retention limit for long-running MCP hosts.
 15. Call `record_preview_feedback` when the user points to a concrete image and variant, for example
     "example 8 is too noisy".
 16. Call `list_preview_feedback` and reuse `aggregated_feedback_tags` for the next `adjust_pipeline` call.
-17. Call `summarize_tuning_session` to inspect `quality_score`, `quality_risk`, and `export_ready`.
-18. Call `record_tuning_decision` to persist the accepted or rejected candidate.
-19. Call `export_preview_report` for a visual Markdown or HTML handoff that includes matching concrete feedback.
-20. Call `export_tuning_report` for a decision journal handoff, then `export_pipeline` once the preview set is acceptable.
+17. Call `start_tuning_session` when the review will take multiple user feedback turns.
+18. Call `record_tuning_session_step` after each baseline-to-candidate comparison.
+19. Call `record_tuning_decision` for one-off accepted or rejected candidate decisions.
+20. Call `export_preview_report` for a visual Markdown or HTML handoff that includes matching concrete feedback.
+21. Call `export_tuning_session` or `export_tuning_report`, then `export_pipeline` once the preview set is acceptable.
 
 ## Diagnostics
 
@@ -141,6 +142,13 @@ Use `record_tuning_decision` after the user accepts or rejects a candidate. Deci
 `tuning_decisions.json` under the configured artifact root. `list_tuning_decisions` can return newest-first history or
 score-ranked candidates with `ranked=true`, and can restrict output to accepted decisions with `accepted_only=true`.
 Use `export_tuning_report` to render the same journal as Markdown for humans or JSON for automation.
+
+Use `start_tuning_session` when an MCP host is running an interactive loop such as "example 8 is too noisy, try a lighter
+candidate". The session stores the task, targets, baseline run id, quality profile, ordered comparison steps, accepted
+candidate id, and next actions in `tuning_sessions.json` under the artifact root. After rendering each candidate, call
+`record_tuning_session_step` with the baseline id, candidate id, feedback tags, `accepted` state, reviewer notes, and
+quality profile. Use `list_tuning_sessions` to resume active or accepted sessions, and `export_tuning_session` to hand off
+a compact Markdown or JSON session record.
 
 `rank_preview_candidates` accepts one baseline id and several candidate ids:
 

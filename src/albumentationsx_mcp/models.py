@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 ArtifactKind = Literal["image", "manifest", "contact_sheet", "overlay", "overlay_contact_sheet", "report"]
 RiskLevel = Literal["low", "medium", "high"]
@@ -385,6 +385,72 @@ class TuningDecisionReport(StrictModel):
     decision_count: int
     accepted_count: int
     best_candidate_run_id: str | None = None
+
+
+TuningSessionStatus = Literal["active", "accepted", "rejected"]
+
+
+class InteractiveTuningStep(StrictModel):
+    """One persisted step in an interactive preview tuning session."""
+
+    step_id: str
+    created_at: str
+    baseline_run_id: str
+    candidate_run_id: str
+    feedback_tags: list[str] = Field(default_factory=list)
+    accepted: bool = False
+    reviewer_notes: list[str] = Field(default_factory=list)
+    recommended_next_tool: Literal[
+        "list_feedback_tags",
+        "adjust_pipeline",
+        "render_preview_batch",
+        "export_pipeline",
+    ]
+    quality_score: float = Field(ge=0.0, le=100.0)
+    quality_risk: RiskLevel
+    summary: TuningSessionSummary
+
+
+class InteractiveTuningSession(StrictModel):
+    """Persisted multi-step interactive preview tuning session."""
+
+    session_id: str
+    created_at: str
+    updated_at: str
+    task: str
+    targets: list[str] = Field(default_factory=list)
+    quality_profile: QualityProfileName = "balanced"
+    status: TuningSessionStatus = "active"
+    baseline_run_id: str | None = None
+    accepted_candidate_run_id: str | None = None
+    steps: list[InteractiveTuningStep] = Field(default_factory=list)
+    next_actions: list[str] = Field(default_factory=list)
+
+    @computed_field
+    @property
+    def step_count(self) -> int:
+        """Return number of recorded session steps."""
+        return len(self.steps)
+
+
+class InteractiveTuningSessionList(StrictModel):
+    """List response for persisted interactive tuning sessions."""
+
+    sessions: list[InteractiveTuningSession] = Field(default_factory=list)
+    total_count: int
+    active_count: int
+    accepted_count: int
+
+
+class InteractiveTuningSessionExport(StrictModel):
+    """Exported interactive tuning session handoff."""
+
+    format: Literal["markdown", "json"]
+    content: str
+    session_id: str
+    status: TuningSessionStatus
+    step_count: int
+    accepted_candidate_run_id: str | None = None
 
 
 class PreviewReportExport(StrictModel):

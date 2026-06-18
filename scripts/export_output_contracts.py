@@ -32,6 +32,7 @@ from albumentationsx_mcp.preview_validation import PreviewRequestValidator
 from albumentationsx_mcp.recipes import recommend_recipe
 from albumentationsx_mcp.reports import PreviewReportService
 from albumentationsx_mcp.review import PreviewFeedbackStore
+from albumentationsx_mcp.sessions import InteractiveTuningSessionStore
 
 _REPORT_UUID_PATTERN = re.compile(r"preview-report-baseline-[0-9a-f]{32}\.(md|html)")
 
@@ -74,6 +75,7 @@ def build_output_contract_snapshot(root: Path) -> dict[str, Any]:
             **listing.model_dump(mode="json"),
             "feedback": [_normalize_feedback_record(item) for item in listing.feedback],
         },
+        "export_tuning_session": _interactive_tuning_session_export(root),
         "export_preview_report": _normalize_report_export(report.model_dump(mode="json"), root, feedback),
     }
 
@@ -206,6 +208,46 @@ def _decision() -> TuningDecisionRecord:
     )
 
 
+def _interactive_tuning_session_export(root: Path) -> dict[str, Any]:
+    store = InteractiveTuningSessionStore(root / "sessions")
+    session = store.start_session(
+        task="classification",
+        targets=["image"],
+        baseline_run_id="baseline",
+        quality_profile="classification",
+    )
+    store.record_step(
+        session.session_id,
+        summary=_decision().summary,
+        reviewer_notes=["accepted output contract fixture"],
+    )
+    export = store.export_session(session.session_id, output_format="json").model_dump(mode="json")
+    payload = json.loads(export["content"])
+    normalized_payload = _normalize_interactive_tuning_session(payload)
+    return {
+        **export,
+        "session_id": "<session-id>",
+        "content": json.dumps(normalized_payload, indent=2, sort_keys=True),
+    }
+
+
+def _normalize_interactive_tuning_session(payload: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(payload)
+    normalized["session_id"] = "<session-id>"
+    normalized["created_at"] = "<created-at>"
+    normalized["updated_at"] = "<updated-at>"
+    steps = [
+        {
+            **step,
+            "step_id": "<step-id>",
+            "created_at": "<created-at>",
+        }
+        for step in normalized.get("steps", [])
+    ]
+    normalized["steps"] = steps
+    return normalized
+
+
 def _diagnostics_ok(root: Path) -> dict[str, Any]:
     images_root = root / "diagnostics" / "images"
     images_root.mkdir(parents=True)
@@ -319,6 +361,10 @@ def _diagnostics_public_surface() -> PublicSurface:
             "render_preview_batch",
             "compare_preview_runs",
             "summarize_tuning_session",
+            "start_tuning_session",
+            "record_tuning_session_step",
+            "list_tuning_sessions",
+            "export_tuning_session",
             "rank_preview_candidates",
             "score_dataset_preview_candidates",
             "list_quality_profiles",

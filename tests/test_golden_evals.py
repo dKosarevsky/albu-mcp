@@ -35,6 +35,9 @@ def test_golden_eval_assets_are_present() -> None:
     preview_request_scenario = next(
         scenario for scenario in scenarios["scenarios"] if scenario["name"] == "preview_request_troubleshooting"
     )
+    interactive_session_scenario = next(
+        scenario for scenario in scenarios["scenarios"] if scenario["name"] == "interactive_tuning_session_flow"
+    )
 
     assert {scenario["name"] for scenario in scenarios["scenarios"]} == {
         "client_smoke_resource_flow",
@@ -46,6 +49,7 @@ def test_golden_eval_assets_are_present() -> None:
         "preview_quality_tuning_summary",
         "real_sample_preview_smoke",
         "preview_request_troubleshooting",
+        "interactive_tuning_session_flow",
     }
     assert smoke_scenario["client_smoke"] is True
     assert smoke_scenario["smoke_resources"] == [
@@ -64,6 +68,8 @@ def test_golden_eval_assets_are_present() -> None:
     assert real_sample_scenario["input_count"] == 3
     assert real_sample_scenario["compare_preview"] is True
     assert preview_request_scenario["preview_request_troubleshooting"] is True
+    assert interactive_session_scenario["interactive_tuning_session"] is True
+    assert interactive_session_scenario["accepted"] is True
     assert quality_scenario["record_preview_feedback"] is True
     assert quality_scenario["feedback_image_index"] == 7
     assert quality_scenario["assert_preview_report_feedback"] is True
@@ -72,6 +78,7 @@ def test_golden_eval_assets_are_present() -> None:
     assert "_run_first_preview_smoke" in runner_source
     assert "_run_real_sample_smoke" in runner_source
     assert "_run_preview_request_troubleshooting" in runner_source
+    assert "_run_interactive_tuning_session" in runner_source
     assert "run_host_smoke_check" in runner_source
     assert "validate_preview_request" in runner_source
     real_sample_source = runner_source.split("async def _run_real_sample_smoke", maxsplit=1)[1].split(
@@ -131,3 +138,4 @@ def test_golden_eval_runner_executes_scenarios_over_stdio(tmp_path: Path) -> Non
     assert "preview_quality_tuning_summary: ok" in completed.stdout
     assert "real_sample_preview_smoke: ok" in completed.stdout
     assert "preview_request_troubleshooting: ok" in completed.stdout
+    assert "interactive_tuning_session_flow: ok" in completed.stdout

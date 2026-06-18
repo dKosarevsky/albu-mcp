@@ -28,6 +28,9 @@ def test_recommend_recipe_returns_task_aware_workflow(
     assert "render_preview_batch" in recipe.recommended_tools
     assert "rank_preview_candidates" in recipe.recommended_tools
     assert "score_dataset_preview_candidates" in recipe.recommended_tools
+    assert "start_tuning_session" in recipe.recommended_tools
+    assert "record_tuning_session_step" in recipe.recommended_tools
+    assert "export_tuning_session" in recipe.recommended_tools
     assert "export_preview_report" in recipe.recommended_tools
     assert recipe.feedback_tags
     assert recipe.rationale

@@ -506,6 +506,32 @@
       }
     },
     {
+      "description": "Export one interactive tuning session as Markdown or JSON.",
+      "name": "export_tuning_session",
+      "parameters": {
+        "properties": {
+          "output_format": {
+            "default": "markdown",
+            "enum": [
+              "markdown",
+              "json"
+            ],
+            "title": "Output Format",
+            "type": "string"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id"
+        ],
+        "title": "export_tuning_sessionArguments",
+        "type": "object"
+      }
+    },
+    {
       "description": "Return the manifest JSON for one recorded preview run.",
       "name": "get_preview_manifest",
       "parameters": {
@@ -626,6 +652,38 @@
           }
         },
         "title": "list_tuning_decisionsArguments",
+        "type": "object"
+      }
+    },
+    {
+      "description": "List persisted interactive preview tuning sessions.",
+      "name": "list_tuning_sessions",
+      "parameters": {
+        "properties": {
+          "limit": {
+            "default": 20,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "active",
+                  "accepted",
+                  "rejected"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Status"
+          }
+        },
+        "title": "list_tuning_sessionsArguments",
         "type": "object"
       }
     },
@@ -905,6 +963,80 @@
       }
     },
     {
+      "description": "Record one candidate comparison inside an interactive tuning session.",
+      "name": "record_tuning_session_step",
+      "parameters": {
+        "properties": {
+          "accepted": {
+            "default": false,
+            "title": "Accepted",
+            "type": "boolean"
+          },
+          "baseline_run_id": {
+            "title": "Baseline Run Id",
+            "type": "string"
+          },
+          "candidate_run_id": {
+            "title": "Candidate Run Id",
+            "type": "string"
+          },
+          "feedback_tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Feedback Tags"
+          },
+          "quality_profile": {
+            "default": "balanced",
+            "enum": [
+              "balanced",
+              "classification",
+              "detection",
+              "segmentation",
+              "ocr"
+            ],
+            "title": "Quality Profile",
+            "type": "string"
+          },
+          "reviewer_notes": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Reviewer Notes"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "baseline_run_id",
+          "candidate_run_id"
+        ],
+        "title": "record_tuning_session_stepArguments",
+        "type": "object"
+      }
+    },
+    {
       "description": "Render deterministic preview artifacts for local input images.",
       "name": "render_preview",
       "parameters": {
@@ -1111,6 +1243,62 @@
           }
         },
         "title": "search_transformsArguments",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Start a persistent multi-step preview tuning session.",
+      "name": "start_tuning_session",
+      "parameters": {
+        "properties": {
+          "baseline_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Baseline Run Id"
+          },
+          "quality_profile": {
+            "default": "balanced",
+            "enum": [
+              "balanced",
+              "classification",
+              "detection",
+              "segmentation",
+              "ocr"
+            ],
+            "title": "Quality Profile",
+            "type": "string"
+          },
+          "targets": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Targets"
+          },
+          "task": {
+            "title": "Task",
+            "type": "string"
+          }
+        },
+        "required": [
+          "task"
+        ],
+        "title": "start_tuning_sessionArguments",
         "type": "object"
       }
     },

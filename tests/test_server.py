@@ -26,6 +26,10 @@ def test_server_exposes_documented_tool_names() -> None:
         "render_preview_batch",
         "compare_preview_runs",
         "summarize_tuning_session",
+        "start_tuning_session",
+        "record_tuning_session_step",
+        "list_tuning_sessions",
+        "export_tuning_session",
         "rank_preview_candidates",
         "score_dataset_preview_candidates",
         "list_quality_profiles",
@@ -90,27 +94,35 @@ def test_server_exposes_agent_workflow_resources() -> None:
     assert "record_preview_feedback" in review_loop_example
     assert "export_preview_report" in report_handoff_example
     assert "adjust_pipeline" in preview_tuning
-    assert "workflow_resources" in capabilities
-    assert "compare_preview_runs_for_feedback" in capabilities
-    assert "run_first_preview_review" in capabilities
-    assert "summarize_tuning_session" in capabilities
-    assert "rank_preview_candidates" in capabilities
-    assert "score_dataset_preview_candidates" in capabilities
-    assert "list_quality_profiles" in capabilities
-    assert "recommend_recipe" in capabilities
-    assert "record_preview_feedback" in capabilities
-    assert "list_preview_feedback" in capabilities
-    assert "record_tuning_decision" in capabilities
-    assert "export_tuning_report" in capabilities
-    assert "export_preview_report" in capabilities
-    assert "diagnose_environment" in capabilities
-    assert "run_host_smoke_check" in capabilities
-    assert "validate_preview_request" in capabilities
-    assert "albumentationsx://diagnostics/guide" in capabilities
-    assert "albumentationsx://recipes/catalog" in capabilities
-    assert "albumentationsx://examples/client-smoke" in capabilities
-    assert "albumentationsx://examples/first-preview" in capabilities
-    assert "albumentationsx://examples/diagnostics" in capabilities
-    assert "albumentationsx://examples/review-loop" in capabilities
-    assert "albumentationsx://examples/report-handoff" in capabilities
-    assert "albumentationsx://workflows/task-profiles" in capabilities
+    expected_capability_terms = {
+        "workflow_resources",
+        "compare_preview_runs_for_feedback",
+        "run_first_preview_review",
+        "summarize_tuning_session",
+        "start_tuning_session",
+        "record_tuning_session_step",
+        "list_tuning_sessions",
+        "export_tuning_session",
+        "rank_preview_candidates",
+        "score_dataset_preview_candidates",
+        "list_quality_profiles",
+        "recommend_recipe",
+        "record_preview_feedback",
+        "list_preview_feedback",
+        "record_tuning_decision",
+        "export_tuning_report",
+        "export_preview_report",
+        "diagnose_environment",
+        "run_host_smoke_check",
+        "validate_preview_request",
+        "albumentationsx://diagnostics/guide",
+        "albumentationsx://recipes/catalog",
+        "albumentationsx://examples/client-smoke",
+        "albumentationsx://examples/first-preview",
+        "albumentationsx://examples/diagnostics",
+        "albumentationsx://examples/review-loop",
+        "albumentationsx://examples/report-handoff",
+        "albumentationsx://workflows/task-profiles",
+    }
+    for term in expected_capability_terms:
+        assert term in capabilities

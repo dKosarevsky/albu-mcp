@@ -27,7 +27,11 @@ For every host, use a small local image under `--allowed-root` and a temporary `
 7. Call `validate_preview_request`.
 8. Call `render_preview_batch` only when validation returns `valid: true`.
 9. Open the generated contact sheet and manifest.
-10. Call `adjust_pipeline`, `compare_preview_runs`, and `export_pipeline` for a complete loop.
+10. Call `adjust_pipeline` and render a candidate from the same input set.
+11. Call `compare_preview_runs`.
+12. Call `start_tuning_session` and `record_tuning_session_step`.
+13. Call `export_tuning_session` and confirm the accepted candidate appears in the exported content.
+14. Call `export_pipeline` for a complete loop.
 
 ## Host-specific checks
 
