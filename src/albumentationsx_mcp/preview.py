@@ -63,6 +63,9 @@ class PathPolicy:
         if not self._is_allowed(resolved):
             msg = f"Input path is outside allowed roots: {resolved}"
             raise ValueError(msg)
+        if not resolved.is_file():
+            msg = f"Input path is not a file: {resolved}"
+            raise ValueError(msg)
         return resolved
 
     def _is_allowed(self, path: Path) -> bool:
@@ -182,6 +185,14 @@ class PreviewService:
     def render_preview(self, request: PreviewRequest) -> PreviewResult:
         """Apply the pipeline to local images and write preview artifacts."""
         run_id, run_dir = self.artifact_store.create_run_dir()
+        try:
+            return self._render_preview_in_run_dir(request, run_id, run_dir)
+        except Exception:
+            shutil.rmtree(run_dir, ignore_errors=True)
+            raise
+
+    def _render_preview_in_run_dir(self, request: PreviewRequest, run_id: str, run_dir: Path) -> PreviewResult:
+        """Render a preview into an already allocated run directory."""
         artifacts: list[ArtifactRef] = []
         image_paths: list[Path] = []
         overlay_paths: list[Path] = []

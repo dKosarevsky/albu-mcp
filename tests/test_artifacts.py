@@ -60,6 +60,28 @@ def test_preview_rendering_records_queryable_run_index(tmp_path: Path) -> None:
     assert any(artifact["kind"] == "contact_sheet" for artifact in manifest["artifacts"])
 
 
+def test_preview_rendering_cleans_up_unindexed_run_dir_on_path_failure(tmp_path: Path) -> None:
+    allowed = tmp_path / "allowed"
+    outside = tmp_path / "outside" / "input.png"
+    allowed.mkdir()
+    outside.parent.mkdir(parents=True)
+    Image.fromarray(np.full((16, 16, 3), 128, dtype=np.uint8)).save(outside)
+    store = ArtifactStore(tmp_path / "artifacts")
+    service = PreviewService(IdentityPipelineService(), PathPolicy([allowed]), store)
+
+    with pytest.raises(ValueError, match="outside allowed roots"):
+        service.render_preview(
+            PreviewRequest(
+                input_paths=[outside],
+                pipeline=ComposeSpec(transforms=[TransformSpec(name="HorizontalFlip", p=1.0)]),
+            ),
+        )
+
+    assert store.list_runs() == []
+    expected_artifacts = ["index.json"] if store.index_path.exists() else []
+    assert [path.name for path in store.root.iterdir()] == expected_artifacts
+
+
 def test_artifact_store_rejects_manifest_path_traversal(tmp_path: Path) -> None:
     store = ArtifactStore(tmp_path / "artifacts")
 
