@@ -340,6 +340,7 @@ async def _run_interactive_tuning_session(
     )
     if candidate["run_id"] not in markdown_export["content"]:
         raise AssertionError(f"{scenario['name']} markdown export missed candidate: {markdown_export}")
+    _assert_session_export_artifact(scenario, markdown_export, expected_mime_type="text/markdown")
     json_export = await _call_tool_json(
         session,
         "export_tuning_session",
@@ -348,6 +349,7 @@ async def _run_interactive_tuning_session(
     export_payload = json.loads(json_export["content"])
     if export_payload["accepted_candidate_run_id"] != candidate["run_id"] or export_payload["step_count"] != 1:
         raise AssertionError(f"{scenario['name']} json export returned wrong session: {json_export}")
+    _assert_session_export_artifact(scenario, json_export, expected_mime_type="application/json")
 
     if scenario.get("export_session_preview_report"):
         preview_report = await _call_tool_json(
@@ -366,9 +368,36 @@ async def _run_interactive_tuning_session(
             raise AssertionError(f"{scenario['name']} preview report missed session timeline: {preview_report}")
         if tuning_session["session_id"] not in preview_report["content"]:
             raise AssertionError(f"{scenario['name']} preview report missed session id: {preview_report}")
+        _assert_preview_report_session_artifact(scenario, preview_report)
 
     await _delete_preview_run(session, scenario, candidate["run_id"])
     await _delete_preview_run(session, scenario, baseline["run_id"])
+
+
+def _assert_session_export_artifact(
+    scenario: dict[str, Any],
+    export: dict[str, Any],
+    *,
+    expected_mime_type: str,
+) -> None:
+    artifact = export.get("artifact")
+    if not isinstance(artifact, dict):
+        raise TypeError(f"{scenario['name']} export missed artifact metadata: {export}")
+    if artifact.get("mime_type") != expected_mime_type:
+        raise AssertionError(f"{scenario['name']} export returned wrong artifact MIME type: {export}")
+    if "artifact://tuning-sessions/" not in str(artifact.get("uri", "")):
+        raise AssertionError(f"{scenario['name']} export returned wrong artifact URI: {export}")
+
+
+def _assert_preview_report_session_artifact(
+    scenario: dict[str, Any],
+    preview_report: dict[str, Any],
+) -> None:
+    session_artifacts = preview_report.get("tuning_session_artifacts", [])
+    if not session_artifacts:
+        raise AssertionError(f"{scenario['name']} preview report missed session artifacts: {preview_report}")
+    if session_artifacts[0]["uri"] not in preview_report["content"]:
+        raise AssertionError(f"{scenario['name']} preview report did not link session artifact: {preview_report}")
 
 
 async def _run_preview_request_troubleshooting(

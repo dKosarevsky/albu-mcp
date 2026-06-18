@@ -73,6 +73,8 @@ def test_output_contract_snapshot_includes_interactive_tuning_session_export() -
     assert export["session_id"] == "<session-id>"
     assert export["status"] == "accepted"
     assert export["step_count"] == 1
+    assert export["artifact"]["uri"] == "artifact://tuning-sessions/tuning-session-<session-id>.json"
+    assert export["artifact"]["mime_type"] == "application/json"
     assert content["accepted_candidate_run_id"] == "candidate-a"
     assert content["steps"][0]["step_id"] == "<step-id>"
 
@@ -84,3 +86,24 @@ def test_output_contract_snapshot_includes_interactive_tuning_session_lifecycle(
     assert snapshot["archive_tuning_session"]["status"] == "archived"
     assert snapshot["cleanup_tuning_sessions"]["deleted_count"] == 1
     assert snapshot["cleanup_tuning_sessions"]["protected_active_count"] == 1
+
+
+def test_output_contract_snapshot_links_preview_report_session_artifacts() -> None:
+    snapshot = json.loads(_SNAPSHOT_PATH.read_text(encoding="utf-8"))
+
+    report = snapshot["export_preview_report"]
+
+    assert report["tuning_session_artifacts"] == [
+        {
+            "kind": "report",
+            "mime_type": "text/markdown",
+            "path": "<artifact-path>/tuning-session-<session-id>.md",
+            "sha256": "<sha256>",
+            "size_bytes": "<size-bytes>",
+            "uri": "artifact://tuning-sessions/tuning-session-<session-id>.md",
+        }
+    ]
+    assert (
+        "[tuning-session-<session-id>.md](artifact://tuning-sessions/tuning-session-<session-id>.md)"
+        in report["content"]
+    )

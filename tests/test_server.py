@@ -1,6 +1,10 @@
+from pathlib import Path
 from typing import Any, cast
 
+from albumentationsx_mcp import server as server_module
+from albumentationsx_mcp.models import TuningSessionSummary
 from albumentationsx_mcp.server import create_mcp_server
+from albumentationsx_mcp.sessions import InteractiveTuningSessionStore
 
 
 def test_create_mcp_server_registers_fastmcp_instance() -> None:
@@ -132,3 +136,33 @@ def test_server_exposes_agent_workflow_resources() -> None:
     }
     for term in expected_capability_terms:
         assert term in capabilities
+
+
+def test_server_exports_matching_tuning_session_artifacts(tmp_path: Path) -> None:
+    store = InteractiveTuningSessionStore(tmp_path)
+    session = store.start_session(task="classification", targets=["image"], baseline_run_id="baseline-a")
+    store.record_step(
+        session.session_id,
+        summary=TuningSessionSummary(
+            baseline_run_id="baseline-a",
+            candidate_run_id="candidate-a",
+            feedback_tags=["too_noisy:low"],
+            accepted=True,
+            export_ready=True,
+            recommended_next_tool="export_pipeline",
+            rationale="accepted",
+            quality_score=96.0,
+            quality_risk="low",
+        ),
+        reviewer_notes=["candidate keeps object readable"],
+    )
+
+    artifacts = server_module._export_matching_tuning_session_artifacts(
+        store,
+        baseline_run_id="baseline-a",
+        candidate_run_ids={"candidate-a"},
+    )
+
+    assert len(artifacts) == 1
+    assert artifacts[0].uri.startswith("artifact://tuning-sessions/")
+    assert artifacts[0].mime_type == "text/markdown"

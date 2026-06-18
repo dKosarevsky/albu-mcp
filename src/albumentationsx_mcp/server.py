@@ -16,6 +16,7 @@ from albumentationsx_mcp.dataset import score_dataset_preview_candidates as scor
 from albumentationsx_mcp.diagnostics import DiagnosticsService, PublicSurface, build_diagnostics_guide
 from albumentationsx_mcp.host_smoke import build_host_smoke_report
 from albumentationsx_mcp.models import (
+    ArtifactRef,
     ComposeSpec,
     InteractiveTuningSession,
     PreviewFeedbackRecord,
@@ -687,6 +688,11 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
             accepted_candidate_ids=set(accepted_candidate_ids or []),
             quality_profile=quality_profile,
         )
+        tuning_sessions = _matching_tuning_sessions(
+            session_store,
+            baseline_run_id=baseline_run_id,
+            candidate_run_ids=set(bounded_candidate_ids),
+        )
         return report_service.export_report(
             score,
             baseline_manifest=preview_service.artifact_store.read_manifest(baseline_run_id),
@@ -704,11 +710,8 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
                 feedback_store,
                 run_ids={baseline_run_id, *bounded_candidate_ids},
             ),
-            tuning_sessions=_matching_tuning_sessions(
-                session_store,
-                baseline_run_id=baseline_run_id,
-                candidate_run_ids=set(bounded_candidate_ids),
-            ),
+            tuning_sessions=tuning_sessions,
+            tuning_session_artifacts=_export_tuning_session_artifacts(session_store, tuning_sessions),
             output_format=output_format,
         ).model_dump(mode="json")
 
@@ -813,6 +816,29 @@ def _matching_tuning_sessions(
             or any(step.candidate_run_id in candidate_run_ids for step in session.steps)
         )
     ]
+
+
+def _export_matching_tuning_session_artifacts(
+    session_store: InteractiveTuningSessionStore,
+    *,
+    baseline_run_id: str,
+    candidate_run_ids: set[str],
+) -> list[ArtifactRef]:
+    return _export_tuning_session_artifacts(
+        session_store,
+        _matching_tuning_sessions(
+            session_store,
+            baseline_run_id=baseline_run_id,
+            candidate_run_ids=candidate_run_ids,
+        ),
+    )
+
+
+def _export_tuning_session_artifacts(
+    session_store: InteractiveTuningSessionStore,
+    sessions: list[InteractiveTuningSession],
+) -> list[ArtifactRef]:
+    return [session_store.export_session(session.session_id, output_format="markdown").artifact for session in sessions]
 
 
 def _validate_feedback_target(manifest: dict[str, Any], *, image_index: int, variant_index: int) -> None:

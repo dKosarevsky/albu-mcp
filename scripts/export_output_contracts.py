@@ -35,6 +35,7 @@ from albumentationsx_mcp.review import PreviewFeedbackStore
 from albumentationsx_mcp.sessions import InteractiveTuningSessionStore
 
 _REPORT_UUID_PATTERN = re.compile(r"preview-report-baseline-[0-9a-f]{32}\.(md|html)")
+_SESSION_EXPORT_PATTERN = re.compile(r"tuning-session-[0-9a-f]{32}\.(md|json)")
 _SESSION_HEADING_PATTERN = re.compile(r"(?m)^### [0-9a-f]{32}$")
 
 
@@ -60,6 +61,7 @@ def build_output_contract_snapshot(root: Path) -> dict[str, Any]:
         decisions=[_decision()],
         feedback_records=[feedback],
         tuning_sessions=session_lifecycle["report_sessions"],
+        tuning_session_artifacts=session_lifecycle["report_artifacts"],
         output_format="markdown",
     )
     return {
@@ -232,6 +234,7 @@ def _interactive_tuning_session_export(root: Path) -> dict[str, Any]:
     normalized_payload = _normalize_interactive_tuning_session(payload)
     return {
         **export,
+        "artifact": _normalize_session_artifact(export["artifact"]),
         "session_id": "<session-id>",
         "content": json.dumps(normalized_payload, indent=2, sort_keys=True),
     }
@@ -271,6 +274,7 @@ def _interactive_tuning_session_lifecycle(root: Path) -> dict[str, Any]:
         "archived": _normalize_interactive_tuning_session(archived.model_dump(mode="json")),
         "cleanup": cleanup,
         "report_sessions": [closed],
+        "report_artifacts": [lifecycle_store.export_session(closed.session_id, output_format="markdown").artifact],
     }
 
 
@@ -484,6 +488,7 @@ def _normalize_report_export(payload: dict[str, Any], root: Path, feedback: Prev
     normalized = _normalize_paths(payload, root)
     normalized["content"] = normalized["content"].replace(feedback.feedback_id, "<feedback-id>")
     normalized["content"] = _REPORT_UUID_PATTERN.sub(r"preview-report-baseline.<\1>", normalized["content"])
+    normalized["content"] = _SESSION_EXPORT_PATTERN.sub(r"tuning-session-<session-id>.\1", normalized["content"])
     normalized["content"] = _SESSION_HEADING_PATTERN.sub("### <session-id>", normalized["content"])
     normalized["artifact"] = {
         **normalized["artifact"],
@@ -492,6 +497,19 @@ def _normalize_report_export(payload: dict[str, Any], root: Path, feedback: Prev
         "sha256": "<sha256>",
         "size_bytes": "<size-bytes>",
     }
+    normalized["tuning_session_artifacts"] = [
+        _normalize_session_artifact(artifact) for artifact in normalized["tuning_session_artifacts"]
+    ]
+    return normalized
+
+
+def _normalize_session_artifact(artifact: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(artifact)
+    suffix = Path(normalized["path"]).suffix.lstrip(".") or "md"
+    normalized["uri"] = f"artifact://tuning-sessions/tuning-session-<session-id>.{suffix}"
+    normalized["path"] = f"<artifact-path>/tuning-session-<session-id>.{suffix}"
+    normalized["sha256"] = "<sha256>"
+    normalized["size_bytes"] = "<size-bytes>"
     return normalized
 
 

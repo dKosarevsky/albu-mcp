@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
+import re
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal
 
 from albumentationsx_mcp.models import (
+    ArtifactRef,
     InteractiveTuningSession,
     InteractiveTuningSessionCleanup,
     InteractiveTuningSessionExport,
@@ -20,6 +23,15 @@ from albumentationsx_mcp.models import (
 )
 
 _SESSIONS_FILE = "tuning_sessions.json"
+_SESSION_EXPORT_MIME_TYPES: dict[Literal["markdown", "json"], str] = {
+    "markdown": "text/markdown",
+    "json": "application/json",
+}
+_SESSION_EXPORT_SUFFIXES: dict[Literal["markdown", "json"], str] = {
+    "markdown": "md",
+    "json": "json",
+}
+_SAFE_NAME_PATTERN = re.compile(r"[^a-zA-Z0-9_.-]+")
 
 
 class InteractiveTuningSessionStore:
@@ -29,6 +41,8 @@ class InteractiveTuningSessionStore:
         self.root = root.resolve()
         self.root.mkdir(parents=True, exist_ok=True)
         self.index_path = self.root / _SESSIONS_FILE
+        self.export_root = self.root / "tuning-sessions"
+        self.export_root.mkdir(parents=True, exist_ok=True)
 
     def start_session(
         self,
@@ -211,13 +225,32 @@ class InteractiveTuningSessionStore:
             )
         else:
             content = _render_markdown_session(session)
+        path = self._export_path(session.session_id, output_format)
+        path.write_text(content, encoding="utf-8")
         return InteractiveTuningSessionExport(
             format=output_format,
             content=content,
+            artifact=self._artifact_ref(path, mime_type=_SESSION_EXPORT_MIME_TYPES[output_format]),
             session_id=session.session_id,
             status=session.status,
             step_count=session.step_count,
             accepted_candidate_run_id=session.accepted_candidate_run_id,
+        )
+
+    def _export_path(self, session_id: str, output_format: Literal["markdown", "json"]) -> Path:
+        safe_session = _safe_name(session_id or "session")
+        suffix = _SESSION_EXPORT_SUFFIXES[output_format]
+        return self.export_root / f"tuning-session-{safe_session}.{suffix}"
+
+    def _artifact_ref(self, path: Path, *, mime_type: str) -> ArtifactRef:
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        return ArtifactRef(
+            kind="report",
+            uri=f"artifact://{path.relative_to(self.root)}",
+            path=str(path),
+            mime_type=mime_type,
+            sha256=digest,
+            size_bytes=path.stat().st_size,
         )
 
     def _read_sessions(self) -> list[InteractiveTuningSession]:
@@ -255,6 +288,11 @@ def _normalize_targets(targets: list[str]) -> list[str]:
             normalized.append(clean_target)
             seen.add(clean_target)
     return normalized or ["image"]
+
+
+def _safe_name(value: str) -> str:
+    safe = _SAFE_NAME_PATTERN.sub("-", value).strip("-")
+    return safe or "session"
 
 
 def _next_actions(summary: TuningSessionSummary) -> list[str]:

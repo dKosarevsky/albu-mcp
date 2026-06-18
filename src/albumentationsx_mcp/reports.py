@@ -50,12 +50,14 @@ class PreviewReportService:
         decisions: list[TuningDecisionRecord],
         feedback_records: list[PreviewFeedbackRecord] | None = None,
         tuning_sessions: list[InteractiveTuningSession] | None = None,
+        tuning_session_artifacts: list[ArtifactRef] | None = None,
         output_format: ReportFormat = "markdown",
     ) -> PreviewReportExport:
         """Render a Markdown or HTML preview report and return its artifact metadata."""
         if output_format not in _REPORT_MIME_TYPES:
             msg = f"Unsupported preview report format: {output_format}"
             raise ValueError(msg)
+        session_artifacts = tuning_session_artifacts or []
 
         content = (
             _render_markdown_report(
@@ -65,6 +67,7 @@ class PreviewReportService:
                 decisions,
                 feedback_records or [],
                 tuning_sessions or [],
+                session_artifacts,
             )
             if output_format == "markdown"
             else _render_html_report(
@@ -74,6 +77,7 @@ class PreviewReportService:
                 decisions,
                 feedback_records or [],
                 tuning_sessions or [],
+                session_artifacts,
             )
         )
         path = self._report_path(score.baseline_run_id, output_format)
@@ -82,6 +86,7 @@ class PreviewReportService:
             format=output_format,
             content=content,
             artifact=self._artifact_ref(path, mime_type=_REPORT_MIME_TYPES[output_format]),
+            tuning_session_artifacts=session_artifacts,
             baseline_run_id=score.baseline_run_id,
             candidate_count=score.candidate_count,
             best_candidate_run_id=score.best_candidate_run_id,
@@ -111,6 +116,7 @@ def _render_markdown_report(  # noqa: PLR0913
     decisions: list[TuningDecisionRecord],
     feedback_records: list[PreviewFeedbackRecord],
     tuning_sessions: list[InteractiveTuningSession],
+    tuning_session_artifacts: list[ArtifactRef],
 ) -> str:
     candidate_contact_sheets = _contact_sheets_by_run_id(candidate_manifests)
     lines = [
@@ -163,7 +169,7 @@ def _render_markdown_report(  # noqa: PLR0913
             "",
             "## Interactive Tuning Sessions",
             "",
-            *_markdown_tuning_sessions(tuning_sessions),
+            *_markdown_tuning_sessions(tuning_sessions, tuning_session_artifacts),
             "",
             "## Concrete Preview Feedback",
             "",
@@ -181,6 +187,7 @@ def _render_html_report(  # noqa: PLR0913
     decisions: list[TuningDecisionRecord],
     feedback_records: list[PreviewFeedbackRecord],
     tuning_sessions: list[InteractiveTuningSession],
+    tuning_session_artifacts: list[ArtifactRef],
 ) -> str:
     candidate_contact_sheets = _contact_sheets_by_run_id(candidate_manifests)
     rows = []
@@ -235,7 +242,7 @@ def _render_html_report(  # noqa: PLR0913
             "<h2>Tuning Decisions</h2>",
             _html_decisions(decisions),
             "<h2>Interactive Tuning Sessions</h2>",
-            _html_tuning_sessions(tuning_sessions),
+            _html_tuning_sessions(tuning_sessions, tuning_session_artifacts),
             "<h2>Concrete Preview Feedback</h2>",
             _html_feedback(feedback_records),
             "</body></html>",
@@ -352,11 +359,16 @@ def _markdown_feedback(feedback_records: list[PreviewFeedbackRecord]) -> list[st
     return lines
 
 
-def _markdown_tuning_sessions(sessions: list[InteractiveTuningSession]) -> list[str]:
+def _markdown_tuning_sessions(
+    sessions: list[InteractiveTuningSession],
+    artifacts: list[ArtifactRef],
+) -> list[str]:
     if not sessions:
         return ["No interactive tuning sessions matched this report."]
+    artifacts_by_session = _artifacts_by_session_id(artifacts)
     lines: list[str] = []
     for session in sessions:
+        artifact = artifacts_by_session.get(session.session_id)
         lines.extend(
             [
                 f"### {session.session_id}",
@@ -365,6 +377,7 @@ def _markdown_tuning_sessions(sessions: list[InteractiveTuningSession]) -> list[
                 f"- Task: {session.task}",
                 f"- Accepted candidate: {session.accepted_candidate_run_id or 'none'}",
                 f"- Status note: {session.status_note or 'none'}",
+                f"- Report artifact: {_markdown_artifact_link(artifact) if artifact else 'none'}",
                 "",
                 "| Step | Candidate | Accepted | Score | Risk | Feedback | Notes |",
                 "| ---: | --- | --- | ---: | --- | --- | --- |",
@@ -479,11 +492,13 @@ def _html_feedback(feedback_records: list[PreviewFeedbackRecord]) -> str:
     )
 
 
-def _html_tuning_sessions(sessions: list[InteractiveTuningSession]) -> str:
+def _html_tuning_sessions(sessions: list[InteractiveTuningSession], artifacts: list[ArtifactRef]) -> str:
     if not sessions:
         return "<p>No interactive tuning sessions matched this report.</p>"
+    artifacts_by_session = _artifacts_by_session_id(artifacts)
     rendered_sessions = []
     for session in sessions:
+        artifact = artifacts_by_session.get(session.session_id)
         rows = [
             "<tr>"
             f"<td>{index}</td>"
@@ -504,6 +519,7 @@ def _html_tuning_sessions(sessions: list[InteractiveTuningSession]) -> str:
             f"<li>Task: {html.escape(session.task)}</li>"
             f"<li>Accepted candidate: {html.escape(session.accepted_candidate_run_id or 'none')}</li>"
             f"<li>Status note: {html.escape(session.status_note or 'none')}</li>"
+            f"<li>Report artifact: {_html_artifact_link(artifact) if artifact else 'none'}</li>"
             "</ul>"
             "<table><thead><tr><th>Step</th><th>Candidate</th><th>Accepted</th>"
             "<th>Score</th><th>Risk</th><th>Feedback</th><th>Notes</th></tr></thead>"
@@ -511,6 +527,26 @@ def _html_tuning_sessions(sessions: list[InteractiveTuningSession]) -> str:
             "</section>"
         )
     return "".join(rendered_sessions)
+
+
+def _artifacts_by_session_id(artifacts: list[ArtifactRef]) -> dict[str, ArtifactRef]:
+    result: dict[str, ArtifactRef] = {}
+    for artifact in artifacts:
+        for candidate in {Path(artifact.path).stem, Path(artifact.uri.removeprefix("artifact://")).stem}:
+            session_id = candidate.removeprefix("tuning-session-")
+            if session_id:
+                result[session_id] = artifact
+    return result
+
+
+def _markdown_artifact_link(artifact: ArtifactRef) -> str:
+    return f"[{Path(artifact.path).name}]({artifact.uri})"
+
+
+def _html_artifact_link(artifact: ArtifactRef) -> str:
+    href = html.escape(artifact.uri, quote=True)
+    label = html.escape(Path(artifact.path).name)
+    return f'<a href="{href}">{label}</a>'
 
 
 def _file_uri(path: str) -> str:

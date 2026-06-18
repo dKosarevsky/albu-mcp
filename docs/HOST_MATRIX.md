@@ -1,7 +1,8 @@
 # MCP Host Acceptance Matrix
 
-Use this matrix after releases that change tools, resources, prompts, package metadata, or local preview behavior. Keep
-the manual run small: one local image under `--allowed-root`, one temporary `--artifact-root`, and the PyPI command from
+Use this matrix after releases that change tools, resources, prompts, package metadata, or local preview behavior.
+Automated stdio, snapshot, release, PyPI, and MCP Registry checks run in CI. Manual app-level host checks are intentionally
+small: one local image under `--allowed-root`, one temporary `--artifact-root`, and the PyPI command from
 `docs/INSTALL.md`.
 
 | Host | Connection check | Preview check | Session check | Notes |
@@ -18,4 +19,11 @@ Minimum release acceptance:
 3. `validate_preview_request` rejects missing and outside-root paths before rendering.
 4. `export_preview_report` includes contact sheets, concrete feedback, and interactive tuning session timelines when
    matching sessions exist.
-5. `export_tuning_session` returns Markdown or JSON suitable for handoff.
+5. `export_preview_report` links exported Markdown tuning session artifacts when matching sessions exist.
+6. `export_tuning_session` returns Markdown or JSON content plus artifact metadata suitable for handoff.
+
+Recorded coverage:
+
+- Automated: pytest, golden stdio evals, output contract snapshots, release build, PyPI publish check, and MCP Registry
+  metadata publish check.
+- Manual host UI: pending per host unless a dated run note is added below this matrix.

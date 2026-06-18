@@ -88,9 +88,19 @@ def test_interactive_tuning_session_store_exports_markdown_and_json(tmp_path: Pa
     payload = json.loads(json_report.content)
 
     assert markdown_report.format == "markdown"
+    assert markdown_report.artifact is not None
+    markdown_artifact_path = Path(markdown_report.artifact.path)
+    assert markdown_report.artifact.uri.startswith("artifact://tuning-sessions/")
+    assert markdown_report.artifact.mime_type == "text/markdown"
+    assert markdown_artifact_path.parent.name == "tuning-sessions"
+    assert markdown_artifact_path.suffix == ".md"
+    assert markdown_artifact_path.read_text(encoding="utf-8") == markdown_report.content
     assert "# Interactive Tuning Session" in markdown_report.content
     assert "candidate-good" in markdown_report.content
     assert markdown_report.step_count == 2
+    assert json_report.artifact is not None
+    assert json_report.artifact.mime_type == "application/json"
+    assert Path(json_report.artifact.path).read_text(encoding="utf-8") == json_report.content
     assert payload["accepted_candidate_run_id"] == "candidate-good"
     assert payload["step_count"] == 2
 

@@ -461,6 +461,7 @@ class InteractiveTuningSessionExport(StrictModel):
 
     format: Literal["markdown", "json"]
     content: str
+    artifact: ArtifactRef
     session_id: str
     status: TuningSessionStatus
     step_count: int
@@ -473,6 +474,7 @@ class PreviewReportExport(StrictModel):
     format: Literal["markdown", "html"]
     content: str
     artifact: ArtifactRef
+    tuning_session_artifacts: list[ArtifactRef] = Field(default_factory=list)
     baseline_run_id: str
     candidate_count: int
     best_candidate_run_id: str | None = None

@@ -2,6 +2,7 @@ from pathlib import Path
 
 from albumentationsx_mcp.dataset import score_dataset_preview_candidates
 from albumentationsx_mcp.models import (
+    ArtifactRef,
     ImageQualityAggregate,
     InteractiveTuningSession,
     InteractiveTuningStep,
@@ -72,6 +73,7 @@ def test_preview_report_service_exports_markdown_with_interactive_session_timeli
     contact_sheet = tmp_path / "candidate-a.png"
     contact_sheet.write_bytes(b"candidate")
     session = _session("session-a", "candidate-a")
+    session_artifact = _artifact(tmp_path, "session-a.md")
 
     report = PreviewReportService(tmp_path / "artifacts").export_report(
         _score("candidate-a"),
@@ -79,6 +81,7 @@ def test_preview_report_service_exports_markdown_with_interactive_session_timeli
         candidate_manifests=[_manifest("candidate-a", contact_sheet)],
         decisions=[],
         tuning_sessions=[session],
+        tuning_session_artifacts=[session_artifact],
         output_format="markdown",
     )
 
@@ -86,6 +89,8 @@ def test_preview_report_service_exports_markdown_with_interactive_session_timeli
     assert "session-a" in report.content
     assert "candidate-a" in report.content
     assert "candidate keeps objects readable" in report.content
+    assert report.tuning_session_artifacts == [session_artifact]
+    assert "[session-a.md](artifact://tuning-sessions/session-a.md)" in report.content
 
 
 def test_preview_report_service_exports_html_with_escaped_dynamic_text(tmp_path: Path) -> None:
@@ -133,6 +138,7 @@ def test_preview_report_service_exports_html_with_escaped_interactive_session_ti
     contact_sheet = tmp_path / "candidate.png"
     contact_sheet.write_bytes(b"candidate")
     session = _session("session-<script>", "candidate-<script>")
+    session_artifact = _artifact(tmp_path, "session-<script>.md")
 
     report = PreviewReportService(tmp_path / "artifacts").export_report(
         _score("candidate-<script>"),
@@ -140,12 +146,14 @@ def test_preview_report_service_exports_html_with_escaped_interactive_session_ti
         candidate_manifests=[_manifest("candidate-<script>", contact_sheet)],
         decisions=[],
         tuning_sessions=[session],
+        tuning_session_artifacts=[session_artifact],
         output_format="html",
     )
 
     assert "<h2>Interactive Tuning Sessions</h2>" in report.content
     assert "session-&lt;script&gt;" in report.content
     assert "candidate-&lt;script&gt;" in report.content
+    assert 'href="artifact://tuning-sessions/session-&lt;script&gt;.md"' in report.content
     assert "<script>" not in report.content
 
 
@@ -279,4 +287,17 @@ def _session(session_id: str, candidate_run_id: str) -> InteractiveTuningSession
                 summary=summary,
             )
         ],
+    )
+
+
+def _artifact(tmp_path: Path, name: str) -> ArtifactRef:
+    path = tmp_path / name
+    path.write_text("session report", encoding="utf-8")
+    return ArtifactRef(
+        kind="report",
+        uri=f"artifact://tuning-sessions/{name}",
+        path=str(path),
+        mime_type="text/markdown",
+        sha256="0" * 64,
+        size_bytes=path.stat().st_size,
     )
