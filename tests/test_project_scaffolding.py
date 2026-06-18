@@ -46,6 +46,7 @@ def test_ci_workflow_uses_node24_ready_actions() -> None:
 def test_usage_docs_and_examples_are_present() -> None:
     assert Path("docs/USAGE.md").exists()
     assert Path("docs/INSTALL.md").exists()
+    assert Path("docs/HOST_ACCEPTANCE.md").exists()
     assert Path("docs/RELEASE.md").exists()
     assert Path("docs/RECIPES.md").exists()
     assert Path("CHANGELOG.md").exists()
@@ -131,6 +132,23 @@ def test_docs_link_client_smoke_playbook_resource() -> None:
     assert "client smoke" in install.lower()
     assert "client-smoke" in usage
     assert "client-smoke" in recipes
+
+
+def test_host_acceptance_checklist_covers_registry_and_hosts() -> None:
+    readme = Path("README.md").read_text(encoding="utf-8")
+    checklist = Path("docs/HOST_ACCEPTANCE.md").read_text(encoding="utf-8")
+
+    assert "[docs/HOST_ACCEPTANCE.md](docs/HOST_ACCEPTANCE.md)" in readme
+    assert "MCP Registry card" in checklist
+    assert "io.github.dKosarevsky/albu-mcp" in checklist
+    assert "https://avatars.githubusercontent.com/u/57894582?s=200&v=4" in checklist
+    assert "Claude Desktop" in checklist
+    assert "Claude Code" in checklist
+    assert "Cursor" in checklist
+    assert "Codex" in checklist
+    assert "run_host_smoke_check" in checklist
+    assert "validate_preview_request" in checklist
+    assert "render_preview_batch" in checklist
 
 
 def test_docs_link_diagnostics_playbook_resource() -> None:
