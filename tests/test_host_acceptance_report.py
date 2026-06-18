@@ -1,4 +1,6 @@
 import importlib
+import subprocess
+import sys
 from pathlib import Path
 
 
@@ -77,6 +79,24 @@ def test_host_acceptance_report_applies_dated_manual_run_records(tmp_path: Path)
     assert cursor["status"] == "pending"
     assert "| Codex | passed | 2026-06-19 | Codex app listed tools" in markdown
     assert "Manual Host UI: partial" in markdown
+
+
+def test_host_acceptance_report_cli_runs_as_script(tmp_path: Path) -> None:
+    output_path = tmp_path / "HOST_ACCEPTANCE_EVIDENCE.md"
+
+    subprocess.run(  # noqa: S603 - regression test for direct script execution with a static command.
+        [
+            sys.executable,
+            "scripts/export_host_acceptance_report.py",
+            "--output",
+            str(output_path),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert "Manual Host UI: pending" in output_path.read_text(encoding="utf-8")
 
 
 def _write_minimal_release_metadata(root: Path) -> None:

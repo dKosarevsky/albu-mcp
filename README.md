@@ -85,8 +85,10 @@ The public MCP surface is kept stable through reviewed contract snapshots. Compa
 - [docs/HOST_MATRIX.md](docs/HOST_MATRIX.md): per-host acceptance matrix.
 - [docs/HOST_ACCEPTANCE_EVIDENCE.md](docs/HOST_ACCEPTANCE_EVIDENCE.md): generated acceptance evidence snapshot.
 - [docs/HOST_MANUAL_RUNS.json](docs/HOST_MANUAL_RUNS.json): dated manual host UI evidence records.
+- [docs/HOST_MANUAL_RUNS.schema.json](docs/HOST_MANUAL_RUNS.schema.json): schema for manual host UI evidence.
 - [scripts/export_host_acceptance_report.py](scripts/export_host_acceptance_report.py): reviewable host acceptance evidence
   artifact generator.
+- [scripts/validate_host_manual_runs.py](scripts/validate_host_manual_runs.py): manual host evidence validator.
 - [docs/USAGE.md](docs/USAGE.md): end-to-end MCP host workflow and tool details.
 - [docs/RECIPES.md](docs/RECIPES.md): task-specific host recipes.
 - [docs/DEMO.md](docs/DEMO.md): generated preview comparison demo.
@@ -103,6 +105,7 @@ uv run pytest
 uv run ruff check .
 uv run ruff format --check .
 uv run ty check
+uv run python scripts/validate_host_manual_runs.py
 uv run python scripts/run_golden_evals.py
 uv build
 ```

@@ -12,6 +12,14 @@ uv run python scripts/export_host_acceptance_report.py --output docs/HOST_ACCEPT
 The generated report records automated coverage and keeps host UI status `pending` until a dated manual run note is
 added by a reviewer in `docs/HOST_MANUAL_RUNS.json`.
 
+Validate manual run records before regenerating evidence:
+
+```bash
+uv run python scripts/validate_host_manual_runs.py
+```
+
+The JSON shape is documented in `docs/HOST_MANUAL_RUNS.schema.json`.
+
 Manual run note format:
 
 ```json

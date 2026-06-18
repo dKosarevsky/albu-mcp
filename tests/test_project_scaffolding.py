@@ -27,6 +27,7 @@ def test_ci_workflow_runs_core_quality_gates() -> None:
     assert "uv run ty check" in commands
     assert "uv build" in commands
     assert "uv run python scripts/run_golden_evals.py" in commands
+    assert "uv run python scripts/validate_host_manual_runs.py" in commands
     assert "ClientSession" in commands
 
 
@@ -141,13 +142,17 @@ def test_host_acceptance_checklist_covers_registry_and_hosts() -> None:
     matrix = Path("docs/HOST_MATRIX.md").read_text(encoding="utf-8")
     evidence = Path("docs/HOST_ACCEPTANCE_EVIDENCE.md").read_text(encoding="utf-8")
     manual_runs = Path("docs/HOST_MANUAL_RUNS.json").read_text(encoding="utf-8")
+    manual_runs_schema = json.loads(Path("docs/HOST_MANUAL_RUNS.schema.json").read_text(encoding="utf-8"))
 
     assert "[docs/HOST_ACCEPTANCE.md](docs/HOST_ACCEPTANCE.md)" in readme
     assert "[docs/HOST_MATRIX.md](docs/HOST_MATRIX.md)" in readme
     assert "[docs/HOST_ACCEPTANCE_EVIDENCE.md](docs/HOST_ACCEPTANCE_EVIDENCE.md)" in readme
     assert "[docs/HOST_MANUAL_RUNS.json](docs/HOST_MANUAL_RUNS.json)" in readme
+    assert "[docs/HOST_MANUAL_RUNS.schema.json](docs/HOST_MANUAL_RUNS.schema.json)" in readme
     assert "export_host_acceptance_report.py" in readme
+    assert "validate_host_manual_runs.py" in readme
     assert "export_host_acceptance_report.py" in checklist
+    assert "validate_host_manual_runs.py" in checklist
     assert "export_host_acceptance_report.py" in matrix
     assert "[HOST_MATRIX.md](HOST_MATRIX.md)" in checklist
     assert "MCP Registry card" in checklist
@@ -171,10 +176,15 @@ def test_host_acceptance_checklist_covers_registry_and_hosts() -> None:
     assert "Manual Host UI: pending" in evidence
     assert "Manual Host UI: passed" not in evidence
     assert '"manual_host_ui": []' in manual_runs
+    assert "Claude Desktop" in manual_runs_schema["properties"]["manual_host_ui"]["items"]["properties"]["host"]["enum"]
+    assert "blocked" in manual_runs_schema["properties"]["manual_host_ui"]["items"]["properties"]["status"]["enum"]
     assert "HOST_MANUAL_RUNS.json" in checklist
+    assert "HOST_MANUAL_RUNS.schema.json" in checklist
     assert "HOST_MANUAL_RUNS.json" in matrix
+    assert "HOST_MANUAL_RUNS.schema.json" in matrix
     release_docs = Path("docs/RELEASE.md").read_text(encoding="utf-8")
     assert "export_host_acceptance_report.py" in release_docs
+    assert "validate_host_manual_runs.py" in release_docs
     assert "HOST_MANUAL_RUNS.json" in release_docs
 
 
@@ -249,6 +259,7 @@ def test_release_workflow_and_readme_publish_instructions_are_present() -> None:
     build_commands = "\n".join(step.get("run", "") for step in workflow["jobs"]["build"]["steps"])
     release_commands = "\n".join(step.get("run", "") for step in workflow["jobs"]["github-release"]["steps"])
     assert "uv build" in build_commands
+    assert "uv run python scripts/validate_host_manual_runs.py" in build_commands
     assert "gh release create" in release_commands
     assert "uvx --from albumentationsx-mcp albumentationsx-mcp" in readme
     assert "uv publish --trusted-publishing automatic" in release_docs.read_text(encoding="utf-8")

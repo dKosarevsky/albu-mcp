@@ -35,3 +35,5 @@ uv run python scripts/export_host_acceptance_report.py --output docs/HOST_ACCEPT
 ```
 
 Add dated manual notes to `docs/HOST_MANUAL_RUNS.json`; supported statuses are `passed`, `blocked`, and `pending`.
+Validate them with `uv run python scripts/validate_host_manual_runs.py`. The JSON shape is documented in
+`docs/HOST_MANUAL_RUNS.schema.json`.
