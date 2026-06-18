@@ -6,6 +6,14 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 - No unreleased changes yet.
 
+## 1.8.0 - 2026-06-18
+
+- Added interactive tuning sessions with `start_tuning_session`, `record_tuning_session_step`,
+  `list_tuning_sessions`, and `export_tuning_session`.
+- Added a golden stdio scenario and contract snapshots for the multi-turn preview tuning flow.
+- Added host acceptance and recipe guidance for session handoff, plus a reviewable demo report artifact.
+- Hardened preview path handling for directories, outside-root symlinks, and failed-run cleanup.
+
 ## 1.7.1 - 2026-06-17
 
 - Improved MCP Registry card metadata with a project homepage URL, repository ID, and PNG icons.
