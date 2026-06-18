@@ -4,6 +4,10 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 ## Unreleased
 
+- No unreleased changes yet.
+
+## 1.10.0 - 2026-06-19
+
 - Added artifact metadata to `export_tuning_session` for Markdown and JSON session handoff files.
 - Added tuning session artifact links to `export_preview_report` output and response payloads.
 - Clarified host acceptance coverage for automated checks versus pending manual host UI runs.
