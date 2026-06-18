@@ -33,6 +33,7 @@ def render_demo_assets(output_dir: Path) -> Path:
 
     contact_sheet_path = output_dir / "contact_sheet.png"
     comparison_path = output_dir / "comparison_contact_sheet.png"
+    report_path = output_dir / "demo_report.md"
     _write_contact_sheet(baseline_variants, contact_sheet_path, labels=["baseline 1", "baseline 2", "baseline 3"])
     _write_contact_sheet(
         [*baseline_variants, *candidate_variants],
@@ -77,6 +78,8 @@ def render_demo_assets(output_dir: Path) -> Path:
             "feedback_tags": ["too_noisy"],
         },
     }
+    _write_demo_report(report_path)
+    manifest["demo_report"] = str(report_path)
     manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8")
     return manifest_path
 
@@ -115,6 +118,28 @@ def _write_contact_sheet(
         sheet.paste(image, (x, y))
         draw.text((x + 4, y + image.height + 3), labels[index], fill=(30, 30, 30))
     sheet.save(output_path)
+
+
+def _write_demo_report(output_path: Path) -> None:
+    output_path.write_text(
+        """# AlbumentationsX MCP Demo Report
+
+## Baseline
+
+![Baseline contact sheet](contact_sheet.png)
+
+## Candidate
+
+![Comparison contact sheet](comparison_contact_sheet.png)
+
+## Review
+
+- Feedback tag: `too_noisy`
+- Adjustment: reduce `GaussNoise` probability and noise range.
+- Decision: Candidate accepted for a small robustness pass.
+""",
+        encoding="utf-8",
+    )
 
 
 def main() -> None:

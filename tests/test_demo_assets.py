@@ -11,8 +11,14 @@ def test_demo_asset_generator_writes_reviewable_artifacts(tmp_path: Path) -> Non
     assert (output_dir / "inputs" / "sample-grid.png").exists()
     assert (output_dir / "contact_sheet.png").exists()
     assert (output_dir / "comparison_contact_sheet.png").exists()
+    assert (output_dir / "demo_report.md").exists()
     assert manifest_path == output_dir / "demo_manifest.json"
     manifest = manifest_path.read_text(encoding="utf-8")
     assert "baseline_pipeline" in manifest
     assert "candidate_pipeline" in manifest
     assert "compare_preview_runs" in manifest
+    report = (output_dir / "demo_report.md").read_text(encoding="utf-8")
+    assert "![Baseline contact sheet](contact_sheet.png)" in report
+    assert "![Comparison contact sheet](comparison_contact_sheet.png)" in report
+    assert "`too_noisy`" in report
+    assert "Candidate accepted" in report
