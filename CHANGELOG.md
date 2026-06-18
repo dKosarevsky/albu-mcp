@@ -6,6 +6,14 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 - No unreleased changes yet.
 
+## 1.9.0 - 2026-06-18
+
+- Added tuning session lifecycle tools: `close_tuning_session`, `archive_tuning_session`, and
+  `cleanup_tuning_sessions`.
+- Added interactive tuning session timelines to `export_preview_report` Markdown and HTML output.
+- Added `docs/HOST_MATRIX.md` for per-host MCP acceptance checks.
+- Extended golden stdio evals and contract snapshots for session lifecycle and report timeline behavior.
+
 ## 1.8.0 - 2026-06-18
 
 - Added interactive tuning sessions with `start_tuning_session`, `record_tuning_session_step`,
