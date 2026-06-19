@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+from PIL import Image, PngImagePlugin
+
 from scripts.check_demo_assets import check_demo_assets
 from scripts.render_demo_assets import render_demo_assets
 
@@ -50,3 +52,28 @@ def test_demo_asset_guard_rejects_stale_committed_bundle(tmp_path: Path) -> None
 
     assert report.ok is False
     assert "stale files: demo_report.md" in report.message
+
+
+def test_demo_asset_guard_accepts_reencoded_png_assets(tmp_path: Path) -> None:
+    output_dir = tmp_path / "demo"
+    render_demo_assets(output_dir)
+    image_path = output_dir / "contact_sheet.png"
+    png_info = PngImagePlugin.PngInfo()
+    png_info.add_text("renderer", "platform-specific")
+    with Image.open(image_path) as image:
+        image.save(image_path, pnginfo=png_info)
+
+    report = check_demo_assets(output_dir, check_fresh=True)
+
+    assert report.ok is True
+
+
+def test_demo_asset_guard_rejects_invalid_png_assets(tmp_path: Path) -> None:
+    output_dir = tmp_path / "demo"
+    render_demo_assets(output_dir)
+    Image.new("RGB", (8, 8), "white").save(output_dir / "contact_sheet.png")
+
+    report = check_demo_assets(output_dir, check_fresh=True)
+
+    assert report.ok is False
+    assert "invalid images: contact_sheet.png" in report.message
