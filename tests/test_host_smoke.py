@@ -122,6 +122,7 @@ def _complete_public_surface_with_host_smoke() -> PublicSurface:
             "albumentationsx://diagnostics/guide",
             "albumentationsx://examples/client-smoke",
             "albumentationsx://examples/first-preview",
+            "albumentationsx://examples/distortion-review",
             "albumentationsx://examples/diagnostics",
             "albumentationsx://examples/review-loop",
             "albumentationsx://examples/report-handoff",

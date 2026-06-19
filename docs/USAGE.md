@@ -309,6 +309,7 @@ uv run pytest tests/test_output_contract_snapshots.py -q
   and validation.
 - `albumentationsx://examples/first-preview`: first local preview playbook with host smoke, request validation, and
   bounded rendering.
+- `albumentationsx://examples/distortion-review`: robustness preview loop for rejected noisy or distorted examples.
 - `albumentationsx://examples/diagnostics`: troubleshooting playbook for preview setup and local root issues.
 - `albumentationsx://examples/review-loop`: concrete example feedback loop for prompts like "example 8 is too noisy".
 - `albumentationsx://examples/report-handoff`: visual report handoff loop after ranking and decisions.

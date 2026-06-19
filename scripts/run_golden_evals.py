@@ -85,6 +85,9 @@ async def _run_scenario(session: ClientSession, scenario: dict[str, Any], images
     if scenario.get("first_preview_smoke"):
         await _run_first_preview_smoke(session, scenario, images_dir)
         return
+    if scenario.get("distortion_review_smoke"):
+        await _run_distortion_review_smoke(session, scenario)
+        return
     if scenario.get("recommend_recipe"):
         await _run_recipe_recommendation(session, scenario)
     if scenario.get("real_sample_smoke"):
@@ -868,6 +871,30 @@ async def _run_client_smoke(session: ClientSession, scenario: dict[str, Any]) ->
         raise AssertionError(f"{scenario['name']} smoke validation failed: {validation}")
     if scenario.get("host_smoke"):
         await _run_host_smoke(session, scenario)
+
+
+async def _run_distortion_review_smoke(session: ClientSession, scenario: dict[str, Any]) -> None:
+    playbook = await _read_resource_json(session, "albumentationsx://examples/distortion-review")
+    if playbook["trigger_phrase"] != "make distorted versions, but example 8 is too noisy":
+        raise AssertionError(f"{scenario['name']} returned wrong distortion-review trigger phrase: {playbook}")
+    step_tools = [step["tool"] for step in playbook["steps"]]
+    expected_steps = [
+        "albumentationsx://examples/first-preview",
+        "render_preview_batch",
+        "record_preview_feedback",
+        "adjust_pipeline",
+        "compare_preview_runs",
+        "export_pipeline",
+    ]
+    if step_tools != expected_steps:
+        raise AssertionError(f"{scenario['name']} returned wrong distortion-review steps: {playbook}")
+
+    capabilities = await _read_resource_json(session, "albumentationsx://capabilities")
+    if "albumentationsx://examples/distortion-review" not in capabilities["workflow_resources"]:
+        raise AssertionError(f"{scenario['name']} capabilities did not include distortion-review: {capabilities}")
+    for tool_name in ("record_preview_feedback", "adjust_pipeline", "compare_preview_runs", "export_pipeline"):
+        if tool_name not in capabilities["tools"]:
+            raise AssertionError(f"{scenario['name']} capabilities did not include {tool_name}: {capabilities}")
 
 
 async def _run_host_smoke(session: ClientSession, scenario: dict[str, Any]) -> None:

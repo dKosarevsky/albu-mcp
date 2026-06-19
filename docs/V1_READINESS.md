@@ -38,6 +38,7 @@ fixtures. Current CI and release jobs enforce this with `uv run python scripts/c
 - batch preview comparison;
 - quality tuning session summary;
 - MCP-native first-preview smoke using `albumentationsx://examples/first-preview` and `run_first_preview_review`;
+- distortion-review resource discovery for rejected noisy preview loops;
 - real sample first-preview smoke using `run_host_smoke_check`, `validate_preview_request`, `render_preview_batch`,
   manifest reads, candidate comparison, quality metrics, and cleanup.
 

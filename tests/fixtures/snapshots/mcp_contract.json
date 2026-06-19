@@ -138,6 +138,12 @@
       "uri": "albumentationsx://examples/diagnostics"
     },
     {
+      "description": "Return the MCP distorted robustness review example.",
+      "mime_type": "text/plain",
+      "name": "distortion_review_example",
+      "uri": "albumentationsx://examples/distortion-review"
+    },
+    {
       "description": "Return the MCP first local preview host example.",
       "mime_type": "text/plain",
       "name": "first_preview_example",

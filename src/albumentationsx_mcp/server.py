@@ -111,6 +111,7 @@ _PUBLIC_WORKFLOW_RESOURCES = [
     "albumentationsx://diagnostics/guide",
     "albumentationsx://examples/client-smoke",
     "albumentationsx://examples/first-preview",
+    "albumentationsx://examples/distortion-review",
     "albumentationsx://examples/diagnostics",
     "albumentationsx://examples/review-loop",
     "albumentationsx://examples/report-handoff",
@@ -261,6 +262,11 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
     def first_preview_example() -> str:
         """Return the MCP first local preview host example."""
         return get_host_example("first-preview").model_dump_json()
+
+    @mcp.resource("albumentationsx://examples/distortion-review")
+    def distortion_review_example() -> str:
+        """Return the MCP distorted robustness review example."""
+        return get_host_example("distortion-review").model_dump_json()
 
     @mcp.resource("albumentationsx://examples/diagnostics")
     def diagnostics_example() -> str:

@@ -54,10 +54,17 @@ def test_host_examples_cover_review_loop_and_report_handoff() -> None:
     examples = list_host_examples()
     client_smoke = get_host_example("client-smoke")
     first_preview = get_host_example("first-preview")
+    distortion_review = get_host_example("distortion-review")
     review_loop = get_host_example("review-loop")
     report_handoff = get_host_example("report-handoff")
 
-    assert {example.name for example in examples} >= {"client-smoke", "first-preview", "review-loop", "report-handoff"}
+    assert {example.name for example in examples} >= {
+        "client-smoke",
+        "first-preview",
+        "distortion-review",
+        "review-loop",
+        "report-handoff",
+    }
     assert client_smoke.trigger_phrase == "is AlbumentationsX MCP connected?"
     assert [step.tool for step in client_smoke.steps] == [
         "albumentationsx://capabilities",
@@ -72,6 +79,15 @@ def test_host_examples_cover_review_loop_and_report_handoff() -> None:
         "run_host_smoke_check",
         "validate_preview_request",
         "render_preview_batch",
+    ]
+    assert distortion_review.trigger_phrase == "make distorted versions, but example 8 is too noisy"
+    assert [step.tool for step in distortion_review.steps] == [
+        "albumentationsx://examples/first-preview",
+        "render_preview_batch",
+        "record_preview_feedback",
+        "adjust_pipeline",
+        "compare_preview_runs",
+        "export_pipeline",
     ]
     assert review_loop.trigger_phrase == "example 8 is too noisy"
     assert [step.tool for step in review_loop.steps[:3]] == [

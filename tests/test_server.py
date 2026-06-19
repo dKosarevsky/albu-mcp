@@ -84,6 +84,7 @@ def test_server_exposes_agent_workflow_resources() -> None:
     diagnostics_guide = cast("Any", resources["albumentationsx://diagnostics/guide"]).fn()
     client_smoke_example = cast("Any", resources["albumentationsx://examples/client-smoke"]).fn()
     first_preview_example = cast("Any", resources["albumentationsx://examples/first-preview"]).fn()
+    distortion_review_example = cast("Any", resources["albumentationsx://examples/distortion-review"]).fn()
     diagnostics_example = cast("Any", resources["albumentationsx://examples/diagnostics"]).fn()
     review_loop_example = cast("Any", resources["albumentationsx://examples/review-loop"]).fn()
     report_handoff_example = cast("Any", resources["albumentationsx://examples/report-handoff"]).fn()
@@ -97,6 +98,7 @@ def test_server_exposes_agent_workflow_resources() -> None:
     assert "diagnose_environment" in diagnostics_guide
     assert "is AlbumentationsX MCP connected?" in client_smoke_example
     assert "run the first AlbumentationsX preview" in first_preview_example
+    assert "make distorted versions, but example 8 is too noisy" in distortion_review_example
     assert "why does AlbumentationsX MCP preview not work?" in diagnostics_example
     assert "record_preview_feedback" in review_loop_example
     assert "export_preview_report" in report_handoff_example
@@ -129,6 +131,7 @@ def test_server_exposes_agent_workflow_resources() -> None:
         "albumentationsx://recipes/catalog",
         "albumentationsx://examples/client-smoke",
         "albumentationsx://examples/first-preview",
+        "albumentationsx://examples/distortion-review",
         "albumentationsx://examples/diagnostics",
         "albumentationsx://examples/review-loop",
         "albumentationsx://examples/report-handoff",

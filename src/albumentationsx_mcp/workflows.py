@@ -287,6 +287,61 @@ _HOST_EXAMPLES = {
             "The user reviews the first contact sheet before changing intensity, batch size, or variants.",
         ],
     ),
+    "distortion-review": HostExample(
+        name="distortion-review",
+        goal=(
+            "Create distorted robustness previews, capture concrete user rejection such as one noisy example, "
+            "then render a safer candidate and export only after acceptance."
+        ),
+        trigger_phrase="make distorted versions, but example 8 is too noisy",
+        steps=[
+            HostExampleStep(
+                order=1,
+                tool="albumentationsx://examples/first-preview",
+                instruction="Start with the first-preview playbook so local paths are validated before rendering.",
+                expected_result="Host smoke and validate_preview_request pass before preview rendering starts.",
+            ),
+            HostExampleStep(
+                order=2,
+                tool="render_preview_batch",
+                instruction=("Render a small deterministic set of variants for the user's requested robustness task."),
+                expected_result="A contact sheet and manifest the user can inspect before increasing scope.",
+            ),
+            HostExampleStep(
+                order=3,
+                tool="record_preview_feedback",
+                instruction=(
+                    "When the user says an example is too noisy or unrecognizable, record the exact image index, "
+                    "variant index, feedback tags, and note."
+                ),
+                expected_result="A concrete feedback record such as too_noisy:high for example 8.",
+            ),
+            HostExampleStep(
+                order=4,
+                tool="adjust_pipeline",
+                instruction="Use recorded feedback tags to reduce destructive noise, distortion, or color shift.",
+                expected_result="A safer candidate pipeline that preserves the task and targets.",
+            ),
+            HostExampleStep(
+                order=5,
+                tool="compare_preview_runs",
+                instruction="Compare baseline and candidate runs before asking the user to accept the next set.",
+                expected_result="Quality summary, deltas, and suggested feedback tags for the candidate.",
+            ),
+            HostExampleStep(
+                order=6,
+                tool="export_pipeline",
+                instruction="Export only the accepted candidate pipeline in the requested format.",
+                expected_result="A reproducible AlbumentationsX pipeline tied to the accepted preview run.",
+            ),
+        ],
+        success_criteria=[
+            "The host never renders paths that fail validate_preview_request.",
+            "Concrete user feedback is recorded against the exact reviewed preview example.",
+            "The adjusted candidate is compared against the same local inputs before export.",
+            "The exported pipeline corresponds to a user-accepted preview run.",
+        ],
+    ),
     "review-loop": HostExample(
         name="review-loop",
         goal="Turn concrete user feedback about one preview example into structured tags and a safer next render.",

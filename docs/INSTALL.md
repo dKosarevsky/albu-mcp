@@ -203,6 +203,8 @@ After configuring Claude Desktop, Claude Code, Cursor, or Codex, use the same fi
 
 The copyable prompt is in [examples/first_preview_workflow.md](../examples/first_preview_workflow.md).
 MCP-native hosts can also read `albumentationsx://examples/first-preview` or use the `run_first_preview_review` prompt.
+For the common robustness loop where a user rejects one noisy preview, read
+`albumentationsx://examples/distortion-review` or copy [examples/distortion_review_workflow.md](../examples/distortion_review_workflow.md).
 
 ## Local Checkout
 

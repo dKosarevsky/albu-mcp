@@ -454,6 +454,7 @@ def _diagnostics_public_surface() -> PublicSurface:
             "albumentationsx://diagnostics/guide",
             "albumentationsx://examples/client-smoke",
             "albumentationsx://examples/first-preview",
+            "albumentationsx://examples/distortion-review",
             "albumentationsx://examples/diagnostics",
             "albumentationsx://examples/review-loop",
             "albumentationsx://examples/report-handoff",

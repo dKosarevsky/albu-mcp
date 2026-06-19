@@ -29,6 +29,9 @@ def test_golden_eval_assets_are_present() -> None:
     first_preview_scenario = next(
         scenario for scenario in scenarios["scenarios"] if scenario["name"] == "first_preview_resource_prompt_flow"
     )
+    distortion_review_scenario = next(
+        scenario for scenario in scenarios["scenarios"] if scenario["name"] == "distortion_review_resource_flow"
+    )
     real_sample_scenario = next(
         scenario for scenario in scenarios["scenarios"] if scenario["name"] == "real_sample_preview_smoke"
     )
@@ -43,6 +46,7 @@ def test_golden_eval_assets_are_present() -> None:
         "client_smoke_resource_flow",
         "diagnostics_resource_flow",
         "first_preview_resource_prompt_flow",
+        "distortion_review_resource_flow",
         "classification_recommend_validate_explain_export",
         "preview_lifecycle",
         "preview_batch_compare",
@@ -64,6 +68,7 @@ def test_golden_eval_assets_are_present() -> None:
         "albumentationsx://capabilities",
     ]
     assert first_preview_scenario["first_preview_smoke"] is True
+    assert distortion_review_scenario["distortion_review_smoke"] is True
     assert real_sample_scenario["real_sample_smoke"] is True
     assert real_sample_scenario["input_count"] == 3
     assert real_sample_scenario["compare_preview"] is True
@@ -77,6 +82,7 @@ def test_golden_eval_assets_are_present() -> None:
     assert "_run_client_smoke" in runner_source
     assert "_run_diagnostics_smoke" in runner_source
     assert "_run_first_preview_smoke" in runner_source
+    assert "_run_distortion_review_smoke" in runner_source
     assert "_run_real_sample_smoke" in runner_source
     assert "_run_preview_request_troubleshooting" in runner_source
     assert "_run_interactive_tuning_session" in runner_source

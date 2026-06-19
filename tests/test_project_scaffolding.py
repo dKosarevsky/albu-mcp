@@ -141,6 +141,7 @@ def test_docs_link_client_smoke_playbook_resource() -> None:
     for content in [install, usage, recipes]:
         assert "albumentationsx://examples/client-smoke" in content
         assert "albumentationsx://examples/first-preview" in content
+        assert "albumentationsx://examples/distortion-review" in content
         assert "validate_preview_request" in content
     assert "run_first_preview_review" in install
     assert "run_first_preview_review" in usage

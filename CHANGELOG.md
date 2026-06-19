@@ -15,6 +15,7 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 - Added a strict manual host acceptance gate for final reviewer evidence checks.
 - Added JSON and GitHub Step Summary output to the release readiness guard.
 - Added structured classification for public contract snapshot drift.
+- Added `albumentationsx://examples/distortion-review` for noisy/distorted preview rejection loops.
 
 ## 1.10.0 - 2026-06-19
 
