@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import difflib
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -22,6 +23,7 @@ class HostAcceptanceReportCheck:
     ok: bool
     expected_path: Path
     message: str
+    diff: str = ""
 
 
 def check_host_acceptance_report(
@@ -44,6 +46,7 @@ def check_host_acceptance_report(
             ok=False,
             expected_path=report_path,
             message=_stale_message(report_path, reason="is stale"),
+            diff=_unified_diff(report_path=report_path, actual=actual, expected=expected),
         )
 
     return HostAcceptanceReportCheck(
@@ -69,6 +72,8 @@ def main() -> None:
     result = check_host_acceptance_report(root=args.root, report_path=report_path)
     if not result.ok:
         sys.stderr.write(f"{result.message}\n")
+        if result.diff:
+            sys.stderr.write(result.diff)
         raise SystemExit(1)
     sys.stdout.write(f"{result.message}\n")
 
@@ -78,6 +83,17 @@ def _stale_message(report_path: Path, *, reason: str) -> str:
         f"Host acceptance evidence {reason}: {report_path}. "
         "Regenerate it with: uv run python scripts/export_host_acceptance_report.py "
         f"--output {report_path}"
+    )
+
+
+def _unified_diff(*, report_path: Path, actual: str, expected: str) -> str:
+    return "".join(
+        difflib.unified_diff(
+            actual.splitlines(keepends=True),
+            expected.splitlines(keepends=True),
+            fromfile=f"{report_path} (committed)",
+            tofile=f"{report_path} (generated)",
+        )
     )
 
 

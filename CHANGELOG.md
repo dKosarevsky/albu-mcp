@@ -9,6 +9,7 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 - Added a public MCP Registry watchdog and automatic Registry metadata publication after successful release smoke checks.
 - Added a manual host run recorder CLI for updating host acceptance evidence without duplicate host entries.
 - Added a CI freshness guard for generated host acceptance evidence.
+- Added unified diff output when generated host acceptance evidence is stale.
 
 ## 1.10.0 - 2026-06-19
 

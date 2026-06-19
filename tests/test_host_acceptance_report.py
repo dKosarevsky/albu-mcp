@@ -106,21 +106,7 @@ def test_host_acceptance_report_freshness_check_rejects_stale_markdown(tmp_path:
     _write_minimal_release_metadata(tmp_path)
     docs_path = tmp_path / "docs"
     docs_path.mkdir()
-    (docs_path / "HOST_MANUAL_RUNS.json").write_text(
-        """
-{
-  "manual_host_ui": [
-    {
-      "host": "Codex",
-      "status": "passed",
-      "date": "2026-06-19",
-      "evidence": "Codex app listed tools, read workflow resources, and ran run_host_smoke_check."
-    }
-  ]
-}
-""".strip(),
-        encoding="utf-8",
-    )
+    _write_codex_manual_run(docs_path / "HOST_MANUAL_RUNS.json")
     report_path = docs_path / "HOST_ACCEPTANCE_EVIDENCE.md"
     report_path.write_text("# Host Acceptance Evidence\n\n- Manual Host UI: pending\n", encoding="utf-8")
 
@@ -130,6 +116,38 @@ def test_host_acceptance_report_freshness_check_rejects_stale_markdown(tmp_path:
     assert result.expected_path == report_path
     assert "Host acceptance evidence is stale" in result.message
     assert "export_host_acceptance_report.py" in result.message
+    assert "---" in result.diff
+    assert "+++" in result.diff
+    assert "Manual Host UI: pending" in result.diff
+    assert "Manual Host UI: partial" in result.diff
+
+
+def test_host_acceptance_report_freshness_check_cli_prints_stale_diff(tmp_path: Path) -> None:
+    _write_minimal_release_metadata(tmp_path)
+    docs_path = tmp_path / "docs"
+    report_path = docs_path / "HOST_ACCEPTANCE_EVIDENCE.md"
+    docs_path.mkdir()
+    _write_codex_manual_run(docs_path / "HOST_MANUAL_RUNS.json")
+    report_path.write_text("# Host Acceptance Evidence\n\n- Manual Host UI: pending\n", encoding="utf-8")
+
+    result = subprocess.run(  # noqa: S603 - regression test for direct script execution with controlled fixture paths.
+        [
+            sys.executable,
+            "scripts/check_host_acceptance_report.py",
+            "--root",
+            str(tmp_path),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 1
+    assert "Host acceptance evidence is stale" in result.stderr
+    assert "---" in result.stderr
+    assert "+++" in result.stderr
+    assert "Manual Host UI: pending" in result.stderr
+    assert "Manual Host UI: partial" in result.stderr
 
 
 def test_host_acceptance_report_freshness_check_cli_runs_as_script(tmp_path: Path) -> None:
@@ -217,6 +235,24 @@ version = "9.9.9"
       "registryType": "pypi",
       "identifier": "albumentationsx-mcp",
       "version": "9.9.9"
+    }
+  ]
+}
+""".strip(),
+        encoding="utf-8",
+    )
+
+
+def _write_codex_manual_run(path: Path) -> None:
+    path.write_text(
+        """
+{
+  "manual_host_ui": [
+    {
+      "host": "Codex",
+      "status": "passed",
+      "date": "2026-06-19",
+      "evidence": "Codex app listed tools, read workflow resources, and ran run_host_smoke_check."
     }
   ]
 }
