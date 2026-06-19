@@ -31,6 +31,20 @@ def test_ci_workflow_runs_core_quality_gates() -> None:
     assert "ClientSession" in commands
 
 
+def test_mcp_registry_watchdog_workflow_checks_latest_registry_entry() -> None:
+    workflow_path = Path(".github/workflows/mcp-registry-watchdog.yml")
+    workflow_text = workflow_path.read_text(encoding="utf-8")
+    workflow = yaml.safe_load(workflow_text)
+    steps = workflow["jobs"]["check"]["steps"]
+    commands = "\n".join(step.get("run", "") for step in steps)
+
+    assert "workflow_dispatch:" in workflow_text
+    assert "schedule:" in workflow_text
+    assert "python scripts/check_mcp_registry_status.py" in commands
+    assert "actions/checkout@v5" in workflow_text
+    assert "actions/setup-python@v6" in workflow_text
+
+
 def test_ci_workflow_uses_node24_ready_actions() -> None:
     workflow_path = Path(".github/workflows/ci.yml")
     workflow = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
@@ -258,11 +272,23 @@ def test_release_workflow_and_readme_publish_instructions_are_present() -> None:
     workflow = yaml.safe_load(release_workflow.read_text(encoding="utf-8"))
     build_commands = "\n".join(step.get("run", "") for step in workflow["jobs"]["build"]["steps"])
     release_commands = "\n".join(step.get("run", "") for step in workflow["jobs"]["github-release"]["steps"])
+    mcp_registry_commands = "\n".join(step.get("run", "") for step in workflow["jobs"]["publish-mcp-registry"]["steps"])
     assert "uv build" in build_commands
     assert "uv run python scripts/validate_host_manual_runs.py" in build_commands
     assert "gh release create" in release_commands
+    assert workflow["jobs"]["publish-mcp-registry"]["needs"] == "post-release-smoke"
+    assert "mcp-publisher publish" in mcp_registry_commands
+    assert "python scripts/check_mcp_registry_status.py" in mcp_registry_commands
     assert "uvx --from albumentationsx-mcp albumentationsx-mcp" in readme
     assert "uv publish --trusted-publishing automatic" in release_docs.read_text(encoding="utf-8")
+
+
+def test_manual_mcp_publish_workflow_uses_registry_status_guard() -> None:
+    workflow = yaml.safe_load(Path(".github/workflows/publish-mcp.yml").read_text(encoding="utf-8"))
+    commands = "\n".join(step.get("run", "") for step in workflow["jobs"]["publish"]["steps"])
+
+    assert "mcp-publisher publish" in commands
+    assert "python scripts/check_mcp_registry_status.py" in commands
 
 
 def test_release_workflow_publishes_to_pypi_with_trusted_publishing() -> None:
@@ -366,6 +392,7 @@ def test_mcp_registry_metadata_is_ready_for_pypi_distribution() -> None:
 
 def test_mcp_registry_publish_workflow_is_present() -> None:
     workflow_path = Path(".github/workflows/publish-mcp.yml")
+    registry_guard = Path("scripts/check_mcp_registry_status.py").read_text(encoding="utf-8")
     workflow = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
     steps = workflow["jobs"]["publish"]["steps"]
     commands = "\n".join(step.get("run", "") for step in steps)
@@ -373,4 +400,5 @@ def test_mcp_registry_publish_workflow_is_present() -> None:
     assert workflow["jobs"]["publish"]["permissions"]["id-token"] == "write"
     assert "mcp-publisher login github-oidc" in commands
     assert "mcp-publisher publish" in commands
-    assert "registry.modelcontextprotocol.io/v0.1/servers?search=io.github.dKosarevsky/albu-mcp" in commands
+    assert "python scripts/check_mcp_registry_status.py" in commands
+    assert "registry.modelcontextprotocol.io/v0.1/servers" in registry_guard

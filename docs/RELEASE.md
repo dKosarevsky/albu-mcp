@@ -97,6 +97,10 @@ mcp-publisher login github-oidc
 mcp-publisher publish
 ```
 
+The release workflow publishes MCP Registry metadata automatically after the PyPI smoke check succeeds. Keep the manual
+workflow for metadata repair runs. A scheduled watchdog also checks that the public Registry latest entry stays active
+and matches [server.json](../server.json).
+
 ## Post-Release Checks
 
 Verify package execution:
@@ -108,7 +112,7 @@ uvx --from albumentationsx-mcp albumentationsx-mcp --help
 Verify MCP Registry metadata:
 
 ```bash
-curl "https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.dKosarevsky/albu-mcp"
+uv run python scripts/check_mcp_registry_status.py
 ```
 
 Export reviewable host acceptance evidence:

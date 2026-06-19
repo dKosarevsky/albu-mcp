@@ -130,3 +130,32 @@ jobs:
             sleep 10
           done
           exit 1
+
+  publish-mcp-registry:
+    needs: post-release-smoke
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install mcp-publisher
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+
+      - name: Authenticate to MCP Registry
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish metadata to MCP Registry
+        run: ./mcp-publisher publish
+
+      - name: Verify MCP Registry metadata
+        run: python scripts/check_mcp_registry_status.py --retries 6 --retry-delay 10 --timeout 30
