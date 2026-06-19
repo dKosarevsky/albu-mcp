@@ -208,6 +208,17 @@ def test_host_acceptance_checklist_covers_registry_and_hosts() -> None:
     assert "HOST_MANUAL_RUNS.json" in release_docs
 
 
+def test_strict_manual_host_acceptance_gate_is_documented() -> None:
+    readme = Path("README.md").read_text(encoding="utf-8")
+    checklist = Path("docs/HOST_ACCEPTANCE.md").read_text(encoding="utf-8")
+    release_docs = Path("docs/RELEASE.md").read_text(encoding="utf-8")
+
+    for content in [readme, checklist, release_docs]:
+        assert "check_manual_host_acceptance.py" in content
+    assert "strict manual host acceptance gate" in readme
+    assert "fails while any required host is missing" in checklist
+
+
 def test_host_acceptance_freshness_guard_is_documented() -> None:
     readme = Path("README.md").read_text(encoding="utf-8")
     checklist = Path("docs/HOST_ACCEPTANCE.md").read_text(encoding="utf-8")

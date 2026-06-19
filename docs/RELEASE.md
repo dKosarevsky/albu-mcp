@@ -131,3 +131,9 @@ uv run python scripts/check_host_acceptance_report.py
 This artifact records automated release coverage and keeps manual host UI status pending until a reviewer adds dated
 host-specific evidence to `docs/HOST_MANUAL_RUNS.json`. The record shape is documented in
 `docs/HOST_MANUAL_RUNS.schema.json`.
+
+For a release that requires complete manual host UI evidence, run the strict gate after recording all host notes:
+
+```bash
+uv run python scripts/check_manual_host_acceptance.py
+```

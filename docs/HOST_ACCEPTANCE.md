@@ -20,6 +20,15 @@ uv run python scripts/validate_host_manual_runs.py
 uv run python scripts/check_host_acceptance_report.py
 ```
 
+For a final manual host UI gate, run:
+
+```bash
+uv run python scripts/check_manual_host_acceptance.py
+```
+
+This gate intentionally fails while any required host is missing, `pending`, or `blocked`. Keep it out of routine CI
+until dated reviewer evidence exists for every required host.
+
 Record or replace one host note with:
 
 ```bash

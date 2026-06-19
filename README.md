@@ -90,6 +90,7 @@ The public MCP surface is kept stable through reviewed contract snapshots. Compa
   artifact generator.
 - [scripts/record_host_manual_run.py](scripts/record_host_manual_run.py): helper for recording dated manual host UI evidence.
 - [scripts/validate_host_manual_runs.py](scripts/validate_host_manual_runs.py): manual host evidence validator.
+- [scripts/check_manual_host_acceptance.py](scripts/check_manual_host_acceptance.py): strict manual host acceptance gate.
 - [scripts/check_host_acceptance_report.py](scripts/check_host_acceptance_report.py): generated evidence freshness guard.
 - [scripts/check_contract_snapshots.py](scripts/check_contract_snapshots.py): contract snapshot freshness guard.
 - [scripts/check_release_readiness.py](scripts/check_release_readiness.py): aggregate release readiness guard.
