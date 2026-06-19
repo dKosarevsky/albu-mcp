@@ -25,7 +25,7 @@ Two reviewed fixtures guard the public surface:
 - `tests/fixtures/snapshots/output_contracts.json` for representative recipe, scoring, feedback, and report payloads.
 
 Before cutting `v1.0.0`, regenerate both snapshots to temporary files and confirm there is no diff from committed
-fixtures.
+fixtures. Current CI and release jobs enforce this with `uv run python scripts/check_contract_snapshots.py`.
 
 ## Golden Evals
 

@@ -49,6 +49,9 @@ jobs:
       - name: Check host acceptance evidence
         run: uv run python scripts/check_host_acceptance_report.py
 
+      - name: Check contract snapshots
+        run: uv run python scripts/check_contract_snapshots.py
+
       - name: Run golden MCP evals
         run: uv run python scripts/run_golden_evals.py --work-dir .golden-evals
 

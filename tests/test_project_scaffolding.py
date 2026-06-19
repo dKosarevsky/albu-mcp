@@ -29,6 +29,7 @@ def test_ci_workflow_runs_core_quality_gates() -> None:
     assert "uv run python scripts/run_golden_evals.py" in commands
     assert "uv run python scripts/validate_host_manual_runs.py" in commands
     assert "uv run python scripts/check_host_acceptance_report.py" in commands
+    assert "uv run python scripts/check_contract_snapshots.py" in commands
     assert "ClientSession" in commands
 
 
@@ -217,6 +218,16 @@ def test_host_acceptance_freshness_guard_is_documented() -> None:
     assert "generated evidence freshness guard" in readme
 
 
+def test_contract_snapshot_freshness_guard_is_documented() -> None:
+    readme = Path("README.md").read_text(encoding="utf-8")
+    compatibility = Path("docs/COMPATIBILITY.md").read_text(encoding="utf-8")
+    release_docs = Path("docs/RELEASE.md").read_text(encoding="utf-8")
+
+    for content in [readme, compatibility, release_docs]:
+        assert "check_contract_snapshots.py" in content
+    assert "contract snapshot freshness guard" in readme
+
+
 def test_docs_link_diagnostics_playbook_resource() -> None:
     readme = Path("README.md").read_text(encoding="utf-8")
     install = Path("docs/INSTALL.md").read_text(encoding="utf-8")
@@ -291,6 +302,7 @@ def test_release_workflow_and_readme_publish_instructions_are_present() -> None:
     assert "uv build" in build_commands
     assert "uv run python scripts/validate_host_manual_runs.py" in build_commands
     assert "uv run python scripts/check_host_acceptance_report.py" in build_commands
+    assert "uv run python scripts/check_contract_snapshots.py" in build_commands
     assert "gh release create" in release_commands
     assert workflow["jobs"]["publish-mcp-registry"]["needs"] == "post-release-smoke"
     assert "mcp-publisher publish" in mcp_registry_commands

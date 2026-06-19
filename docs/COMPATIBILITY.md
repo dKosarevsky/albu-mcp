@@ -72,3 +72,9 @@ Regenerate snapshots with:
 uv run python scripts/export_mcp_contract.py --output tests/fixtures/snapshots/mcp_contract.json
 uv run python scripts/export_output_contracts.py --output tests/fixtures/snapshots/output_contracts.json
 ```
+
+Check that committed snapshots are fresh with:
+
+```bash
+uv run python scripts/check_contract_snapshots.py
+```
