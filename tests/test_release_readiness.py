@@ -1,3 +1,4 @@
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -73,3 +74,48 @@ def test_release_readiness_cli_prints_failed_check(tmp_path: Path) -> None:
     assert result.returncode == 1
     assert "[release_version]" in result.stderr
     assert "does not match tag version '0.0.0'" in result.stderr
+
+
+def test_release_readiness_cli_can_emit_json(tmp_path: Path) -> None:
+    result = subprocess.run(  # noqa: S603 - static script path with controlled fixture paths.
+        [
+            sys.executable,
+            "scripts/check_release_readiness.py",
+            "--format",
+            "json",
+            "--contract-output-work-dir",
+            str(tmp_path),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads(result.stdout)
+
+    assert payload["ok"] is True
+    assert payload["checks"][0]["name"] == "manual_host_records"
+    assert payload["checks"][0]["ok"] is True
+
+
+def test_release_readiness_cli_writes_github_step_summary(tmp_path: Path) -> None:
+    summary_path = tmp_path / "summary.md"
+    result = subprocess.run(  # noqa: S603 - static script path with controlled fixture paths.
+        [
+            sys.executable,
+            "scripts/check_release_readiness.py",
+            "--contract-output-work-dir",
+            str(tmp_path / "contracts"),
+        ],
+        check=True,
+        capture_output=True,
+        env={"GITHUB_STEP_SUMMARY": str(summary_path)},
+        text=True,
+    )
+
+    summary = summary_path.read_text(encoding="utf-8")
+
+    assert "release readiness checks passed" in result.stdout
+    assert "## Release Readiness" in summary
+    assert "| Check | Status | Message |" in summary
+    assert "| manual_host_records | passed |" in summary

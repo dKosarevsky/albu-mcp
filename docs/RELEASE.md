@@ -44,6 +44,10 @@ uv run python scripts/run_golden_evals.py
 uv build
 ```
 
+Use `uv run python scripts/check_release_readiness.py --tag vX.Y.Z --format json` when another tool needs
+machine-readable pre-release status. In GitHub Actions, the same guard writes a compact Markdown table to
+`GITHUB_STEP_SUMMARY` automatically.
+
 5. Commit the version bump:
 
 ```bash

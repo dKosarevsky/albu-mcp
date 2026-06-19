@@ -248,6 +248,8 @@ def test_release_readiness_guard_is_documented() -> None:
     for content in [readme, release_docs, audit]:
         assert "check_release_readiness.py" in content
     assert "release readiness guard" in readme
+    assert "--format json" in release_docs
+    assert "GITHUB_STEP_SUMMARY" in release_docs
 
 
 def test_docs_link_diagnostics_playbook_resource() -> None:

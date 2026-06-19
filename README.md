@@ -93,7 +93,8 @@ The public MCP surface is kept stable through reviewed contract snapshots. Compa
 - [scripts/check_manual_host_acceptance.py](scripts/check_manual_host_acceptance.py): strict manual host acceptance gate.
 - [scripts/check_host_acceptance_report.py](scripts/check_host_acceptance_report.py): generated evidence freshness guard.
 - [scripts/check_contract_snapshots.py](scripts/check_contract_snapshots.py): contract snapshot freshness guard.
-- [scripts/check_release_readiness.py](scripts/check_release_readiness.py): aggregate release readiness guard.
+- [scripts/check_release_readiness.py](scripts/check_release_readiness.py): aggregate release readiness guard with JSON and
+  GitHub summary output.
 - [scripts/check_mcp_registry_status.py](scripts/check_mcp_registry_status.py): public MCP Registry latest-status guard.
 - [docs/USAGE.md](docs/USAGE.md): end-to-end MCP host workflow and tool details.
 - [docs/RECIPES.md](docs/RECIPES.md): task-specific host recipes.

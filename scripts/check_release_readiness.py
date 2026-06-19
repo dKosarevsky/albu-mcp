@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import json
+import os
 import sys
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 
 if not __package__:
@@ -94,6 +96,7 @@ def main() -> None:
     parser.add_argument("--contract-output-work-dir", type=Path, default=None)
     parser.add_argument("--pyproject", type=Path, default=_DEFAULT_PYPROJECT_PATH)
     parser.add_argument("--server-json", type=Path, default=_DEFAULT_SERVER_JSON_PATH)
+    parser.add_argument("--format", choices=["text", "json"], default="text")
     args = parser.parse_args()
 
     host_report_path = (
@@ -112,17 +115,18 @@ def main() -> None:
             server_json_path=args.server_json,
         )
     )
+    _write_github_step_summary(report)
+    if args.format == "json":
+        sys.stdout.write(json.dumps(_report_payload(report), indent=2))
+        sys.stdout.write("\n")
     if not report.ok:
-        for check in report.checks:
-            if check.ok:
-                continue
-            sys.stderr.write(f"[{check.name}] {check.message}\n")
-            if check.diff:
-                sys.stderr.write(check.diff)
+        if args.format == "text":
+            _write_text_failures(report)
         raise SystemExit(1)
 
-    checked = ", ".join(check.name for check in report.checks)
-    sys.stdout.write(f"release readiness checks passed: {checked}\n")
+    if args.format == "text":
+        checked = ", ".join(check.name for check in report.checks)
+        sys.stdout.write(f"release readiness checks passed: {checked}\n")
 
 
 def _check_manual_host_records(path: Path) -> ReleaseReadinessCheck:
@@ -193,6 +197,45 @@ def _check_release_version(tag: str, *, pyproject_path: Path, server_json_path: 
         ok=True,
         message=f"release version {report.version} is consistent",
     )
+
+
+def _report_payload(report: ReleaseReadinessReport) -> dict[str, object]:
+    return {"ok": report.ok, "checks": [asdict(check) for check in report.checks]}
+
+
+def _write_text_failures(report: ReleaseReadinessReport) -> None:
+    for check in report.checks:
+        if check.ok:
+            continue
+        sys.stderr.write(f"[{check.name}] {check.message}\n")
+        if check.diff:
+            sys.stderr.write(check.diff)
+
+
+def _write_github_step_summary(report: ReleaseReadinessReport) -> None:
+    summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+    if not summary_path:
+        return
+    Path(summary_path).parent.mkdir(parents=True, exist_ok=True)
+    Path(summary_path).write_text(_github_step_summary(report), encoding="utf-8")
+
+
+def _github_step_summary(report: ReleaseReadinessReport) -> str:
+    lines = [
+        "## Release Readiness",
+        "",
+        "| Check | Status | Message |",
+        "| --- | --- | --- |",
+    ]
+    for check in report.checks:
+        status = "passed" if check.ok else "failed"
+        lines.append(f"| {check.name} | {status} | {_escape_markdown_cell(check.message)} |")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _escape_markdown_cell(value: str) -> str:
+    return value.replace("|", "\\|").replace("\n", "<br>")
 
 
 if __name__ == "__main__":
