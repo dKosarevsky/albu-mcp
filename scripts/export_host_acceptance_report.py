@@ -48,6 +48,11 @@ _AUTOMATED_COVERAGE: tuple[dict[str, str], ...] = (
         "status": "automated",
         "evidence": ".github/workflows/publish-mcp.yml",
     },
+    {
+        "name": "host acceptance evidence freshness",
+        "status": "automated",
+        "evidence": "uv run python scripts/check_host_acceptance_report.py",
+    },
 )
 _MANUAL_HOST_UI: tuple[dict[str, str], ...] = (
     {

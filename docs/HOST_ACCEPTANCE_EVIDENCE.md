@@ -17,6 +17,7 @@
 | release build | automated | uv build and GitHub Release workflow |
 | PyPI publish check | automated | Release workflow publish-pypi and post-release-smoke jobs |
 | MCP Registry metadata publish check | automated | .github/workflows/publish-mcp.yml |
+| host acceptance evidence freshness | automated | uv run python scripts/check_host_acceptance_report.py |
 
 ## Manual Host UI
 

@@ -37,6 +37,7 @@ uv run ruff check .
 uv run ruff format --check .
 uv run ty check
 uv run python scripts/validate_host_manual_runs.py
+uv run python scripts/check_host_acceptance_report.py
 uv run python scripts/run_golden_evals.py
 uv build
 ```
@@ -122,6 +123,7 @@ uv run python scripts/record_host_manual_run.py --host Codex --status passed --d
   --evidence "Codex app listed tools, read workflow resources, and ran run_host_smoke_check."
 uv run python scripts/validate_host_manual_runs.py
 uv run python scripts/export_host_acceptance_report.py --output docs/HOST_ACCEPTANCE_EVIDENCE.md
+uv run python scripts/check_host_acceptance_report.py
 ```
 
 This artifact records automated release coverage and keeps manual host UI status pending until a reviewer adds dated

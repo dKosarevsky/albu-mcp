@@ -7,6 +7,7 @@ Generate a reviewable local evidence artifact before and after manual host runs:
 
 ```bash
 uv run python scripts/export_host_acceptance_report.py --output docs/HOST_ACCEPTANCE_EVIDENCE.md
+uv run python scripts/check_host_acceptance_report.py
 ```
 
 The generated report records automated coverage and keeps host UI status `pending` until a dated manual run note is
@@ -16,6 +17,7 @@ Validate manual run records before regenerating evidence:
 
 ```bash
 uv run python scripts/validate_host_manual_runs.py
+uv run python scripts/check_host_acceptance_report.py
 ```
 
 Record or replace one host note with:

@@ -21,6 +21,7 @@ def test_host_acceptance_report_keeps_manual_hosts_pending_by_default() -> None:
         "release build",
         "PyPI publish check",
         "MCP Registry metadata publish check",
+        "host acceptance evidence freshness",
     }
     assert {item["host"] for item in report["manual_host_ui"]} == {
         "Claude Desktop",
@@ -42,6 +43,7 @@ def test_host_acceptance_markdown_reports_pending_manual_status() -> None:
     assert "# Host Acceptance Evidence" in markdown
     assert "| Claude Desktop | pending | none | manual UI run not recorded |" in markdown
     assert "| MCP Registry metadata publish check | automated |" in markdown
+    assert "| host acceptance evidence freshness | automated |" in markdown
     assert "Manual Host UI: pending" in markdown
     assert "Manual Host UI: passed" not in markdown
 
@@ -97,6 +99,103 @@ def test_host_acceptance_report_cli_runs_as_script(tmp_path: Path) -> None:
     )
 
     assert "Manual Host UI: pending" in output_path.read_text(encoding="utf-8")
+
+
+def test_host_acceptance_report_freshness_check_rejects_stale_markdown(tmp_path: Path) -> None:
+    module = importlib.import_module("scripts.check_host_acceptance_report")
+    _write_minimal_release_metadata(tmp_path)
+    docs_path = tmp_path / "docs"
+    docs_path.mkdir()
+    (docs_path / "HOST_MANUAL_RUNS.json").write_text(
+        """
+{
+  "manual_host_ui": [
+    {
+      "host": "Codex",
+      "status": "passed",
+      "date": "2026-06-19",
+      "evidence": "Codex app listed tools, read workflow resources, and ran run_host_smoke_check."
+    }
+  ]
+}
+""".strip(),
+        encoding="utf-8",
+    )
+    report_path = docs_path / "HOST_ACCEPTANCE_EVIDENCE.md"
+    report_path.write_text("# Host Acceptance Evidence\n\n- Manual Host UI: pending\n", encoding="utf-8")
+
+    result = module.check_host_acceptance_report(root=tmp_path, report_path=report_path)
+
+    assert result.ok is False
+    assert result.expected_path == report_path
+    assert "Host acceptance evidence is stale" in result.message
+    assert "export_host_acceptance_report.py" in result.message
+
+
+def test_host_acceptance_report_freshness_check_cli_runs_as_script(tmp_path: Path) -> None:
+    output_path = tmp_path / "HOST_ACCEPTANCE_EVIDENCE.md"
+
+    subprocess.run(  # noqa: S603 - regression test for direct script execution with a static command.
+        [
+            sys.executable,
+            "scripts/export_host_acceptance_report.py",
+            "--output",
+            str(output_path),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    result = subprocess.run(  # noqa: S603 - regression test for direct script execution with a static command.
+        [
+            sys.executable,
+            "scripts/check_host_acceptance_report.py",
+            "--report",
+            str(output_path),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert "host acceptance evidence is fresh" in result.stdout
+
+
+def test_host_acceptance_report_freshness_check_cli_uses_root_default_report(tmp_path: Path) -> None:
+    _write_minimal_release_metadata(tmp_path)
+    docs_path = tmp_path / "docs"
+    output_path = docs_path / "HOST_ACCEPTANCE_EVIDENCE.md"
+    docs_path.mkdir()
+    (docs_path / "HOST_MANUAL_RUNS.json").write_text('{"manual_host_ui": []}', encoding="utf-8")
+
+    subprocess.run(  # noqa: S603 - regression test for direct script execution with a static command.
+        [
+            sys.executable,
+            "scripts/export_host_acceptance_report.py",
+            "--root",
+            str(tmp_path),
+            "--output",
+            str(output_path),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    result = subprocess.run(  # noqa: S603 - regression test for direct script execution with a static command.
+        [
+            sys.executable,
+            "scripts/check_host_acceptance_report.py",
+            "--root",
+            str(tmp_path),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert f"host acceptance evidence is fresh: {output_path}" in result.stdout
 
 
 def _write_minimal_release_metadata(root: Path) -> None:

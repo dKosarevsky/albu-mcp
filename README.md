@@ -90,6 +90,7 @@ The public MCP surface is kept stable through reviewed contract snapshots. Compa
   artifact generator.
 - [scripts/record_host_manual_run.py](scripts/record_host_manual_run.py): helper for recording dated manual host UI evidence.
 - [scripts/validate_host_manual_runs.py](scripts/validate_host_manual_runs.py): manual host evidence validator.
+- [scripts/check_host_acceptance_report.py](scripts/check_host_acceptance_report.py): generated evidence freshness guard.
 - [scripts/check_mcp_registry_status.py](scripts/check_mcp_registry_status.py): public MCP Registry latest-status guard.
 - [docs/USAGE.md](docs/USAGE.md): end-to-end MCP host workflow and tool details.
 - [docs/RECIPES.md](docs/RECIPES.md): task-specific host recipes.
@@ -108,6 +109,7 @@ uv run ruff check .
 uv run ruff format --check .
 uv run ty check
 uv run python scripts/validate_host_manual_runs.py
+uv run python scripts/check_host_acceptance_report.py
 uv run python scripts/run_golden_evals.py
 uv run python scripts/check_mcp_registry_status.py
 uv build
