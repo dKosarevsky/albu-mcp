@@ -18,6 +18,13 @@ Validate manual run records before regenerating evidence:
 uv run python scripts/validate_host_manual_runs.py
 ```
 
+Record or replace one host note with:
+
+```bash
+uv run python scripts/record_host_manual_run.py --host Codex --status passed --date 2026-06-19 \
+  --evidence "Codex app listed tools, read workflow resources, and ran run_host_smoke_check."
+```
+
 The JSON shape is documented in `docs/HOST_MANUAL_RUNS.schema.json`.
 
 Manual run note format:

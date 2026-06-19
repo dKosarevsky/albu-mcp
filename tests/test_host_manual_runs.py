@@ -1,8 +1,11 @@
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 
+from scripts.record_host_manual_run import record_host_manual_run
 from scripts.validate_host_manual_runs import validate_host_manual_runs
 
 
@@ -111,3 +114,74 @@ def test_host_manual_runs_validator_rejects_duplicate_hosts(tmp_path: Path) -> N
 
     with pytest.raises(ValueError, match="Duplicate manual host UI record"):
         validate_host_manual_runs(manual_runs_path)
+
+
+def test_record_host_manual_run_adds_and_replaces_records_in_canonical_order(tmp_path: Path) -> None:
+    manual_runs_path = tmp_path / "HOST_MANUAL_RUNS.json"
+    manual_runs_path.write_text(
+        json.dumps(
+            {
+                "manual_host_ui": [
+                    {
+                        "host": "Codex",
+                        "status": "blocked",
+                        "date": "2026-06-18",
+                        "evidence": "initial Codex note",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    record_host_manual_run(
+        path=manual_runs_path,
+        host="Cursor",
+        status="passed",
+        run_date="2026-06-19",
+        evidence="Cursor listed tools and completed run_host_smoke_check.",
+    )
+    report = record_host_manual_run(
+        path=manual_runs_path,
+        host="Codex",
+        status="passed",
+        run_date="2026-06-20",
+        evidence="Codex listed tools and completed run_host_smoke_check.",
+    )
+
+    records = [record.model_dump(mode="json") for record in report.manual_host_ui]
+
+    assert [record["host"] for record in records] == ["Cursor", "Codex"]
+    assert records[0]["status"] == "passed"
+    assert records[1]["date"] == "2026-06-20"
+    assert "initial Codex note" not in manual_runs_path.read_text(encoding="utf-8")
+
+
+def test_record_host_manual_run_cli_writes_valid_json(tmp_path: Path) -> None:
+    manual_runs_path = tmp_path / "HOST_MANUAL_RUNS.json"
+    manual_runs_path.write_text('{"manual_host_ui": []}', encoding="utf-8")
+
+    result = subprocess.run(  # noqa: S603 - static script path with controlled fixture paths.
+        [
+            sys.executable,
+            "scripts/record_host_manual_run.py",
+            "--path",
+            str(manual_runs_path),
+            "--host",
+            "Codex",
+            "--status",
+            "passed",
+            "--date",
+            "2026-06-19",
+            "--evidence",
+            "Codex listed tools and completed run_host_smoke_check.",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    report = validate_host_manual_runs(manual_runs_path)
+
+    assert "recorded Codex passed on 2026-06-19" in result.stdout
+    assert report.manual_host_ui[0].host == "Codex"

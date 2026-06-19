@@ -165,8 +165,10 @@ def test_host_acceptance_checklist_covers_registry_and_hosts() -> None:
     assert "[docs/HOST_MANUAL_RUNS.schema.json](docs/HOST_MANUAL_RUNS.schema.json)" in readme
     assert "export_host_acceptance_report.py" in readme
     assert "validate_host_manual_runs.py" in readme
+    assert "record_host_manual_run.py" in readme
     assert "export_host_acceptance_report.py" in checklist
     assert "validate_host_manual_runs.py" in checklist
+    assert "record_host_manual_run.py" in checklist
     assert "export_host_acceptance_report.py" in matrix
     assert "[HOST_MATRIX.md](HOST_MATRIX.md)" in checklist
     assert "MCP Registry card" in checklist
@@ -199,6 +201,7 @@ def test_host_acceptance_checklist_covers_registry_and_hosts() -> None:
     release_docs = Path("docs/RELEASE.md").read_text(encoding="utf-8")
     assert "export_host_acceptance_report.py" in release_docs
     assert "validate_host_manual_runs.py" in release_docs
+    assert "record_host_manual_run.py" in release_docs
     assert "HOST_MANUAL_RUNS.json" in release_docs
 
 

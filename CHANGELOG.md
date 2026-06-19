@@ -7,6 +7,7 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 - Added a host acceptance evidence exporter, generated evidence snapshot, structured manual run records, and a validation
   gate that keeps host UI checks pending until dated reviewer evidence is recorded.
 - Added a public MCP Registry watchdog and automatic Registry metadata publication after successful release smoke checks.
+- Added a manual host run recorder CLI for updating host acceptance evidence without duplicate host entries.
 
 ## 1.10.0 - 2026-06-19
 

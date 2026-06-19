@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 
 HostName = Literal["Claude Desktop", "Claude Code", "Cursor", "Codex"]
 HostStatus = Literal["passed", "blocked", "pending"]
+HOST_NAMES: tuple[HostName, ...] = ("Claude Desktop", "Claude Code", "Cursor", "Codex")
 
 
 class HostManualRun(BaseModel):

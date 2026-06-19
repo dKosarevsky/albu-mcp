@@ -118,6 +118,8 @@ uv run python scripts/check_mcp_registry_status.py
 Export reviewable host acceptance evidence:
 
 ```bash
+uv run python scripts/record_host_manual_run.py --host Codex --status passed --date 2026-06-19 \
+  --evidence "Codex app listed tools, read workflow resources, and ran run_host_smoke_check."
 uv run python scripts/validate_host_manual_runs.py
 uv run python scripts/export_host_acceptance_report.py --output docs/HOST_ACCEPTANCE_EVIDENCE.md
 ```
