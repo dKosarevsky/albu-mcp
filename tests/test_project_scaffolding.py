@@ -237,7 +237,9 @@ def test_contract_snapshot_freshness_guard_is_documented() -> None:
 
     for content in [readme, compatibility, release_docs]:
         assert "check_contract_snapshots.py" in content
+        assert "classify_contract_drift.py" in content
     assert "contract snapshot freshness guard" in readme
+    assert "structured snapshot drift classifier" in readme
 
 
 def test_release_readiness_guard_is_documented() -> None:

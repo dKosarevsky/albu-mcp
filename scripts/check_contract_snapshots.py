@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import difflib
+import json
 import sys
 import tempfile
 from dataclasses import dataclass
@@ -12,6 +13,7 @@ from pathlib import Path
 if not __package__:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from scripts.classify_contract_drift import classify_contract_drift
 from scripts.export_mcp_contract import build_contract_snapshot, dump_contract_snapshot
 from scripts.export_output_contracts import build_output_contract_snapshot, dump_output_contract_snapshot
 
@@ -138,9 +140,20 @@ def _compare_snapshot(
         name=name,
         path=path,
         ok=False,
-        message=f"{label} is stale: {path}. Regenerate it with: {regenerate_command}",
+        message=(
+            f"{label} is stale: {path} "
+            f"(classification: {_classify_json_drift(actual=actual, expected=expected)}). "
+            f"Regenerate it with: {regenerate_command}"
+        ),
         diff=_unified_diff(path=path, actual=actual, expected=expected),
     )
+
+
+def _classify_json_drift(*, actual: str, expected: str) -> str:
+    try:
+        return classify_contract_drift(json.loads(actual), json.loads(expected)).kind
+    except json.JSONDecodeError:
+        return "unclassified"
 
 
 def _unified_diff(*, path: Path, actual: str, expected: str) -> str:

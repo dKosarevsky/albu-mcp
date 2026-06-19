@@ -44,6 +44,9 @@ uv run python scripts/run_golden_evals.py
 uv build
 ```
 
+If `check_contract_snapshots.py` reports drift, review its classification before updating fixtures. Use
+`scripts/classify_contract_drift.py` for ad hoc JSON snapshot comparisons.
+
 Use `uv run python scripts/check_release_readiness.py --tag vX.Y.Z --format json` when another tool needs
 machine-readable pre-release status. In GitHub Actions, the same guard writes a compact Markdown table to
 `GITHUB_STEP_SUMMARY` automatically.

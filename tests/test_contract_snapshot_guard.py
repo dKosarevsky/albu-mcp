@@ -27,6 +27,7 @@ def test_contract_snapshot_guard_reports_stale_mcp_contract_diff(tmp_path: Path)
     assert report.ok is False
     assert mcp_check.ok is False
     assert "MCP contract snapshot is stale" in mcp_check.message
+    assert "classification: output_shape_change" in mcp_check.message
     assert "---" in mcp_check.diff
     assert "+++" in mcp_check.diff
     assert "stale" in mcp_check.diff
@@ -55,6 +56,7 @@ def test_contract_snapshot_guard_cli_prints_stale_diff(tmp_path: Path) -> None:
 
     assert result.returncode == 1
     assert "MCP contract snapshot is stale" in result.stderr
+    assert "classification: output_shape_change" in result.stderr
     assert "---" in result.stderr
     assert "+++" in result.stderr
     assert "stale" in result.stderr

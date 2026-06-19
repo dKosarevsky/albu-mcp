@@ -65,6 +65,8 @@ Every public contract change needs at least one of these checks:
 - release version guard updates for package or registry metadata changes.
 
 If a snapshot diff is intentional, commit it with the code or docs that explain the change.
+Use `scripts/classify_contract_drift.py` or the classification printed by `scripts/check_contract_snapshots.py` to
+separate compatible additions, documentation-only edits, output shape drift, and breaking removals.
 
 Regenerate snapshots with:
 
