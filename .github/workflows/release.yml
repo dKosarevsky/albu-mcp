@@ -52,6 +52,9 @@ jobs:
       - name: Check contract snapshots
         run: uv run python scripts/check_contract_snapshots.py
 
+      - name: Check demo assets
+        run: uv run python scripts/check_demo_assets.py --output-dir docs/assets/demo --check
+
       - name: Check release readiness
         run: uv run python scripts/check_release_readiness.py --tag "${GITHUB_REF_NAME}"
 

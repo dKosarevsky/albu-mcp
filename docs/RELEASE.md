@@ -39,6 +39,7 @@ uv run ty check
 uv run python scripts/validate_host_manual_runs.py
 uv run python scripts/check_host_acceptance_report.py
 uv run python scripts/check_contract_snapshots.py
+uv run python scripts/check_demo_assets.py --output-dir docs/assets/demo --check
 uv run python scripts/check_release_readiness.py --tag vX.Y.Z
 uv run python scripts/run_golden_evals.py
 uv build

@@ -19,5 +19,11 @@ The script writes a synthetic input image, a baseline contact sheet, a compariso
 manifest that names the MCP tools used in the workflow. Open `docs/assets/demo/demo_report.md` first: it is the
 30-second visual review artifact for the generated baseline and candidate.
 
+Committed demo assets live in `docs/assets/demo/`. Check that they match the generator with:
+
+```bash
+uv run python scripts/check_demo_assets.py --output-dir docs/assets/demo --check
+```
+
 The generated files are intentionally small and deterministic so they can be refreshed whenever README or usage examples
 need screenshots.

@@ -30,6 +30,7 @@ def test_ci_workflow_runs_core_quality_gates() -> None:
     assert "uv run python scripts/validate_host_manual_runs.py" in commands
     assert "uv run python scripts/check_host_acceptance_report.py" in commands
     assert "uv run python scripts/check_contract_snapshots.py" in commands
+    assert "uv run python scripts/check_demo_assets.py --output-dir docs/assets/demo --check" in commands
     assert "uv run python scripts/check_release_readiness.py" in commands
     assert "ClientSession" in commands
 
@@ -81,7 +82,10 @@ def test_usage_docs_and_examples_are_present() -> None:
     assert Path("examples/first_preview_workflow.md").exists()
     assert Path("examples/classification_pipeline.json").exists()
     assert Path("scripts/render_demo_assets.py").exists()
+    assert Path("scripts/check_demo_assets.py").exists()
     assert Path("docs/DEMO.md").exists()
+    assert Path("docs/assets/demo/demo_manifest.json").exists()
+    assert Path("docs/assets/demo/demo_report.md").exists()
 
 
 def test_install_guide_covers_host_setup_and_examples() -> None:
@@ -330,6 +334,7 @@ def test_release_workflow_and_readme_publish_instructions_are_present() -> None:
     assert "uv run python scripts/validate_host_manual_runs.py" in build_commands
     assert "uv run python scripts/check_host_acceptance_report.py" in build_commands
     assert "uv run python scripts/check_contract_snapshots.py" in build_commands
+    assert "uv run python scripts/check_demo_assets.py --output-dir docs/assets/demo --check" in build_commands
     assert 'uv run python scripts/check_release_readiness.py --tag "${GITHUB_REF_NAME}"' in build_commands
     assert "gh release create" in release_commands
     assert workflow["jobs"]["publish-mcp-registry"]["needs"] == "post-release-smoke"

@@ -1,0 +1,59 @@
+{
+  "baseline_pipeline": {
+    "seed": 137,
+    "transforms": [
+      {
+        "name": "HorizontalFlip",
+        "p": 0.2
+      },
+      {
+        "name": "RandomBrightnessContrast",
+        "p": 0.2
+      },
+      {
+        "name": "GaussNoise",
+        "p": 0.1,
+        "params": {
+          "std_range": [
+            0.02,
+            0.1
+          ]
+        }
+      }
+    ]
+  },
+  "candidate_pipeline": {
+    "seed": 147,
+    "transforms": [
+      {
+        "name": "HorizontalFlip",
+        "p": 0.2
+      },
+      {
+        "name": "RandomBrightnessContrast",
+        "p": 0.2
+      },
+      {
+        "name": "GaussNoise",
+        "p": 0.05,
+        "params": {
+          "std_range": [
+            0.01,
+            0.05
+          ]
+        }
+      }
+    ]
+  },
+  "compare_preview_runs": {
+    "feedback_tags": [
+      "too_noisy"
+    ],
+    "review_note": "Candidate keeps the object readable while reducing noise severity."
+  },
+  "comparison_contact_sheet": "comparison_contact_sheet.png",
+  "contact_sheet": "contact_sheet.png",
+  "demo_report": "demo_report.md",
+  "input": "inputs/sample-grid.png",
+  "workflow": "recommend_pipeline -> render_preview_batch -> adjust_pipeline -> compare_preview_runs -> export_pipeline"
+}

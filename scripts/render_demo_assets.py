@@ -54,9 +54,9 @@ def render_demo_assets(output_dir: Path) -> Path:
         "workflow": (
             "recommend_pipeline -> render_preview_batch -> adjust_pipeline -> compare_preview_runs -> export_pipeline"
         ),
-        "input": str(sample_path),
-        "contact_sheet": str(contact_sheet_path),
-        "comparison_contact_sheet": str(comparison_path),
+        "input": "inputs/sample-grid.png",
+        "contact_sheet": "contact_sheet.png",
+        "comparison_contact_sheet": "comparison_contact_sheet.png",
         "baseline_pipeline": {
             "transforms": [
                 {"name": "HorizontalFlip", "p": 0.2},
@@ -79,7 +79,7 @@ def render_demo_assets(output_dir: Path) -> Path:
         },
     }
     _write_demo_report(report_path)
-    manifest["demo_report"] = str(report_path)
+    manifest["demo_report"] = "demo_report.md"
     manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8")
     return manifest_path
 

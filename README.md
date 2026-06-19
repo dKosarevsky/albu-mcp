@@ -96,6 +96,7 @@ The public MCP surface is kept stable through reviewed contract snapshots. Compa
 - [scripts/classify_contract_drift.py](scripts/classify_contract_drift.py): structured snapshot drift classifier.
 - [scripts/check_release_readiness.py](scripts/check_release_readiness.py): aggregate release readiness guard with JSON and
   GitHub summary output.
+- [scripts/check_demo_assets.py](scripts/check_demo_assets.py): committed demo asset freshness guard.
 - [scripts/check_mcp_registry_status.py](scripts/check_mcp_registry_status.py): public MCP Registry latest-status guard.
 - [docs/USAGE.md](docs/USAGE.md): end-to-end MCP host workflow and tool details.
 - [docs/RECIPES.md](docs/RECIPES.md): task-specific host recipes.
@@ -117,6 +118,7 @@ uv run ty check
 uv run python scripts/validate_host_manual_runs.py
 uv run python scripts/check_host_acceptance_report.py
 uv run python scripts/check_contract_snapshots.py
+uv run python scripts/check_demo_assets.py --output-dir docs/assets/demo --check
 uv run python scripts/check_release_readiness.py
 uv run python scripts/run_golden_evals.py
 uv run python scripts/check_mcp_registry_status.py
