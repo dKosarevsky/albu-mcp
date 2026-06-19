@@ -11,6 +11,7 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 - Added a CI freshness guard for generated host acceptance evidence.
 - Added unified diff output when generated host acceptance evidence is stale.
 - Added a CI freshness guard with unified diffs for public contract snapshots.
+- Added an aggregate release readiness guard for fast pre-release checks.
 
 ## 1.10.0 - 2026-06-19
 

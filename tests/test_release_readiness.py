@@ -1,0 +1,75 @@
+import subprocess
+import sys
+from pathlib import Path
+
+from scripts.check_release_readiness import ReleaseReadinessConfig, check_release_readiness
+
+
+def test_release_readiness_accepts_current_fast_guards(tmp_path: Path) -> None:
+    report = check_release_readiness(ReleaseReadinessConfig(contract_output_work_dir=tmp_path))
+
+    assert report.ok is True
+    assert [check.name for check in report.checks] == [
+        "manual_host_records",
+        "host_acceptance_evidence",
+        "mcp_contract_snapshot",
+        "output_contract_snapshot",
+    ]
+    assert all(check.message for check in report.checks)
+    assert all(not check.diff for check in report.checks)
+
+
+def test_release_readiness_runs_optional_version_check(tmp_path: Path) -> None:
+    report = check_release_readiness(ReleaseReadinessConfig(tag="v1.10.0", contract_output_work_dir=tmp_path))
+
+    assert report.ok is True
+    assert report.checks[-1].name == "release_version"
+    assert report.checks[-1].message == "release version 1.10.0 is consistent"
+
+
+def test_release_readiness_reports_version_mismatch(tmp_path: Path) -> None:
+    report = check_release_readiness(ReleaseReadinessConfig(tag="v0.0.0", contract_output_work_dir=tmp_path))
+
+    failed = [check for check in report.checks if not check.ok]
+    assert report.ok is False
+    assert len(failed) == 1
+    assert failed[0].name == "release_version"
+    assert "does not match tag version '0.0.0'" in failed[0].message
+
+
+def test_release_readiness_cli_passes_fast_guards(tmp_path: Path) -> None:
+    result = subprocess.run(  # noqa: S603 - static script path with controlled fixture paths.
+        [
+            sys.executable,
+            "scripts/check_release_readiness.py",
+            "--contract-output-work-dir",
+            str(tmp_path),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert "release readiness checks passed" in result.stdout
+    assert "manual_host_records" in result.stdout
+    assert "output_contract_snapshot" in result.stdout
+
+
+def test_release_readiness_cli_prints_failed_check(tmp_path: Path) -> None:
+    result = subprocess.run(  # noqa: S603 - static script path with controlled fixture paths.
+        [
+            sys.executable,
+            "scripts/check_release_readiness.py",
+            "--tag",
+            "v0.0.0",
+            "--contract-output-work-dir",
+            str(tmp_path),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 1
+    assert "[release_version]" in result.stderr
+    assert "does not match tag version '0.0.0'" in result.stderr

@@ -48,6 +48,9 @@ Run `uv run python scripts/run_golden_evals.py` before every release.
 The release workflow builds the package, checks release metadata, runs tests, runs lint/type checks, executes golden MCP
 evals, publishes to PyPI through Trusted Publishing, creates a GitHub Release, and runs a post-release `uvx` smoke check.
 
+`uv run python scripts/check_release_readiness.py --tag v1.0.0` aggregates the fast release guards: version metadata,
+manual host evidence schema, generated host acceptance evidence, and public contract snapshots.
+
 The MCP Registry workflow publishes `server.json` metadata through GitHub OIDC after the PyPI package is visible.
 
 ## Install Flow

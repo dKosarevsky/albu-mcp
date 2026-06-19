@@ -52,6 +52,9 @@ jobs:
       - name: Check contract snapshots
         run: uv run python scripts/check_contract_snapshots.py
 
+      - name: Check release readiness
+        run: uv run python scripts/check_release_readiness.py --tag "${GITHUB_REF_NAME}"
+
       - name: Run golden MCP evals
         run: uv run python scripts/run_golden_evals.py --work-dir .golden-evals
 
