@@ -59,6 +59,9 @@ instructions still match the repository.
 Use GitHub Discussions or issues before opening a docs PR against AlbumentationsX. The first message should be short and
 concrete:
 
+Current status: upstream issue opened at
+[albumentations-team/AlbumentationsX#285](https://github.com/albumentations-team/AlbumentationsX/issues/285).
+
 ```markdown
 Hi, I built a small MCP server for AlbumentationsX workflows:
 https://github.com/dKosarevsky/albu-mcp
