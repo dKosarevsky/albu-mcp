@@ -1,0 +1,66 @@
+name: MCP host acceptance report
+description: Report a real UI run in Claude Desktop, Claude Code, Cursor, or Codex.
+title: "[Host Acceptance]: "
+labels:
+  - host-acceptance
+  - mcp-host
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Run `uv run python scripts/export_manual_host_acceptance_packet.py --output /tmp/albu-host-acceptance.md`
+        before testing. Do not mark a host as passed unless the real MCP host UI completed the flow.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy check
+      options:
+        - label: I did not upload private datasets, credentials, absolute private paths, or proprietary images.
+          required: true
+  - type: dropdown
+    id: host
+    attributes:
+      label: Host
+      options:
+        - Claude Desktop
+        - Claude Code
+        - Cursor
+        - Codex
+        - Other MCP host
+    validations:
+      required: true
+  - type: input
+    id: package-version
+    attributes:
+      label: Package version
+      placeholder: "albumentationsx-mcp==1.10.0"
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Config summary
+      description: Paste the non-sensitive command/config shape. Redact local private path segments if needed.
+      placeholder: "uvx --from albumentationsx-mcp==1.10.0 albumentationsx-mcp --allowed-root ..."
+    validations:
+      required: true
+  - type: textarea
+    id: completed-flow
+    attributes:
+      label: Completed flow
+      description: Confirm listed tools/resources, smoke check, validation, preview render, compare, tuning export, and pipeline export.
+      placeholder: "Listed tools, read albumentationsx://examples/distortion-review, ran run_host_smoke_check, ..."
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence note for HOST_MANUAL_RUNS.json
+      description: Provide one sentence suitable for scripts/record_host_manual_run.py --evidence.
+    validations:
+      required: true
+  - type: textarea
+    id: blockers
+    attributes:
+      label: Blockers or warnings
+      description: If blocked, include the exact host error and the last completed step.

@@ -1,0 +1,49 @@
+name: Feature request
+description: Suggest a new MCP host workflow, tool, resource, prompt, or documentation improvement.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for concrete product improvements. For preview output issues, use the preview workflow feedback form.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - MCP host workflow
+        - Preview rendering
+        - Pipeline recommendation
+        - Quality scoring
+        - Documentation
+        - Release or registry automation
+    validations:
+      required: true
+  - type: input
+    id: host
+    attributes:
+      label: MCP host
+      description: Claude Desktop, Claude Code, Cursor, Codex, another MCP client, or not host-specific.
+      placeholder: "Claude Desktop"
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user workflow is blocked or awkward?
+      placeholder: "I want the host to ..."
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the smallest useful behavior and any expected MCP tool/resource/prompt shape.
+    validations:
+      required: true
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Constraints
+      description: Mention privacy, local filesystem, performance, package, or compatibility constraints.

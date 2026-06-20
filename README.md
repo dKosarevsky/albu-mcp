@@ -102,6 +102,8 @@ The public MCP surface is kept stable through reviewed contract snapshots. Compa
 - [scripts/check_mcp_registry_status.py](scripts/check_mcp_registry_status.py): public MCP Registry latest-status guard.
 - [docs/USAGE.md](docs/USAGE.md): end-to-end MCP host workflow and tool details.
 - [docs/RECIPES.md](docs/RECIPES.md): task-specific host recipes.
+- [docs/COMMUNITY_FEEDBACK.md](docs/COMMUNITY_FEEDBACK.md): privacy-safe GitHub issue intake for host and workflow
+  feedback.
 - [examples/distortion_review_workflow.md](examples/distortion_review_workflow.md): rejected noisy preview review loop.
 - [docs/DEMO.md](docs/DEMO.md): generated preview comparison demo.
 - [docs/V1_READINESS.md](docs/V1_READINESS.md): v1 compatibility and release audit.

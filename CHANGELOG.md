@@ -17,6 +17,7 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 - Added structured classification for public contract snapshot drift.
 - Added `albumentationsx://examples/distortion-review` for noisy/distorted preview rejection loops.
 - Added committed deterministic demo assets and a demo asset freshness guard.
+- Added privacy-safe GitHub issue templates and a community feedback guide for MCP host reports and preview workflows.
 
 ## 1.10.0 - 2026-06-19
 

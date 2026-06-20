@@ -1,0 +1,63 @@
+name: Preview workflow feedback
+description: Report noisy, distorted, unreadable, or awkward augmentation review loops.
+title: "[Workflow Feedback]: "
+labels:
+  - workflow-feedback
+  - preview-review
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for the "example 8 is too noisy" class of feedback. Share small synthetic/demo images when possible.
+        Do not upload private datasets, proprietary training images, credentials, or unredacted private paths.
+  - type: dropdown
+    id: task
+    attributes:
+      label: Task
+      options:
+        - classification
+        - detection
+        - segmentation
+        - OCR
+        - balanced
+        - other
+    validations:
+      required: true
+  - type: input
+    id: host
+    attributes:
+      label: MCP host
+      placeholder: "Claude Desktop / Claude Code / Cursor / Codex"
+  - type: textarea
+    id: workflow
+    attributes:
+      label: Workflow context
+      description: Mention resources/tools used, such as albumentationsx://examples/distortion-review.
+      placeholder: "recommend_pipeline -> render_preview_batch -> adjust_pipeline -> compare_preview_runs -> export_preview_report"
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed preview issue
+      description: Include feedback tags such as too_noisy, too_blurry, too_distorted, too_dark, or acceptable.
+      placeholder: "too_noisy:high on candidate 2; object is no longer recognizable."
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What would a useful MCP response, adjustment, ranking, or report include?
+    validations:
+      required: true
+  - type: textarea
+    id: artifacts
+    attributes:
+      label: Safe artifact references
+      description: Share preview run IDs, contact sheet paths with private segments redacted, or synthetic demo images only.
+  - type: textarea
+    id: exported-report
+    attributes:
+      label: Report output
+      description: Paste relevant export_preview_report or compare_preview_runs excerpts if they are safe to share.

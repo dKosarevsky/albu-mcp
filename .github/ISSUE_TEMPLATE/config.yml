@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Install and host setup docs
+    url: https://github.com/dKosarevsky/albu-mcp/blob/main/docs/INSTALL.md
+    about: Use this for PyPI, MCP Registry, Claude Desktop, Claude Code, Cursor, Codex, and bounded-root setup.
+  - name: Host acceptance checklist
+    url: https://github.com/dKosarevsky/albu-mcp/blob/main/docs/HOST_ACCEPTANCE.md
+    about: Use this before filing a host-specific acceptance report.
