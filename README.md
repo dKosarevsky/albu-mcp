@@ -88,6 +88,8 @@ The public MCP surface is kept stable through reviewed contract snapshots. Compa
 - [docs/HOST_MANUAL_RUNS.schema.json](docs/HOST_MANUAL_RUNS.schema.json): schema for manual host UI evidence.
 - [scripts/export_host_acceptance_report.py](scripts/export_host_acceptance_report.py): reviewable host acceptance evidence
   artifact generator.
+- [scripts/export_manual_host_acceptance_packet.py](scripts/export_manual_host_acceptance_packet.py): local per-release
+  manual host UI run packet generator.
 - [scripts/record_host_manual_run.py](scripts/record_host_manual_run.py): helper for recording dated manual host UI evidence.
 - [scripts/validate_host_manual_runs.py](scripts/validate_host_manual_runs.py): manual host evidence validator.
 - [scripts/check_manual_host_acceptance.py](scripts/check_manual_host_acceptance.py): strict manual host acceptance gate.

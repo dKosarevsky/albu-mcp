@@ -3,6 +3,13 @@
 Use this checklist after each public release that changes installation, host workflow, or MCP Registry metadata.
 Use [HOST_MATRIX.md](HOST_MATRIX.md) for per-host manual acceptance details.
 
+Generate a local packet for the UI reviewer. It includes bounded-root configs, a copyable host prompt, and commands for
+recording evidence without marking any host as passed automatically:
+
+```bash
+uv run python scripts/export_manual_host_acceptance_packet.py --output /tmp/albu-host-acceptance.md
+```
+
 Generate a reviewable local evidence artifact before and after manual host runs:
 
 ```bash

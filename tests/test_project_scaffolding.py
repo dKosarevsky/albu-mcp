@@ -171,13 +171,18 @@ def test_host_acceptance_checklist_covers_registry_and_hosts() -> None:
     assert "[docs/HOST_ACCEPTANCE_EVIDENCE.md](docs/HOST_ACCEPTANCE_EVIDENCE.md)" in readme
     assert "[docs/HOST_MANUAL_RUNS.json](docs/HOST_MANUAL_RUNS.json)" in readme
     assert "[docs/HOST_MANUAL_RUNS.schema.json](docs/HOST_MANUAL_RUNS.schema.json)" in readme
-    assert "export_host_acceptance_report.py" in readme
-    assert "validate_host_manual_runs.py" in readme
-    assert "record_host_manual_run.py" in readme
-    assert "export_host_acceptance_report.py" in checklist
-    assert "validate_host_manual_runs.py" in checklist
-    assert "record_host_manual_run.py" in checklist
-    assert "export_host_acceptance_report.py" in matrix
+    host_scripts = [
+        "export_host_acceptance_report.py",
+        "export_manual_host_acceptance_packet.py",
+        "validate_host_manual_runs.py",
+        "record_host_manual_run.py",
+    ]
+    for script in host_scripts:
+        assert script in readme
+    for script in host_scripts:
+        assert script in checklist
+    for script in ["export_host_acceptance_report.py", "export_manual_host_acceptance_packet.py"]:
+        assert script in matrix
     assert "[HOST_MATRIX.md](HOST_MATRIX.md)" in checklist
     assert "MCP Registry card" in checklist
     assert "io.github.dKosarevsky/albu-mcp" in checklist
@@ -207,9 +212,8 @@ def test_host_acceptance_checklist_covers_registry_and_hosts() -> None:
     assert "HOST_MANUAL_RUNS.json" in matrix
     assert "HOST_MANUAL_RUNS.schema.json" in matrix
     release_docs = Path("docs/RELEASE.md").read_text(encoding="utf-8")
-    assert "export_host_acceptance_report.py" in release_docs
-    assert "validate_host_manual_runs.py" in release_docs
-    assert "record_host_manual_run.py" in release_docs
+    for script in host_scripts:
+        assert script in release_docs
     assert "HOST_MANUAL_RUNS.json" in release_docs
 
 

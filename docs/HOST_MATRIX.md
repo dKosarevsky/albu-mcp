@@ -31,6 +31,7 @@ Recorded coverage:
 To produce a reviewable evidence artifact without overstating manual coverage:
 
 ```bash
+uv run python scripts/export_manual_host_acceptance_packet.py --output /tmp/albu-host-acceptance.md
 uv run python scripts/export_host_acceptance_report.py --output docs/HOST_ACCEPTANCE_EVIDENCE.md
 uv run python scripts/check_host_acceptance_report.py
 ```
