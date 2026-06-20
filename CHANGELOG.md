@@ -18,6 +18,8 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 - Added `albumentationsx://examples/distortion-review` for noisy/distorted preview rejection loops.
 - Added committed deterministic demo assets and a demo asset freshness guard.
 - Added privacy-safe GitHub issue templates and a community feedback guide for MCP host reports and preview workflows.
+- Refined the README registry badge and documentation index to keep the project front page concise and accurate before
+  public registry indexing.
 
 ## 1.10.0 - 2026-06-19
 

@@ -9,7 +9,7 @@ vision augmentation work.
 [![CI](https://github.com/dKosarevsky/albu-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/dKosarevsky/albu-mcp/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/albumentationsx-mcp)](https://pypi.org/project/albumentationsx-mcp/)
 [![Python](https://img.shields.io/badge/python-3.10--3.13-blue)](pyproject.toml)
-[![MCP Registry](https://img.shields.io/badge/MCP%20Registry-active-green)](https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.dKosarevsky/albu-mcp)
+[![MCP Registry](https://img.shields.io/badge/MCP%20Registry-metadata%20ready-blue)](server.json)
 
 ## Purpose
 
@@ -81,36 +81,21 @@ The public MCP surface is kept stable through reviewed contract snapshots. Compa
 ## Documentation
 
 - [docs/INSTALL.md](docs/INSTALL.md): PyPI, MCP Registry, Claude Desktop, Claude Code, Cursor, Codex, bounded roots.
-- [docs/HOST_ACCEPTANCE.md](docs/HOST_ACCEPTANCE.md): registry card and MCP host acceptance checklist.
-- [docs/HOST_MATRIX.md](docs/HOST_MATRIX.md): per-host acceptance matrix.
-- [docs/HOST_ACCEPTANCE_EVIDENCE.md](docs/HOST_ACCEPTANCE_EVIDENCE.md): generated acceptance evidence snapshot.
-- [docs/HOST_MANUAL_RUNS.json](docs/HOST_MANUAL_RUNS.json): dated manual host UI evidence records.
-- [docs/HOST_MANUAL_RUNS.schema.json](docs/HOST_MANUAL_RUNS.schema.json): schema for manual host UI evidence.
-- [scripts/export_host_acceptance_report.py](scripts/export_host_acceptance_report.py): reviewable host acceptance evidence
-  artifact generator.
-- [scripts/export_manual_host_acceptance_packet.py](scripts/export_manual_host_acceptance_packet.py): local per-release
-  manual host UI run packet generator.
-- [scripts/record_host_manual_run.py](scripts/record_host_manual_run.py): helper for recording dated manual host UI evidence.
-- [scripts/validate_host_manual_runs.py](scripts/validate_host_manual_runs.py): manual host evidence validator.
-- [scripts/check_manual_host_acceptance.py](scripts/check_manual_host_acceptance.py): strict manual host acceptance gate.
-- [scripts/check_host_acceptance_report.py](scripts/check_host_acceptance_report.py): generated evidence freshness guard.
-- [scripts/check_contract_snapshots.py](scripts/check_contract_snapshots.py): contract snapshot freshness guard.
-- [scripts/classify_contract_drift.py](scripts/classify_contract_drift.py): structured snapshot drift classifier.
-- [scripts/check_release_readiness.py](scripts/check_release_readiness.py): aggregate release readiness guard with JSON and
-  GitHub summary output.
-- [scripts/check_demo_assets.py](scripts/check_demo_assets.py): committed demo asset freshness guard.
-- [scripts/check_mcp_registry_status.py](scripts/check_mcp_registry_status.py): public MCP Registry latest-status guard.
 - [docs/USAGE.md](docs/USAGE.md): end-to-end MCP host workflow and tool details.
 - [docs/RECIPES.md](docs/RECIPES.md): task-specific host recipes.
 - [docs/COMMUNITY_FEEDBACK.md](docs/COMMUNITY_FEEDBACK.md): privacy-safe GitHub issue intake for host and workflow
   feedback.
 - [examples/distortion_review_workflow.md](examples/distortion_review_workflow.md): rejected noisy preview review loop.
 - [docs/DEMO.md](docs/DEMO.md): generated preview comparison demo.
+- [docs/HOST_ACCEPTANCE.md](docs/HOST_ACCEPTANCE.md), [docs/HOST_MATRIX.md](docs/HOST_MATRIX.md), and
+  [docs/HOST_ACCEPTANCE_EVIDENCE.md](docs/HOST_ACCEPTANCE_EVIDENCE.md): MCP host acceptance status.
 - [docs/V1_READINESS.md](docs/V1_READINESS.md): v1 compatibility and release audit.
 - [docs/RELEASE.md](docs/RELEASE.md): PyPI, GitHub Release, and MCP Registry publication process.
 - [CHANGELOG.md](CHANGELOG.md): release history.
 - [server.json](server.json): public MCP Registry metadata.
 - [evals/golden_mcp_scenarios.yaml](evals/golden_mcp_scenarios.yaml): executable MCP scenarios.
+
+Operational scripts live in [scripts](scripts/) and are covered by the verification commands below.
 
 ## Verification
 
