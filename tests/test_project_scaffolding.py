@@ -169,16 +169,13 @@ def test_host_acceptance_checklist_covers_registry_and_hosts() -> None:
     assert "[docs/HOST_ACCEPTANCE.md](docs/HOST_ACCEPTANCE.md)" in readme
     assert "[docs/HOST_MATRIX.md](docs/HOST_MATRIX.md)" in readme
     assert "[docs/HOST_ACCEPTANCE_EVIDENCE.md](docs/HOST_ACCEPTANCE_EVIDENCE.md)" in readme
-    assert "[docs/HOST_MANUAL_RUNS.json](docs/HOST_MANUAL_RUNS.json)" in readme
-    assert "[docs/HOST_MANUAL_RUNS.schema.json](docs/HOST_MANUAL_RUNS.schema.json)" in readme
+    assert "Operational scripts live in [scripts](scripts/)" in readme
     host_scripts = [
         "export_host_acceptance_report.py",
         "export_manual_host_acceptance_packet.py",
         "validate_host_manual_runs.py",
         "record_host_manual_run.py",
     ]
-    for script in host_scripts:
-        assert script in readme
     for script in host_scripts:
         assert script in checklist
     for script in ["export_host_acceptance_report.py", "export_manual_host_acceptance_packet.py"]:
@@ -222,9 +219,9 @@ def test_strict_manual_host_acceptance_gate_is_documented() -> None:
     checklist = Path("docs/HOST_ACCEPTANCE.md").read_text(encoding="utf-8")
     release_docs = Path("docs/RELEASE.md").read_text(encoding="utf-8")
 
-    for content in [readme, checklist, release_docs]:
+    assert "Operational scripts live in [scripts](scripts/)" in readme
+    for content in [checklist, release_docs]:
         assert "check_manual_host_acceptance.py" in content
-    assert "strict manual host acceptance gate" in readme
     assert "fails while any required host is missing" in checklist
 
 
@@ -236,7 +233,8 @@ def test_host_acceptance_freshness_guard_is_documented() -> None:
 
     for content in [readme, checklist, matrix, release_docs]:
         assert "check_host_acceptance_report.py" in content
-    assert "generated evidence freshness guard" in readme
+    for content in [checklist, matrix, release_docs]:
+        assert "generated evidence freshness guard" in content
 
 
 def test_contract_snapshot_freshness_guard_is_documented() -> None:
@@ -246,9 +244,10 @@ def test_contract_snapshot_freshness_guard_is_documented() -> None:
 
     for content in [readme, compatibility, release_docs]:
         assert "check_contract_snapshots.py" in content
+    for content in [compatibility, release_docs]:
         assert "classify_contract_drift.py" in content
-    assert "contract snapshot freshness guard" in readme
-    assert "structured snapshot drift classifier" in readme
+    assert "contract snapshot freshness guard" in compatibility
+    assert "structured snapshot drift classifier" in release_docs
 
 
 def test_release_readiness_guard_is_documented() -> None:
@@ -258,7 +257,7 @@ def test_release_readiness_guard_is_documented() -> None:
 
     for content in [readme, release_docs, audit]:
         assert "check_release_readiness.py" in content
-    assert "release readiness guard" in readme
+    assert "release readiness guard" in release_docs
     assert "--format json" in release_docs
     assert "GITHUB_STEP_SUMMARY" in release_docs
 
@@ -378,7 +377,8 @@ def test_public_package_metadata_is_polished() -> None:
 
     assert "https://img.shields.io/pypi/v/albumentationsx-mcp" in readme
     assert "https://pypi.org/project/albumentationsx-mcp/" in readme
-    assert "https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.dKosarevsky/albu-mcp" in readme
+    assert "MCP%20Registry-metadata%20ready-blue" in readme
+    assert "[server.json](server.json): public MCP Registry metadata." in readme
     assert "[project.urls]" in pyproject
     assert '"Repository" = "https://github.com/dKosarevsky/albu-mcp"' in pyproject
     assert '"Documentation" = "https://github.com/dKosarevsky/albu-mcp/blob/main/docs/USAGE.md"' in pyproject

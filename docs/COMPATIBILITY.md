@@ -80,3 +80,5 @@ Check that committed snapshots are fresh with:
 ```bash
 uv run python scripts/check_contract_snapshots.py
 ```
+
+This contract snapshot freshness guard fails when committed tool, resource, prompt, or output snapshots are stale.

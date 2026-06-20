@@ -46,11 +46,13 @@ uv build
 ```
 
 If `check_contract_snapshots.py` reports drift, review its classification before updating fixtures. Use
-`scripts/classify_contract_drift.py` for ad hoc JSON snapshot comparisons.
+`scripts/classify_contract_drift.py` as the structured snapshot drift classifier for ad hoc JSON snapshot comparisons.
 
 Use `uv run python scripts/check_release_readiness.py --tag vX.Y.Z --format json` when another tool needs
 machine-readable pre-release status. In GitHub Actions, the same guard writes a compact Markdown table to
 `GITHUB_STEP_SUMMARY` automatically.
+This release readiness guard aggregates manual host records, generated evidence freshness, contract snapshots, and
+version consistency before tagging.
 
 5. Commit the version bump:
 
@@ -140,6 +142,7 @@ uv run python scripts/check_host_acceptance_report.py
 This artifact records automated release coverage and keeps manual host UI status pending until a reviewer adds dated
 host-specific evidence to `docs/HOST_MANUAL_RUNS.json`. The record shape is documented in
 `docs/HOST_MANUAL_RUNS.schema.json`.
+The generated evidence freshness guard fails if this committed acceptance report is stale.
 
 For a release that requires complete manual host UI evidence, run the strict gate after recording all host notes:
 

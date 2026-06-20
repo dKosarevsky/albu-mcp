@@ -36,6 +36,8 @@ uv run python scripts/export_host_acceptance_report.py --output docs/HOST_ACCEPT
 uv run python scripts/check_host_acceptance_report.py
 ```
 
+The generated evidence freshness guard fails when `docs/HOST_ACCEPTANCE_EVIDENCE.md` is out of date.
+
 Add dated manual notes to `docs/HOST_MANUAL_RUNS.json`; supported statuses are `passed`, `blocked`, and `pending`.
 Validate them with `uv run python scripts/validate_host_manual_runs.py`. The JSON shape is documented in
 `docs/HOST_MANUAL_RUNS.schema.json`.

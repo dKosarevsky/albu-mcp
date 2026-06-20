@@ -19,6 +19,7 @@ uv run python scripts/check_host_acceptance_report.py
 
 The generated report records automated coverage and keeps host UI status `pending` until a dated manual run note is
 added by a reviewer in `docs/HOST_MANUAL_RUNS.json`.
+The generated evidence freshness guard (`check_host_acceptance_report.py`) fails when the committed report is stale.
 
 Validate manual run records before regenerating evidence:
 
