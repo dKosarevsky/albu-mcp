@@ -9,7 +9,7 @@ vision augmentation work.
 [![CI](https://github.com/dKosarevsky/albu-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/dKosarevsky/albu-mcp/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/albumentationsx-mcp)](https://pypi.org/project/albumentationsx-mcp/)
 [![Python](https://img.shields.io/badge/python-3.10--3.13-blue)](pyproject.toml)
-[![MCP Registry](https://img.shields.io/badge/MCP%20Registry-metadata%20ready-blue)](server.json)
+[![MCP Registry](https://img.shields.io/badge/MCP%20Registry-active-green)](https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.dKosarevsky/albu-mcp)
 
 ## Purpose
 
@@ -85,6 +85,7 @@ The public MCP surface is kept stable through reviewed contract snapshots. Compa
 - [docs/RECIPES.md](docs/RECIPES.md): task-specific host recipes.
 - [docs/COMMUNITY_FEEDBACK.md](docs/COMMUNITY_FEEDBACK.md): privacy-safe GitHub issue intake for host and workflow
   feedback.
+- [docs/NETWORK_GROWTH.md](docs/NETWORK_GROWTH.md): public directory status, registry follow-up, and outreach plan.
 - [examples/distortion_review_workflow.md](examples/distortion_review_workflow.md): rejected noisy preview review loop.
 - [docs/DEMO.md](docs/DEMO.md): generated preview comparison demo.
 - [docs/HOST_ACCEPTANCE.md](docs/HOST_ACCEPTANCE.md), [docs/HOST_MATRIX.md](docs/HOST_MATRIX.md), and
@@ -111,5 +112,6 @@ uv run python scripts/check_demo_assets.py --output-dir docs/assets/demo --check
 uv run python scripts/check_release_readiness.py
 uv run python scripts/run_golden_evals.py
 uv run python scripts/check_mcp_registry_status.py
+uv run python scripts/check_directory_presence.py
 uv build
 ```

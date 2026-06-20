@@ -377,7 +377,8 @@ def test_public_package_metadata_is_polished() -> None:
 
     assert "https://img.shields.io/pypi/v/albumentationsx-mcp" in readme
     assert "https://pypi.org/project/albumentationsx-mcp/" in readme
-    assert "MCP%20Registry-metadata%20ready-blue" in readme
+    assert "MCP%20Registry-active-green" in readme
+    assert "https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.dKosarevsky/albu-mcp" in readme
     assert "[server.json](server.json): public MCP Registry metadata." in readme
     assert "[project.urls]" in pyproject
     assert '"Repository" = "https://github.com/dKosarevsky/albu-mcp"' in pyproject
