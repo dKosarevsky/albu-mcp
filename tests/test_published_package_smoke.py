@@ -20,8 +20,7 @@ def test_published_package_smoke_dry_run_uses_release_metadata(tmp_path: Path) -
     )
 
     assert result.stdout.strip() == (
-        "uvx --from albumentationsx-mcp==9.9.9 "
-        "--refresh-package albumentationsx-mcp albumentationsx-mcp --help"
+        "uvx --from albumentationsx-mcp==9.9.9 --refresh-package albumentationsx-mcp albumentationsx-mcp --help"
     )
 
 
