@@ -25,6 +25,7 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 - Added a public directory presence checker and network growth plan for MCP Registry, Glama, and upstream outreach.
 - Marked the README MCP Registry badge active after live directory checks confirmed active/latest Registry metadata.
 - Recorded the AlbumentationsX upstream community integration request.
+- Added a copyable upstream PR packet for a possible AlbumentationsX community integration docs entry.
 
 ## 1.10.0 - 2026-06-19
 

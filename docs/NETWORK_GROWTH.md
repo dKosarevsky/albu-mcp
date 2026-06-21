@@ -61,6 +61,8 @@ concrete:
 
 Current status: upstream issue opened at
 [albumentations-team/AlbumentationsX#285](https://github.com/albumentations-team/AlbumentationsX/issues/285).
+If maintainers are open to it, use [docs/UPSTREAM_PR_PACKET.md](UPSTREAM_PR_PACKET.md) as the source for a small
+community integration docs PR.
 
 ```markdown
 Hi, I built a small MCP server for AlbumentationsX workflows:

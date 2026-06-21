@@ -392,6 +392,22 @@ def test_public_package_metadata_is_polished() -> None:
     assert '"Topic :: Scientific/Engineering :: Artificial Intelligence"' in pyproject
 
 
+def test_upstream_pr_packet_is_available() -> None:
+    packet_path = Path("docs/UPSTREAM_PR_PACKET.md")
+    readme = Path("README.md").read_text(encoding="utf-8")
+    network_growth = Path("docs/NETWORK_GROWTH.md").read_text(encoding="utf-8")
+
+    assert packet_path.exists()
+    packet = packet_path.read_text(encoding="utf-8")
+
+    assert "https://github.com/albumentations-team/AlbumentationsX/issues/285" in packet
+    assert "Suggested upstream snippet" in packet
+    assert "Community integration" in packet
+    assert "not an official AlbumentationsX project" in packet
+    assert "docs/UPSTREAM_PR_PACKET.md" in readme
+    assert "docs/UPSTREAM_PR_PACKET.md" in network_growth
+
+
 def test_public_docs_describe_current_preview_workflow() -> None:
     readme = Path("README.md").read_text(encoding="utf-8")
     usage = Path("docs/USAGE.md").read_text(encoding="utf-8")
