@@ -159,6 +159,41 @@ def test_dataset_onboarding_report_detects_yolo_and_coco_annotations(tmp_path: P
     assert any("bbox" in hint.lower() or "detection" in hint.lower() for hint in report.dataset_structure.recipe_hints)
 
 
+def test_dataset_onboarding_report_builds_annotation_aware_preview_template(tmp_path: Path) -> None:
+    dataset_dir = tmp_path / "dataset"
+    image_path = _write_image(dataset_dir / "images/a.png")
+    annotations_dir = dataset_dir / "annotations"
+    annotations_dir.mkdir()
+    (annotations_dir / "instances_train.json").write_text(
+        json.dumps(
+            {
+                "images": [{"id": 1, "file_name": "images/a.png"}],
+                "annotations": [{"id": 1, "image_id": 1, "bbox": [2, 3, 10, 8], "category_id": 7}],
+                "categories": [{"id": 7, "name": "car"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = build_dataset_onboarding_report(
+        dataset_path=dataset_dir,
+        task="object_detection",
+        intensity="low",
+        targets=["image", "bboxes"],
+        path_policy=PathPolicy([tmp_path]),
+        pipeline_service=PipelineService(TransformCatalog()),
+        recipe_builder=recommend_recipe,
+    )
+
+    assert report.preview_ready is True
+    assert report.preview_request_template is not None
+    request = report.preview_request_template.request
+    assert request["input_paths"] == [str(image_path.resolve())]
+    assert request["annotations"] == [{"bboxes": [[2.0, 3.0, 12.0, 11.0]], "bbox_labels": ["car"]}]
+    assert request["pipeline"]["bbox_params"] == {"format": "pascal_voc", "label_fields": ["labels"]}
+    assert any("overlay" in instruction.lower() for instruction in report.preview_request_template.instructions)
+
+
 def _write_image(path: Path) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     image = Image.new("RGB", (16, 12), color=(80, 120, 160))

@@ -8,6 +8,7 @@ from typing import Any, Literal
 
 from pydantic import Field
 
+from albumentationsx_mcp.dataset_annotations import SampleAnnotationSet, build_sample_annotations
 from albumentationsx_mcp.dataset_profile import DatasetStructureProfile, build_dataset_structure_profile
 from albumentationsx_mcp.diagnostics import DiagnosticSeverity, DiagnosticStatus
 from albumentationsx_mcp.models import PipelineValidationReport, RecipeRecommendation, StrictModel, TargetSpec
@@ -96,10 +97,15 @@ def build_dataset_onboarding_report(  # noqa: PLR0913
         checks.append(_image_inventory_check(image_paths, ignored_file_count))
     checks.append(_validation_check(validation))
 
-    sample_paths = [str(path) for path in image_paths[: _bounded_max_images(max_images)]]
+    sample_image_paths = image_paths[: _bounded_max_images(max_images)]
+    sample_paths = [str(path) for path in sample_image_paths]
     status = _aggregate_status(checks)
     preview_ready = status == "ok" and bool(sample_paths) and validation.valid
-    template = _preview_request_template(sample_paths, recipe) if preview_ready else None
+    template = (
+        _preview_request_template(dataset_path=resolved, sample_paths=sample_image_paths, recipe=recipe)
+        if preview_ready
+        else None
+    )
     return DatasetOnboardingReport(
         status=status,
         preview_ready=preview_ready,
@@ -211,22 +217,68 @@ def _validation_check(validation: PipelineValidationReport) -> DatasetOnboarding
     )
 
 
-def _preview_request_template(sample_paths: list[str], recipe: RecipeRecommendation) -> DatasetPreviewRequestTemplate:
+def _preview_request_template(
+    *,
+    dataset_path: Path,
+    sample_paths: list[Path],
+    recipe: RecipeRecommendation,
+) -> DatasetPreviewRequestTemplate:
+    annotation_set = _annotation_set_for_template(dataset_path, sample_paths, recipe)
+    request = {
+        "input_paths": [str(path) for path in sample_paths],
+        "pipeline": recipe.pipeline.model_dump(mode="json", exclude_none=True),
+        "variants_per_image": 1,
+        "seed": 0,
+        "max_side": 512,
+    }
+    instructions = [
+        "Call `validate_preview_request` with this request before rendering.",
+        "Call `render_preview_batch` only after validation returns `valid=true`.",
+        "Inspect the contact sheet before increasing variants_per_image, max_side, or intensity.",
+        "Record concrete feedback tags before adjusting the pipeline.",
+    ]
+    if annotation_set is not None:
+        request["annotations"] = _annotation_payload(annotation_set)
+        instructions.extend(
+            [
+                f"Annotation-aware template uses {annotation_set.source_format} bboxes for overlay previews.",
+                "Inspect `overlay_contact_sheet` before accepting geometric transforms.",
+            ]
+        )
+        instructions.extend(annotation_set.warnings)
     return DatasetPreviewRequestTemplate(
-        request={
-            "input_paths": sample_paths,
-            "pipeline": recipe.pipeline.model_dump(mode="json", exclude_none=True),
-            "variants_per_image": 1,
-            "seed": 0,
-            "max_side": 512,
-        },
-        instructions=[
-            "Call `validate_preview_request` with this request before rendering.",
-            "Call `render_preview_batch` only after validation returns `valid=true`.",
-            "Inspect the contact sheet before increasing variants_per_image, max_side, or intensity.",
-            "Record concrete feedback tags before adjusting the pipeline.",
-        ],
+        request=request,
+        instructions=instructions,
     )
+
+
+def _annotation_set_for_template(
+    dataset_path: Path,
+    sample_paths: list[Path],
+    recipe: RecipeRecommendation,
+) -> SampleAnnotationSet | None:
+    if "bboxes" not in recipe.targets and recipe.pipeline.bbox_params is None:
+        return None
+    return build_sample_annotations(dataset_path, sample_paths)
+
+
+def _annotation_payload(annotation_set: SampleAnnotationSet) -> list[dict[str, Any] | None]:
+    payload: list[dict[str, Any] | None] = []
+    for annotation in annotation_set.annotations:
+        if annotation is None:
+            payload.append(None)
+            continue
+        item: dict[str, Any] = {}
+        if annotation.bboxes:
+            item["bboxes"] = annotation.bboxes
+        if annotation.bbox_labels:
+            item["bbox_labels"] = annotation.bbox_labels
+        if annotation.keypoints:
+            item["keypoints"] = annotation.keypoints
+        if annotation.mask_path is not None:
+            item["mask_path"] = str(annotation.mask_path)
+        payload.append(item)
+    return payload
 
 
 def _next_actions(*, preview_ready: bool, checks: list[DatasetOnboardingCheck]) -> list[str]:
