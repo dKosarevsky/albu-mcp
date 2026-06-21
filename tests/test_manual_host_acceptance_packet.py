@@ -16,14 +16,14 @@ def test_manual_host_acceptance_packet_contains_host_configs_and_record_commands
         allowed_root=allowed_root,
         artifact_root=artifact_root,
         sample_image=sample_image,
-        package_version="1.13.0",
+        package_version="1.14.0",
         run_date="2026-06-20",
     )
 
     packet = build_manual_host_acceptance_packet(config)
 
     assert "uvx" in packet
-    assert "albumentationsx-mcp==1.13.0" in packet
+    assert "albumentationsx-mcp==1.14.0" in packet
     assert str(allowed_root) in packet
     assert str(artifact_root) in packet
     assert str(sample_image) in packet
@@ -45,7 +45,7 @@ def test_manual_host_acceptance_packet_can_target_one_host(tmp_path: Path) -> No
         allowed_root=tmp_path / "inputs",
         artifact_root=tmp_path / "artifacts",
         sample_image=tmp_path / "inputs" / "sample-grid.png",
-        package_version="1.13.0",
+        package_version="1.14.0",
         run_date="2026-06-20",
         hosts=("Cursor",),
     )
@@ -83,7 +83,7 @@ def test_manual_host_acceptance_packet_cli_writes_markdown(tmp_path: Path) -> No
             "--date",
             "2026-06-20",
             "--package-version",
-            "1.13.0",
+            "1.14.0",
             "--host",
             "Cursor",
             "--output",

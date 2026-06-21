@@ -45,7 +45,7 @@ dataset augmentation robustness before exporting the final pipeline.
 Run the local project checks that keep the public MCP surface accurate:
 
 ```bash
-uv run python scripts/check_release_readiness.py --tag v1.13.0 --format json
+uv run python scripts/check_release_readiness.py --tag v1.14.0 --format json
 uv run python scripts/check_directory_presence.py --format json
 uv run python scripts/run_golden_evals.py
 ```

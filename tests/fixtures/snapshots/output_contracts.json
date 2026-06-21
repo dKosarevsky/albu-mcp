@@ -493,6 +493,23 @@
     ],
     "preview_ready": true,
     "preview_request_template": {
+      "annotation_summary": {
+        "bbox_count": 1,
+        "compressed_rle_count": 0,
+        "keypoint_count": 0,
+        "mask_formats": [],
+        "mask_path_count": 0,
+        "mask_polygon_count": 0,
+        "mask_rle_count": 0,
+        "matched_count": 1,
+        "missing_count": 1,
+        "sample_count": 2,
+        "source_format": "coco",
+        "uncompressed_rle_count": 0,
+        "warnings": [
+          "1 sampled image(s) are without annotations."
+        ]
+      },
       "instructions": [
         "Call `validate_preview_request` with this request before rendering.",
         "Call `render_preview_batch` only after validation returns `valid=true`.",

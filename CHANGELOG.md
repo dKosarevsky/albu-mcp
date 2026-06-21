@@ -4,6 +4,18 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 ## Unreleased
 
+## 1.14.0 - 2026-06-21
+
+- Added targeted manual host acceptance packets with per-host filtering, evidence checklists, and explicit
+  `passed`/`blocked`/`pending` record commands.
+- Added compressed COCO RLE mask support for segmentation onboarding and preview overlays while preserving
+  uncompressed RLE compatibility.
+- Added `annotation_summary` to dataset onboarding preview templates so hosts can report matched sample counts,
+  bbox/keypoint counts, mask formats, RLE counts, and annotation warnings.
+- Added a concise adoption packet for quick trials, host setup, segmentation workflows, outreach copy, and feedback
+  routing.
+- Refined PyPI and MCP Registry metadata around segmentation-mask preview review.
+
 ## 1.13.0 - 2026-06-21
 
 - Added segmentation annotation onboarding for COCO polygon/RLE masks and YOLO-seg labels, including mask-aware

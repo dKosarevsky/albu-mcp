@@ -37,8 +37,8 @@ def test_host_acceptance_report_includes_published_package_smoke() -> None:
 def test_published_package_smoke_builds_direct_pypi_version_url() -> None:
     from scripts.check_published_package_smoke import build_pypi_version_url
 
-    assert build_pypi_version_url(package="albumentationsx-mcp", version="1.13.0") == (
-        "https://pypi.org/pypi/albumentationsx-mcp/1.13.0/json"
+    assert build_pypi_version_url(package="albumentationsx-mcp", version="1.14.0") == (
+        "https://pypi.org/pypi/albumentationsx-mcp/1.14.0/json"
     )
 
 

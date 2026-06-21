@@ -33,7 +33,7 @@ body:
     id: package-version
     attributes:
       label: Package version
-      placeholder: "albumentationsx-mcp==1.13.0"
+      placeholder: "albumentationsx-mcp==1.14.0"
     validations:
       required: true
   - type: textarea
@@ -41,7 +41,7 @@ body:
     attributes:
       label: Config summary
       description: Paste the non-sensitive command/config shape. Redact local private path segments if needed.
-      placeholder: "uvx --from albumentationsx-mcp==1.13.0 albumentationsx-mcp --allowed-root ..."
+      placeholder: "uvx --from albumentationsx-mcp==1.14.0 albumentationsx-mcp --allowed-root ..."
     validations:
       required: true
   - type: textarea

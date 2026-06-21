@@ -1,9 +1,9 @@
 # Host Acceptance Evidence
 
 - Project: albumentationsx-mcp
-- Version: 1.13.0
+- Version: 1.14.0
 - Registry name: io.github.dKosarevsky/albu-mcp
-- PyPI package: albumentationsx-mcp==1.13.0
+- PyPI package: albumentationsx-mcp==1.14.0
 - Automated Coverage: recorded
 - Manual Host UI: pending
 

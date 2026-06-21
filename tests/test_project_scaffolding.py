@@ -452,6 +452,7 @@ def test_public_docs_describe_current_preview_workflow() -> None:
     assert "agent workflow resources" in readme.lower()
     assert "batch previews" in server_json["description"]
     assert "compare preview runs" in server_json["description"]
+    assert "segmentation masks" in server_json["description"]
 
 
 def test_release_workflow_checks_versions_and_smokes_published_package() -> None:
