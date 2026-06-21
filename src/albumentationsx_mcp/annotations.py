@@ -15,6 +15,7 @@ _BOX_COLOR = (255, 64, 64, 255)
 _KEYPOINT_COLOR = (0, 180, 255, 255)
 _MASK_COLOR = (0, 210, 90, 100)
 _BBOX_COORDINATES = 4
+_COCO_RLE_DELTA_START_INDEX = 3
 _KEYPOINT_COORDINATES = 2
 _POLYGON_MIN_POINTS = 3
 
@@ -148,7 +149,7 @@ def _decode_compressed_rle_counts(counts: str) -> list[int]:
                 break
         if char_value & 0x10:
             value |= -1 << shift
-        if len(decoded) > 2:
+        if len(decoded) >= _COCO_RLE_DELTA_START_INDEX:
             value += decoded[-2]
         if value < 0:
             msg = "negative compressed COCO RLE count"
