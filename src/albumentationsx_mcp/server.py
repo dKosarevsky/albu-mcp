@@ -24,6 +24,7 @@ from albumentationsx_mcp.models import (
     QualityProfileName,
     TargetSpec,
 )
+from albumentationsx_mcp.onboarding import build_dataset_onboarding_report
 from albumentationsx_mcp.pipeline import PipelineService
 from albumentationsx_mcp.presets import Intensity, adjust_pipeline, recommend_pipeline
 from albumentationsx_mcp.preview import ArtifactStore, PathPolicy, PreviewService
@@ -94,6 +95,7 @@ _PUBLIC_TOOLS = [
     "diagnose_environment",
     "run_host_smoke_check",
     "validate_preview_request",
+    "plan_dataset_onboarding",
 ]
 _PUBLIC_PROMPTS = [
     "build_robustness_augmentation_session",
@@ -112,6 +114,7 @@ _PUBLIC_WORKFLOW_RESOURCES = [
     "albumentationsx://examples/client-smoke",
     "albumentationsx://examples/first-preview",
     "albumentationsx://examples/distortion-review",
+    "albumentationsx://examples/dataset-onboarding",
     "albumentationsx://examples/diagnostics",
     "albumentationsx://examples/review-loop",
     "albumentationsx://examples/report-handoff",
@@ -268,6 +271,11 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
         """Return the MCP distorted robustness review example."""
         return get_host_example("distortion-review").model_dump_json()
 
+    @mcp.resource("albumentationsx://examples/dataset-onboarding")
+    def dataset_onboarding_example() -> str:
+        """Return the MCP dataset onboarding host example."""
+        return get_host_example("dataset-onboarding").model_dump_json()
+
     @mcp.resource("albumentationsx://examples/diagnostics")
     def diagnostics_example() -> str:
         """Return the MCP host diagnostics example."""
@@ -393,6 +401,26 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
         """Validate a preview request before rendering local preview artifacts."""
         target_spec = TargetSpec.model_validate(target or {})
         return preview_validator.validate(request, target=target_spec).model_dump(mode="json")
+
+    @mcp.tool(name="plan_dataset_onboarding")
+    def plan_dataset_onboarding_tool(
+        dataset_path: str,
+        task: str = "classification",
+        intensity: Intensity = "low",
+        targets: list[str] | None = None,
+        max_images: int = 8,
+    ) -> dict[str, Any]:
+        """Plan the first safe preview for a local image dataset folder."""
+        return build_dataset_onboarding_report(
+            dataset_path=Path(dataset_path),
+            task=task,
+            intensity=intensity,
+            targets=targets,
+            max_images=max_images,
+            path_policy=PathPolicy(settings.allowed_roots),
+            pipeline_service=pipeline_service,
+            recipe_builder=recommend_recipe,
+        ).model_dump(mode="json", exclude_none=True)
 
     @mcp.tool()
     def render_preview(request: dict[str, Any]) -> dict[str, Any]:

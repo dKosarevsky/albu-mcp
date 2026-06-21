@@ -14,7 +14,9 @@ After connecting a new host, read `albumentationsx://examples/client-smoke` for 
 local previews.
 When preview setup is unclear, read `albumentationsx://diagnostics/guide` and call `diagnose_environment` before
 changing augmentation pipelines.
-For a single read-only preflight, call `run_host_smoke_check` and continue only when `preview_ready` is true.
+For a single read-only preflight, call `run_host_smoke_check` and continue only when `preview_ready` is true. For a
+real local dataset folder, read `albumentationsx://examples/dataset-onboarding` and call `plan_dataset_onboarding`
+before rendering.
 
 Use `examples/claude_desktop_config.json` as a starting point and replace `/path/to/albu-mcp` with the repository path:
 
@@ -48,25 +50,26 @@ retention limit for long-running MCP hosts.
 3. Call `validate_pipeline` before rendering or exporting.
 4. Call `run_host_smoke_check`; when `preview_ready` is true, replace the placeholder path in
    `preview_request_template.request`.
-5. Call `validate_preview_request` after filling local image paths and before rendering.
-6. Call `explain_pipeline` to identify likely preview risks and feedback tags.
-7. Call `render_preview_batch` on a small local image set.
-8. Review the generated `contact_sheet` artifact.
-9. Use `compare_preview_runs` when comparing a baseline preview to an adjusted candidate preview.
-10. Review `suggested_feedback_tags` as candidates, then ask the user which tags match the contact sheets.
-11. Call `adjust_pipeline` with tags from `list_feedback_tags`, for example `too_noisy`, `too_noisy:high`, or
+5. For a real folder, call `plan_dataset_onboarding` with `dataset_path`, task, targets, and a small `max_images`.
+6. Call `validate_preview_request` after filling or receiving local image paths and before rendering.
+7. Call `explain_pipeline` to identify likely preview risks and feedback tags.
+8. Call `render_preview_batch` on a small local image set.
+9. Review the generated `contact_sheet` artifact.
+10. Use `compare_preview_runs` when comparing a baseline preview to an adjusted candidate preview.
+11. Review `suggested_feedback_tags` as candidates, then ask the user which tags match the contact sheets.
+12. Call `adjust_pipeline` with tags from `list_feedback_tags`, for example `too_noisy`, `too_noisy:high`, or
    `too_distorted`.
-12. Re-render one or more candidates with the same input set.
-13. Call `rank_preview_candidates` when multiple candidates need comparison.
-14. Call `score_dataset_preview_candidates` to inspect cross-candidate metric ranges and finding counts.
-15. Call `record_preview_feedback` when the user points to a concrete image and variant, for example
+13. Re-render one or more candidates with the same input set.
+14. Call `rank_preview_candidates` when multiple candidates need comparison.
+15. Call `score_dataset_preview_candidates` to inspect cross-candidate metric ranges and finding counts.
+16. Call `record_preview_feedback` when the user points to a concrete image and variant, for example
     "example 8 is too noisy".
-16. Call `list_preview_feedback` and reuse `aggregated_feedback_tags` for the next `adjust_pipeline` call.
-17. Call `start_tuning_session` when the review will take multiple user feedback turns.
-18. Call `record_tuning_session_step` after each baseline-to-candidate comparison.
-19. Call `record_tuning_decision` for one-off accepted or rejected candidate decisions.
-20. Call `export_preview_report` for a visual Markdown or HTML handoff that includes matching concrete feedback.
-21. Call `export_tuning_session` or `export_tuning_report`, then `export_pipeline` once the preview set is acceptable.
+17. Call `list_preview_feedback` and reuse `aggregated_feedback_tags` for the next `adjust_pipeline` call.
+18. Call `start_tuning_session` when the review will take multiple user feedback turns.
+19. Call `record_tuning_session_step` after each baseline-to-candidate comparison.
+20. Call `record_tuning_decision` for one-off accepted or rejected candidate decisions.
+21. Call `export_preview_report` for a visual Markdown or HTML handoff that includes matching concrete feedback.
+22. Call `export_tuning_session` or `export_tuning_report`, then `export_pipeline` once the preview set is acceptable.
 
 ## Diagnostics
 
@@ -89,6 +92,16 @@ Use `run_host_smoke_check` after connecting a host and before the first local pr
 true, copy `preview_request_template.request`, replace the placeholder input path with one small image under an allowed
 root, call `validate_preview_request`, then call `render_preview_batch`. When `preview_ready` is false, follow
 `remediation_actions` before rendering.
+
+## Dataset Onboarding
+
+Use `plan_dataset_onboarding` when the user points the host at a real local dataset folder and asks for the first safe
+preview. The tool is read-only: it checks that `dataset_path` is under an allowed root, scans supported image extensions,
+selects a bounded deterministic sample, recommends a recipe, validates the pipeline, and returns a
+`preview_request_template`.
+
+Call `validate_preview_request` with `preview_request_template.request` before rendering. Stable remediation action codes
+include `move_dataset_under_allowed_root`, `fix_dataset_path`, `add_dataset_images`, and `fix_recommended_pipeline`.
 
 ## Preview Request Validation
 

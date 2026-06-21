@@ -9,7 +9,7 @@ import yaml
 from PIL import Image
 
 
-def test_golden_eval_assets_are_present() -> None:
+def test_golden_eval_assets_are_present() -> None:  # noqa: PLR0915
     scenarios_path = Path("evals/golden_mcp_scenarios.yaml")
     runner_path = Path("scripts/run_golden_evals.py")
 
@@ -32,6 +32,9 @@ def test_golden_eval_assets_are_present() -> None:
     distortion_review_scenario = next(
         scenario for scenario in scenarios["scenarios"] if scenario["name"] == "distortion_review_resource_flow"
     )
+    dataset_onboarding_scenario = next(
+        scenario for scenario in scenarios["scenarios"] if scenario["name"] == "dataset_onboarding_flow"
+    )
     real_sample_scenario = next(
         scenario for scenario in scenarios["scenarios"] if scenario["name"] == "real_sample_preview_smoke"
     )
@@ -47,6 +50,7 @@ def test_golden_eval_assets_are_present() -> None:
         "diagnostics_resource_flow",
         "first_preview_resource_prompt_flow",
         "distortion_review_resource_flow",
+        "dataset_onboarding_flow",
         "classification_recommend_validate_explain_export",
         "preview_lifecycle",
         "preview_batch_compare",
@@ -69,6 +73,8 @@ def test_golden_eval_assets_are_present() -> None:
     ]
     assert first_preview_scenario["first_preview_smoke"] is True
     assert distortion_review_scenario["distortion_review_smoke"] is True
+    assert dataset_onboarding_scenario["dataset_onboarding"] is True
+    assert dataset_onboarding_scenario["input_count"] == 3
     assert real_sample_scenario["real_sample_smoke"] is True
     assert real_sample_scenario["input_count"] == 3
     assert real_sample_scenario["compare_preview"] is True
@@ -83,11 +89,13 @@ def test_golden_eval_assets_are_present() -> None:
     assert "_run_diagnostics_smoke" in runner_source
     assert "_run_first_preview_smoke" in runner_source
     assert "_run_distortion_review_smoke" in runner_source
+    assert "_run_dataset_onboarding" in runner_source
     assert "_run_real_sample_smoke" in runner_source
     assert "_run_preview_request_troubleshooting" in runner_source
     assert "_run_interactive_tuning_session" in runner_source
     assert "run_host_smoke_check" in runner_source
     assert "validate_preview_request" in runner_source
+    assert "plan_dataset_onboarding" in runner_source
     real_sample_source = runner_source.split("async def _run_real_sample_smoke", maxsplit=1)[1].split(
         "async def _run_preview_request_troubleshooting",
         maxsplit=1,
@@ -146,3 +154,4 @@ def test_golden_eval_runner_executes_scenarios_over_stdio(tmp_path: Path) -> Non
     assert "real_sample_preview_smoke: ok" in completed.stdout
     assert "preview_request_troubleshooting: ok" in completed.stdout
     assert "interactive_tuning_session_flow: ok" in completed.stdout
+    assert "dataset_onboarding_flow: ok" in completed.stdout

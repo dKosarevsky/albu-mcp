@@ -20,6 +20,7 @@ _REQUIRED_TOOLS = {
     "diagnose_environment",
     "run_host_smoke_check",
     "validate_preview_request",
+    "plan_dataset_onboarding",
     "recommend_recipe",
     "validate_pipeline",
     "render_preview_batch",
@@ -40,6 +41,7 @@ _REQUIRED_PROMPTS = {
 _REQUIRED_WORKFLOW_RESOURCES = {
     "albumentationsx://diagnostics/guide",
     "albumentationsx://examples/client-smoke",
+    "albumentationsx://examples/dataset-onboarding",
     "albumentationsx://recipes/catalog",
     "albumentationsx://workflows/preview-tuning",
 }

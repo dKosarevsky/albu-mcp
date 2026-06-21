@@ -55,6 +55,7 @@ def test_server_exposes_documented_tool_names() -> None:
         "diagnose_environment",
         "run_host_smoke_check",
         "validate_preview_request",
+        "plan_dataset_onboarding",
     }.issubset(tool_names)
 
 
@@ -85,6 +86,7 @@ def test_server_exposes_agent_workflow_resources() -> None:
     client_smoke_example = cast("Any", resources["albumentationsx://examples/client-smoke"]).fn()
     first_preview_example = cast("Any", resources["albumentationsx://examples/first-preview"]).fn()
     distortion_review_example = cast("Any", resources["albumentationsx://examples/distortion-review"]).fn()
+    dataset_onboarding_example = cast("Any", resources["albumentationsx://examples/dataset-onboarding"]).fn()
     diagnostics_example = cast("Any", resources["albumentationsx://examples/diagnostics"]).fn()
     review_loop_example = cast("Any", resources["albumentationsx://examples/review-loop"]).fn()
     report_handoff_example = cast("Any", resources["albumentationsx://examples/report-handoff"]).fn()
@@ -99,6 +101,7 @@ def test_server_exposes_agent_workflow_resources() -> None:
     assert "is AlbumentationsX MCP connected?" in client_smoke_example
     assert "run the first AlbumentationsX preview" in first_preview_example
     assert "make distorted versions, but example 8 is too noisy" in distortion_review_example
+    assert "plan the first AlbumentationsX dataset preview" in dataset_onboarding_example
     assert "why does AlbumentationsX MCP preview not work?" in diagnostics_example
     assert "record_preview_feedback" in review_loop_example
     assert "export_preview_report" in report_handoff_example
@@ -127,11 +130,13 @@ def test_server_exposes_agent_workflow_resources() -> None:
         "diagnose_environment",
         "run_host_smoke_check",
         "validate_preview_request",
+        "plan_dataset_onboarding",
         "albumentationsx://diagnostics/guide",
         "albumentationsx://recipes/catalog",
         "albumentationsx://examples/client-smoke",
         "albumentationsx://examples/first-preview",
         "albumentationsx://examples/distortion-review",
+        "albumentationsx://examples/dataset-onboarding",
         "albumentationsx://examples/diagnostics",
         "albumentationsx://examples/review-loop",
         "albumentationsx://examples/report-handoff",

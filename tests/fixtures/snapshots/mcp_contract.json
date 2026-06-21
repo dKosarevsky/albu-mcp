@@ -132,6 +132,12 @@
       "uri": "albumentationsx://examples/client-smoke"
     },
     {
+      "description": "Return the MCP dataset onboarding host example.",
+      "mime_type": "text/plain",
+      "name": "dataset_onboarding_example",
+      "uri": "albumentationsx://examples/dataset-onboarding"
+    },
+    {
       "description": "Return the MCP host diagnostics example.",
       "mime_type": "text/plain",
       "name": "diagnostics_example",
@@ -790,6 +796,58 @@
           }
         },
         "title": "list_tuning_sessionsArguments",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Plan the first safe preview for a local image dataset folder.",
+      "name": "plan_dataset_onboarding",
+      "parameters": {
+        "properties": {
+          "dataset_path": {
+            "title": "Dataset Path",
+            "type": "string"
+          },
+          "intensity": {
+            "default": "low",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Intensity",
+            "type": "string"
+          },
+          "max_images": {
+            "default": 8,
+            "title": "Max Images",
+            "type": "integer"
+          },
+          "targets": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Targets"
+          },
+          "task": {
+            "default": "classification",
+            "title": "Task",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dataset_path"
+        ],
+        "title": "plan_dataset_onboarding_toolArguments",
         "type": "object"
       }
     },

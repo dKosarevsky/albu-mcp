@@ -26,6 +26,8 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 - Marked the README MCP Registry badge active after live directory checks confirmed active/latest Registry metadata.
 - Recorded the AlbumentationsX upstream community integration request.
 - Added a copyable upstream PR packet for a possible AlbumentationsX community integration docs entry.
+- Added `plan_dataset_onboarding` and `albumentationsx://examples/dataset-onboarding` for safe first previews from a
+  local dataset folder.
 
 ## 1.10.0 - 2026-06-19
 

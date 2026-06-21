@@ -111,6 +111,7 @@
             "export_preview_report",
             "export_tuning_session",
             "list_tuning_sessions",
+            "plan_dataset_onboarding",
             "recommend_recipe",
             "record_tuning_session_step",
             "render_preview_batch",
@@ -142,6 +143,7 @@
           "required": [
             "albumentationsx://diagnostics/guide",
             "albumentationsx://examples/client-smoke",
+            "albumentationsx://examples/dataset-onboarding",
             "albumentationsx://recipes/catalog",
             "albumentationsx://workflows/preview-tuning"
           ]
@@ -231,6 +233,7 @@
             "export_preview_report",
             "export_tuning_session",
             "list_tuning_sessions",
+            "plan_dataset_onboarding",
             "recommend_recipe",
             "record_tuning_session_step",
             "render_preview_batch",
@@ -262,6 +265,7 @@
           "required": [
             "albumentationsx://diagnostics/guide",
             "albumentationsx://examples/client-smoke",
+            "albumentationsx://examples/dataset-onboarding",
             "albumentationsx://recipes/catalog",
             "albumentationsx://workflows/preview-tuning"
           ]
@@ -361,6 +365,278 @@
     ],
     "run_id": "candidate-a",
     "total_count": 1
+  },
+  "plan_dataset_onboarding_ready": {
+    "allowed_roots": [
+      "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding/images"
+    ],
+    "checks": [
+      {
+        "code": "dataset_path_accessible",
+        "details": {
+          "allowed_roots": [
+            "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding/images"
+          ],
+          "path": "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding/images"
+        },
+        "severity": "info",
+        "status": "ok",
+        "summary": "Dataset path is accessible: <OUTPUT_CONTRACT_ROOT>/dataset-onboarding/images"
+      },
+      {
+        "code": "dataset_images_found",
+        "details": {
+          "ignored_file_count": 1,
+          "image_count": 2,
+          "supported_extensions": [
+            ".bmp",
+            ".jpeg",
+            ".jpg",
+            ".png",
+            ".tif",
+            ".tiff",
+            ".webp"
+          ]
+        },
+        "severity": "info",
+        "status": "ok",
+        "summary": "Found 2 supported image file(s)."
+      },
+      {
+        "code": "recommended_pipeline_valid",
+        "details": {
+          "warning_count": 0
+        },
+        "severity": "info",
+        "status": "ok",
+        "summary": "Recommended pipeline validates for the selected targets."
+      }
+    ],
+    "dataset_path": "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding/images",
+    "ignored_file_count": 1,
+    "image_count": 2,
+    "next_actions": [
+      "Call `validate_preview_request` with `preview_request_template.request`.",
+      "Call `render_preview_batch` with the validated request.",
+      "Inspect the contact sheet and collect concrete feedback tags.",
+      "Use `adjust_pipeline` or `start_tuning_session` after feedback."
+    ],
+    "preview_ready": true,
+    "preview_request_template": {
+      "instructions": [
+        "Call `validate_preview_request` with this request before rendering.",
+        "Call `render_preview_batch` only after validation returns `valid=true`.",
+        "Inspect the contact sheet before increasing variants_per_image, max_side, or intensity.",
+        "Record concrete feedback tags before adjusting the pipeline."
+      ],
+      "request": {
+        "input_paths": [
+          "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding/images/sample-a.png",
+          "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding/images/sample-b.jpg"
+        ],
+        "max_side": 512,
+        "pipeline": {
+          "additional_targets": {},
+          "is_check_shapes": true,
+          "seed": 137,
+          "strict": true,
+          "transforms": [
+            {
+              "name": "HorizontalFlip",
+              "p": 0.2,
+              "params": {}
+            },
+            {
+              "name": "RandomBrightnessContrast",
+              "p": 0.2,
+              "params": {}
+            },
+            {
+              "name": "GaussNoise",
+              "p": 0.1,
+              "params": {
+                "std_range": [
+                  0.02,
+                  0.1
+                ]
+              }
+            },
+            {
+              "name": "MotionBlur",
+              "p": 0.06666666666666667,
+              "params": {
+                "blur_range": [
+                  3,
+                  5
+                ]
+              }
+            }
+          ]
+        },
+        "seed": 0,
+        "variants_per_image": 1
+      },
+      "tool": "render_preview_batch"
+    },
+    "recipe": {
+      "explanations": [
+        {
+          "kind": "quality_profile",
+          "rationale": "Selected the classification quality profile for the matched classification recipe.",
+          "selected": "classification"
+        },
+        {
+          "kind": "targets",
+          "rationale": "Used explicit targets supplied by the host so validation and preview rendering match the dataset.",
+          "selected": [
+            "image"
+          ]
+        },
+        {
+          "kind": "feedback_tags",
+          "rationale": "These feedback tags match the transforms and failure modes most likely to matter for this task.",
+          "selected": [
+            "too_noisy",
+            "too_blurry",
+            "object_unrecognizable"
+          ]
+        },
+        {
+          "kind": "workflow",
+          "rationale": "Render, rank, score, report, record the decision, then export only after preview acceptance.",
+          "selected": [
+            "render_preview_batch",
+            "rank_preview_candidates",
+            "score_dataset_preview_candidates",
+            "start_tuning_session",
+            "record_tuning_session_step",
+            "export_tuning_session",
+            "export_preview_report",
+            "record_tuning_decision",
+            "export_pipeline"
+          ]
+        }
+      ],
+      "feedback_tags": [
+        "too_noisy",
+        "too_blurry",
+        "object_unrecognizable"
+      ],
+      "intensity": "low",
+      "pipeline": {
+        "additional_targets": {},
+        "bbox_params": null,
+        "is_check_shapes": true,
+        "keypoint_params": null,
+        "seed": 137,
+        "strict": true,
+        "transforms": [
+          {
+            "name": "HorizontalFlip",
+            "p": 0.2,
+            "params": {}
+          },
+          {
+            "name": "RandomBrightnessContrast",
+            "p": 0.2,
+            "params": {}
+          },
+          {
+            "name": "GaussNoise",
+            "p": 0.1,
+            "params": {
+              "std_range": [
+                0.02,
+                0.1
+              ]
+            }
+          },
+          {
+            "name": "MotionBlur",
+            "p": 0.06666666666666667,
+            "params": {
+              "blur_range": [
+                3,
+                5
+              ]
+            }
+          }
+        ]
+      },
+      "preview_guidance": [
+        "Use the classification quality profile when comparing preview runs.",
+        "Render at least two candidate preview runs before ranking.",
+        "Score the candidate set before exporting a report or final pipeline."
+      ],
+      "quality_profile": "classification",
+      "rationale": "Matched the classification recipe, selected the classification quality profile, and paired a conservative starter pipeline with preview ranking and report export tools.",
+      "recipe_name": "classification",
+      "recommended_tools": [
+        "render_preview_batch",
+        "rank_preview_candidates",
+        "score_dataset_preview_candidates",
+        "start_tuning_session",
+        "record_tuning_session_step",
+        "export_tuning_session",
+        "export_preview_report",
+        "record_tuning_decision",
+        "export_pipeline"
+      ],
+      "targets": [
+        "image"
+      ],
+      "task": "classification"
+    },
+    "remediation_actions": [],
+    "sample_paths": [
+      "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding/images/sample-a.png",
+      "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding/images/sample-b.jpg"
+    ],
+    "sampled_image_count": 2,
+    "status": "ok",
+    "validation": {
+      "errors": [],
+      "normalized_pipeline": {
+        "additional_targets": {},
+        "is_check_shapes": true,
+        "seed": 137,
+        "strict": true,
+        "transforms": [
+          {
+            "name": "HorizontalFlip",
+            "p": 0.2,
+            "params": {}
+          },
+          {
+            "name": "RandomBrightnessContrast",
+            "p": 0.2,
+            "params": {}
+          },
+          {
+            "name": "GaussNoise",
+            "p": 0.1,
+            "params": {
+              "std_range": [
+                0.02,
+                0.1
+              ]
+            }
+          },
+          {
+            "name": "MotionBlur",
+            "p": 0.06666666666666667,
+            "params": {
+              "blur_range": [
+                3,
+                5
+              ]
+            }
+          }
+        ]
+      },
+      "valid": true,
+      "warnings": []
+    }
   },
   "recommend_recipe": {
     "explanations": [
@@ -587,6 +863,7 @@
               "export_preview_report",
               "export_tuning_session",
               "list_tuning_sessions",
+              "plan_dataset_onboarding",
               "recommend_recipe",
               "record_tuning_session_step",
               "render_preview_batch",
@@ -618,6 +895,7 @@
             "required": [
               "albumentationsx://diagnostics/guide",
               "albumentationsx://examples/client-smoke",
+              "albumentationsx://examples/dataset-onboarding",
               "albumentationsx://recipes/catalog",
               "albumentationsx://workflows/preview-tuning"
             ]
@@ -788,6 +1066,7 @@
               "export_preview_report",
               "export_tuning_session",
               "list_tuning_sessions",
+              "plan_dataset_onboarding",
               "recommend_recipe",
               "record_tuning_session_step",
               "render_preview_batch",
@@ -819,6 +1098,7 @@
             "required": [
               "albumentationsx://diagnostics/guide",
               "albumentationsx://examples/client-smoke",
+              "albumentationsx://examples/dataset-onboarding",
               "albumentationsx://recipes/catalog",
               "albumentationsx://workflows/preview-tuning"
             ]

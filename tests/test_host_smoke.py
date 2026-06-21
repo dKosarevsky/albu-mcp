@@ -105,6 +105,7 @@ def _complete_public_surface_with_host_smoke() -> PublicSurface:
             "export_pipeline",
             "diagnose_environment",
             "run_host_smoke_check",
+            "plan_dataset_onboarding",
         ],
         prompts=[
             "build_robustness_augmentation_session",
@@ -123,6 +124,7 @@ def _complete_public_surface_with_host_smoke() -> PublicSurface:
             "albumentationsx://examples/client-smoke",
             "albumentationsx://examples/first-preview",
             "albumentationsx://examples/distortion-review",
+            "albumentationsx://examples/dataset-onboarding",
             "albumentationsx://examples/diagnostics",
             "albumentationsx://examples/review-loop",
             "albumentationsx://examples/report-handoff",

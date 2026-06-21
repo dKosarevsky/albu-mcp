@@ -75,7 +75,7 @@ def _prepare_work_dirs(work_dir: Path) -> tuple[Path, Path]:
     return images_dir, artifacts_dir
 
 
-async def _run_scenario(session: ClientSession, scenario: dict[str, Any], images_dir: Path) -> None:
+async def _run_scenario(session: ClientSession, scenario: dict[str, Any], images_dir: Path) -> None:  # noqa: PLR0912
     task = scenario["task"]
     targets = scenario["targets"]
     if scenario.get("client_smoke"):
@@ -87,6 +87,9 @@ async def _run_scenario(session: ClientSession, scenario: dict[str, Any], images
         return
     if scenario.get("distortion_review_smoke"):
         await _run_distortion_review_smoke(session, scenario)
+        return
+    if scenario.get("dataset_onboarding"):
+        await _run_dataset_onboarding(session, scenario, images_dir)
         return
     if scenario.get("recommend_recipe"):
         await _run_recipe_recommendation(session, scenario)
@@ -895,6 +898,70 @@ async def _run_distortion_review_smoke(session: ClientSession, scenario: dict[st
     for tool_name in ("record_preview_feedback", "adjust_pipeline", "compare_preview_runs", "export_pipeline"):
         if tool_name not in capabilities["tools"]:
             raise AssertionError(f"{scenario['name']} capabilities did not include {tool_name}: {capabilities}")
+
+
+async def _run_dataset_onboarding(session: ClientSession, scenario: dict[str, Any], images_dir: Path) -> None:
+    image_paths = _write_real_sample_inputs(images_dir, scenario)
+    dataset_path = image_paths[0].parent
+    playbook = await _read_resource_json(session, "albumentationsx://examples/dataset-onboarding")
+    if playbook["trigger_phrase"] != "plan the first AlbumentationsX dataset preview":
+        raise AssertionError(f"{scenario['name']} returned wrong onboarding trigger phrase: {playbook}")
+    step_tools = [step["tool"] for step in playbook["steps"]]
+    expected_steps = [
+        "albumentationsx://capabilities",
+        "plan_dataset_onboarding",
+        "validate_preview_request",
+        "render_preview_batch",
+    ]
+    if step_tools != expected_steps:
+        raise AssertionError(f"{scenario['name']} returned wrong onboarding steps: {playbook}")
+
+    capabilities = await _read_resource_json(session, "albumentationsx://capabilities")
+    if "albumentationsx://examples/dataset-onboarding" not in capabilities["workflow_resources"]:
+        raise AssertionError(f"{scenario['name']} capabilities did not include dataset onboarding: {capabilities}")
+    for tool_name in ("plan_dataset_onboarding", "validate_preview_request", "render_preview_batch"):
+        if tool_name not in capabilities["tools"]:
+            raise AssertionError(f"{scenario['name']} capabilities did not include {tool_name}: {capabilities}")
+
+    report = await _call_tool_json(
+        session,
+        "plan_dataset_onboarding",
+        {
+            "dataset_path": str(dataset_path),
+            "task": scenario["task"],
+            "intensity": scenario.get("intensity", "medium"),
+            "targets": scenario["targets"],
+            "max_images": int(scenario.get("max_images", scenario.get("input_count", 1))),
+        },
+    )
+    if report["status"] != "ok" or report["preview_ready"] is not True:
+        raise AssertionError(f"{scenario['name']} onboarding report was not preview-ready: {report}")
+    if report["image_count"] != len(image_paths):
+        raise AssertionError(f"{scenario['name']} onboarding image count mismatch: {report}")
+    if report["sampled_image_count"] != int(scenario.get("max_images", len(image_paths))):
+        raise AssertionError(f"{scenario['name']} onboarding sample count mismatch: {report}")
+    template = report.get("preview_request_template")
+    if template is None or template["tool"] != "render_preview_batch":
+        raise AssertionError(f"{scenario['name']} onboarding returned no preview template: {report}")
+
+    valid_request = await _validate_preview_request_or_fail(
+        session,
+        scenario,
+        {
+            **template["request"],
+            "variants_per_image": int(scenario.get("variants_per_image", 1)),
+            "seed": int(scenario.get("seed", 0)),
+            "max_side": int(scenario.get("max_side", 160)),
+        },
+    )
+    preview = await _call_tool_json(session, "render_preview_batch", {"request": valid_request})
+    await _assert_real_sample_preview_manifest(
+        session,
+        scenario,
+        preview["run_id"],
+        expected_input_count=report["sampled_image_count"],
+    )
+    await _delete_preview_run(session, scenario, preview["run_id"])
 
 
 async def _run_host_smoke(session: ClientSession, scenario: dict[str, Any]) -> None:

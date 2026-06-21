@@ -342,6 +342,48 @@ _HOST_EXAMPLES = {
             "The exported pipeline corresponds to a user-accepted preview run.",
         ],
     ),
+    "dataset-onboarding": HostExample(
+        name="dataset-onboarding",
+        goal="Plan a first safe AlbumentationsX preview from a local image dataset folder.",
+        trigger_phrase="plan the first AlbumentationsX dataset preview",
+        steps=[
+            HostExampleStep(
+                order=1,
+                tool="albumentationsx://capabilities",
+                instruction="Read capabilities to confirm allowed roots before scanning local dataset paths.",
+                expected_result="A compact JSON object with allowed_roots, artifact_root, tools, and limits.",
+            ),
+            HostExampleStep(
+                order=2,
+                tool="plan_dataset_onboarding",
+                instruction=(
+                    "Call plan_dataset_onboarding with a dataset_path under an allowed root, task, targets, and "
+                    "small max_images."
+                ),
+                expected_result=(
+                    "A read-only report with image counts, recipe, validation, and preview request template."
+                ),
+            ),
+            HostExampleStep(
+                order=3,
+                tool="validate_preview_request",
+                instruction="Validate preview_request_template.request before rendering any images.",
+                expected_result="A valid request or concrete remediation actions for paths, schema, or targets.",
+            ),
+            HostExampleStep(
+                order=4,
+                tool="render_preview_batch",
+                instruction="Render only the validated sample request, then inspect the contact sheet.",
+                expected_result="Preview artifacts, manifest, and contact sheet for the sampled dataset images.",
+            ),
+        ],
+        success_criteria=[
+            "The dataset path is under an allowed root and contains supported image files.",
+            "The recommended recipe and pipeline validate for the selected targets.",
+            "The host validates the generated preview request before calling render_preview_batch.",
+            "The first contact sheet is reviewed before increasing sample size or intensity.",
+        ],
+    ),
     "review-loop": HostExample(
         name="review-loop",
         goal="Turn concrete user feedback about one preview example into structured tags and a safer next render.",

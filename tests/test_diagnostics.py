@@ -161,6 +161,7 @@ def _complete_public_surface() -> PublicSurface:
             "diagnose_environment",
             "run_host_smoke_check",
             "validate_preview_request",
+            "plan_dataset_onboarding",
         ],
         prompts=[
             "build_robustness_augmentation_session",
@@ -179,6 +180,7 @@ def _complete_public_surface() -> PublicSurface:
             "albumentationsx://examples/client-smoke",
             "albumentationsx://examples/first-preview",
             "albumentationsx://examples/distortion-review",
+            "albumentationsx://examples/dataset-onboarding",
             "albumentationsx://examples/diagnostics",
             "albumentationsx://examples/review-loop",
             "albumentationsx://examples/report-handoff",

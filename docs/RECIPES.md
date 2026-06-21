@@ -10,17 +10,30 @@ the dataset and review goal.
 
 Use profile `classification-robustness`.
 
-1. Call `recommend_recipe` with task `classification` and intensity `medium`.
-2. Render a small balanced preview batch.
-3. Use `compare_preview_runs` and inspect `quality_summary.findings` plus contact sheets.
-4. Ask the user to choose feedback tags such as `too_noisy`, `too_blurry`, or `object_unrecognizable`.
-5. When the user points to a concrete preview, call `record_preview_feedback` with the image and variant index.
-6. Call `list_preview_feedback` and reuse `aggregated_feedback_tags` for the next adjustment.
-7. Render two or three candidates when feedback is ambiguous, then call `rank_preview_candidates`.
-8. Call `score_dataset_preview_candidates` to compare metric ranges and finding counts.
-9. Persist the accepted or rejected outcome with `record_tuning_decision`.
-10. Export a visual handoff with `export_preview_report`; Markdown reports include image refs, HTML reports include
+1. Call `plan_dataset_onboarding` when the user starts from a local dataset folder.
+2. Call `recommend_recipe` with task `classification` and intensity `medium` when no dataset folder is available yet.
+3. Render a small balanced preview batch.
+4. Use `compare_preview_runs` and inspect `quality_summary.findings` plus contact sheets.
+5. Ask the user to choose feedback tags such as `too_noisy`, `too_blurry`, or `object_unrecognizable`.
+6. When the user points to a concrete preview, call `record_preview_feedback` with the image and variant index.
+7. Call `list_preview_feedback` and reuse `aggregated_feedback_tags` for the next adjustment.
+8. Render two or three candidates when feedback is ambiguous, then call `rank_preview_candidates`.
+9. Call `score_dataset_preview_candidates` to compare metric ranges and finding counts.
+10. Persist the accepted or rejected outcome with `record_tuning_decision`.
+11. Export a visual handoff with `export_preview_report`; Markdown reports include image refs, HTML reports include
    contact sheet thumbnails, and both include matching concrete feedback.
+
+## Dataset Onboarding
+
+Use `albumentationsx://examples/dataset-onboarding` when the user provides a local folder and wants the first preview
+planned safely.
+
+1. Read `albumentationsx://capabilities` and confirm the folder is under an allowed root.
+2. Call `plan_dataset_onboarding` with `dataset_path`, task, targets, and `max_images` between 1 and 32.
+3. Follow `remediation_actions` if the folder is missing, outside allowed roots, or contains no supported images.
+4. Call `validate_preview_request` with the returned `preview_request_template.request`.
+5. Call `render_preview_batch` only after validation returns `valid: true`.
+6. Review the contact sheet before increasing sample size, variants, max side, or intensity.
 
 ## Detection Annotation Review
 
@@ -87,6 +100,7 @@ MCP hosts can read:
 - `albumentationsx://examples/client-smoke`
 - `albumentationsx://examples/first-preview`
 - `albumentationsx://examples/distortion-review`
+- `albumentationsx://examples/dataset-onboarding`
 - `albumentationsx://examples/diagnostics`
 - `albumentationsx://examples/review-loop`
 - `albumentationsx://examples/report-handoff`
@@ -98,5 +112,7 @@ the first small preview. Replace the placeholder image path, call `validate_prev
 `render_preview_batch`.
 Use `albumentationsx://examples/distortion-review` when the user asks for distorted robustness variants and then points
 to a concrete bad example such as "example 8 is too noisy".
+Use `albumentationsx://examples/dataset-onboarding` when the user starts from a real local folder and needs a bounded
+first preview request.
 Use `albumentationsx://diagnostics/guide` plus `diagnose_environment` when preview setup fails, local paths are rejected,
 or host-side tool discovery looks stale.
