@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 from PIL import Image
 
+from albumentationsx_mcp.annotations import render_overlay
 from albumentationsx_mcp.models import ComposeSpec, ImageAnnotations, PreviewRequest, TransformSpec
 from albumentationsx_mcp.preview import ArtifactStore, PathPolicy, PreviewService
 
@@ -114,3 +115,18 @@ def test_preview_request_requires_annotation_count_to_match_inputs(tmp_path: Pat
 
     with pytest.raises(ValueError, match="annotations length must match input_paths length"):
         service.render_preview(request)
+
+
+def test_render_overlay_accepts_numpy_bbox_arrays() -> None:
+    image = np.full((24, 24, 3), 200, dtype=np.uint8)
+
+    overlay = render_overlay(
+        {
+            "image": image,
+            "bboxes": np.asarray([[4.0, 5.0, 18.0, 19.0]], dtype=np.float32),
+            "labels": np.asarray(["object"]),
+        }
+    )
+
+    assert overlay.mode == "RGB"
+    assert overlay.size == (24, 24)

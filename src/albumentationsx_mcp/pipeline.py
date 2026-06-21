@@ -66,7 +66,9 @@ class PipelineService:
                 params["p"] = transform_spec.p
             transforms.append(transform_class(**params))
 
-        bbox_params = A.BboxParams(**pipeline.bbox_params) if pipeline.bbox_params is not None else None
+        bbox_params = (
+            A.BboxParams(**_runtime_bbox_params(pipeline.bbox_params)) if pipeline.bbox_params is not None else None
+        )
         keypoint_params = A.KeypointParams(**pipeline.keypoint_params) if pipeline.keypoint_params is not None else None
         return A.Compose(
             transforms,
@@ -197,7 +199,7 @@ class PipelineService:
         lines.extend(f"    {self._format_transform(transform)}," for transform in pipeline.transforms)
         lines.append("],")
         if pipeline.bbox_params is not None:
-            lines.append(f"    bbox_params=A.BboxParams(**{pipeline.bbox_params!r}),")
+            lines.append(f"    bbox_params=A.BboxParams(**{_runtime_bbox_params(pipeline.bbox_params)!r}),")
         if pipeline.keypoint_params is not None:
             lines.append(f"    keypoint_params=A.KeypointParams(**{pipeline.keypoint_params!r}),")
         if pipeline.additional_targets:
@@ -216,3 +218,13 @@ class PipelineService:
             params["p"] = transform.p
         args = ", ".join(f"{name}={value!r}" for name, value in sorted(params.items()))
         return f"A.{transform.name}({args})" if args else f"A.{transform.name}()"
+
+
+def _runtime_bbox_params(params: dict[str, Any] | None) -> dict[str, Any]:
+    """Adapt public bbox params to the installed AlbumentationsX runtime API."""
+    if params is None:
+        return {}
+    runtime_params = dict(params)
+    if "format" in runtime_params and "coord_format" not in runtime_params:
+        runtime_params["coord_format"] = runtime_params.pop("format")
+    return runtime_params

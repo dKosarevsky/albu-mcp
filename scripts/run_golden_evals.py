@@ -511,6 +511,33 @@ def _write_real_sample_inputs(images_dir: Path, scenario: dict[str, Any]) -> lis
     return paths
 
 
+def _write_dataset_onboarding_annotations(dataset_path: Path, image_paths: list[Path]) -> None:
+    annotations_dir = dataset_path / "annotations"
+    annotations_dir.mkdir(parents=True, exist_ok=True)
+    images = []
+    annotations = []
+    for index, image_path in enumerate(image_paths, start=1):
+        images.append({"id": index, "file_name": image_path.name})
+        annotations.append(
+            {
+                "id": index,
+                "image_id": index,
+                "bbox": [18 + index, 20, 48, 42],
+                "category_id": 1,
+            }
+        )
+    (annotations_dir / "instances_train.json").write_text(
+        json.dumps(
+            {
+                "images": images,
+                "annotations": annotations,
+                "categories": [{"id": 1, "name": "object"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
 def _build_real_sample_image(index: int) -> Image.Image:
     width, height = 128, 96
     x = np.linspace(0, 1, width, dtype=np.float32)
@@ -552,6 +579,7 @@ async def _assert_real_sample_preview_manifest(
     run_id: str,
     *,
     expected_input_count: int,
+    expect_overlay: bool = False,
 ) -> dict[str, Any]:
     manifest = await _call_tool_json(session, "get_preview_manifest", {"run_id": run_id})
     summary = manifest.get("summary", {})
@@ -564,9 +592,18 @@ async def _assert_real_sample_preview_manifest(
         raise AssertionError(f"{scenario['name']} manifest image artifact count mismatch: {manifest}")
     if summary.get("artifact_counts", {}).get("contact_sheet") != 1:
         raise AssertionError(f"{scenario['name']} manifest contact sheet count mismatch: {manifest}")
+    if expect_overlay:
+        if summary.get("artifact_counts", {}).get("overlay") != expected_image_count:
+            raise AssertionError(f"{scenario['name']} manifest overlay artifact count mismatch: {manifest}")
+        if summary.get("artifact_counts", {}).get("overlay_contact_sheet") != 1:
+            raise AssertionError(f"{scenario['name']} manifest overlay contact sheet count mismatch: {manifest}")
+        if summary.get("annotation_observation_count") != expected_image_count:
+            raise AssertionError(f"{scenario['name']} manifest annotation observations mismatch: {manifest}")
     contact_sheet_paths = [Path(path) for path in summary.get("contact_sheet_paths", [])]
     if not contact_sheet_paths:
         raise AssertionError(f"{scenario['name']} manifest has no contact sheet paths: {manifest}")
+    if expect_overlay and not any("overlay_contact_sheet" in path.name for path in contact_sheet_paths):
+        raise AssertionError(f"{scenario['name']} manifest has no overlay_contact_sheet path: {manifest}")
     for contact_sheet_path in contact_sheet_paths:
         if not contact_sheet_path.exists() or contact_sheet_path.stat().st_size <= 0:
             raise AssertionError(f"{scenario['name']} contact sheet artifact is missing: {manifest}")
@@ -903,6 +940,8 @@ async def _run_distortion_review_smoke(session: ClientSession, scenario: dict[st
 async def _run_dataset_onboarding(session: ClientSession, scenario: dict[str, Any], images_dir: Path) -> None:
     image_paths = _write_real_sample_inputs(images_dir, scenario)
     dataset_path = image_paths[0].parent
+    if scenario.get("annotation_onboarding"):
+        _write_dataset_onboarding_annotations(dataset_path, image_paths)
     playbook = await _read_resource_json(session, "albumentationsx://examples/dataset-onboarding")
     if playbook["trigger_phrase"] != "plan the first AlbumentationsX dataset preview":
         raise AssertionError(f"{scenario['name']} returned wrong onboarding trigger phrase: {playbook}")
@@ -943,6 +982,8 @@ async def _run_dataset_onboarding(session: ClientSession, scenario: dict[str, An
     template = report.get("preview_request_template")
     if template is None or template["tool"] != "render_preview_batch":
         raise AssertionError(f"{scenario['name']} onboarding returned no preview template: {report}")
+    if scenario.get("annotation_onboarding"):
+        _assert_annotation_onboarding_report(scenario, report, template)
 
     valid_request = await _validate_preview_request_or_fail(
         session,
@@ -960,8 +1001,23 @@ async def _run_dataset_onboarding(session: ClientSession, scenario: dict[str, An
         scenario,
         preview["run_id"],
         expected_input_count=report["sampled_image_count"],
+        expect_overlay=bool(scenario.get("annotation_onboarding")),
     )
     await _delete_preview_run(session, scenario, preview["run_id"])
+
+
+def _assert_annotation_onboarding_report(
+    scenario: dict[str, Any],
+    report: dict[str, Any],
+    template: dict[str, Any],
+) -> None:
+    request = template["request"]
+    if "annotations" not in request:
+        raise AssertionError(f"{scenario['name']} onboarding template returned no annotations: {report}")
+    if request["pipeline"].get("bbox_params", {}).get("format") != "pascal_voc":
+        raise AssertionError(f"{scenario['name']} onboarding template returned wrong bbox params: {report}")
+    if "coco_manifest" not in report.get("dataset_structure", {}).get("detected_layouts", []):
+        raise AssertionError(f"{scenario['name']} onboarding did not detect COCO annotations: {report}")
 
 
 async def _run_host_smoke(session: ClientSession, scenario: dict[str, Any]) -> None:

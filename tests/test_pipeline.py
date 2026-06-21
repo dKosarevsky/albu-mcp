@@ -5,6 +5,7 @@ from typing import Any
 
 import pytest
 
+from albumentationsx_mcp.catalog import TransformCatalog
 from albumentationsx_mcp.models import (
     ComposeSpec,
     ConstraintInfo,
@@ -110,3 +111,28 @@ def test_export_python_contains_reproducible_compose(catalog: FakeCatalog) -> No
     assert "A.Compose" in exported.content
     assert "A.GaussNoise" in exported.content
     assert "seed=137" in exported.content
+
+
+def test_build_pipeline_adapts_public_bbox_format_for_runtime() -> None:
+    service = PipelineService(TransformCatalog())
+    spec = ComposeSpec(
+        transforms=[TransformSpec(name="HorizontalFlip", p=1.0)],
+        bbox_params={"format": "pascal_voc", "label_fields": ["labels"]},
+    )
+
+    pipeline = service.build_pipeline(spec)
+
+    assert pipeline is not None
+
+
+def test_export_python_adapts_public_bbox_format_for_runtime() -> None:
+    service = PipelineService(TransformCatalog())
+    spec = ComposeSpec(
+        transforms=[TransformSpec(name="HorizontalFlip", p=1.0)],
+        bbox_params={"format": "pascal_voc", "label_fields": ["labels"]},
+    )
+
+    exported = service.export_pipeline(spec, output_format="python")
+
+    assert "'coord_format': 'pascal_voc'" in exported.content
+    assert "'format': 'pascal_voc'" not in exported.content

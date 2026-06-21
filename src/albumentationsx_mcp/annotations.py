@@ -83,13 +83,20 @@ def render_overlay(result: Mapping[str, Any]) -> Image.Image:
 
     draw = ImageDraw.Draw(base)
     width = max(2, min(base.size) // 120)
-    labels = list(result.get("labels") or [])
-    for index, bbox in enumerate(result.get("bboxes") or []):
+    labels = annotation_values(result.get("labels"))
+    for index, bbox in enumerate(annotation_values(result.get("bboxes"))):
         label = str(labels[index]) if index < len(labels) else None
         _draw_bbox(draw, bbox, label, width)
-    for keypoint in result.get("keypoints") or []:
+    for keypoint in annotation_values(result.get("keypoints")):
         _draw_keypoint(draw, keypoint, width)
     return base.convert("RGB")
+
+
+def annotation_values(value: Any) -> list[Any]:
+    """Return annotation container values without relying on ambiguous array truthiness."""
+    if value is None:
+        return []
+    return list(value)
 
 
 def _scale_bbox(bbox: list[float], scale_x: float, scale_y: float) -> list[float]:

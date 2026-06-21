@@ -18,6 +18,7 @@ from PIL import Image
 
 from albumentationsx_mcp.annotations import (
     annotation_has_content,
+    annotation_values,
     build_transform_payload,
     load_mask,
     render_overlay,
@@ -355,9 +356,9 @@ class PreviewService:
             image_index=image_index,
             variant_index=variant_index,
             input_bbox_count=len(annotation.bboxes),
-            output_bbox_count=len(result.get("bboxes") or []),
+            output_bbox_count=len(annotation_values(result.get("bboxes"))),
             input_keypoint_count=len(annotation.keypoints),
-            output_keypoint_count=len(result.get("keypoints") or []),
+            output_keypoint_count=len(annotation_values(result.get("keypoints"))),
             input_mask_coverage=_mask_coverage(input_mask),
             output_mask_coverage=_mask_coverage(result.get("mask")),
         )

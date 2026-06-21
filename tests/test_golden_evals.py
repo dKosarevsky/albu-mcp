@@ -74,6 +74,9 @@ def test_golden_eval_assets_are_present() -> None:  # noqa: PLR0915
     assert first_preview_scenario["first_preview_smoke"] is True
     assert distortion_review_scenario["distortion_review_smoke"] is True
     assert dataset_onboarding_scenario["dataset_onboarding"] is True
+    assert dataset_onboarding_scenario["annotation_onboarding"] is True
+    assert dataset_onboarding_scenario["task"] == "object_detection"
+    assert dataset_onboarding_scenario["targets"] == ["image", "bboxes"]
     assert dataset_onboarding_scenario["input_count"] == 3
     assert real_sample_scenario["real_sample_smoke"] is True
     assert real_sample_scenario["input_count"] == 3
@@ -96,6 +99,8 @@ def test_golden_eval_assets_are_present() -> None:  # noqa: PLR0915
     assert "run_host_smoke_check" in runner_source
     assert "validate_preview_request" in runner_source
     assert "plan_dataset_onboarding" in runner_source
+    assert "_write_dataset_onboarding_annotations" in runner_source
+    assert "overlay_contact_sheet" in runner_source
     real_sample_source = runner_source.split("async def _run_real_sample_smoke", maxsplit=1)[1].split(
         "async def _run_preview_request_troubleshooting",
         maxsplit=1,

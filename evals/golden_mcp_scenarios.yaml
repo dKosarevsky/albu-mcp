@@ -44,12 +44,13 @@ scenarios:
     distortion_review_smoke: true
 
   - name: dataset_onboarding_flow
-    task: classification
+    task: object_detection
     intensity: low
-    targets: ["image"]
+    targets: ["image", "bboxes"]
     export_format: json
     preview: false
     dataset_onboarding: true
+    annotation_onboarding: true
     input_count: 3
     max_images: 2
     variants_per_image: 1
