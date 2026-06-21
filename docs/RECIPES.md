@@ -33,9 +33,10 @@ planned safely.
 3. Inspect `dataset_structure.detected_layouts` for class directories, split folders, YOLO labels, or COCO manifests.
 4. Use `dataset_structure.recipe_hints` and `balance_warnings` when asking the user which preview subset to start with.
 5. Follow `remediation_actions` if the folder is missing, outside allowed roots, or contains no supported images.
-6. Call `validate_preview_request` with the returned `preview_request_template.request`.
-7. Call `render_preview_batch` only after validation returns `valid: true`.
-8. Review the contact sheet before increasing sample size, variants, max side, or intensity.
+6. For detection datasets, keep the returned `annotations` aligned with `input_paths` and use the bbox-aware pipeline.
+7. Call `validate_preview_request` with the returned `preview_request_template.request`.
+8. Call `render_preview_batch` only after validation returns `valid: true`.
+9. Review `overlay_contact_sheet.png` before increasing sample size, variants, max side, or intensity.
 
 ## Detection Annotation Review
 

@@ -71,7 +71,7 @@ details and `remediation_actions` are documented in [docs/USAGE.md](docs/USAGE.m
 - Recipe and pipeline recommendation for classification, detection, segmentation, OCR, and balanced workflows.
 - Pipeline validation and explanation before rendering.
 - Preview request validation for missing files, outside-root paths, masks, and annotation counts.
-- Read-only dataset onboarding that samples local folders, detects common layouts, and builds first-preview templates.
+- Read-only dataset onboarding that detects common layouts and builds annotation-aware first-preview templates.
 - Deterministic single-image and batch previews with contact sheets.
 - Preview comparison with `quality_summary` and suggested feedback tags.
 - Concrete preview feedback, interactive tuning sessions, ranking, dataset scoring, and visual reports.

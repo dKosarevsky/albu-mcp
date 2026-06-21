@@ -378,9 +378,9 @@ def _dataset_onboarding_ready(root: Path) -> dict[str, Any]:
     catalog = TransformCatalog()
     report = build_dataset_onboarding_report(
         dataset_path=dataset_root,
-        task="classification",
+        task="object_detection",
         intensity="low",
-        targets=["image"],
+        targets=["image", "bboxes"],
         max_images=2,
         path_policy=PathPolicy([dataset_root]),
         pipeline_service=PipelineService(catalog),

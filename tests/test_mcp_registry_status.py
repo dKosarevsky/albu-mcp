@@ -21,7 +21,7 @@ def test_mcp_registry_status_accepts_active_latest_entry(tmp_path: Path) -> None
     )
 
     assert report.name == "io.github.dKosarevsky/albu-mcp"
-    assert report.version == "1.11.0"
+    assert report.version == "1.12.0"
     assert report.package == "albumentationsx-mcp"
     assert report.status == "active"
     assert report.is_latest is True
@@ -71,7 +71,7 @@ def test_mcp_registry_status_cli_accepts_registry_response_fixture(tmp_path: Pat
     )
 
     assert "MCP Registry latest is active" in result.stdout
-    assert "1.11.0" in result.stdout
+    assert "1.12.0" in result.stdout
 
 
 def _write_server_json(tmp_path: Path) -> Path:
@@ -82,7 +82,7 @@ def _write_server_json(tmp_path: Path) -> Path:
                 "name": "io.github.dKosarevsky/albu-mcp",
                 "title": "AlbumentationsX MCP",
                 "description": _DESCRIPTION,
-                "version": "1.11.0",
+                "version": "1.12.0",
                 "websiteUrl": "https://github.com/dKosarevsky/albu-mcp#readme",
                 "icons": [
                     {
@@ -100,7 +100,7 @@ def _write_server_json(tmp_path: Path) -> Path:
                     {
                         "registryType": "pypi",
                         "identifier": "albumentationsx-mcp",
-                        "version": "1.11.0",
+                        "version": "1.12.0",
                         "transport": {"type": "stdio"},
                     }
                 ],
@@ -125,7 +125,7 @@ def _registry_payload_for_case(case: str) -> dict[str, object]:
         return {
             "servers": [
                 _registry_entry(version="1.9.0", is_latest=True),
-                _registry_entry(version="1.11.0", is_latest=False),
+                _registry_entry(version="1.12.0", is_latest=False),
             ]
         }
     if case == "pending_status":
@@ -140,7 +140,7 @@ def _registry_payload_for_case(case: str) -> dict[str, object]:
 
 
 def _registry_entry(**overrides: object) -> dict[str, object]:
-    version = str(overrides.get("version", "1.11.0"))
+    version = str(overrides.get("version", "1.12.0"))
     package_version = overrides.get("package_version") or version
     return {
         "server": {

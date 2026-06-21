@@ -4,8 +4,14 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 ## Unreleased
 
+## 1.12.0 - 2026-06-21
+
 - Added dataset-aware onboarding profile detection for class-directory layouts, split folders, YOLO labels, and COCO
   manifests in `plan_dataset_onboarding`.
+- Added annotation-aware onboarding templates that match sampled COCO/YOLO bbox labels and render overlay contact sheets
+  through the existing preview flow.
+- Added runtime compatibility for AlbumentationsX `BboxParams(coord_format=...)` while preserving the public MCP
+  `bbox_params.format` contract.
 
 ## 1.11.0 - 2026-06-21
 

@@ -497,9 +497,28 @@
         "Call `validate_preview_request` with this request before rendering.",
         "Call `render_preview_batch` only after validation returns `valid=true`.",
         "Inspect the contact sheet before increasing variants_per_image, max_side, or intensity.",
-        "Record concrete feedback tags before adjusting the pipeline."
+        "Record concrete feedback tags before adjusting the pipeline.",
+        "Annotation-aware template uses coco bboxes for overlay previews.",
+        "Inspect `overlay_contact_sheet` before accepting geometric transforms.",
+        "1 sampled image(s) are without annotations."
       ],
       "request": {
+        "annotations": [
+          {
+            "bbox_labels": [
+              "object"
+            ],
+            "bboxes": [
+              [
+                1.0,
+                1.0,
+                5.0,
+                5.0
+              ]
+            ]
+          },
+          null
+        ],
         "input_paths": [
           "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding/train/cat/sample-a.png",
           "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding/train/dog/sample-b.jpg"
@@ -507,6 +526,12 @@
         "max_side": 512,
         "pipeline": {
           "additional_targets": {},
+          "bbox_params": {
+            "format": "pascal_voc",
+            "label_fields": [
+              "labels"
+            ]
+          },
           "is_check_shapes": true,
           "seed": 137,
           "strict": true,
@@ -517,29 +542,23 @@
               "params": {}
             },
             {
+              "name": "Affine",
+              "p": 0.2,
+              "params": {
+                "rotate": [
+                  -8,
+                  8
+                ],
+                "scale": [
+                  0.9,
+                  1.1
+                ]
+              }
+            },
+            {
               "name": "RandomBrightnessContrast",
               "p": 0.2,
               "params": {}
-            },
-            {
-              "name": "GaussNoise",
-              "p": 0.1,
-              "params": {
-                "std_range": [
-                  0.02,
-                  0.1
-                ]
-              }
-            },
-            {
-              "name": "MotionBlur",
-              "p": 0.06666666666666667,
-              "params": {
-                "blur_range": [
-                  3,
-                  5
-                ]
-              }
             }
           ]
         },
@@ -552,22 +571,22 @@
       "explanations": [
         {
           "kind": "quality_profile",
-          "rationale": "Selected the classification quality profile for the matched classification recipe.",
-          "selected": "classification"
+          "rationale": "Selected the detection quality profile for the matched detection recipe.",
+          "selected": "detection"
         },
         {
           "kind": "targets",
           "rationale": "Used explicit targets supplied by the host so validation and preview rendering match the dataset.",
           "selected": [
-            "image"
+            "image",
+            "bboxes"
           ]
         },
         {
           "kind": "feedback_tags",
           "rationale": "These feedback tags match the transforms and failure modes most likely to matter for this task.",
           "selected": [
-            "too_noisy",
-            "too_blurry",
+            "too_distorted",
             "object_unrecognizable"
           ]
         },
@@ -588,14 +607,18 @@
         }
       ],
       "feedback_tags": [
-        "too_noisy",
-        "too_blurry",
+        "too_distorted",
         "object_unrecognizable"
       ],
       "intensity": "low",
       "pipeline": {
         "additional_targets": {},
-        "bbox_params": null,
+        "bbox_params": {
+          "format": "pascal_voc",
+          "label_fields": [
+            "labels"
+          ]
+        },
         "is_check_shapes": true,
         "keypoint_params": null,
         "seed": 137,
@@ -607,40 +630,34 @@
             "params": {}
           },
           {
+            "name": "Affine",
+            "p": 0.2,
+            "params": {
+              "rotate": [
+                -8,
+                8
+              ],
+              "scale": [
+                0.9,
+                1.1
+              ]
+            }
+          },
+          {
             "name": "RandomBrightnessContrast",
             "p": 0.2,
             "params": {}
-          },
-          {
-            "name": "GaussNoise",
-            "p": 0.1,
-            "params": {
-              "std_range": [
-                0.02,
-                0.1
-              ]
-            }
-          },
-          {
-            "name": "MotionBlur",
-            "p": 0.06666666666666667,
-            "params": {
-              "blur_range": [
-                3,
-                5
-              ]
-            }
           }
         ]
       },
       "preview_guidance": [
-        "Use the classification quality profile when comparing preview runs.",
+        "Use the detection quality profile when comparing preview runs.",
         "Render at least two candidate preview runs before ranking.",
         "Score the candidate set before exporting a report or final pipeline."
       ],
-      "quality_profile": "classification",
-      "rationale": "Matched the classification recipe, selected the classification quality profile, and paired a conservative starter pipeline with preview ranking and report export tools.",
-      "recipe_name": "classification",
+      "quality_profile": "detection",
+      "rationale": "Matched the detection recipe, selected the detection quality profile, and paired a conservative starter pipeline with preview ranking and report export tools.",
+      "recipe_name": "detection",
       "recommended_tools": [
         "render_preview_batch",
         "rank_preview_candidates",
@@ -653,9 +670,10 @@
         "export_pipeline"
       ],
       "targets": [
-        "image"
+        "image",
+        "bboxes"
       ],
-      "task": "classification"
+      "task": "object_detection"
     },
     "remediation_actions": [],
     "sample_paths": [
@@ -668,6 +686,12 @@
       "errors": [],
       "normalized_pipeline": {
         "additional_targets": {},
+        "bbox_params": {
+          "format": "pascal_voc",
+          "label_fields": [
+            "labels"
+          ]
+        },
         "is_check_shapes": true,
         "seed": 137,
         "strict": true,
@@ -678,29 +702,23 @@
             "params": {}
           },
           {
+            "name": "Affine",
+            "p": 0.2,
+            "params": {
+              "rotate": [
+                -8,
+                8
+              ],
+              "scale": [
+                0.9,
+                1.1
+              ]
+            }
+          },
+          {
             "name": "RandomBrightnessContrast",
             "p": 0.2,
             "params": {}
-          },
-          {
-            "name": "GaussNoise",
-            "p": 0.1,
-            "params": {
-              "std_range": [
-                0.02,
-                0.1
-              ]
-            }
-          },
-          {
-            "name": "MotionBlur",
-            "p": 0.06666666666666667,
-            "params": {
-              "blur_range": [
-                3,
-                5
-              ]
-            }
           }
         ]
       },

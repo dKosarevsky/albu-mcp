@@ -106,6 +106,11 @@ JSON manifests with `images`, `annotations`, and `categories`. Hosts can use `de
 `splits`, `annotation_formats`, `balance_warnings`, and `recipe_hints` to ask better follow-up questions before rendering.
 Profiling is advisory: malformed or unsupported annotation files do not block first-preview planning.
 
+For detection datasets, the returned `preview_request_template.request` includes bounded bbox `annotations` when sampled
+images can be matched to COCO or YOLO labels. Those annotations are converted to `pascal_voc` bboxes so
+`render_preview_batch` can produce `overlay_contact_sheet.png` for the first visual review. If some sampled images do not
+have matching labels, the template still preserves `annotations` length and adds a warning to `instructions`.
+
 Call `validate_preview_request` with `preview_request_template.request` before rendering. Stable remediation action codes
 include `move_dataset_under_allowed_root`, `fix_dataset_path`, `add_dataset_images`, and `fix_recommended_pipeline`.
 
