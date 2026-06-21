@@ -538,6 +538,37 @@ def _write_dataset_onboarding_annotations(dataset_path: Path, image_paths: list[
     )
 
 
+def _write_segmentation_onboarding_annotations(dataset_path: Path, image_paths: list[Path]) -> None:
+    annotations_dir = dataset_path / "annotations"
+    annotations_dir.mkdir(parents=True, exist_ok=True)
+    images = []
+    annotations = []
+    for index, image_path in enumerate(image_paths, start=1):
+        x_min = 18 + index
+        y_min = 20
+        x_max = x_min + 48
+        y_max = y_min + 42
+        images.append({"id": index, "file_name": image_path.name})
+        annotations.append(
+            {
+                "id": index,
+                "image_id": index,
+                "segmentation": [[x_min, y_min, x_max, y_min, x_max, y_max, x_min, y_max]],
+                "category_id": 1,
+            }
+        )
+    (annotations_dir / "instances_train.json").write_text(
+        json.dumps(
+            {
+                "images": images,
+                "annotations": annotations,
+                "categories": [{"id": 1, "name": "object"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
 def _build_real_sample_image(index: int) -> Image.Image:
     width, height = 128, 96
     x = np.linspace(0, 1, width, dtype=np.float32)
@@ -940,7 +971,9 @@ async def _run_distortion_review_smoke(session: ClientSession, scenario: dict[st
 async def _run_dataset_onboarding(session: ClientSession, scenario: dict[str, Any], images_dir: Path) -> None:
     image_paths = _write_real_sample_inputs(images_dir, scenario)
     dataset_path = image_paths[0].parent
-    if scenario.get("annotation_onboarding"):
+    if scenario.get("segmentation_onboarding"):
+        _write_segmentation_onboarding_annotations(dataset_path, image_paths)
+    elif scenario.get("annotation_onboarding"):
         _write_dataset_onboarding_annotations(dataset_path, image_paths)
     playbook = await _read_resource_json(session, "albumentationsx://examples/dataset-onboarding")
     if playbook["trigger_phrase"] != "plan the first AlbumentationsX dataset preview":
@@ -1014,7 +1047,15 @@ def _assert_annotation_onboarding_report(
     request = template["request"]
     if "annotations" not in request:
         raise AssertionError(f"{scenario['name']} onboarding template returned no annotations: {report}")
-    if request["pipeline"].get("bbox_params", {}).get("format") != "pascal_voc":
+    if scenario.get("segmentation_onboarding"):
+        if "bbox_params" in request["pipeline"]:
+            raise AssertionError(f"{scenario['name']} segmentation template returned bbox params: {report}")
+        annotations = [item for item in request["annotations"] if isinstance(item, dict)]
+        if not annotations or not all("mask_polygons" in item or "mask_rles" in item for item in annotations):
+            raise AssertionError(f"{scenario['name']} segmentation template returned no mask annotations: {report}")
+        if any("bboxes" in item for item in annotations):
+            raise AssertionError(f"{scenario['name']} segmentation template returned mask-only unsafe bboxes: {report}")
+    elif request["pipeline"].get("bbox_params", {}).get("format") != "pascal_voc":
         raise AssertionError(f"{scenario['name']} onboarding template returned wrong bbox params: {report}")
     if "coco_manifest" not in report.get("dataset_structure", {}).get("detected_layouts", []):
         raise AssertionError(f"{scenario['name']} onboarding did not detect COCO annotations: {report}")

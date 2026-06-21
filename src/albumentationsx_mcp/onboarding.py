@@ -238,13 +238,19 @@ def _preview_request_template(
         "Record concrete feedback tags before adjusting the pipeline.",
     ]
     if annotation_set is not None:
-        request["annotations"] = _annotation_payload(annotation_set)
+        request["annotations"] = _annotation_payload(
+            annotation_set,
+            include_bboxes=_include_bboxes(recipe),
+            include_masks=_include_masks(recipe),
+        )
         instructions.extend(
             [
-                f"Annotation-aware template uses {annotation_set.source_format} bboxes for overlay previews.",
+                f"Annotation-aware template uses {annotation_set.source_format} annotations for overlay previews.",
                 "Inspect `overlay_contact_sheet` before accepting geometric transforms.",
             ]
         )
+        if _include_masks(recipe):
+            instructions.append("Mask-aware template preserves segmentation masks for coverage-aware overlay previews.")
         instructions.extend(annotation_set.warnings)
     return DatasetPreviewRequestTemplate(
         request=request,
@@ -257,28 +263,45 @@ def _annotation_set_for_template(
     sample_paths: list[Path],
     recipe: RecipeRecommendation,
 ) -> SampleAnnotationSet | None:
-    if "bboxes" not in recipe.targets and recipe.pipeline.bbox_params is None:
+    if not _include_bboxes(recipe) and not _include_masks(recipe):
         return None
     return build_sample_annotations(dataset_path, sample_paths)
 
 
-def _annotation_payload(annotation_set: SampleAnnotationSet) -> list[dict[str, Any] | None]:
+def _annotation_payload(
+    annotation_set: SampleAnnotationSet,
+    *,
+    include_bboxes: bool,
+    include_masks: bool,
+) -> list[dict[str, Any] | None]:
     payload: list[dict[str, Any] | None] = []
     for annotation in annotation_set.annotations:
         if annotation is None:
             payload.append(None)
             continue
         item: dict[str, Any] = {}
-        if annotation.bboxes:
+        if include_bboxes and annotation.bboxes:
             item["bboxes"] = annotation.bboxes
-        if annotation.bbox_labels:
+        if include_bboxes and annotation.bbox_labels:
             item["bbox_labels"] = annotation.bbox_labels
         if annotation.keypoints:
             item["keypoints"] = annotation.keypoints
-        if annotation.mask_path is not None:
+        if include_masks and annotation.mask_path is not None:
             item["mask_path"] = str(annotation.mask_path)
-        payload.append(item)
+        if include_masks and annotation.mask_polygons:
+            item["mask_polygons"] = annotation.mask_polygons
+        if include_masks and annotation.mask_rles:
+            item["mask_rles"] = [mask_rle.model_dump(mode="json") for mask_rle in annotation.mask_rles]
+        payload.append(item or None)
     return payload
+
+
+def _include_bboxes(recipe: RecipeRecommendation) -> bool:
+    return "bboxes" in recipe.targets or recipe.pipeline.bbox_params is not None
+
+
+def _include_masks(recipe: RecipeRecommendation) -> bool:
+    return "mask" in recipe.targets or "masks" in recipe.targets
 
 
 def _next_actions(*, preview_ready: bool, checks: list[DatasetOnboardingCheck]) -> list[str]:

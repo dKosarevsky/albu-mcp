@@ -194,6 +194,48 @@ def test_dataset_onboarding_report_builds_annotation_aware_preview_template(tmp_
     assert any("overlay" in instruction.lower() for instruction in report.preview_request_template.instructions)
 
 
+def test_dataset_onboarding_report_builds_segmentation_mask_preview_template(tmp_path: Path) -> None:
+    dataset_dir = tmp_path / "dataset"
+    image_path = _write_image(dataset_dir / "images/a.png")
+    annotations_dir = dataset_dir / "annotations"
+    annotations_dir.mkdir()
+    (annotations_dir / "instances_train.json").write_text(
+        json.dumps(
+            {
+                "images": [{"id": 1, "file_name": "images/a.png"}],
+                "annotations": [
+                    {
+                        "id": 1,
+                        "image_id": 1,
+                        "segmentation": [[2, 3, 12, 3, 12, 11, 2, 11]],
+                        "category_id": 7,
+                    }
+                ],
+                "categories": [{"id": 7, "name": "car"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = build_dataset_onboarding_report(
+        dataset_path=dataset_dir,
+        task="segmentation",
+        intensity="low",
+        targets=["image", "mask"],
+        path_policy=PathPolicy([tmp_path]),
+        pipeline_service=PipelineService(TransformCatalog()),
+        recipe_builder=recommend_recipe,
+    )
+
+    assert report.preview_ready is True
+    assert report.preview_request_template is not None
+    request = report.preview_request_template.request
+    assert request["input_paths"] == [str(image_path.resolve())]
+    assert request["annotations"] == [{"mask_polygons": [[[2.0, 3.0, 12.0, 3.0, 12.0, 11.0, 2.0, 11.0]]]}]
+    assert "bbox_params" not in request["pipeline"]
+    assert any("mask" in instruction.lower() for instruction in report.preview_request_template.instructions)
+
+
 def _write_image(path: Path) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     image = Image.new("RGB", (16, 12), color=(80, 120, 160))

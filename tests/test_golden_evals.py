@@ -35,6 +35,9 @@ def test_golden_eval_assets_are_present() -> None:  # noqa: PLR0915
     dataset_onboarding_scenario = next(
         scenario for scenario in scenarios["scenarios"] if scenario["name"] == "dataset_onboarding_flow"
     )
+    segmentation_onboarding_scenario = next(
+        scenario for scenario in scenarios["scenarios"] if scenario["name"] == "segmentation_onboarding_flow"
+    )
     real_sample_scenario = next(
         scenario for scenario in scenarios["scenarios"] if scenario["name"] == "real_sample_preview_smoke"
     )
@@ -51,6 +54,7 @@ def test_golden_eval_assets_are_present() -> None:  # noqa: PLR0915
         "first_preview_resource_prompt_flow",
         "distortion_review_resource_flow",
         "dataset_onboarding_flow",
+        "segmentation_onboarding_flow",
         "classification_recommend_validate_explain_export",
         "preview_lifecycle",
         "preview_batch_compare",
@@ -78,6 +82,11 @@ def test_golden_eval_assets_are_present() -> None:  # noqa: PLR0915
     assert dataset_onboarding_scenario["task"] == "object_detection"
     assert dataset_onboarding_scenario["targets"] == ["image", "bboxes"]
     assert dataset_onboarding_scenario["input_count"] == 3
+    assert segmentation_onboarding_scenario["dataset_onboarding"] is True
+    assert segmentation_onboarding_scenario["annotation_onboarding"] is True
+    assert segmentation_onboarding_scenario["segmentation_onboarding"] is True
+    assert segmentation_onboarding_scenario["task"] == "segmentation"
+    assert segmentation_onboarding_scenario["targets"] == ["image", "mask"]
     assert real_sample_scenario["real_sample_smoke"] is True
     assert real_sample_scenario["input_count"] == 3
     assert real_sample_scenario["compare_preview"] is True
@@ -100,6 +109,8 @@ def test_golden_eval_assets_are_present() -> None:  # noqa: PLR0915
     assert "validate_preview_request" in runner_source
     assert "plan_dataset_onboarding" in runner_source
     assert "_write_dataset_onboarding_annotations" in runner_source
+    assert "_write_segmentation_onboarding_annotations" in runner_source
+    assert "mask_polygons" in runner_source
     assert "overlay_contact_sheet" in runner_source
     real_sample_source = runner_source.split("async def _run_real_sample_smoke", maxsplit=1)[1].split(
         "async def _run_preview_request_troubleshooting",
@@ -160,3 +171,4 @@ def test_golden_eval_runner_executes_scenarios_over_stdio(tmp_path: Path) -> Non
     assert "preview_request_troubleshooting: ok" in completed.stdout
     assert "interactive_tuning_session_flow: ok" in completed.stdout
     assert "dataset_onboarding_flow: ok" in completed.stdout
+    assert "segmentation_onboarding_flow: ok" in completed.stdout
