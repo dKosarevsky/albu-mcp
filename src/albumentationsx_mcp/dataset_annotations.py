@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any, Literal
 
@@ -221,7 +222,7 @@ def _sample_keys(dataset_path: Path, path: Path) -> set[str]:
     return keys
 
 
-def _merge_image_annotations(annotations: object) -> ImageAnnotations:
+def _merge_image_annotations(annotations: Iterable[ImageAnnotations]) -> ImageAnnotations:
     merged = ImageAnnotations()
     for annotation in annotations:
         if not isinstance(annotation, ImageAnnotations):
