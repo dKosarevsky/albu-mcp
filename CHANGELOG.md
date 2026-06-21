@@ -4,6 +4,9 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 ## Unreleased
 
+- Added dataset-aware onboarding profile detection for class-directory layouts, split folders, YOLO labels, and COCO
+  manifests in `plan_dataset_onboarding`.
+
 ## 1.11.0 - 2026-06-21
 
 - Added a host acceptance evidence exporter, generated evidence snapshot, structured manual run records, and a validation

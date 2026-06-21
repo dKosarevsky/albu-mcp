@@ -368,26 +368,26 @@
   },
   "plan_dataset_onboarding_ready": {
     "allowed_roots": [
-      "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding/images"
+      "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding"
     ],
     "checks": [
       {
         "code": "dataset_path_accessible",
         "details": {
           "allowed_roots": [
-            "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding/images"
+            "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding"
           ],
-          "path": "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding/images"
+          "path": "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding"
         },
         "severity": "info",
         "status": "ok",
-        "summary": "Dataset path is accessible: <OUTPUT_CONTRACT_ROOT>/dataset-onboarding/images"
+        "summary": "Dataset path is accessible: <OUTPUT_CONTRACT_ROOT>/dataset-onboarding"
       },
       {
         "code": "dataset_images_found",
         "details": {
-          "ignored_file_count": 1,
-          "image_count": 2,
+          "ignored_file_count": 3,
+          "image_count": 3,
           "supported_extensions": [
             ".bmp",
             ".jpeg",
@@ -400,7 +400,7 @@
         },
         "severity": "info",
         "status": "ok",
-        "summary": "Found 2 supported image file(s)."
+        "summary": "Found 3 supported image file(s)."
       },
       {
         "code": "recommended_pipeline_valid",
@@ -412,9 +412,79 @@
         "summary": "Recommended pipeline validates for the selected targets."
       }
     ],
-    "dataset_path": "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding/images",
-    "ignored_file_count": 1,
-    "image_count": 2,
+    "dataset_path": "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding",
+    "dataset_structure": {
+      "annotation_formats": [
+        {
+          "details": {},
+          "file_count": 1,
+          "format": "yolo",
+          "sample_files": [
+            "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding/labels/sample-a.txt"
+          ]
+        },
+        {
+          "details": {
+            "manifest_count": 1
+          },
+          "file_count": 1,
+          "format": "coco",
+          "sample_files": [
+            "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding/annotations/instances_train.json"
+          ]
+        }
+      ],
+      "balance_warnings": [
+        "Potential class imbalance: dog has 1 image(s), cat has 2 image(s)."
+      ],
+      "class_directories": [
+        {
+          "image_count": 2,
+          "name": "cat",
+          "sample_paths": [
+            "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding/train/cat/sample-a.png",
+            "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding/val/cat/sample-c.png"
+          ]
+        },
+        {
+          "image_count": 1,
+          "name": "dog",
+          "sample_paths": [
+            "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding/train/dog/sample-b.jpg"
+          ]
+        }
+      ],
+      "detected_layouts": [
+        "class_directories",
+        "split_directories",
+        "yolo_labels",
+        "coco_manifest"
+      ],
+      "recipe_hints": [
+        "Classification class directories detected; start with a low or medium classification recipe.",
+        "Split directories detected; sample from training and validation splits before increasing intensity.",
+        "Detection annotations found; use bbox targets and inspect overlay previews before accepting a pipeline."
+      ],
+      "splits": [
+        {
+          "image_count": 2,
+          "name": "train",
+          "sample_paths": [
+            "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding/train/cat/sample-a.png",
+            "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding/train/dog/sample-b.jpg"
+          ]
+        },
+        {
+          "image_count": 1,
+          "name": "val",
+          "sample_paths": [
+            "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding/val/cat/sample-c.png"
+          ]
+        }
+      ]
+    },
+    "ignored_file_count": 3,
+    "image_count": 3,
     "next_actions": [
       "Call `validate_preview_request` with `preview_request_template.request`.",
       "Call `render_preview_batch` with the validated request.",
@@ -431,8 +501,8 @@
       ],
       "request": {
         "input_paths": [
-          "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding/images/sample-a.png",
-          "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding/images/sample-b.jpg"
+          "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding/train/cat/sample-a.png",
+          "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding/train/dog/sample-b.jpg"
         ],
         "max_side": 512,
         "pipeline": {
@@ -589,8 +659,8 @@
     },
     "remediation_actions": [],
     "sample_paths": [
-      "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding/images/sample-a.png",
-      "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding/images/sample-b.jpg"
+      "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding/train/cat/sample-a.png",
+      "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding/train/dog/sample-b.jpg"
     ],
     "sampled_image_count": 2,
     "status": "ok",

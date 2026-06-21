@@ -100,6 +100,12 @@ preview. The tool is read-only: it checks that `dataset_path` is under an allowe
 selects a bounded deterministic sample, recommends a recipe, validates the pipeline, and returns a
 `preview_request_template`.
 
+The response also includes `dataset_structure` when the folder is accessible. This best-effort profile detects common
+class-directory layouts, `train`/`val`/`valid`/`validation`/`test` split folders, YOLO `labels/**/*.txt` files, and COCO
+JSON manifests with `images`, `annotations`, and `categories`. Hosts can use `detected_layouts`, `class_directories`,
+`splits`, `annotation_formats`, `balance_warnings`, and `recipe_hints` to ask better follow-up questions before rendering.
+Profiling is advisory: malformed or unsupported annotation files do not block first-preview planning.
+
 Call `validate_preview_request` with `preview_request_template.request` before rendering. Stable remediation action codes
 include `move_dataset_under_allowed_root`, `fix_dataset_path`, `add_dataset_images`, and `fix_recommended_pipeline`.
 

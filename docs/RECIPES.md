@@ -30,10 +30,12 @@ planned safely.
 
 1. Read `albumentationsx://capabilities` and confirm the folder is under an allowed root.
 2. Call `plan_dataset_onboarding` with `dataset_path`, task, targets, and `max_images` between 1 and 32.
-3. Follow `remediation_actions` if the folder is missing, outside allowed roots, or contains no supported images.
-4. Call `validate_preview_request` with the returned `preview_request_template.request`.
-5. Call `render_preview_batch` only after validation returns `valid: true`.
-6. Review the contact sheet before increasing sample size, variants, max side, or intensity.
+3. Inspect `dataset_structure.detected_layouts` for class directories, split folders, YOLO labels, or COCO manifests.
+4. Use `dataset_structure.recipe_hints` and `balance_warnings` when asking the user which preview subset to start with.
+5. Follow `remediation_actions` if the folder is missing, outside allowed roots, or contains no supported images.
+6. Call `validate_preview_request` with the returned `preview_request_template.request`.
+7. Call `render_preview_batch` only after validation returns `valid: true`.
+8. Review the contact sheet before increasing sample size, variants, max side, or intensity.
 
 ## Detection Annotation Review
 

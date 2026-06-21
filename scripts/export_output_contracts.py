@@ -354,18 +354,35 @@ def _host_smoke_report(diagnostics_report: DiagnosticsReport) -> HostSmokeReport
 
 
 def _dataset_onboarding_ready(root: Path) -> dict[str, Any]:
-    images_root = root / "dataset-onboarding" / "images"
-    images_root.mkdir(parents=True, exist_ok=True)
-    for name in ("sample-a.png", "sample-b.jpg", "notes.txt"):
-        (images_root / name).write_bytes(b"placeholder")
+    dataset_root = root / "dataset-onboarding"
+    for name in ("train/cat/sample-a.png", "train/dog/sample-b.jpg", "val/cat/sample-c.png"):
+        path = dataset_root / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"placeholder")
+    labels_root = dataset_root / "labels"
+    labels_root.mkdir(parents=True, exist_ok=True)
+    (labels_root / "sample-a.txt").write_text("0 0.5 0.5 0.25 0.25\n", encoding="utf-8")
+    annotations_root = dataset_root / "annotations"
+    annotations_root.mkdir()
+    (annotations_root / "instances_train.json").write_text(
+        json.dumps(
+            {
+                "images": [{"id": 1, "file_name": "sample-a.png"}],
+                "annotations": [{"id": 1, "image_id": 1, "bbox": [1, 1, 4, 4], "category_id": 1}],
+                "categories": [{"id": 1, "name": "object"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (dataset_root / "notes.txt").write_text("not an image", encoding="utf-8")
     catalog = TransformCatalog()
     report = build_dataset_onboarding_report(
-        dataset_path=images_root,
+        dataset_path=dataset_root,
         task="classification",
         intensity="low",
         targets=["image"],
         max_images=2,
-        path_policy=PathPolicy([images_root]),
+        path_policy=PathPolicy([dataset_root]),
         pipeline_service=PipelineService(catalog),
         recipe_builder=recommend_recipe,
     )

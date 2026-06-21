@@ -8,6 +8,7 @@ from typing import Any, Literal
 
 from pydantic import Field
 
+from albumentationsx_mcp.dataset_profile import DatasetStructureProfile, build_dataset_structure_profile
 from albumentationsx_mcp.diagnostics import DiagnosticSeverity, DiagnosticStatus
 from albumentationsx_mcp.models import PipelineValidationReport, RecipeRecommendation, StrictModel, TargetSpec
 from albumentationsx_mcp.pipeline import PipelineService
@@ -63,6 +64,7 @@ class DatasetOnboardingReport(StrictModel):
     validation: PipelineValidationReport
     next_actions: list[str]
     remediation_actions: list[DatasetOnboardingRemediationAction]
+    dataset_structure: DatasetStructureProfile | None = None
     preview_request_template: DatasetPreviewRequestTemplate | None = None
 
 
@@ -87,8 +89,10 @@ def build_dataset_onboarding_report(  # noqa: PLR0913
     checks = _dataset_path_checks(resolved, path_policy)
     image_paths: list[Path] = []
     ignored_file_count = 0
+    dataset_structure: DatasetStructureProfile | None = None
     if all(check.status == "ok" for check in checks):
         image_paths, ignored_file_count = _scan_images(resolved)
+        dataset_structure = build_dataset_structure_profile(resolved, image_paths)
         checks.append(_image_inventory_check(image_paths, ignored_file_count))
     checks.append(_validation_check(validation))
 
@@ -110,6 +114,7 @@ def build_dataset_onboarding_report(  # noqa: PLR0913
         validation=validation,
         next_actions=_next_actions(preview_ready=preview_ready, checks=checks),
         remediation_actions=_remediation_actions(checks),
+        dataset_structure=dataset_structure,
         preview_request_template=template,
     )
 
