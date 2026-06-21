@@ -17,6 +17,13 @@ uv run python scripts/export_host_acceptance_report.py --output docs/HOST_ACCEPT
 uv run python scripts/check_host_acceptance_report.py
 ```
 
+Check the published PyPI package entrypoint with the same command used by release smoke:
+
+```bash
+uv run python scripts/check_published_package_smoke.py --dry-run
+uv run python scripts/check_published_package_smoke.py
+```
+
 The generated report records automated coverage and keeps host UI status `pending` until a dated manual run note is
 added by a reviewer in `docs/HOST_MANUAL_RUNS.json`.
 The generated evidence freshness guard (`check_host_acceptance_report.py`) fails when the committed report is stale.

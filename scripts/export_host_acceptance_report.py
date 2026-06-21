@@ -44,6 +44,11 @@ _AUTOMATED_COVERAGE: tuple[dict[str, str], ...] = (
         "evidence": "Release workflow publish-pypi and post-release-smoke jobs",
     },
     {
+        "name": "published package smoke",
+        "status": "automated",
+        "evidence": "uv run python scripts/check_published_package_smoke.py",
+    },
+    {
         "name": "MCP Registry metadata publish check",
         "status": "automated",
         "evidence": ".github/workflows/publish-mcp.yml",
