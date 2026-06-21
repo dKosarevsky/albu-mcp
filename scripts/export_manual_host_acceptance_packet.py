@@ -31,6 +31,7 @@ class ManualHostAcceptancePacketConfig:
     sample_image: Path
     package_version: str
     run_date: str
+    hosts: tuple[HostName, ...] = HOST_NAMES
 
 
 def build_manual_host_acceptance_packet(config: ManualHostAcceptancePacketConfig) -> str:
@@ -49,36 +50,9 @@ def build_manual_host_acceptance_packet(config: ManualHostAcceptancePacketConfig
             f"- Artifact root: `{config.artifact_root}`",
             f"- Sample image: `{config.sample_image}`",
             f"- Run date: `{config.run_date}`",
+            f"- Hosts: `{', '.join(config.hosts)}`",
             "",
-            "## Claude Desktop",
-            "",
-            "```json",
-            _desktop_json(args),
-            "```",
-            "",
-            "Restart Claude Desktop after editing the MCP config, then run the prompt below.",
-            "",
-            "## Claude Code",
-            "",
-            "```bash",
-            _claude_code_command(args),
-            "```",
-            "",
-            "## Cursor",
-            "",
-            "```json",
-            _desktop_json(args),
-            "```",
-            "",
-            "Refresh MCP discovery after editing the Cursor MCP config, then run the prompt below.",
-            "",
-            "## Codex",
-            "",
-            "```toml",
-            _codex_toml(args),
-            "```",
-            "",
-            "Restart or reload the Codex MCP server config, then run the prompt below.",
+            *(_host_config_section(host=host, args=args) for host in config.hosts),
             "",
             "## Copyable Host Prompt",
             "",
@@ -86,12 +60,16 @@ def build_manual_host_acceptance_packet(config: ManualHostAcceptancePacketConfig
             _host_prompt(config),
             "```",
             "",
+            "## Evidence Checklist",
+            "",
+            *(_evidence_checklist(host) for host in config.hosts),
+            "",
             "## Record Evidence",
             "",
             "Only record `passed` after the host UI actually completed the flow. If a host cannot be tested, keep it",
             "`pending` or record `blocked` with the concrete blocker.",
             "",
-            *(_record_command(host, config.run_date) for host in HOST_NAMES),
+            *(_record_commands(host, config.run_date) for host in config.hosts),
             "",
             "After recording all completed hosts:",
             "",
@@ -114,6 +92,12 @@ def main() -> None:
     parser.add_argument("--sample-image", type=Path)
     parser.add_argument("--date", default=_today(), help="ISO date for record commands.")
     parser.add_argument("--package-version", default=_read_project_version(Path("pyproject.toml")))
+    parser.add_argument(
+        "--host",
+        action="append",
+        choices=HOST_NAMES,
+        help="Host to include in the packet. Repeat for multiple hosts. Defaults to all supported hosts.",
+    )
     parser.add_argument("--output", type=Path, help="Write Markdown to this path instead of stdout.")
     args = parser.parse_args()
 
@@ -125,6 +109,7 @@ def main() -> None:
         sample_image=sample_image,
         package_version=args.package_version,
         run_date=args.date,
+        hosts=tuple(args.host) if args.host else HOST_NAMES,
     )
     packet = build_manual_host_acceptance_packet(config)
     if args.output:
@@ -171,6 +156,30 @@ def _codex_toml(args: list[str]) -> str:
     return f'[mcp_servers.albumentationsx]\ncommand = "uvx"\nargs = [\n  {rendered_args},\n]'
 
 
+def _host_config_section(*, host: HostName, args: list[str]) -> str:
+    if host == "Claude Desktop":
+        body = ["```json", _desktop_json(args), "```", "", "Restart Claude Desktop after editing the MCP config."]
+    elif host == "Claude Code":
+        body = ["```bash", _claude_code_command(args), "```"]
+    elif host == "Cursor":
+        body = [
+            "```json",
+            _desktop_json(args),
+            "```",
+            "",
+            "Refresh MCP discovery after editing the Cursor MCP config.",
+        ]
+    else:
+        body = [
+            "```toml",
+            _codex_toml(args),
+            "```",
+            "",
+            "Restart or reload the Codex MCP server config.",
+        ]
+    return "\n".join([f"## {host}", "", *body, "", "Run the copyable host prompt below."])
+
+
 def _host_prompt(config: ManualHostAcceptancePacketConfig) -> str:
     return f"""Run AlbumentationsX MCP manual acceptance for this host.
 
@@ -196,12 +205,31 @@ Evidence: <one sentence mentioning listed tools/resources, smoke check, preview 
 and any blocker>"""
 
 
-def _record_command(host: HostName, run_date: str) -> str:
+def _evidence_checklist(host: HostName) -> str:
+    return "\n".join(
+        [
+            f"### {host} Evidence Checklist",
+            "",
+            "- Host listed AlbumentationsX MCP tools and resources.",
+            "- Host read `albumentationsx://capabilities` and `albumentationsx://examples/distortion-review`.",
+            "- Host ran `run_host_smoke_check` successfully.",
+            "- Host validated and rendered at least one preview under the configured artifact root.",
+            "- Host compared baseline and candidate previews.",
+            "- Host exported a tuning session and final pipeline.",
+        ]
+    )
+
+
+def _record_commands(host: HostName, run_date: str) -> str:
+    return "\n".join(_record_command(host, run_date, status=status) for status in ("passed", "blocked", "pending"))
+
+
+def _record_command(host: HostName, run_date: str, *, status: str) -> str:
     return (
         "`"
         "uv run python scripts/record_host_manual_run.py "
         f"--host {shlex.quote(host)} "
-        f"--status passed --date {run_date} "
+        f"--status {status} --date {run_date} "
         "--evidence '<paste host evidence note>'"
         "`"
     )

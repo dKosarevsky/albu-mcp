@@ -10,6 +10,12 @@ recording evidence without marking any host as passed automatically:
 uv run python scripts/export_manual_host_acceptance_packet.py --output /tmp/albu-host-acceptance.md
 ```
 
+For one reviewer or one host at a time, generate a narrower packet:
+
+```bash
+uv run python scripts/export_manual_host_acceptance_packet.py --host Cursor --output /tmp/albu-host-cursor.md
+```
+
 Generate a reviewable local evidence artifact before and after manual host runs:
 
 ```bash

@@ -40,6 +40,28 @@ def test_manual_host_acceptance_packet_contains_host_configs_and_record_commands
     assert '"status": "passed"' not in packet
 
 
+def test_manual_host_acceptance_packet_can_target_one_host(tmp_path: Path) -> None:
+    config = ManualHostAcceptancePacketConfig(
+        allowed_root=tmp_path / "inputs",
+        artifact_root=tmp_path / "artifacts",
+        sample_image=tmp_path / "inputs" / "sample-grid.png",
+        package_version="1.13.0",
+        run_date="2026-06-20",
+        hosts=("Cursor",),
+    )
+
+    packet = build_manual_host_acceptance_packet(config)
+
+    assert "## Cursor" in packet
+    assert "## Claude Desktop" not in packet
+    assert "## Claude Code" not in packet
+    assert "## Codex" not in packet
+    assert "### Cursor Evidence Checklist" in packet
+    assert "record_host_manual_run.py --host Cursor --status passed --date 2026-06-20" in packet
+    assert "record_host_manual_run.py --host Cursor --status blocked --date 2026-06-20" in packet
+    assert "record_host_manual_run.py --host Cursor --status pending --date 2026-06-20" in packet
+
+
 def test_manual_host_acceptance_packet_cli_writes_markdown(tmp_path: Path) -> None:
     allowed_root = tmp_path / "inputs"
     artifact_root = tmp_path / "artifacts"
@@ -62,6 +84,8 @@ def test_manual_host_acceptance_packet_cli_writes_markdown(tmp_path: Path) -> No
             "2026-06-20",
             "--package-version",
             "1.13.0",
+            "--host",
+            "Cursor",
             "--output",
             str(output_path),
         ],
@@ -74,3 +98,5 @@ def test_manual_host_acceptance_packet_cli_writes_markdown(tmp_path: Path) -> No
     packet = output_path.read_text(encoding="utf-8")
     assert "# Manual Host Acceptance Packet" in packet
     assert str(sample_image.resolve()) in packet
+    assert "## Cursor" in packet
+    assert "## Codex" not in packet
