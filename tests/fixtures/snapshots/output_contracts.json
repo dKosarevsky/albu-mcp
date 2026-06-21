@@ -498,7 +498,7 @@
         "Call `render_preview_batch` only after validation returns `valid=true`.",
         "Inspect the contact sheet before increasing variants_per_image, max_side, or intensity.",
         "Record concrete feedback tags before adjusting the pipeline.",
-        "Annotation-aware template uses coco bboxes for overlay previews.",
+        "Annotation-aware template uses coco annotations for overlay previews.",
         "Inspect `overlay_contact_sheet` before accepting geometric transforms.",
         "1 sampled image(s) are without annotations."
       ],

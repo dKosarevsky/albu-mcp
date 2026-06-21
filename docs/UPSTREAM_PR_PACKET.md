@@ -23,7 +23,8 @@ Avoid adding install instructions that imply official support or maintainer owne
 [AlbumentationsX MCP](https://github.com/dKosarevsky/albu-mcp) is a community Model Context Protocol server for
 interactive AlbumentationsX augmentation workflows. It lets MCP hosts discover transforms, validate pipelines, render
 deterministic local preview batches, collect concrete feedback such as `too_noisy:high`, compare preview runs, and
-export reproducible pipeline specs.
+export reproducible pipeline specs. It also includes segmentation mask onboarding for COCO polygon/RLE masks and
+YOLO-seg labels, so teams can inspect mask overlays before accepting geometric augmentation changes.
 
 This is not an official AlbumentationsX project. It is useful when a team wants an assistant-guided review loop for
 dataset augmentation robustness before exporting the final pipeline.
@@ -36,14 +37,15 @@ dataset augmentation robustness before exporting the final pipeline.
 - Use "community integration" wording.
 - Include "not an official AlbumentationsX project".
 - Do not ask users to upload private datasets or raw production images.
-- Keep the example focused on local preview review, structured feedback, and reproducible export.
+- Keep the example focused on local preview review, segmentation mask onboarding, structured feedback, and reproducible
+  export.
 
 ## Validation Before Opening A PR
 
 Run the local project checks that keep the public MCP surface accurate:
 
 ```bash
-uv run python scripts/check_release_readiness.py --tag v1.12.0 --format json
+uv run python scripts/check_release_readiness.py --tag v1.13.0 --format json
 uv run python scripts/check_directory_presence.py --format json
 uv run python scripts/run_golden_evals.py
 ```

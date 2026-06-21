@@ -4,6 +4,18 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 ## Unreleased
 
+## 1.13.0 - 2026-06-21
+
+- Added segmentation annotation onboarding for COCO polygon/RLE masks and YOLO-seg labels, including mask-aware
+  first-preview templates and overlay contact sheets.
+- Added a segmentation onboarding golden eval that proves mask-aware dataset planning, preview validation, rendering,
+  overlay artifacts, and annotation observations over MCP stdio.
+- Added a reusable published-package smoke checker that verifies PyPI's direct version JSON endpoint before running the
+  released package through `uvx`.
+- Updated the release workflow to reuse the published-package smoke checker and avoid the empty-workdir warning in
+  post-release smoke jobs.
+- Refined host acceptance and upstream outreach docs for segmentation mask onboarding and published-package checks.
+
 ## 1.12.0 - 2026-06-21
 
 - Added dataset-aware onboarding profile detection for class-directory layouts, split folders, YOLO labels, and COCO

@@ -111,6 +111,10 @@ images can be matched to COCO or YOLO labels. Those annotations are converted to
 `render_preview_batch` can produce `overlay_contact_sheet.png` for the first visual review. If some sampled images do not
 have matching labels, the template still preserves `annotations` length and adds a warning to `instructions`.
 
+For segmentation datasets, COCO polygon/RLE masks and YOLO-seg polygons are converted into mask annotations. The
+template keeps mask-only payloads for `["image", "mask"]` targets, so preview rendering can produce mask overlays
+without sending bboxes to pipelines that do not declare `bbox_params`.
+
 Call `validate_preview_request` with `preview_request_template.request` before rendering. Stable remediation action codes
 include `move_dataset_under_allowed_root`, `fix_dataset_path`, `add_dataset_images`, and `fix_recommended_pipeline`.
 
@@ -272,6 +276,7 @@ example feedback can use `accepted=true` with no tags, but negative feedback mus
 ```
 
 Mask paths are resolved through the same `--allowed-root` policy as input images.
+Dataset onboarding can also emit inline `mask_polygons` or uncompressed COCO `mask_rles` for segmentation samples.
 
 Preview manifests record annotation observations like this:
 

@@ -403,6 +403,7 @@ def test_upstream_pr_packet_is_available() -> None:
     assert "https://github.com/albumentations-team/AlbumentationsX/issues/285" in packet
     assert "Suggested upstream snippet" in packet
     assert "Community integration" in packet
+    assert "segmentation mask onboarding" in packet
     assert "not an official AlbumentationsX project" in packet
     assert "docs/UPSTREAM_PR_PACKET.md" in readme
     assert "docs/UPSTREAM_PR_PACKET.md" in network_growth

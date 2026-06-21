@@ -34,9 +34,10 @@ planned safely.
 4. Use `dataset_structure.recipe_hints` and `balance_warnings` when asking the user which preview subset to start with.
 5. Follow `remediation_actions` if the folder is missing, outside allowed roots, or contains no supported images.
 6. For detection datasets, keep the returned `annotations` aligned with `input_paths` and use the bbox-aware pipeline.
-7. Call `validate_preview_request` with the returned `preview_request_template.request`.
-8. Call `render_preview_batch` only after validation returns `valid: true`.
-9. Review `overlay_contact_sheet.png` before increasing sample size, variants, max side, or intensity.
+7. For segmentation datasets, keep returned `mask_polygons` or `mask_rles` and use `["image", "mask"]` targets.
+8. Call `validate_preview_request` with the returned `preview_request_template.request`.
+9. Call `render_preview_batch` only after validation returns `valid: true`.
+10. Review `overlay_contact_sheet.png` before increasing sample size, variants, max side, or intensity.
 
 ## Detection Annotation Review
 
