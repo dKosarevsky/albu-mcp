@@ -11,7 +11,7 @@ from typing import Any, Literal, TypeGuard
 from PIL import Image
 from pydantic import Field
 
-from albumentationsx_mcp.annotations import decode_uncompressed_rle
+from albumentationsx_mcp.annotations import decode_coco_rle
 from albumentationsx_mcp.models import ImageAnnotations, MaskRLE, StrictModel
 
 _MAX_COCO_MANIFEST_BYTES = 5_000_000
@@ -199,15 +199,19 @@ def _coco_segmentation_rle(segmentation: object) -> MaskRLE | None:
         return None
     counts = segmentation.get("counts")
     size = segmentation.get("size")
-    if not (
-        _is_int_list(counts)
-        and all(count >= 0 for count in counts)
-        and _is_int_list(size)
-        and len(size) == _RLE_SIZE_VALUES
-        and all(value > 0 for value in size)
-    ):
+    if not (_is_int_list(size) and len(size) == _RLE_SIZE_VALUES and all(value > 0 for value in size)):
         return None
-    return MaskRLE(counts=list(counts), size=list(size))
+    if _is_int_list(counts) and all(count >= 0 for count in counts):
+        mask_rle = MaskRLE(counts=list(counts), size=list(size))
+    elif isinstance(counts, str) and counts:
+        mask_rle = MaskRLE(counts=counts, size=list(size))
+    else:
+        return None
+    try:
+        decode_coco_rle(mask_rle)
+    except ValueError:
+        return None
+    return mask_rle
 
 
 def _bbox_from_polygons(polygons: list[list[float]]) -> list[float] | None:
@@ -220,7 +224,7 @@ def _bbox_from_polygons(polygons: list[list[float]]) -> list[float] | None:
 
 
 def _bbox_from_rle(mask_rle: MaskRLE) -> list[float] | None:
-    mask = decode_uncompressed_rle(mask_rle)
+    mask = decode_coco_rle(mask_rle)
     y_values, x_values = (mask > 0).nonzero()
     if len(x_values) == 0 or len(y_values) == 0:
         return None

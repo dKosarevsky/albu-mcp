@@ -275,8 +275,8 @@ example feedback can use `accepted=true` with no tags, but negative feedback mus
 }
 ```
 
-Mask paths are resolved through the same `--allowed-root` policy as input images.
-Dataset onboarding can also emit inline `mask_polygons` or uncompressed COCO `mask_rles` for segmentation samples.
+Mask paths are resolved through the same `--allowed-root` policy as input images. Dataset onboarding can also emit
+inline `mask_polygons` or COCO `mask_rles` with uncompressed or compressed counts for segmentation samples.
 
 Preview manifests record annotation observations like this:
 

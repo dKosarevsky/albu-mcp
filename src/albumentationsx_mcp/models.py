@@ -111,9 +111,9 @@ class ExportResult(StrictModel):
 
 
 class MaskRLE(StrictModel):
-    """Serializable uncompressed COCO-style mask RLE."""
+    """Serializable COCO-style mask RLE."""
 
-    counts: list[int]
+    counts: list[int] | str
     size: list[int] = Field(min_length=2, max_length=2)
 
 

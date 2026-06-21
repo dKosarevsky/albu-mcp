@@ -79,7 +79,7 @@ def build_annotation_mask(annotation: ImageAnnotations | None, size: tuple[int, 
     polygon_mask = rasterize_polygons(annotation.mask_polygons, size)
     if polygon_mask is not None:
         masks.append(polygon_mask)
-    masks.extend(decode_uncompressed_rle(mask_rle, size) for mask_rle in annotation.mask_rles)
+    masks.extend(decode_coco_rle(mask_rle, size) for mask_rle in annotation.mask_rles)
     if not masks:
         return None
     combined = np.zeros((size[1], size[0]), dtype=np.uint8)
@@ -102,13 +102,13 @@ def rasterize_polygons(polygons: list[list[list[float]]], size: tuple[int, int])
     return np.asarray(mask, dtype=np.uint8)
 
 
-def decode_uncompressed_rle(mask_rle: MaskRLE, size: tuple[int, int] | None = None) -> np.ndarray:
-    """Decode an uncompressed COCO-style RLE mask, optionally resizing it."""
+def decode_coco_rle(mask_rle: MaskRLE, size: tuple[int, int] | None = None) -> np.ndarray:
+    """Decode a COCO-style uncompressed or compressed RLE mask, optionally resizing it."""
     height, width = mask_rle.size[:2]
     total = height * width
     values: list[int] = []
     current = 0
-    for count in mask_rle.counts:
+    for count in _rle_counts(mask_rle):
         values.extend([current] * max(0, count))
         current = 1 - current
     if len(values) < total:
@@ -117,6 +117,44 @@ def decode_uncompressed_rle(mask_rle: MaskRLE, size: tuple[int, int] | None = No
     if size is None or size == (width, height):
         return data
     return np.asarray(Image.fromarray(data).resize(size, Image.Resampling.NEAREST), dtype=np.uint8)
+
+
+def decode_uncompressed_rle(mask_rle: MaskRLE, size: tuple[int, int] | None = None) -> np.ndarray:
+    """Backward-compatible wrapper for COCO RLE decoding."""
+    return decode_coco_rle(mask_rle, size)
+
+
+def _rle_counts(mask_rle: MaskRLE) -> list[int]:
+    if isinstance(mask_rle.counts, str):
+        return _decode_compressed_rle_counts(mask_rle.counts)
+    return list(mask_rle.counts)
+
+
+def _decode_compressed_rle_counts(counts: str) -> list[int]:
+    decoded: list[int] = []
+    index = 0
+    while index < len(counts):
+        shift = 0
+        value = 0
+        while True:
+            if index >= len(counts):
+                msg = "truncated compressed COCO RLE counts"
+                raise ValueError(msg)
+            char_value = ord(counts[index]) - 48
+            index += 1
+            value |= (char_value & 0x1F) << shift
+            shift += 5
+            if not (char_value & 0x20):
+                break
+        if char_value & 0x10:
+            value |= -1 << shift
+        if len(decoded) > 2:
+            value += decoded[-2]
+        if value < 0:
+            msg = "negative compressed COCO RLE count"
+            raise ValueError(msg)
+        decoded.append(value)
+    return decoded
 
 
 def build_transform_payload(

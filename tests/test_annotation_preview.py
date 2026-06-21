@@ -6,7 +6,7 @@ import pytest
 from PIL import Image
 
 from albumentationsx_mcp.annotations import render_overlay
-from albumentationsx_mcp.models import ComposeSpec, ImageAnnotations, PreviewRequest, TransformSpec
+from albumentationsx_mcp.models import ComposeSpec, ImageAnnotations, MaskRLE, PreviewRequest, TransformSpec
 from albumentationsx_mcp.preview import ArtifactStore, PathPolicy, PreviewService
 
 
@@ -126,6 +126,34 @@ def test_render_preview_rasterizes_polygon_masks_for_overlay_observations(tmp_pa
     assert any(artifact.kind == "overlay_contact_sheet" for artifact in result.artifacts)
     assert manifest["annotation_observations"][0]["input_mask_coverage"] > 0.2
     assert manifest["annotation_observations"][0]["output_mask_coverage"] > 0.2
+
+
+def test_render_preview_decodes_compressed_rle_masks_for_overlay_observations(tmp_path: Path) -> None:
+    image_path = tmp_path / "input.png"
+    Image.fromarray(np.full((4, 4, 3), 220, dtype=np.uint8)).save(image_path)
+    service = PreviewService(
+        IdentityPipelineService(),
+        PathPolicy([tmp_path]),
+        ArtifactStore(tmp_path / "artifacts"),
+    )
+    request = PreviewRequest(
+        input_paths=[image_path],
+        annotations=[
+            ImageAnnotations(
+                bbox_labels=["object"],
+                mask_rles=[MaskRLE(counts="52203", size=[4, 4])],
+            ),
+        ],
+        pipeline=ComposeSpec(transforms=[TransformSpec(name="HorizontalFlip", p=1.0)]),
+        variants_per_image=1,
+    )
+
+    result = service.render_preview(request)
+    manifest = service.artifact_store.read_manifest(result.run_id)
+
+    assert any(artifact.kind == "overlay_contact_sheet" for artifact in result.artifacts)
+    assert manifest["annotation_observations"][0]["input_mask_coverage"] == 0.25
+    assert manifest["annotation_observations"][0]["output_mask_coverage"] == 0.25
 
 
 def test_preview_request_requires_annotation_count_to_match_inputs(tmp_path: Path) -> None:
