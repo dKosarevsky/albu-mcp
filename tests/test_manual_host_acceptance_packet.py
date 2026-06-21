@@ -16,14 +16,14 @@ def test_manual_host_acceptance_packet_contains_host_configs_and_record_commands
         allowed_root=allowed_root,
         artifact_root=artifact_root,
         sample_image=sample_image,
-        package_version="1.10.0",
+        package_version="1.11.0",
         run_date="2026-06-20",
     )
 
     packet = build_manual_host_acceptance_packet(config)
 
     assert "uvx" in packet
-    assert "albumentationsx-mcp==1.10.0" in packet
+    assert "albumentationsx-mcp==1.11.0" in packet
     assert str(allowed_root) in packet
     assert str(artifact_root) in packet
     assert str(sample_image) in packet
@@ -61,7 +61,7 @@ def test_manual_host_acceptance_packet_cli_writes_markdown(tmp_path: Path) -> No
             "--date",
             "2026-06-20",
             "--package-version",
-            "1.10.0",
+            "1.11.0",
             "--output",
             str(output_path),
         ],

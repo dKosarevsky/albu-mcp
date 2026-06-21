@@ -4,6 +4,8 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 ## Unreleased
 
+## 1.11.0 - 2026-06-21
+
 - Added a host acceptance evidence exporter, generated evidence snapshot, structured manual run records, and a validation
   gate that keeps host UI checks pending until dated reviewer evidence is recorded.
 - Added a public MCP Registry watchdog and automatic Registry metadata publication after successful release smoke checks.
