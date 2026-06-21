@@ -65,6 +65,7 @@ def test_ci_workflow_uses_node24_ready_actions() -> None:
 def test_usage_docs_and_examples_are_present() -> None:
     assert Path("docs/USAGE.md").exists()
     assert Path("docs/INSTALL.md").exists()
+    assert Path("docs/ADOPTION.md").exists()
     assert Path("docs/HOST_ACCEPTANCE.md").exists()
     assert Path("docs/HOST_MATRIX.md").exists()
     assert Path("docs/RELEASE.md").exists()
@@ -86,6 +87,25 @@ def test_usage_docs_and_examples_are_present() -> None:
     assert Path("docs/DEMO.md").exists()
     assert Path("docs/assets/demo/demo_manifest.json").exists()
     assert Path("docs/assets/demo/demo_report.md").exists()
+
+
+def test_adoption_packet_is_linked_and_actionable() -> None:
+    readme = Path("README.md").read_text(encoding="utf-8")
+    adoption = Path("docs/ADOPTION.md").read_text(encoding="utf-8")
+
+    assert "[docs/ADOPTION.md](docs/ADOPTION.md)" in readme
+    for term in [
+        "2-minute trial",
+        "uvx --from albumentationsx-mcp albumentationsx-mcp",
+        "Claude Desktop",
+        "Cursor",
+        "plan_dataset_onboarding",
+        "segmentation",
+        "compressed COCO RLE",
+        "compare_preview_runs",
+        "export_pipeline",
+    ]:
+        assert term in adoption
 
 
 def test_install_guide_covers_host_setup_and_examples() -> None:
