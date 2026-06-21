@@ -71,12 +71,14 @@ git push origin main
 git push origin vX.Y.Z
 ```
 
-The `Release` workflow runs in three stages:
+The `Release` workflow runs in five stages:
 
 1. `build`: runs the quality gate, builds the wheel/source distribution, and uploads `dist/*` as a workflow artifact.
 2. `publish-pypi`: waits for the protected GitHub environment `pypi`, then publishes the same artifact to PyPI through
    Trusted Publishing.
 3. `github-release`: creates the GitHub Release and attaches the same `dist/*` artifact.
+4. `post-release-smoke`: checks PyPI's direct version JSON endpoint, then runs the published package with `uvx`.
+5. `publish-mcp-registry`: publishes and verifies the MCP Registry metadata.
 
 ## PyPI Package Publishing
 
@@ -119,7 +121,7 @@ and matches [server.json](../server.json).
 Verify package execution:
 
 ```bash
-uvx --from albumentationsx-mcp albumentationsx-mcp --help
+uv run python scripts/check_published_package_smoke.py
 ```
 
 Verify MCP Registry metadata:

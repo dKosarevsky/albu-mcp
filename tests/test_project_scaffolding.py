@@ -440,11 +440,13 @@ def test_release_workflow_checks_versions_and_smokes_published_package() -> None
     smoke_commands = "\n".join(step.get("run", "") for step in smoke_job["steps"])
 
     assert Path("scripts/check_release_version.py").exists()
+    assert Path("scripts/check_published_package_smoke.py").exists()
     assert "uv run python scripts/check_release_version.py" in build_commands
     assert smoke_job["needs"] == "github-release"
-    assert "for attempt in" in smoke_commands
-    assert "--refresh-package albumentationsx-mcp" in smoke_commands
-    assert 'uvx --from "albumentationsx-mcp==${GITHUB_REF_NAME#v}"' in smoke_commands
+    assert any(step.get("uses") == "actions/checkout@v5" for step in smoke_job["steps"])
+    assert 'python scripts/check_published_package_smoke.py --version "${GITHUB_REF_NAME#v}"' in smoke_commands
+    assert "for attempt in" not in smoke_commands
+    assert 'uvx --from "albumentationsx-mcp==${GITHUB_REF_NAME#v}"' not in smoke_commands
 
 
 def test_mcp_registry_metadata_is_ready_for_pypi_distribution() -> None:

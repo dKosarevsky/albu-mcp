@@ -35,6 +35,14 @@ def test_host_acceptance_report_includes_published_package_smoke() -> None:
     assert "scripts/check_published_package_smoke.py" in markdown
 
 
+def test_published_package_smoke_builds_direct_pypi_version_url() -> None:
+    from scripts.check_published_package_smoke import build_pypi_version_url
+
+    assert build_pypi_version_url(package="albumentationsx-mcp", version="1.13.0") == (
+        "https://pypi.org/pypi/albumentationsx-mcp/1.13.0/json"
+    )
+
+
 def _write_minimal_release_metadata(root: Path) -> None:
     (root / "pyproject.toml").write_text(
         """
