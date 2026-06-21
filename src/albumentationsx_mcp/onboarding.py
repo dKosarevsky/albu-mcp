@@ -47,6 +47,7 @@ class DatasetPreviewRequestTemplate(StrictModel):
     tool: Literal["render_preview_batch"] = "render_preview_batch"
     request: dict[str, Any]
     instructions: list[str] = Field(default_factory=list)
+    annotation_summary: dict[str, Any] | None = None
 
 
 class DatasetOnboardingReport(StrictModel):
@@ -238,6 +239,7 @@ def _preview_request_template(
         "Record concrete feedback tags before adjusting the pipeline.",
     ]
     if annotation_set is not None:
+        annotation_summary = _annotation_summary(annotation_set)
         request["annotations"] = _annotation_payload(
             annotation_set,
             include_bboxes=_include_bboxes(recipe),
@@ -251,10 +253,14 @@ def _preview_request_template(
         )
         if _include_masks(recipe):
             instructions.append("Mask-aware template preserves segmentation masks for coverage-aware overlay previews.")
+            instructions.append(_mask_summary_instruction(annotation_summary))
         instructions.extend(annotation_set.warnings)
+    else:
+        annotation_summary = None
     return DatasetPreviewRequestTemplate(
         request=request,
         instructions=instructions,
+        annotation_summary=annotation_summary,
     )
 
 
@@ -294,6 +300,68 @@ def _annotation_payload(
             item["mask_rles"] = [mask_rle.model_dump(mode="json") for mask_rle in annotation.mask_rles]
         payload.append(item or None)
     return payload
+
+
+def _annotation_summary(annotation_set: SampleAnnotationSet) -> dict[str, Any]:
+    annotations = [annotation for annotation in annotation_set.annotations if annotation is not None]
+    mask_path_count = sum(annotation.mask_path is not None for annotation in annotations)
+    mask_polygon_count = sum(len(annotation.mask_polygons) for annotation in annotations)
+    compressed_rle_count = sum(
+        1 for annotation in annotations for mask_rle in annotation.mask_rles if isinstance(mask_rle.counts, str)
+    )
+    uncompressed_rle_count = sum(
+        1 for annotation in annotations for mask_rle in annotation.mask_rles if not isinstance(mask_rle.counts, str)
+    )
+    mask_formats = _mask_formats(
+        mask_path_count=mask_path_count,
+        mask_polygon_count=mask_polygon_count,
+        compressed_rle_count=compressed_rle_count,
+        uncompressed_rle_count=uncompressed_rle_count,
+    )
+    return {
+        "source_format": annotation_set.source_format,
+        "sample_count": len(annotation_set.annotations),
+        "matched_count": annotation_set.matched_count,
+        "missing_count": len(annotation_set.annotations) - annotation_set.matched_count,
+        "bbox_count": sum(len(annotation.bboxes) for annotation in annotations),
+        "keypoint_count": sum(len(annotation.keypoints) for annotation in annotations),
+        "mask_path_count": mask_path_count,
+        "mask_polygon_count": mask_polygon_count,
+        "mask_rle_count": compressed_rle_count + uncompressed_rle_count,
+        "compressed_rle_count": compressed_rle_count,
+        "uncompressed_rle_count": uncompressed_rle_count,
+        "mask_formats": mask_formats,
+        "warnings": list(annotation_set.warnings),
+    }
+
+
+def _mask_formats(
+    *,
+    mask_path_count: int,
+    mask_polygon_count: int,
+    compressed_rle_count: int,
+    uncompressed_rle_count: int,
+) -> list[str]:
+    formats: list[str] = []
+    if mask_path_count:
+        formats.append("mask_path")
+    if mask_polygon_count:
+        formats.append("polygons")
+    if uncompressed_rle_count:
+        formats.append("uncompressed_rle")
+    if compressed_rle_count:
+        formats.append("compressed_rle")
+    return formats
+
+
+def _mask_summary_instruction(annotation_summary: dict[str, Any]) -> str:
+    return (
+        "Segmentation annotation summary: "
+        f"matched={annotation_summary['matched_count']}/{annotation_summary['sample_count']}, "
+        f"mask_polygons={annotation_summary['mask_polygon_count']}, "
+        f"mask_rles={annotation_summary['mask_rle_count']}, "
+        f"formats={','.join(annotation_summary['mask_formats']) or 'none'}."
+    )
 
 
 def _include_bboxes(recipe: RecipeRecommendation) -> bool:

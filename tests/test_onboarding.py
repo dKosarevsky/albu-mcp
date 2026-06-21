@@ -233,7 +233,23 @@ def test_dataset_onboarding_report_builds_segmentation_mask_preview_template(tmp
     assert request["input_paths"] == [str(image_path.resolve())]
     assert request["annotations"] == [{"mask_polygons": [[[2.0, 3.0, 12.0, 3.0, 12.0, 11.0, 2.0, 11.0]]]}]
     assert "bbox_params" not in request["pipeline"]
+    assert report.preview_request_template.annotation_summary == {
+        "source_format": "coco",
+        "sample_count": 1,
+        "matched_count": 1,
+        "missing_count": 0,
+        "bbox_count": 1,
+        "keypoint_count": 0,
+        "mask_path_count": 0,
+        "mask_polygon_count": 1,
+        "mask_rle_count": 0,
+        "compressed_rle_count": 0,
+        "uncompressed_rle_count": 0,
+        "mask_formats": ["polygons"],
+        "warnings": [],
+    }
     assert any("mask" in instruction.lower() for instruction in report.preview_request_template.instructions)
+    assert any("mask_polygons=1" in instruction for instruction in report.preview_request_template.instructions)
 
 
 def _write_image(path: Path) -> Path:
