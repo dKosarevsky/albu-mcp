@@ -99,6 +99,35 @@ def test_render_preview_records_annotation_observations(tmp_path: Path) -> None:
     ]
 
 
+def test_render_preview_rasterizes_polygon_masks_for_overlay_observations(tmp_path: Path) -> None:
+    image_path = tmp_path / "input.png"
+    Image.fromarray(np.full((32, 32, 3), 220, dtype=np.uint8)).save(image_path)
+    service = PreviewService(
+        IdentityPipelineService(),
+        PathPolicy([tmp_path]),
+        ArtifactStore(tmp_path / "artifacts"),
+    )
+    request = PreviewRequest(
+        input_paths=[image_path],
+        annotations=[
+            ImageAnnotations(
+                bboxes=[[8, 8, 24, 24]],
+                bbox_labels=["object"],
+                mask_polygons=[[[8, 8, 24, 8, 24, 24, 8, 24]]],
+            ),
+        ],
+        pipeline=ComposeSpec(transforms=[TransformSpec(name="HorizontalFlip", p=1.0)]),
+        variants_per_image=1,
+    )
+
+    result = service.render_preview(request)
+    manifest = service.artifact_store.read_manifest(result.run_id)
+
+    assert any(artifact.kind == "overlay_contact_sheet" for artifact in result.artifacts)
+    assert manifest["annotation_observations"][0]["input_mask_coverage"] > 0.2
+    assert manifest["annotation_observations"][0]["output_mask_coverage"] > 0.2
+
+
 def test_preview_request_requires_annotation_count_to_match_inputs(tmp_path: Path) -> None:
     image_path = tmp_path / "input.png"
     Image.fromarray(np.full((16, 16, 3), 128, dtype=np.uint8)).save(image_path)

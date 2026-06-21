@@ -6,16 +6,21 @@ import json
 from collections import defaultdict
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, TypeGuard
 
 from PIL import Image
 from pydantic import Field
 
-from albumentationsx_mcp.models import ImageAnnotations, StrictModel
+from albumentationsx_mcp.annotations import decode_uncompressed_rle
+from albumentationsx_mcp.models import ImageAnnotations, MaskRLE, StrictModel
 
 _MAX_COCO_MANIFEST_BYTES = 5_000_000
 _COCO_BBOX_VALUES = 4
 _YOLO_BBOX_VALUES = 5
+_YOLO_SEGMENTATION_MIN_VALUES = 7
+_POLYGON_PAIR_SIZE = 2
+_POLYGON_BBOX_MIN_VALUES = 6
+_RLE_SIZE_VALUES = 2
 
 
 class SampleAnnotationSet(StrictModel):
@@ -53,12 +58,12 @@ def _build_coco_annotations(dataset_path: Path, sample_paths: list[Path]) -> Sam
         if not image_ids_by_index:
             continue
         category_names = _coco_category_names(payload)
-        bboxes_by_image_id = _coco_bboxes_by_image_id(payload, category_names)
+        annotations_by_image_id = _coco_annotations_by_image_id(payload, category_names)
         for index, image_ids in image_ids_by_index.items():
             annotation = _merge_image_annotations(
-                bboxes_by_image_id.get(image_id, ImageAnnotations()) for image_id in image_ids
+                annotations_by_image_id.get(image_id, ImageAnnotations()) for image_id in image_ids
             )
-            if annotation.bboxes:
+            if _has_annotation_content(annotation):
                 annotations_by_index[index] = annotation
     if not annotations_by_index:
         return None
@@ -80,7 +85,7 @@ def _build_yolo_annotations(dataset_path: Path, sample_paths: list[Path]) -> Sam
             annotations.append(None)
             continue
         annotation = _read_yolo_label(label_path, image_path)
-        annotations.append(annotation if annotation.bboxes else None)
+        annotations.append(annotation if _has_annotation_content(annotation) else None)
     matched_count = sum(annotation is not None for annotation in annotations)
     if matched_count == 0:
         return None
@@ -141,7 +146,7 @@ def _coco_category_names(payload: dict[str, Any]) -> dict[int, str | int]:
     return names
 
 
-def _coco_bboxes_by_image_id(
+def _coco_annotations_by_image_id(
     payload: dict[str, Any],
     category_names: dict[int, str | int],
 ) -> dict[int, ImageAnnotations]:
@@ -150,14 +155,81 @@ def _coco_bboxes_by_image_id(
         if not isinstance(item, dict):
             continue
         image_id = item.get("image_id")
-        bbox = item.get("bbox")
-        if not isinstance(image_id, int) or not _is_number_list(bbox, _COCO_BBOX_VALUES):
+        if not isinstance(image_id, int):
             continue
-        x_min, y_min, width, height = [float(value) for value in bbox[:_COCO_BBOX_VALUES]]
-        grouped[image_id].bboxes.append([x_min, y_min, x_min + width, y_min + height])
-        category_id = item.get("category_id")
-        grouped[image_id].bbox_labels.append(category_names.get(category_id, category_id))
+        annotation = grouped[image_id]
+        bbox = item.get("bbox")
+        polygons = _coco_segmentation_polygons(item.get("segmentation"))
+        mask_rle = _coco_segmentation_rle(item.get("segmentation"))
+        bbox_values = _coco_bbox_values(bbox)
+        if bbox_values is None and polygons:
+            bbox_values = _bbox_from_polygons(polygons)
+        if bbox_values is None and mask_rle is not None:
+            bbox_values = _bbox_from_rle(mask_rle)
+        if bbox_values is not None:
+            annotation.bboxes.append(bbox_values)
+            category_id = item.get("category_id")
+            annotation.bbox_labels.append(category_names.get(category_id, category_id))
+        if polygons:
+            annotation.mask_polygons.append(polygons)
+        if mask_rle is not None:
+            annotation.mask_rles.append(mask_rle)
     return dict(grouped)
+
+
+def _coco_bbox_values(bbox: object) -> list[float] | None:
+    if not _is_number_list(bbox, _COCO_BBOX_VALUES):
+        return None
+    x_min, y_min, width, height = [float(value) for value in bbox[:_COCO_BBOX_VALUES]]
+    return [x_min, y_min, x_min + width, y_min + height]
+
+
+def _coco_segmentation_polygons(segmentation: object) -> list[list[float]]:
+    if not isinstance(segmentation, list):
+        return []
+    return [
+        [float(value) for value in polygon]
+        for polygon in segmentation
+        if _is_number_list(polygon, _POLYGON_BBOX_MIN_VALUES) and len(polygon) % _POLYGON_PAIR_SIZE == 0
+    ]
+
+
+def _coco_segmentation_rle(segmentation: object) -> MaskRLE | None:
+    if not isinstance(segmentation, dict):
+        return None
+    counts = segmentation.get("counts")
+    size = segmentation.get("size")
+    if not (
+        _is_int_list(counts)
+        and all(count >= 0 for count in counts)
+        and _is_int_list(size)
+        and len(size) == _RLE_SIZE_VALUES
+        and all(value > 0 for value in size)
+    ):
+        return None
+    return MaskRLE(counts=list(counts), size=list(size))
+
+
+def _bbox_from_polygons(polygons: list[list[float]]) -> list[float] | None:
+    coordinates = [coordinate for polygon in polygons for coordinate in polygon]
+    if len(coordinates) < _POLYGON_BBOX_MIN_VALUES:
+        return None
+    x_values = coordinates[0::2]
+    y_values = coordinates[1::2]
+    return [min(x_values), min(y_values), max(x_values), max(y_values)]
+
+
+def _bbox_from_rle(mask_rle: MaskRLE) -> list[float] | None:
+    mask = decode_uncompressed_rle(mask_rle)
+    y_values, x_values = (mask > 0).nonzero()
+    if len(x_values) == 0 or len(y_values) == 0:
+        return None
+    return [
+        float(x_values.min()),
+        float(y_values.min()),
+        float(x_values.max() + 1),
+        float(y_values.max() + 1),
+    ]
 
 
 def _find_yolo_label_path(dataset_path: Path, image_path: Path) -> Path | None:
@@ -198,16 +270,37 @@ def _read_yolo_label(label_path: Path, image_path: Path) -> ImageAnnotations:
             continue
         try:
             class_id = int(float(values[0]))
-            x_center, y_center, box_width, box_height = [float(value) for value in values[1:_YOLO_BBOX_VALUES]]
+            coordinates = [float(value) for value in values[1:]]
         except ValueError:
             continue
-        x_min = (x_center - (box_width / 2.0)) * width
-        y_min = (y_center - (box_height / 2.0)) * height
-        x_max = (x_center + (box_width / 2.0)) * width
-        y_max = (y_center + (box_height / 2.0)) * height
-        annotation.bboxes.append([x_min, y_min, x_max, y_max])
-        annotation.bbox_labels.append(class_id)
+        if _is_yolo_segmentation_values(coordinates):
+            polygon = _yolo_polygon_to_pixels(coordinates, width, height)
+            bbox = _bbox_from_polygons([polygon])
+            if bbox is not None:
+                annotation.bboxes.append(bbox)
+                annotation.bbox_labels.append(class_id)
+                annotation.mask_polygons.append([polygon])
+            continue
+        if len(coordinates) >= _COCO_BBOX_VALUES:
+            x_center, y_center, box_width, box_height = coordinates[:_COCO_BBOX_VALUES]
+            x_min = (x_center - (box_width / 2.0)) * width
+            y_min = (y_center - (box_height / 2.0)) * height
+            x_max = (x_center + (box_width / 2.0)) * width
+            y_max = (y_center + (box_height / 2.0)) * height
+            annotation.bboxes.append([x_min, y_min, x_max, y_max])
+            annotation.bbox_labels.append(class_id)
     return annotation
+
+
+def _is_yolo_segmentation_values(coordinates: list[float]) -> bool:
+    return len(coordinates) >= _YOLO_SEGMENTATION_MIN_VALUES - 1 and len(coordinates) % _POLYGON_PAIR_SIZE == 0
+
+
+def _yolo_polygon_to_pixels(coordinates: list[float], width: int, height: int) -> list[float]:
+    polygon: list[float] = []
+    for index in range(0, len(coordinates) - 1, _POLYGON_PAIR_SIZE):
+        polygon.extend([coordinates[index] * width, coordinates[index + 1] * height])
+    return polygon
 
 
 def _sample_keys(dataset_path: Path, path: Path) -> set[str]:
@@ -229,7 +322,22 @@ def _merge_image_annotations(annotations: Iterable[ImageAnnotations]) -> ImageAn
             continue
         merged.bboxes.extend(annotation.bboxes)
         merged.bbox_labels.extend(annotation.bbox_labels)
+        merged.keypoints.extend(annotation.keypoints)
+        merged.mask_polygons.extend(annotation.mask_polygons)
+        merged.mask_rles.extend(annotation.mask_rles)
+        if merged.mask_path is None:
+            merged.mask_path = annotation.mask_path
     return merged
+
+
+def _has_annotation_content(annotation: ImageAnnotations) -> bool:
+    return bool(
+        annotation.bboxes
+        or annotation.keypoints
+        or annotation.mask_path
+        or annotation.mask_polygons
+        or annotation.mask_rles
+    )
 
 
 def _missing_annotation_warnings(annotations: list[ImageAnnotations | None]) -> list[str]:
@@ -239,8 +347,12 @@ def _missing_annotation_warnings(annotations: list[ImageAnnotations | None]) -> 
     return [f"{missing_count} sampled image(s) are without annotations."]
 
 
-def _is_number_list(value: object, min_length: int) -> bool:
+def _is_number_list(value: object, min_length: int) -> TypeGuard[list[int | float]]:
     return isinstance(value, list) and len(value) >= min_length and all(_is_number(item) for item in value[:min_length])
+
+
+def _is_int_list(value: object) -> TypeGuard[list[int]]:
+    return isinstance(value, list) and all(isinstance(item, int) and not isinstance(item, bool) for item in value)
 
 
 def _is_number(value: object) -> bool:

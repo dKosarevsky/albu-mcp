@@ -9,18 +9,28 @@ from typing import Any
 import numpy as np
 from PIL import Image, ImageDraw
 
-from albumentationsx_mcp.models import ImageAnnotations
+from albumentationsx_mcp.models import ImageAnnotations, MaskRLE
 
 _BOX_COLOR = (255, 64, 64, 255)
 _KEYPOINT_COLOR = (0, 180, 255, 255)
 _MASK_COLOR = (0, 210, 90, 100)
 _BBOX_COORDINATES = 4
 _KEYPOINT_COORDINATES = 2
+_POLYGON_MIN_POINTS = 3
 
 
 def annotation_has_content(annotation: ImageAnnotations | None) -> bool:
     """Return true when an annotation should produce overlay artifacts."""
-    return bool(annotation and (annotation.bboxes or annotation.keypoints or annotation.mask_path))
+    return bool(
+        annotation
+        and (
+            annotation.bboxes
+            or annotation.keypoints
+            or annotation.mask_path
+            or annotation.mask_polygons
+            or annotation.mask_rles
+        )
+    )
 
 
 def scale_annotations(
@@ -44,6 +54,10 @@ def scale_annotations(
         bbox_labels=list(annotation.bbox_labels),
         keypoints=[_scale_keypoint(keypoint, scale_x, scale_y) for keypoint in annotation.keypoints],
         mask_path=annotation.mask_path,
+        mask_polygons=[
+            [_scale_polygon(polygon, scale_x, scale_y) for polygon in item] for item in annotation.mask_polygons
+        ],
+        mask_rles=list(annotation.mask_rles),
     )
 
 
@@ -52,6 +66,57 @@ def load_mask(mask_path: Path | None, size: tuple[int, int]) -> np.ndarray | Non
     if mask_path is None:
         return None
     return np.asarray(Image.open(mask_path).convert("L").resize(size, Image.Resampling.NEAREST))
+
+
+def build_annotation_mask(annotation: ImageAnnotations | None, size: tuple[int, int]) -> np.ndarray | None:
+    """Build a single-channel mask from path, polygon, and RLE annotation sources."""
+    if annotation is None:
+        return None
+    masks: list[np.ndarray] = []
+    path_mask = load_mask(annotation.mask_path, size)
+    if path_mask is not None:
+        masks.append(path_mask)
+    polygon_mask = rasterize_polygons(annotation.mask_polygons, size)
+    if polygon_mask is not None:
+        masks.append(polygon_mask)
+    masks.extend(decode_uncompressed_rle(mask_rle, size) for mask_rle in annotation.mask_rles)
+    if not masks:
+        return None
+    combined = np.zeros((size[1], size[0]), dtype=np.uint8)
+    for mask in masks:
+        combined = np.maximum(combined, np.asarray(mask, dtype=np.uint8))
+    return combined
+
+
+def rasterize_polygons(polygons: list[list[list[float]]], size: tuple[int, int]) -> np.ndarray | None:
+    """Rasterize annotation polygons into a binary mask for Albumentations transforms."""
+    if not polygons:
+        return None
+    mask = Image.new("L", size, 0)
+    draw = ImageDraw.Draw(mask)
+    for instance in polygons:
+        for polygon in instance:
+            points = _polygon_points(polygon)
+            if len(points) >= _POLYGON_MIN_POINTS:
+                draw.polygon(points, fill=255)
+    return np.asarray(mask, dtype=np.uint8)
+
+
+def decode_uncompressed_rle(mask_rle: MaskRLE, size: tuple[int, int] | None = None) -> np.ndarray:
+    """Decode an uncompressed COCO-style RLE mask, optionally resizing it."""
+    height, width = mask_rle.size[:2]
+    total = height * width
+    values: list[int] = []
+    current = 0
+    for count in mask_rle.counts:
+        values.extend([current] * max(0, count))
+        current = 1 - current
+    if len(values) < total:
+        values.extend([0] * (total - len(values)))
+    data = np.asarray(values[:total], dtype=np.uint8).reshape((width, height)).T * 255
+    if size is None or size == (width, height):
+        return data
+    return np.asarray(Image.fromarray(data).resize(size, Image.Resampling.NEAREST), dtype=np.uint8)
 
 
 def build_transform_payload(
@@ -117,6 +182,18 @@ def _scale_keypoint(keypoint: list[float], scale_x: float, scale_y: float) -> li
     scaled[0] *= scale_x
     scaled[1] *= scale_y
     return scaled
+
+
+def _scale_polygon(polygon: list[float], scale_x: float, scale_y: float) -> list[float]:
+    scaled = list(polygon)
+    for index in range(0, len(scaled) - 1, 2):
+        scaled[index] *= scale_x
+        scaled[index + 1] *= scale_y
+    return scaled
+
+
+def _polygon_points(polygon: list[float]) -> list[tuple[float, float]]:
+    return [(polygon[index], polygon[index + 1]) for index in range(0, len(polygon) - 1, 2)]
 
 
 def _apply_mask(base: Image.Image, mask: np.ndarray) -> Image.Image:

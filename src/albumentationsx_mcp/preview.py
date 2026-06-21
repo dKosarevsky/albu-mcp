@@ -19,8 +19,8 @@ from PIL import Image
 from albumentationsx_mcp.annotations import (
     annotation_has_content,
     annotation_values,
+    build_annotation_mask,
     build_transform_payload,
-    load_mask,
     render_overlay,
     scale_annotations,
 )
@@ -210,7 +210,7 @@ class PreviewService:
             )
             if annotation and annotation.mask_path is not None:
                 annotation.mask_path = self.path_policy.resolve_input(annotation.mask_path)
-            mask = load_mask(annotation.mask_path if annotation else None, image.size)
+            mask = build_annotation_mask(annotation, image.size)
             for variant_index in range(request.variants_per_image):
                 pipeline = request.pipeline.model_copy(deep=True)
                 if request.seed is not None:

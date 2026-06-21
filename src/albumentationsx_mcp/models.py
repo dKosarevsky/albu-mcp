@@ -110,6 +110,13 @@ class ExportResult(StrictModel):
     content: str
 
 
+class MaskRLE(StrictModel):
+    """Serializable uncompressed COCO-style mask RLE."""
+
+    counts: list[int]
+    size: list[int] = Field(min_length=2, max_length=2)
+
+
 class ImageAnnotations(StrictModel):
     """Optional annotations supplied for one preview input image."""
 
@@ -117,6 +124,8 @@ class ImageAnnotations(StrictModel):
     bbox_labels: list[str | int] = Field(default_factory=list)
     keypoints: list[list[float]] = Field(default_factory=list)
     mask_path: Path | None = None
+    mask_polygons: list[list[list[float]]] = Field(default_factory=list)
+    mask_rles: list[MaskRLE] = Field(default_factory=list)
 
 
 class PreviewRequest(StrictModel):
