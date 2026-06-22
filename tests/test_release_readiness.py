@@ -13,6 +13,7 @@ def test_release_readiness_accepts_current_fast_guards(tmp_path: Path) -> None:
     assert [check.name for check in report.checks] == [
         "manual_host_records",
         "host_acceptance_evidence",
+        "first_10_minutes",
         "mcp_contract_snapshot",
         "output_contract_snapshot",
     ]

@@ -3,6 +3,9 @@
 Use this page when sharing AlbumentationsX MCP with maintainers, MCP host users, or computer-vision teams that need a
 quick trial before reading the full docs.
 
+For the shortest hands-on path, send users to [docs/FIRST_10_MINUTES.md](FIRST_10_MINUTES.md). It takes them from
+installation to smoke check, preview, feedback, comparison, and export.
+
 ## 2-minute trial
 
 Run the published package:
@@ -25,6 +28,8 @@ Then ask the host:
 Read albumentationsx://examples/client-smoke, run run_host_smoke_check, then help me create a small augmentation
 preview for images under my allowed root.
 ```
+
+For a fuller copyable prompt, use `examples/first_10_minutes_prompt.md`.
 
 ## Host setup
 

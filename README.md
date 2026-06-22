@@ -48,6 +48,8 @@ uvx --from albumentationsx-mcp albumentationsx-mcp \
 ```
 
 Copyable host snippets are in [examples](examples/). Full host setup is in [docs/INSTALL.md](docs/INSTALL.md).
+For a guided trial from install to exported pipeline, use
+[docs/FIRST_10_MINUTES.md](docs/FIRST_10_MINUTES.md).
 
 ## Host Workflow
 
@@ -83,6 +85,8 @@ The public MCP surface is kept stable through reviewed contract snapshots. Compa
 ## Documentation
 
 - [docs/INSTALL.md](docs/INSTALL.md): PyPI, MCP Registry, Claude Desktop, Claude Code, Cursor, Codex, bounded roots.
+- [docs/FIRST_10_MINUTES.md](docs/FIRST_10_MINUTES.md): shortest path from install to smoke check, preview,
+  feedback, comparison, and export.
 - [docs/USAGE.md](docs/USAGE.md): end-to-end MCP host workflow and tool details.
 - [docs/RECIPES.md](docs/RECIPES.md): task-specific host recipes.
 - [docs/ADOPTION.md](docs/ADOPTION.md): short trial, host setup, workflow examples, and outreach copy.
@@ -112,6 +116,7 @@ uv run ruff format --check .
 uv run ty check
 uv run python scripts/validate_host_manual_runs.py
 uv run python scripts/check_host_acceptance_report.py
+uv run python scripts/check_first_10_minutes.py
 uv run python scripts/check_contract_snapshots.py
 uv run python scripts/check_demo_assets.py --output-dir docs/assets/demo --check
 uv run python scripts/check_release_readiness.py
