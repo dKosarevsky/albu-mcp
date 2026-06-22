@@ -60,9 +60,18 @@ def build_manual_host_acceptance_packet(config: ManualHostAcceptancePacketConfig
             _host_prompt(config),
             "```",
             "",
+            "For the shorter product quickstart path, use `examples/first_10_minutes_prompt.md` with the same allowed",
+            "root and artifact root.",
+            "",
             "## Evidence Checklist",
             "",
             *(_evidence_checklist(host) for host in config.hosts),
+            "",
+            "## First 10 Minutes Replay",
+            "",
+            "Use this section after the host completes the short quickstart path from `docs/FIRST_10_MINUTES.md`.",
+            "",
+            *(_first_10_minutes_replay_section(host, config.run_date) for host in config.hosts),
             "",
             "## Record Evidence",
             "",
@@ -78,6 +87,7 @@ def build_manual_host_acceptance_packet(config: ManualHostAcceptancePacketConfig
             "uv run python scripts/export_host_acceptance_report.py --output docs/HOST_ACCEPTANCE_EVIDENCE.md",
             "uv run python scripts/check_host_acceptance_report.py",
             "uv run python scripts/check_manual_host_acceptance.py",
+            "uv run python scripts/check_first_10_minutes_replay.py",
             "```",
             "",
         ]
@@ -220,6 +230,27 @@ def _evidence_checklist(host: HostName) -> str:
     )
 
 
+def _first_10_minutes_replay_section(host: HostName, run_date: str) -> str:
+    return "\n".join(
+        [
+            f"### {host} First 10 Minutes Replay",
+            "",
+            "- Host ran the prompt from `examples/first_10_minutes_prompt.md`.",
+            "- Host completed `run_host_smoke_check` before rendering.",
+            "- Host called `validate_preview_request` before `render_preview_batch`.",
+            "- Host rendered baseline and candidate previews.",
+            "- Host called `compare_preview_runs` before `export_pipeline`.",
+            "- Evidence names at least one contact sheet, manifest, report, or exported pipeline artifact.",
+            "",
+            _record_first_10_minutes_command(host, run_date, status="passed"),
+            _record_first_10_minutes_command(host, run_date, status="blocked"),
+            _record_first_10_minutes_command(host, run_date, status="pending"),
+            "",
+            f"`uv run python scripts/check_first_10_minutes_replay.py --host {shlex.quote(host)}`",
+        ]
+    )
+
+
 def _record_commands(host: HostName, run_date: str) -> str:
     return "\n".join(_record_command(host, run_date, status=status) for status in ("passed", "blocked", "pending"))
 
@@ -231,6 +262,19 @@ def _record_command(host: HostName, run_date: str, *, status: str) -> str:
         f"--host {shlex.quote(host)} "
         f"--status {status} --date {run_date} "
         "--evidence '<paste host evidence note>'"
+        "`"
+    )
+
+
+def _record_first_10_minutes_command(host: HostName, run_date: str, *, status: str) -> str:
+    return (
+        "`"
+        "uv run python scripts/record_host_manual_run.py "
+        "--kind first-10-minutes "
+        f"--host {shlex.quote(host)} "
+        f"--status {status} --date {run_date} "
+        "--evidence '<paste first 10 minutes replay evidence note>' "
+        "--artifact '<paste contact sheet, manifest, report, or exported pipeline path>'"
         "`"
     )
 

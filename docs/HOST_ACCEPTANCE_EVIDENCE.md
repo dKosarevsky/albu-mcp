@@ -6,6 +6,7 @@
 - PyPI package: albumentationsx-mcp==1.14.0
 - Automated Coverage: recorded
 - Manual Host UI: pending
+- First 10 Minutes Replay: pending
 
 ## Automated Coverage
 
@@ -28,6 +29,15 @@
 | Claude Code | pending | none | manual UI run not recorded |
 | Cursor | pending | none | manual UI run not recorded |
 | Codex | pending | none | manual UI run not recorded |
+
+## First 10 Minutes Replay
+
+| Host | Status | Date | Evidence | Artifacts |
+| --- | --- | --- | --- | --- |
+| Claude Desktop | pending | none | first 10 minutes replay not recorded |  |
+| Claude Code | pending | none | first 10 minutes replay not recorded |  |
+| Cursor | pending | none | first 10 minutes replay not recorded |  |
+| Codex | pending | none | first 10 minutes replay not recorded |  |
 
 ## Minimum Release Acceptance
 

@@ -32,10 +32,15 @@ def test_manual_host_acceptance_packet_contains_host_configs_and_record_commands
     assert "Cursor" in packet
     assert "Codex" in packet
     assert "albumentationsx://examples/distortion-review" in packet
+    assert "examples/first_10_minutes_prompt.md" in packet
     assert "run_host_smoke_check" in packet
     assert "compare_preview_runs" in packet
     assert "export_tuning_session" in packet
     assert "record_host_manual_run.py --host 'Claude Desktop' --status passed --date 2026-06-20" in packet
+    assert (
+        "record_host_manual_run.py --kind first-10-minutes --host 'Claude Desktop' --status passed --date 2026-06-20"
+    ) in packet
+    assert "check_first_10_minutes_replay.py --host 'Claude Desktop'" in packet
     assert "record_host_manual_run.py --host Codex --status passed --date 2026-06-20" in packet
     assert '"status": "passed"' not in packet
 
@@ -57,7 +62,9 @@ def test_manual_host_acceptance_packet_can_target_one_host(tmp_path: Path) -> No
     assert "## Claude Code" not in packet
     assert "## Codex" not in packet
     assert "### Cursor Evidence Checklist" in packet
+    assert "### Cursor First 10 Minutes Replay" in packet
     assert "record_host_manual_run.py --host Cursor --status passed --date 2026-06-20" in packet
+    assert "record_host_manual_run.py --kind first-10-minutes --host Cursor --status passed" in packet
     assert "record_host_manual_run.py --host Cursor --status blocked --date 2026-06-20" in packet
     assert "record_host_manual_run.py --host Cursor --status pending --date 2026-06-20" in packet
 

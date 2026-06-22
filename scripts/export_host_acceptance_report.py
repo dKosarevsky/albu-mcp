@@ -85,6 +85,36 @@ _MANUAL_HOST_UI: tuple[dict[str, str], ...] = (
         "evidence": "manual UI run not recorded",
     },
 )
+_FIRST_10_MINUTES_REPLAY: tuple[dict[str, str | list[str]], ...] = (
+    {
+        "host": "Claude Desktop",
+        "status": "pending",
+        "date": "none",
+        "evidence": "first 10 minutes replay not recorded",
+        "artifacts": [],
+    },
+    {
+        "host": "Claude Code",
+        "status": "pending",
+        "date": "none",
+        "evidence": "first 10 minutes replay not recorded",
+        "artifacts": [],
+    },
+    {
+        "host": "Cursor",
+        "status": "pending",
+        "date": "none",
+        "evidence": "first 10 minutes replay not recorded",
+        "artifacts": [],
+    },
+    {
+        "host": "Codex",
+        "status": "pending",
+        "date": "none",
+        "evidence": "first 10 minutes replay not recorded",
+        "artifacts": [],
+    },
+)
 _MINIMUM_RELEASE_ACCEPTANCE: tuple[str, ...] = (
     "`albumentationsx://capabilities` lists expected tools, prompts, resources, roots, and limits.",
     '`diagnose_environment` returns `status="ok"` or actionable `remediation_actions`.',
@@ -102,6 +132,7 @@ def build_host_acceptance_report(root: Path) -> dict[str, Any]:
     server = json.loads((root / "server.json").read_text(encoding="utf-8"))
     pypi_package = _first_pypi_package(server)
     manual_host_ui = _manual_host_ui(root)
+    first_10_minutes_replay = _first_10_minutes_replay(root)
     return {
         "project": package["name"],
         "version": package["version"],
@@ -113,9 +144,11 @@ def build_host_acceptance_report(root: Path) -> dict[str, Any]:
         "summary": {
             "automated_coverage": "recorded",
             "manual_host_ui": _manual_summary(manual_host_ui),
+            "first_10_minutes_replay": _manual_summary(first_10_minutes_replay),
         },
         "automated_coverage": [dict(item) for item in _AUTOMATED_COVERAGE],
         "manual_host_ui": manual_host_ui,
+        "first_10_minutes_replay": first_10_minutes_replay,
         "minimum_release_acceptance": list(_MINIMUM_RELEASE_ACCEPTANCE),
         "manual_run_records": "docs/HOST_MANUAL_RUNS.json",
         "source_docs": [
@@ -142,6 +175,7 @@ def dump_host_acceptance_markdown(report: dict[str, Any]) -> str:
         f"- PyPI package: {report['pypi_package']}=={report['pypi_package_version']}",
         "- Automated Coverage: recorded",
         f"- Manual Host UI: {report['summary']['manual_host_ui']}",
+        f"- First 10 Minutes Replay: {report['summary']['first_10_minutes_replay']}",
         "",
         "## Automated Coverage",
         "",
@@ -161,6 +195,19 @@ def dump_host_acceptance_markdown(report: dict[str, Any]) -> str:
     lines.extend(
         f"| {item['host']} | {item['status']} | {item['date']} | {item['evidence']} |"
         for item in report["manual_host_ui"]
+    )
+    lines.extend(
+        [
+            "",
+            "## First 10 Minutes Replay",
+            "",
+            "| Host | Status | Date | Evidence | Artifacts |",
+            "| --- | --- | --- | --- | --- |",
+        ]
+    )
+    lines.extend(
+        f"| {item['host']} | {item['status']} | {item['date']} | {item['evidence']} | {', '.join(item['artifacts'])} |"
+        for item in report["first_10_minutes_replay"]
     )
     lines.extend(
         [
@@ -211,14 +258,26 @@ def _manual_host_ui(root: Path) -> list[dict[str, str]]:
     return [{**item, **by_host.get(item["host"], {})} for item in _MANUAL_HOST_UI]
 
 
+def _first_10_minutes_replay(root: Path) -> list[dict[str, Any]]:
+    records = _read_first_10_minutes_records(root / "docs" / "HOST_MANUAL_RUNS.json")
+    by_host = {record["host"]: record for record in records}
+    return [{**item, **by_host.get(item["host"], {})} for item in _FIRST_10_MINUTES_REPLAY]
+
+
 def _read_manual_records(path: Path) -> list[dict[str, str]]:
     if not path.exists():
         return []
     return [record.model_dump(mode="json") for record in validate_host_manual_runs(path).manual_host_ui]
 
 
-def _manual_summary(manual_host_ui: list[dict[str, str]]) -> str:
-    statuses = {item["status"] for item in manual_host_ui}
+def _read_first_10_minutes_records(path: Path) -> list[dict[str, Any]]:
+    if not path.exists():
+        return []
+    return [record.model_dump(mode="json") for record in validate_host_manual_runs(path).first_10_minutes_replay]
+
+
+def _manual_summary(records: list[dict[str, Any]]) -> str:
+    statuses = {item["status"] for item in records}
     if statuses == {"passed"}:
         return "passed"
     if statuses == {"pending"}:

@@ -32,6 +32,40 @@
           }
         }
       }
+    },
+    "first_10_minutes_replay": {
+      "type": "array",
+      "description": "Dated host replay evidence for the First 10 Minutes workflow.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["host", "status", "date", "evidence", "artifacts"],
+        "properties": {
+          "host": {
+            "type": "string",
+            "enum": ["Claude Desktop", "Claude Code", "Cursor", "Codex"]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["passed", "blocked", "pending"]
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "evidence": {
+            "type": "string",
+            "minLength": 1
+          },
+          "artifacts": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
     }
   }
 }

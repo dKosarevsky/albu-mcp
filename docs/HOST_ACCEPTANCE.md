@@ -41,10 +41,25 @@ uv run python scripts/validate_host_manual_runs.py
 uv run python scripts/check_host_acceptance_report.py
 ```
 
+For the shorter product quickstart, ask the host to run `examples/first_10_minutes_prompt.md`, then record the replay
+separately from the broader host UI gate:
+
+```bash
+uv run python scripts/record_host_manual_run.py --kind first-10-minutes --host Codex --status passed \
+  --date 2026-06-22 \
+  --evidence "Codex completed smoke check, preview validation, baseline and candidate render, comparison, and export." \
+  --artifact docs/assets/demo/demo_report.md
+uv run python scripts/check_first_10_minutes_replay.py --host Codex
+```
+
+This replay gate intentionally tracks whether the First 10 Minutes path works in a real host. It does not replace the
+broader manual host UI gate below.
+
 For a final manual host UI gate, run:
 
 ```bash
 uv run python scripts/check_manual_host_acceptance.py
+uv run python scripts/check_first_10_minutes_replay.py
 ```
 
 This gate intentionally fails while any required host is missing, `pending`, or `blocked`. Keep it out of routine CI
@@ -67,6 +82,18 @@ Manual run note format:
   "status": "passed",
   "date": "2026-06-19",
   "evidence": "Codex app listed tools, read workflow resources, and ran run_host_smoke_check."
+}
+```
+
+First 10 Minutes replay note format:
+
+```json
+{
+  "host": "Codex",
+  "status": "passed",
+  "date": "2026-06-22",
+  "evidence": "Codex completed smoke check, preview validation, baseline and candidate render, comparison, and export.",
+  "artifacts": ["docs/assets/demo/demo_report.md"]
 }
 ```
 

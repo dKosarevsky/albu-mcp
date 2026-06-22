@@ -27,23 +27,35 @@ class HostManualRun(BaseModel):
     evidence: str = Field(min_length=1)
 
 
+class FirstTenMinutesReplayRun(HostManualRun):
+    """One dated first-10-minutes workflow replay record for an MCP host."""
+
+    artifacts: list[str] = Field(default_factory=list)
+
+
 class HostManualRuns(BaseModel):
     """Manual UI evidence records loaded from docs/HOST_MANUAL_RUNS.json."""
 
     model_config = ConfigDict(extra="forbid")
 
     manual_host_ui: list[HostManualRun] = Field(default_factory=list)
+    first_10_minutes_replay: list[FirstTenMinutesReplayRun] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def require_unique_hosts(self) -> HostManualRuns:
         """Reject ambiguous overlays before generating host acceptance evidence."""
-        seen: set[str] = set()
-        for record in self.manual_host_ui:
-            if record.host in seen:
-                msg = f"Duplicate manual host UI record for {record.host!r}"
-                raise ValueError(msg)
-            seen.add(record.host)
+        _require_unique_hosts(self.manual_host_ui, label="manual host UI")
+        _require_unique_hosts(self.first_10_minutes_replay, label="first 10 minutes replay")
         return self
+
+
+def _require_unique_hosts(records: list[HostManualRun], *, label: str) -> None:
+    seen: set[str] = set()
+    for record in records:
+        if record.host in seen:
+            msg = f"Duplicate {label} record for {record.host!r}"
+            raise ValueError(msg)
+        seen.add(record.host)
 
 
 def validate_host_manual_runs(path: Path = Path("docs/HOST_MANUAL_RUNS.json")) -> HostManualRuns:
@@ -65,7 +77,10 @@ def main() -> None:
     parser.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
     args = parser.parse_args()
     report = validate_host_manual_runs(args.path)
-    sys.stdout.write(f"manual host run records are valid ({len(report.manual_host_ui)} recorded)\n")
+    sys.stdout.write(
+        "manual host run records are valid "
+        f"({len(report.manual_host_ui)} host UI, {len(report.first_10_minutes_replay)} first-10-minutes replay)\n"
+    )
 
 
 if __name__ == "__main__":

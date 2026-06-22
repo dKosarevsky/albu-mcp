@@ -5,7 +5,11 @@ from pathlib import Path
 
 import pytest
 
-from scripts.record_host_manual_run import record_host_manual_run
+from scripts.record_host_manual_run import (
+    FirstTenMinutesReplayEvidence,
+    record_first_10_minutes_replay,
+    record_host_manual_run,
+)
 from scripts.validate_host_manual_runs import validate_host_manual_runs
 
 
@@ -32,6 +36,41 @@ def test_host_manual_runs_validator_accepts_dated_records(tmp_path: Path) -> Non
     assert report.manual_host_ui[0].host == "Codex"
     assert report.manual_host_ui[0].status == "passed"
     assert report.manual_host_ui[0].model_dump(mode="json")["date"] == "2026-06-19"
+
+
+def test_host_manual_runs_validator_accepts_first_10_minutes_replay_records(tmp_path: Path) -> None:
+    manual_runs_path = tmp_path / "HOST_MANUAL_RUNS.json"
+    manual_runs_path.write_text(
+        json.dumps(
+            {
+                "manual_host_ui": [],
+                "first_10_minutes_replay": [
+                    {
+                        "host": "Codex",
+                        "status": "passed",
+                        "date": "2026-06-22",
+                        "evidence": "Codex completed smoke, validated preview, rendered baseline and candidate, "
+                        "compared runs, and exported Python.",
+                        "artifacts": [
+                            "docs/assets/demo/demo_report.md",
+                            "docs/assets/demo/comparison_contact_sheet.png",
+                        ],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = validate_host_manual_runs(manual_runs_path)
+    replay = report.first_10_minutes_replay[0]
+
+    assert replay.host == "Codex"
+    assert replay.status == "passed"
+    assert replay.artifacts == [
+        "docs/assets/demo/demo_report.md",
+        "docs/assets/demo/comparison_contact_sheet.png",
+    ]
 
 
 @pytest.mark.parametrize(
@@ -116,6 +155,24 @@ def test_host_manual_runs_validator_rejects_duplicate_hosts(tmp_path: Path) -> N
         validate_host_manual_runs(manual_runs_path)
 
 
+def test_host_manual_runs_validator_rejects_duplicate_first_10_minutes_hosts(tmp_path: Path) -> None:
+    manual_runs_path = tmp_path / "HOST_MANUAL_RUNS.json"
+    replay = {
+        "host": "Codex",
+        "status": "passed",
+        "date": "2026-06-22",
+        "evidence": "first replay",
+        "artifacts": ["docs/assets/demo/demo_report.md"],
+    }
+    manual_runs_path.write_text(
+        json.dumps({"manual_host_ui": [], "first_10_minutes_replay": [replay, {**replay, "evidence": "second"}]}),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="Duplicate first 10 minutes replay record"):
+        validate_host_manual_runs(manual_runs_path)
+
+
 def test_record_host_manual_run_adds_and_replaces_records_in_canonical_order(tmp_path: Path) -> None:
     manual_runs_path = tmp_path / "HOST_MANUAL_RUNS.json"
     manual_runs_path.write_text(
@@ -157,6 +214,39 @@ def test_record_host_manual_run_adds_and_replaces_records_in_canonical_order(tmp
     assert "initial Codex note" not in manual_runs_path.read_text(encoding="utf-8")
 
 
+def test_record_host_manual_run_preserves_first_10_minutes_replay_records(tmp_path: Path) -> None:
+    manual_runs_path = tmp_path / "HOST_MANUAL_RUNS.json"
+    manual_runs_path.write_text(
+        json.dumps(
+            {
+                "manual_host_ui": [],
+                "first_10_minutes_replay": [
+                    {
+                        "host": "Codex",
+                        "status": "passed",
+                        "date": "2026-06-22",
+                        "evidence": "Codex completed the first 10 minutes path.",
+                        "artifacts": ["docs/assets/demo/demo_report.md"],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = record_host_manual_run(
+        path=manual_runs_path,
+        host="Codex",
+        status="passed",
+        run_date="2026-06-23",
+        evidence="Codex completed the broader host UI flow.",
+    )
+
+    assert report.manual_host_ui[0].evidence == "Codex completed the broader host UI flow."
+    assert report.first_10_minutes_replay[0].evidence == "Codex completed the first 10 minutes path."
+    assert report.first_10_minutes_replay[0].artifacts == ["docs/assets/demo/demo_report.md"]
+
+
 def test_record_host_manual_run_cli_writes_valid_json(tmp_path: Path) -> None:
     manual_runs_path = tmp_path / "HOST_MANUAL_RUNS.json"
     manual_runs_path.write_text('{"manual_host_ui": []}', encoding="utf-8")
@@ -185,3 +275,70 @@ def test_record_host_manual_run_cli_writes_valid_json(tmp_path: Path) -> None:
 
     assert "recorded Codex passed on 2026-06-19" in result.stdout
     assert report.manual_host_ui[0].host == "Codex"
+
+
+def test_record_first_10_minutes_replay_adds_records_in_canonical_order(tmp_path: Path) -> None:
+    manual_runs_path = tmp_path / "HOST_MANUAL_RUNS.json"
+    manual_runs_path.write_text('{"manual_host_ui": [], "first_10_minutes_replay": []}', encoding="utf-8")
+
+    record_first_10_minutes_replay(
+        path=manual_runs_path,
+        replay=FirstTenMinutesReplayEvidence(
+            host="Codex",
+            status="blocked",
+            run_date="2026-06-21",
+            evidence="Codex could not access the configured artifact root.",
+            artifacts=[],
+        ),
+    )
+    report = record_first_10_minutes_replay(
+        path=manual_runs_path,
+        replay=FirstTenMinutesReplayEvidence(
+            host="Cursor",
+            status="passed",
+            run_date="2026-06-22",
+            evidence="Cursor completed smoke, preview, comparison, and export.",
+            artifacts=["docs/assets/demo/demo_report.md"],
+        ),
+    )
+
+    records = [record.model_dump(mode="json") for record in report.first_10_minutes_replay]
+
+    assert [record["host"] for record in records] == ["Cursor", "Codex"]
+    assert records[0]["status"] == "passed"
+    assert records[0]["artifacts"] == ["docs/assets/demo/demo_report.md"]
+
+
+def test_record_first_10_minutes_replay_cli_writes_valid_json(tmp_path: Path) -> None:
+    manual_runs_path = tmp_path / "HOST_MANUAL_RUNS.json"
+    manual_runs_path.write_text('{"manual_host_ui": [], "first_10_minutes_replay": []}', encoding="utf-8")
+
+    result = subprocess.run(  # noqa: S603 - static script path with controlled fixture paths.
+        [
+            sys.executable,
+            "scripts/record_host_manual_run.py",
+            "--kind",
+            "first-10-minutes",
+            "--path",
+            str(manual_runs_path),
+            "--host",
+            "Codex",
+            "--status",
+            "passed",
+            "--date",
+            "2026-06-22",
+            "--evidence",
+            "Codex completed smoke, preview, comparison, and export.",
+            "--artifact",
+            "docs/assets/demo/demo_report.md",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    report = validate_host_manual_runs(manual_runs_path)
+
+    assert "recorded first-10-minutes Codex passed on 2026-06-22" in result.stdout
+    assert report.first_10_minutes_replay[0].host == "Codex"
+    assert report.first_10_minutes_replay[0].artifacts == ["docs/assets/demo/demo_report.md"]

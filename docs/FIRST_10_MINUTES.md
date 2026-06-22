@@ -127,3 +127,18 @@ uv run python scripts/check_first_10_minutes.py
 
 The release readiness script runs the same guard so the README entrypoint, quickstart guide, host prompt, and demo
 artifacts do not drift apart.
+
+## Manual host replay
+
+After a real MCP host completes this workflow, record the result separately from the broader host acceptance gate:
+
+```bash
+uv run python scripts/record_host_manual_run.py --kind first-10-minutes --host Codex --status passed \
+  --date 2026-06-22 \
+  --evidence "Codex completed smoke check, preview validation, baseline and candidate render, comparison, and export." \
+  --artifact docs/assets/demo/demo_report.md
+uv run python scripts/check_first_10_minutes_replay.py --host Codex
+```
+
+Use `blocked` instead of `passed` when the host cannot complete the workflow, and include the concrete blocker in
+`--evidence`.

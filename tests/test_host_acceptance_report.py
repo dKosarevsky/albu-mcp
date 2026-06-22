@@ -32,6 +32,13 @@ def test_host_acceptance_report_keeps_manual_hosts_pending_by_default() -> None:
     assert {item["status"] for item in report["manual_host_ui"]} == {"pending"}
     assert all("manual UI run not recorded" in item["evidence"] for item in report["manual_host_ui"])
     assert all(item["date"] == "none" for item in report["manual_host_ui"])
+    assert {item["host"] for item in report["first_10_minutes_replay"]} == {
+        "Claude Desktop",
+        "Claude Code",
+        "Cursor",
+        "Codex",
+    }
+    assert {item["status"] for item in report["first_10_minutes_replay"]} == {"pending"}
 
 
 def test_host_acceptance_markdown_reports_pending_manual_status() -> None:
@@ -42,6 +49,8 @@ def test_host_acceptance_markdown_reports_pending_manual_status() -> None:
 
     assert "# Host Acceptance Evidence" in markdown
     assert "| Claude Desktop | pending | none | manual UI run not recorded |" in markdown
+    assert "## First 10 Minutes Replay" in markdown
+    assert "| Codex | pending | none | first 10 minutes replay not recorded |  |" in markdown
     assert "| MCP Registry metadata publish check | automated |" in markdown
     assert "| host acceptance evidence freshness | automated |" in markdown
     assert "Manual Host UI: pending" in markdown
@@ -63,6 +72,15 @@ def test_host_acceptance_report_applies_dated_manual_run_records(tmp_path: Path)
       "date": "2026-06-19",
       "evidence": "Codex app listed tools, read workflow resources, and ran run_host_smoke_check."
     }
+  ],
+  "first_10_minutes_replay": [
+    {
+      "host": "Codex",
+      "status": "passed",
+      "date": "2026-06-22",
+      "evidence": "Codex completed the first 10 minutes path.",
+      "artifacts": ["docs/assets/demo/demo_report.md"]
+    }
   ]
 }
 """.strip(),
@@ -72,14 +90,19 @@ def test_host_acceptance_report_applies_dated_manual_run_records(tmp_path: Path)
     report = module.build_host_acceptance_report(tmp_path)
     markdown = module.dump_host_acceptance_markdown(report)
     codex = next(item for item in report["manual_host_ui"] if item["host"] == "Codex")
+    codex_replay = next(item for item in report["first_10_minutes_replay"] if item["host"] == "Codex")
     cursor = next(item for item in report["manual_host_ui"] if item["host"] == "Cursor")
 
     assert report["summary"]["manual_host_ui"] == "partial"
+    assert report["summary"]["first_10_minutes_replay"] == "partial"
     assert codex["status"] == "passed"
     assert codex["date"] == "2026-06-19"
     assert "run_host_smoke_check" in codex["evidence"]
+    assert codex_replay["status"] == "passed"
+    assert codex_replay["artifacts"] == ["docs/assets/demo/demo_report.md"]
     assert cursor["status"] == "pending"
     assert "| Codex | passed | 2026-06-19 | Codex app listed tools" in markdown
+    assert "| Codex | passed | 2026-06-22 | Codex completed the first 10 minutes path. |" in markdown
     assert "Manual Host UI: partial" in markdown
 
 
