@@ -87,22 +87,18 @@ source: [docs/integrations/mcp.md](https://github.com/albumentations-team/Albume
 ## Documentation
 
 - [docs/INSTALL.md](docs/INSTALL.md): PyPI, MCP Registry, Claude Desktop, Claude Code, Cursor, Codex, bounded roots.
-- [docs/FIRST_10_MINUTES.md](docs/FIRST_10_MINUTES.md): shortest path from install to smoke check, preview,
-  feedback, comparison, and export.
+- [docs/FIRST_10_MINUTES.md](docs/FIRST_10_MINUTES.md): shortest path from install to preview, feedback, and export.
 - [docs/HOST_PROOF_SPRINT.md](docs/HOST_PROOF_SPRINT.md): runbook for recording real host replay evidence.
 - [docs/USAGE.md](docs/USAGE.md): end-to-end MCP host workflow and tool details.
 - [docs/RECIPES.md](docs/RECIPES.md): task-specific host recipes.
 - [docs/ADOPTION.md](docs/ADOPTION.md): short trial, host setup, workflow examples, and outreach copy.
 - [docs/ADOPTION_PACKET.md](docs/ADOPTION_PACKET.md): generated public launch copy, links, host coverage, and workflow.
-- [docs/COMMUNITY_FEEDBACK.md](docs/COMMUNITY_FEEDBACK.md): privacy-safe GitHub issue intake for host and workflow
-  feedback.
+- [docs/COMMUNITY_FEEDBACK.md](docs/COMMUNITY_FEEDBACK.md): privacy-safe GitHub issue intake.
 - [docs/NETWORK_GROWTH.md](docs/NETWORK_GROWTH.md): public directory status, registry follow-up, and outreach plan.
-- [docs/UPSTREAM_PR_PACKET.md](docs/UPSTREAM_PR_PACKET.md): upstream integration source that became
-  [AlbumentationsX#289](https://github.com/albumentations-team/AlbumentationsX/pull/289).
+- [docs/UPSTREAM_PR_PACKET.md](docs/UPSTREAM_PR_PACKET.md): upstream source for [AlbumentationsX#289](https://github.com/albumentations-team/AlbumentationsX/pull/289).
 - [examples/distortion_review_workflow.md](examples/distortion_review_workflow.md): rejected noisy preview review loop.
 - [docs/DEMO.md](docs/DEMO.md): generated preview comparison demo.
-- [docs/HOST_ACCEPTANCE.md](docs/HOST_ACCEPTANCE.md), [docs/HOST_MATRIX.md](docs/HOST_MATRIX.md), and
-  [docs/HOST_ACCEPTANCE_EVIDENCE.md](docs/HOST_ACCEPTANCE_EVIDENCE.md): MCP host acceptance status.
+- [docs/HOST_ACCEPTANCE.md](docs/HOST_ACCEPTANCE.md), [docs/HOST_MATRIX.md](docs/HOST_MATRIX.md), and [docs/HOST_ACCEPTANCE_EVIDENCE.md](docs/HOST_ACCEPTANCE_EVIDENCE.md): MCP host acceptance status.
 - [docs/V1_READINESS.md](docs/V1_READINESS.md): v1 compatibility and release audit.
 - [docs/V1_LAUNCH_REPORT.md](docs/V1_LAUNCH_REPORT.md): current machine-readable v1 launch blocker summary.
 - [docs/RELEASE.md](docs/RELEASE.md): PyPI, GitHub Release, and MCP Registry publication process.

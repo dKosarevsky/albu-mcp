@@ -79,8 +79,7 @@ def render_v1_launch_report_markdown(report: dict[str, Any]) -> str:
     ]
     if report["blockers"]:
         lines.extend(
-            f"- `{blocker['code']}` ({blocker['severity']}): {blocker['summary']}"
-            for blocker in report["blockers"]
+            f"- `{blocker['code']}` ({blocker['severity']}): {blocker['summary']}" for blocker in report["blockers"]
         )
     else:
         lines.append("- none")
