@@ -325,7 +325,8 @@ def test_v1_readiness_audit_is_present_and_complete() -> None:
         "Release Automation",
         "Install Flow",
         "Compatibility Policy",
-        "No runtime API changes",
+        "Current Status",
+        "build_review_packet",
         "v1.0.0",
     ]
 
