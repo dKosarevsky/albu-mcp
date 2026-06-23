@@ -417,14 +417,25 @@ def _review_packet_ready(root: Path) -> dict[str, Any]:
 def _dataset_quality_ready(root: Path) -> dict[str, Any]:
     dataset_root = root / "dataset-quality"
     dataset_root.mkdir(parents=True, exist_ok=True)
-    Image.new("RGB", (24, 16), color=(90, 120, 150)).save(dataset_root / "normal.png")
-    Image.new("RGB", (24, 16), color=(255, 255, 255)).save(dataset_root / "clipped.png")
+    _write_output_contract_image(dataset_root / "train" / "cat" / "normal.png", color=(90, 120, 150), size=(24, 16))
+    _write_output_contract_image(
+        dataset_root / "train" / "cat" / "duplicate.png",
+        color=(90, 120, 150),
+        size=(24, 16),
+    )
+    _write_output_contract_image(dataset_root / "train" / "dog" / "dog.png", color=(80, 90, 100), size=(20, 20))
+    _write_output_contract_image(dataset_root / "val" / "cat" / "clipped.png", color=(255, 255, 255), size=(12, 24))
     report = inspect_dataset_quality(
         dataset_path=dataset_root,
-        max_images=2,
+        max_images=4,
         path_policy=PathPolicy([dataset_root]),
     )
     return _normalize_paths(report.model_dump(mode="json"), root)
+
+
+def _write_output_contract_image(path: Path, *, color: tuple[int, int, int], size: tuple[int, int]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    Image.new("RGB", size, color=color).save(path)
 
 
 def _preview_request_ready(root: Path) -> dict[str, Any]:

@@ -81,11 +81,17 @@ def test_output_contract_snapshot_includes_dataset_quality_report() -> None:
     assert "inspect_dataset_quality_ready" in snapshot
     report = snapshot["inspect_dataset_quality_ready"]
     assert report["status"] == "warning"
-    assert report["image_count"] == 2
-    assert report["sampled_image_count"] == 2
-    assert report["aggregate"]["image_count"] == 2
+    assert report["image_count"] == 4
+    assert report["sampled_image_count"] == 4
+    assert report["aggregate"]["image_count"] == 4
+    assert report["split_distribution"] == {"train": 3, "val": 1}
+    assert report["class_distribution"] == {"cat": 3, "dog": 1}
+    assert report["image_size_summary"]["aspect_ratio_min"] == 0.5
+    assert report["image_size_summary"]["aspect_ratio_max"] == 1.5
+    assert report["duplicate_image_count"] == 2
     assert "build_review_packet" in report["recommended_next_tools"]
     assert "dataset_high_clipping" in {finding["code"] for finding in report["findings"]}
+    assert "dataset_exact_duplicate_images" in {finding["code"] for finding in report["findings"]}
 
 
 def test_output_contract_snapshot_includes_interactive_tuning_session_export() -> None:
