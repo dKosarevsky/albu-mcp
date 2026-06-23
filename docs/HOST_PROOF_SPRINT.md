@@ -3,6 +3,9 @@
 This sprint proves the First 10 Minutes workflow in real MCP hosts without marking evidence as passed before a reviewer
 actually runs the host UI.
 
+Current machine-verifiable status is tracked in [docs/HOST_PROOF_STATUS.md](HOST_PROOF_STATUS.md). It does not replace
+manual host UI evidence.
+
 ## Goal
 
 Record dated `first_10_minutes_replay` evidence for at least:

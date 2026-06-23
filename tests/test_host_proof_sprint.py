@@ -57,6 +57,17 @@ def test_host_proof_sprint_cli_outputs_json() -> None:
     assert payload["checks"][0]["name"] == "runbook"
 
 
+def test_host_proof_status_records_v115_machine_proof_without_claiming_manual_ui() -> None:
+    status = Path("docs/HOST_PROOF_STATUS.md").read_text(encoding="utf-8")
+
+    assert "v1.15.0" in status
+    assert "28049831952" in status
+    assert "Manual Host UI: pending" in status
+    assert "First 10 Minutes Replay: pending" in status
+    assert 'scripts/check_first_10_minutes_replay.py --host Codex --host "Claude Code"' in status
+    assert "client_smoke_resource_flow: ok" in status
+
+
 def _valid_runbook_text() -> str:
     return """# Host Proof Sprint
 docs/FIRST_10_MINUTES.md
