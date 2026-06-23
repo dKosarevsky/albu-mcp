@@ -1,6 +1,7 @@
 import json
 import subprocess
 import sys
+import urllib.request
 from pathlib import Path
 
 import pytest
@@ -72,6 +73,19 @@ def test_mcp_registry_status_cli_accepts_registry_response_fixture(tmp_path: Pat
 
     assert "MCP Registry latest is active" in result.stdout
     assert "1.14.0" in result.stdout
+
+
+def test_mcp_registry_status_wraps_registry_timeouts(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    server_json_path = _write_server_json(tmp_path)
+
+    def raise_timeout(*_args: object, **_kwargs: object) -> None:
+        message = "read operation timed out"
+        raise TimeoutError(message)
+
+    monkeypatch.setattr(urllib.request, "urlopen", raise_timeout)
+
+    with pytest.raises(ValueError, match="Could not fetch MCP Registry metadata"):
+        validate_mcp_registry_status(server_json_path=server_json_path, timeout=0.01)
 
 
 def _write_server_json(tmp_path: Path) -> Path:

@@ -27,7 +27,18 @@ jobs:
         run: ./mcp-publisher login github-oidc
 
       - name: Publish metadata to MCP Registry
-        run: ./mcp-publisher publish
+        run: |
+          set +e
+          ./mcp-publisher publish 2>&1 | tee mcp-publisher.log
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -ne 0 ]; then
+            if grep -q "cannot publish duplicate version" mcp-publisher.log; then
+              echo "MCP Registry already has this version; continuing to verification."
+            else
+              exit "$status"
+            fi
+          fi
 
       - name: Verify MCP Registry metadata
         run: python scripts/check_mcp_registry_status.py --retries 6 --retry-delay 10 --timeout 30

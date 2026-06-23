@@ -362,6 +362,7 @@ def test_release_workflow_and_readme_publish_instructions_are_present() -> None:
     assert "gh release create" in release_commands
     assert workflow["jobs"]["publish-mcp-registry"]["needs"] == "post-release-smoke"
     assert "mcp-publisher publish" in mcp_registry_commands
+    assert "cannot publish duplicate version" in mcp_registry_commands
     assert "python scripts/check_mcp_registry_status.py" in mcp_registry_commands
     assert "uvx --from albumentationsx-mcp albumentationsx-mcp" in readme
     assert "uv publish --trusted-publishing automatic" in release_docs.read_text(encoding="utf-8")
@@ -372,6 +373,7 @@ def test_manual_mcp_publish_workflow_uses_registry_status_guard() -> None:
     commands = "\n".join(step.get("run", "") for step in workflow["jobs"]["publish"]["steps"])
 
     assert "mcp-publisher publish" in commands
+    assert "cannot publish duplicate version" in commands
     assert "python scripts/check_mcp_registry_status.py" in commands
 
 
@@ -506,5 +508,6 @@ def test_mcp_registry_publish_workflow_is_present() -> None:
     assert workflow["jobs"]["publish"]["permissions"]["id-token"] == "write"
     assert "mcp-publisher login github-oidc" in commands
     assert "mcp-publisher publish" in commands
+    assert "cannot publish duplicate version" in commands
     assert "python scripts/check_mcp_registry_status.py" in commands
     assert "registry.modelcontextprotocol.io/v0.1/servers" in registry_guard

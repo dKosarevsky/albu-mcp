@@ -4,6 +4,9 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 ## Unreleased
 
+- Hardened MCP Registry release verification so transient read timeouts are retryable and duplicate-version reruns can
+  continue to metadata verification.
+
 ## 1.15.0 - 2026-06-23
 
 - Added a Host Proof Sprint runbook and readiness guard for real First 10 Minutes replay evidence across MCP hosts.

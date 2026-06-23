@@ -186,7 +186,7 @@ def _fetch_registry_response(registry_url: str, *, timeout: float) -> dict[str, 
     try:
         with urllib.request.urlopen(registry_url, timeout=timeout) as response:  # noqa: S310
             payload = json.loads(response.read().decode("utf-8"))
-    except urllib.error.URLError as exc:
+    except (TimeoutError, urllib.error.URLError) as exc:
         msg = f"Could not fetch MCP Registry metadata from {registry_url}: {exc}"
         raise ValueError(msg) from exc
     except json.JSONDecodeError as exc:
