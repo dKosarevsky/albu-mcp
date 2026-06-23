@@ -108,6 +108,22 @@ def test_adoption_packet_is_linked_and_actionable() -> None:
         assert term in adoption
 
 
+def test_v1_readiness_tracks_current_product_gate() -> None:
+    readiness = Path("docs/V1_READINESS.md").read_text(encoding="utf-8")
+
+    for term in [
+        "v1.15.0",
+        "albumentationsx-mcp==1.15.0",
+        "MCP Registry",
+        "build_review_packet",
+        "review_packet_flow",
+        "docs/HOST_PROOF_STATUS.md",
+        "Manual Host UI",
+        "pending",
+    ]:
+        assert term in readiness
+
+
 def test_install_guide_covers_host_setup_and_examples() -> None:
     readme = Path("README.md").read_text(encoding="utf-8")
     usage = Path("docs/USAGE.md").read_text(encoding="utf-8")
