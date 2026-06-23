@@ -282,6 +282,58 @@
       }
     },
     {
+      "description": "Build one host-facing first-preview handoff packet for a local dataset.",
+      "name": "build_review_packet",
+      "parameters": {
+        "properties": {
+          "dataset_path": {
+            "title": "Dataset Path",
+            "type": "string"
+          },
+          "intensity": {
+            "default": "low",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Intensity",
+            "type": "string"
+          },
+          "max_images": {
+            "default": 8,
+            "title": "Max Images",
+            "type": "integer"
+          },
+          "targets": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Targets"
+          },
+          "task": {
+            "default": "classification",
+            "title": "Task",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dataset_path"
+        ],
+        "title": "build_review_packet_toolArguments",
+        "type": "object"
+      }
+    },
+    {
       "description": "Delete older preview runs beyond a retention count.",
       "name": "cleanup_preview_runs",
       "parameters": {

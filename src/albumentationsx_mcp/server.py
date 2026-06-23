@@ -49,6 +49,7 @@ from albumentationsx_mcp.ranking import rank_preview_candidates as rank_candidat
 from albumentationsx_mcp.recipes import list_recipe_catalog, recommend_recipe
 from albumentationsx_mcp.reports import PreviewReportService
 from albumentationsx_mcp.review import PreviewFeedbackStore
+from albumentationsx_mcp.review_packet import build_review_packet
 from albumentationsx_mcp.sessions import InteractiveTuningSessionStore
 from albumentationsx_mcp.tuning import TuningDecisionStore, build_tuning_session_summary
 from albumentationsx_mcp.workflows import (
@@ -96,6 +97,7 @@ _PUBLIC_TOOLS = [
     "run_host_smoke_check",
     "validate_preview_request",
     "plan_dataset_onboarding",
+    "build_review_packet",
 ]
 _PUBLIC_PROMPTS = [
     "build_robustness_augmentation_session",
@@ -412,6 +414,26 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
     ) -> dict[str, Any]:
         """Plan the first safe preview for a local image dataset folder."""
         return build_dataset_onboarding_report(
+            dataset_path=Path(dataset_path),
+            task=task,
+            intensity=intensity,
+            targets=targets,
+            max_images=max_images,
+            path_policy=PathPolicy(settings.allowed_roots),
+            pipeline_service=pipeline_service,
+            recipe_builder=recommend_recipe,
+        ).model_dump(mode="json", exclude_none=True)
+
+    @mcp.tool(name="build_review_packet")
+    def build_review_packet_tool(
+        dataset_path: str,
+        task: str = "classification",
+        intensity: Intensity = "low",
+        targets: list[str] | None = None,
+        max_images: int = 8,
+    ) -> dict[str, Any]:
+        """Build one host-facing first-preview handoff packet for a local dataset."""
+        return build_review_packet(
             dataset_path=Path(dataset_path),
             task=task,
             intensity=intensity,

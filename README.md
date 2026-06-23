@@ -56,7 +56,7 @@ After connecting an MCP host:
 1. Read `albumentationsx://examples/client-smoke`.
 2. Call `run_host_smoke_check`.
 3. Continue only when `preview_ready` is true.
-4. For a real folder, call `plan_dataset_onboarding` to sample local images and detect common dataset layouts safely.
+4. For a real folder, call `build_review_packet` to sample local images and get one first-preview handoff.
 5. Replace or reuse the paths in `preview_request_template.request`.
 6. Call `validate_preview_request` before rendering user-provided paths.
 7. Call `render_preview_batch` on a small local image set.
@@ -71,7 +71,7 @@ details and `remediation_actions` are documented in [docs/USAGE.md](docs/USAGE.m
 - Recipe and pipeline recommendation for classification, detection, segmentation, OCR, and balanced workflows.
 - Pipeline validation and explanation before rendering.
 - Preview request validation for missing files, outside-root paths, masks, and annotation counts.
-- Read-only dataset onboarding that detects common layouts and builds bbox/mask-aware first-preview templates.
+- Read-only dataset onboarding and review packets that build bbox/mask-aware first-preview templates.
 - Deterministic single-image and batch previews with contact sheets.
 - Preview comparison with `quality_summary` and suggested feedback tags.
 - Concrete preview feedback, interactive tuning sessions, ranking, dataset scoring, and visual reports.

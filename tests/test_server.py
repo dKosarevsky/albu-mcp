@@ -56,6 +56,7 @@ def test_server_exposes_documented_tool_names() -> None:
         "run_host_smoke_check",
         "validate_preview_request",
         "plan_dataset_onboarding",
+        "build_review_packet",
     }.issubset(tool_names)
 
 
@@ -131,6 +132,7 @@ def test_server_exposes_agent_workflow_resources() -> None:
         "run_host_smoke_check",
         "validate_preview_request",
         "plan_dataset_onboarding",
+        "build_review_packet",
         "albumentationsx://diagnostics/guide",
         "albumentationsx://recipes/catalog",
         "albumentationsx://examples/client-smoke",

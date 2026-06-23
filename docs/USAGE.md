@@ -298,6 +298,26 @@ Preview manifests record annotation observations like this:
 }
 ```
 
+## Review Packet
+
+Use `build_review_packet` when the host needs one compact first-preview handoff for a real local dataset folder. It wraps
+dataset onboarding, the safe preview template, the recommended next tool, the full review tool sequence, and the report
+handoff resource:
+
+```json
+{
+  "dataset_path": "/absolute/path/to/images",
+  "task": "classification",
+  "intensity": "low",
+  "targets": ["image"],
+  "max_images": 8
+}
+```
+
+When `preview_ready` is true, validate `preview_request_template.request` with `validate_preview_request`, render it with
+`render_preview_batch`, then follow `tool_sequence` through feedback, comparison, report export, and pipeline export. If
+`preview_ready` is false, show `review_brief` and `remediation_actions` before attempting previews.
+
 ## Golden Evals
 
 Run executable MCP scenarios locally before changing tool contracts:

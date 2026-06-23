@@ -4,6 +4,8 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 ## Unreleased
 
+- Added `build_review_packet` for one compact host-facing first-preview handoff that combines dataset onboarding,
+  preview request validation, the tuning tool sequence, and report handoff guidance.
 - Hardened MCP Registry release verification so transient read timeouts are retryable and duplicate-version reruns can
   continue to metadata verification.
 
