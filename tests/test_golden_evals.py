@@ -47,6 +47,9 @@ def test_golden_eval_assets_are_present() -> None:  # noqa: PLR0915
     interactive_session_scenario = next(
         scenario for scenario in scenarios["scenarios"] if scenario["name"] == "interactive_tuning_session_flow"
     )
+    review_packet_scenario = next(
+        scenario for scenario in scenarios["scenarios"] if scenario["name"] == "review_packet_flow"
+    )
 
     assert {scenario["name"] for scenario in scenarios["scenarios"]} == {
         "client_smoke_resource_flow",
@@ -62,6 +65,7 @@ def test_golden_eval_assets_are_present() -> None:  # noqa: PLR0915
         "real_sample_preview_smoke",
         "preview_request_troubleshooting",
         "interactive_tuning_session_flow",
+        "review_packet_flow",
     }
     assert smoke_scenario["client_smoke"] is True
     assert smoke_scenario["smoke_resources"] == [
@@ -94,6 +98,8 @@ def test_golden_eval_assets_are_present() -> None:  # noqa: PLR0915
     assert interactive_session_scenario["interactive_tuning_session"] is True
     assert interactive_session_scenario["accepted"] is True
     assert interactive_session_scenario["export_session_preview_report"] is True
+    assert review_packet_scenario["review_packet"] is True
+    assert review_packet_scenario["input_count"] == 2
     assert quality_scenario["record_preview_feedback"] is True
     assert quality_scenario["feedback_image_index"] == 7
     assert quality_scenario["assert_preview_report_feedback"] is True
@@ -105,9 +111,11 @@ def test_golden_eval_assets_are_present() -> None:  # noqa: PLR0915
     assert "_run_real_sample_smoke" in runner_source
     assert "_run_preview_request_troubleshooting" in runner_source
     assert "_run_interactive_tuning_session" in runner_source
+    assert "_run_review_packet_flow" in runner_source
     assert "run_host_smoke_check" in runner_source
     assert "validate_preview_request" in runner_source
     assert "plan_dataset_onboarding" in runner_source
+    assert "build_review_packet" in runner_source
     assert "_write_dataset_onboarding_annotations" in runner_source
     assert "_write_segmentation_onboarding_annotations" in runner_source
     assert "mask_polygons" in runner_source
@@ -170,5 +178,6 @@ def test_golden_eval_runner_executes_scenarios_over_stdio(tmp_path: Path) -> Non
     assert "real_sample_preview_smoke: ok" in completed.stdout
     assert "preview_request_troubleshooting: ok" in completed.stdout
     assert "interactive_tuning_session_flow: ok" in completed.stdout
+    assert "review_packet_flow: ok" in completed.stdout
     assert "dataset_onboarding_flow: ok" in completed.stdout
     assert "segmentation_onboarding_flow: ok" in completed.stdout

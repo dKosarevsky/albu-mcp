@@ -75,7 +75,11 @@ def _prepare_work_dirs(work_dir: Path) -> tuple[Path, Path]:
     return images_dir, artifacts_dir
 
 
-async def _run_scenario(session: ClientSession, scenario: dict[str, Any], images_dir: Path) -> None:  # noqa: PLR0912
+async def _run_scenario(  # noqa: PLR0911, PLR0912
+    session: ClientSession,
+    scenario: dict[str, Any],
+    images_dir: Path,
+) -> None:
     task = scenario["task"]
     targets = scenario["targets"]
     if scenario.get("client_smoke"):
@@ -90,6 +94,9 @@ async def _run_scenario(session: ClientSession, scenario: dict[str, Any], images
         return
     if scenario.get("dataset_onboarding"):
         await _run_dataset_onboarding(session, scenario, images_dir)
+        return
+    if scenario.get("review_packet"):
+        await _run_review_packet_flow(session, scenario, images_dir)
         return
     if scenario.get("recommend_recipe"):
         await _run_recipe_recommendation(session, scenario)
@@ -1037,6 +1044,114 @@ async def _run_dataset_onboarding(session: ClientSession, scenario: dict[str, An
         expect_overlay=bool(scenario.get("annotation_onboarding")),
     )
     await _delete_preview_run(session, scenario, preview["run_id"])
+
+
+async def _run_review_packet_flow(session: ClientSession, scenario: dict[str, Any], images_dir: Path) -> None:
+    image_paths = _write_real_sample_inputs(images_dir, scenario)
+    dataset_path = image_paths[0].parent
+    capabilities = await _read_resource_json(session, "albumentationsx://capabilities")
+    if "build_review_packet" not in capabilities["tools"]:
+        raise AssertionError(f"{scenario['name']} capabilities did not include build_review_packet: {capabilities}")
+    if "albumentationsx://examples/report-handoff" not in capabilities["workflow_resources"]:
+        raise AssertionError(f"{scenario['name']} capabilities did not include report handoff: {capabilities}")
+
+    packet = await _call_tool_json(
+        session,
+        "build_review_packet",
+        {
+            "dataset_path": str(dataset_path),
+            "task": scenario["task"],
+            "intensity": scenario.get("intensity", "medium"),
+            "targets": scenario["targets"],
+            "max_images": int(scenario.get("max_images", scenario.get("input_count", 1))),
+        },
+    )
+    if packet["status"] != "ok" or packet["preview_ready"] is not True:
+        raise AssertionError(f"{scenario['name']} review packet was not preview-ready: {packet}")
+    if packet["recommended_next_tool"] != "validate_preview_request":
+        raise AssertionError(f"{scenario['name']} returned wrong next tool: {packet}")
+    expected_tools = [
+        "validate_preview_request",
+        "render_preview_batch",
+        "adjust_pipeline",
+        "render_preview_batch",
+        "compare_preview_runs",
+        "export_preview_report",
+        "export_pipeline",
+    ]
+    if packet["tool_sequence"] != expected_tools:
+        raise AssertionError(f"{scenario['name']} returned wrong tool sequence: {packet}")
+    if packet["report_handoff"]["resource"] != "albumentationsx://examples/report-handoff":
+        raise AssertionError(f"{scenario['name']} returned wrong report handoff: {packet}")
+    if not packet["review_brief"]:
+        raise AssertionError(f"{scenario['name']} returned no review brief: {packet}")
+
+    template = packet.get("preview_request_template")
+    if template is None or template["tool"] != "render_preview_batch":
+        raise AssertionError(f"{scenario['name']} review packet returned no preview template: {packet}")
+    baseline_request = await _validate_preview_request_or_fail(
+        session,
+        scenario,
+        _real_sample_preview_request(template["request"], scenario, image_paths),
+    )
+    baseline = await _call_tool_json(session, "render_preview_batch", {"request": baseline_request})
+    await _assert_real_sample_preview_manifest(
+        session,
+        scenario,
+        baseline["run_id"],
+        expected_input_count=len(image_paths),
+    )
+
+    candidate_pipeline = await _call_tool_json(
+        session,
+        "adjust_pipeline",
+        {"pipeline": baseline_request["pipeline"], "feedback_tags": scenario.get("feedback_tags", [])},
+    )
+    candidate_request = await _validate_preview_request_or_fail(
+        session,
+        scenario,
+        {
+            **baseline_request,
+            "pipeline": candidate_pipeline,
+            "seed": int(scenario.get("seed", 0)) + 10,
+        },
+    )
+    candidate = await _call_tool_json(session, "render_preview_batch", {"request": candidate_request})
+    comparison = await _call_tool_json(
+        session,
+        "compare_preview_runs",
+        {
+            "baseline_run_id": baseline["run_id"],
+            "candidate_run_id": candidate["run_id"],
+            "quality_profile": scenario.get("quality_profile", "balanced"),
+        },
+    )
+    if comparison["candidate"]["run_id"] != candidate["run_id"]:
+        raise AssertionError(f"{scenario['name']} comparison returned wrong candidate: {comparison}")
+    report = await _call_tool_json(
+        session,
+        "export_preview_report",
+        {
+            "baseline_run_id": baseline["run_id"],
+            "candidate_run_ids": [candidate["run_id"]],
+            "feedback_tags_by_candidate": {candidate["run_id"]: scenario.get("feedback_tags", [])},
+            "accepted_candidate_ids": [candidate["run_id"]] if scenario.get("accepted") else [],
+            "quality_profile": scenario.get("quality_profile", "balanced"),
+            "output_format": "markdown",
+        },
+    )
+    if candidate["run_id"] not in report["content"]:
+        raise AssertionError(f"{scenario['name']} report did not include candidate: {report}")
+    exported = await _call_tool_json(
+        session,
+        "export_pipeline",
+        {"pipeline": candidate_pipeline, "output_format": scenario.get("export_format", "json")},
+    )
+    if not exported["content"]:
+        raise AssertionError(f"{scenario['name']} produced an empty export")
+
+    await _delete_preview_run(session, scenario, candidate["run_id"])
+    await _delete_preview_run(session, scenario, baseline["run_id"])
 
 
 def _assert_annotation_onboarding_report(

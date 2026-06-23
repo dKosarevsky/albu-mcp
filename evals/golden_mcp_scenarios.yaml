@@ -72,6 +72,22 @@ scenarios:
     seed: 521
     max_side: 160
 
+  - name: review_packet_flow
+    task: classification
+    intensity: low
+    targets: ["image"]
+    export_format: json
+    preview: false
+    review_packet: true
+    input_count: 2
+    max_images: 2
+    variants_per_image: 1
+    seed: 547
+    max_side: 160
+    quality_profile: classification
+    feedback_tags: ["too_noisy:low"]
+    accepted: true
+
   - name: classification_recommend_validate_explain_export
     task: classification
     intensity: low

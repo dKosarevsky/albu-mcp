@@ -20,6 +20,384 @@
     "task": "classification",
     "updated_at": "<updated-at>"
   },
+  "build_review_packet_ready": {
+    "dataset_path": "<OUTPUT_CONTRACT_ROOT>/review-packet/images",
+    "next_actions": [
+      "Call `validate_preview_request` with `preview_request_template.request`.",
+      "Call `render_preview_batch` with the validated request.",
+      "Inspect the contact sheet and collect concrete feedback tags.",
+      "Use `adjust_pipeline` or `start_tuning_session` after feedback."
+    ],
+    "onboarding_report": {
+      "allowed_roots": [
+        "<OUTPUT_CONTRACT_ROOT>/review-packet/images"
+      ],
+      "checks": [
+        {
+          "code": "dataset_path_accessible",
+          "details": {
+            "allowed_roots": [
+              "<OUTPUT_CONTRACT_ROOT>/review-packet/images"
+            ],
+            "path": "<OUTPUT_CONTRACT_ROOT>/review-packet/images"
+          },
+          "severity": "info",
+          "status": "ok",
+          "summary": "Dataset path is accessible: <OUTPUT_CONTRACT_ROOT>/review-packet/images"
+        },
+        {
+          "code": "dataset_images_found",
+          "details": {
+            "ignored_file_count": 0,
+            "image_count": 2,
+            "supported_extensions": [
+              ".bmp",
+              ".jpeg",
+              ".jpg",
+              ".png",
+              ".tif",
+              ".tiff",
+              ".webp"
+            ]
+          },
+          "severity": "info",
+          "status": "ok",
+          "summary": "Found 2 supported image file(s)."
+        },
+        {
+          "code": "recommended_pipeline_valid",
+          "details": {
+            "warning_count": 0
+          },
+          "severity": "info",
+          "status": "ok",
+          "summary": "Recommended pipeline validates for the selected targets."
+        }
+      ],
+      "dataset_path": "<OUTPUT_CONTRACT_ROOT>/review-packet/images",
+      "dataset_structure": {
+        "annotation_formats": [],
+        "balance_warnings": [],
+        "class_directories": [],
+        "detected_layouts": [],
+        "recipe_hints": [],
+        "splits": []
+      },
+      "ignored_file_count": 0,
+      "image_count": 2,
+      "next_actions": [
+        "Call `validate_preview_request` with `preview_request_template.request`.",
+        "Call `render_preview_batch` with the validated request.",
+        "Inspect the contact sheet and collect concrete feedback tags.",
+        "Use `adjust_pipeline` or `start_tuning_session` after feedback."
+      ],
+      "preview_ready": true,
+      "preview_request_template": {
+        "instructions": [
+          "Call `validate_preview_request` with this request before rendering.",
+          "Call `render_preview_batch` only after validation returns `valid=true`.",
+          "Inspect the contact sheet before increasing variants_per_image, max_side, or intensity.",
+          "Record concrete feedback tags before adjusting the pipeline."
+        ],
+        "request": {
+          "input_paths": [
+            "<OUTPUT_CONTRACT_ROOT>/review-packet/images/sample-a.png",
+            "<OUTPUT_CONTRACT_ROOT>/review-packet/images/sample-b.png"
+          ],
+          "max_side": 512,
+          "pipeline": {
+            "additional_targets": {},
+            "is_check_shapes": true,
+            "seed": 137,
+            "strict": true,
+            "transforms": [
+              {
+                "name": "HorizontalFlip",
+                "p": 0.2,
+                "params": {}
+              },
+              {
+                "name": "RandomBrightnessContrast",
+                "p": 0.2,
+                "params": {}
+              },
+              {
+                "name": "GaussNoise",
+                "p": 0.1,
+                "params": {
+                  "std_range": [
+                    0.02,
+                    0.1
+                  ]
+                }
+              },
+              {
+                "name": "MotionBlur",
+                "p": 0.06666666666666667,
+                "params": {
+                  "blur_range": [
+                    3,
+                    5
+                  ]
+                }
+              }
+            ]
+          },
+          "seed": 0,
+          "variants_per_image": 1
+        },
+        "tool": "render_preview_batch"
+      },
+      "recipe": {
+        "explanations": [
+          {
+            "kind": "quality_profile",
+            "rationale": "Selected the classification quality profile for the matched classification recipe.",
+            "selected": "classification"
+          },
+          {
+            "kind": "targets",
+            "rationale": "Used explicit targets supplied by the host so validation and preview rendering match the dataset.",
+            "selected": [
+              "image"
+            ]
+          },
+          {
+            "kind": "feedback_tags",
+            "rationale": "These feedback tags match the transforms and failure modes most likely to matter for this task.",
+            "selected": [
+              "too_noisy",
+              "too_blurry",
+              "object_unrecognizable"
+            ]
+          },
+          {
+            "kind": "workflow",
+            "rationale": "Render, rank, score, report, record the decision, then export only after preview acceptance.",
+            "selected": [
+              "render_preview_batch",
+              "rank_preview_candidates",
+              "score_dataset_preview_candidates",
+              "start_tuning_session",
+              "record_tuning_session_step",
+              "export_tuning_session",
+              "export_preview_report",
+              "record_tuning_decision",
+              "export_pipeline"
+            ]
+          }
+        ],
+        "feedback_tags": [
+          "too_noisy",
+          "too_blurry",
+          "object_unrecognizable"
+        ],
+        "intensity": "low",
+        "pipeline": {
+          "additional_targets": {},
+          "is_check_shapes": true,
+          "seed": 137,
+          "strict": true,
+          "transforms": [
+            {
+              "name": "HorizontalFlip",
+              "p": 0.2,
+              "params": {}
+            },
+            {
+              "name": "RandomBrightnessContrast",
+              "p": 0.2,
+              "params": {}
+            },
+            {
+              "name": "GaussNoise",
+              "p": 0.1,
+              "params": {
+                "std_range": [
+                  0.02,
+                  0.1
+                ]
+              }
+            },
+            {
+              "name": "MotionBlur",
+              "p": 0.06666666666666667,
+              "params": {
+                "blur_range": [
+                  3,
+                  5
+                ]
+              }
+            }
+          ]
+        },
+        "preview_guidance": [
+          "Use the classification quality profile when comparing preview runs.",
+          "Render at least two candidate preview runs before ranking.",
+          "Score the candidate set before exporting a report or final pipeline."
+        ],
+        "quality_profile": "classification",
+        "rationale": "Matched the classification recipe, selected the classification quality profile, and paired a conservative starter pipeline with preview ranking and report export tools.",
+        "recipe_name": "classification",
+        "recommended_tools": [
+          "render_preview_batch",
+          "rank_preview_candidates",
+          "score_dataset_preview_candidates",
+          "start_tuning_session",
+          "record_tuning_session_step",
+          "export_tuning_session",
+          "export_preview_report",
+          "record_tuning_decision",
+          "export_pipeline"
+        ],
+        "targets": [
+          "image"
+        ],
+        "task": "classification"
+      },
+      "remediation_actions": [],
+      "review_brief": [
+        "Preview-ready dataset: 2 sampled images out of 2 supported images.",
+        "Validate preview_request_template.request before rendering."
+      ],
+      "sample_paths": [
+        "<OUTPUT_CONTRACT_ROOT>/review-packet/images/sample-a.png",
+        "<OUTPUT_CONTRACT_ROOT>/review-packet/images/sample-b.png"
+      ],
+      "sampled_image_count": 2,
+      "status": "ok",
+      "validation": {
+        "errors": [],
+        "normalized_pipeline": {
+          "additional_targets": {},
+          "is_check_shapes": true,
+          "seed": 137,
+          "strict": true,
+          "transforms": [
+            {
+              "name": "HorizontalFlip",
+              "p": 0.2,
+              "params": {}
+            },
+            {
+              "name": "RandomBrightnessContrast",
+              "p": 0.2,
+              "params": {}
+            },
+            {
+              "name": "GaussNoise",
+              "p": 0.1,
+              "params": {
+                "std_range": [
+                  0.02,
+                  0.1
+                ]
+              }
+            },
+            {
+              "name": "MotionBlur",
+              "p": 0.06666666666666667,
+              "params": {
+                "blur_range": [
+                  3,
+                  5
+                ]
+              }
+            }
+          ]
+        },
+        "valid": true,
+        "warnings": []
+      }
+    },
+    "preview_ready": true,
+    "preview_request_template": {
+      "instructions": [
+        "Call `validate_preview_request` with this request before rendering.",
+        "Call `render_preview_batch` only after validation returns `valid=true`.",
+        "Inspect the contact sheet before increasing variants_per_image, max_side, or intensity.",
+        "Record concrete feedback tags before adjusting the pipeline."
+      ],
+      "request": {
+        "input_paths": [
+          "<OUTPUT_CONTRACT_ROOT>/review-packet/images/sample-a.png",
+          "<OUTPUT_CONTRACT_ROOT>/review-packet/images/sample-b.png"
+        ],
+        "max_side": 512,
+        "pipeline": {
+          "additional_targets": {},
+          "is_check_shapes": true,
+          "seed": 137,
+          "strict": true,
+          "transforms": [
+            {
+              "name": "HorizontalFlip",
+              "p": 0.2,
+              "params": {}
+            },
+            {
+              "name": "RandomBrightnessContrast",
+              "p": 0.2,
+              "params": {}
+            },
+            {
+              "name": "GaussNoise",
+              "p": 0.1,
+              "params": {
+                "std_range": [
+                  0.02,
+                  0.1
+                ]
+              }
+            },
+            {
+              "name": "MotionBlur",
+              "p": 0.06666666666666667,
+              "params": {
+                "blur_range": [
+                  3,
+                  5
+                ]
+              }
+            }
+          ]
+        },
+        "seed": 0,
+        "variants_per_image": 1
+      },
+      "tool": "render_preview_batch"
+    },
+    "recommended_next_tool": "validate_preview_request",
+    "remediation_actions": [],
+    "report_handoff": {
+      "required_inputs": [
+        "baseline_run_id",
+        "candidate_run_ids",
+        "quality_profile"
+      ],
+      "resource": "albumentationsx://examples/report-handoff",
+      "tool": "export_preview_report",
+      "when": "After rendering baseline and candidate previews, comparing runs, and recording concrete feedback."
+    },
+    "review_brief": [
+      "Preview-ready dataset: 2 sampled images out of 2 supported images.",
+      "Validate preview_request_template.request before rendering."
+    ],
+    "status": "ok",
+    "targets": [
+      "image"
+    ],
+    "task": "classification",
+    "tool_sequence": [
+      "validate_preview_request",
+      "render_preview_batch",
+      "adjust_pipeline",
+      "render_preview_batch",
+      "compare_preview_runs",
+      "export_preview_report",
+      "export_pipeline"
+    ]
+  },
   "cleanup_tuning_sessions": {
     "deleted_count": 1,
     "deleted_sessions": [

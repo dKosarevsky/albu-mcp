@@ -33,6 +33,7 @@ from albumentationsx_mcp.preview_validation import PreviewRequestValidator
 from albumentationsx_mcp.recipes import recommend_recipe
 from albumentationsx_mcp.reports import PreviewReportService
 from albumentationsx_mcp.review import PreviewFeedbackStore
+from albumentationsx_mcp.review_packet import build_review_packet
 from albumentationsx_mcp.sessions import InteractiveTuningSessionStore
 
 _REPORT_UUID_PATTERN = re.compile(r"preview-report-baseline-[0-9a-f]{32}\.(md|html)")
@@ -73,6 +74,7 @@ def build_output_contract_snapshot(root: Path) -> dict[str, Any]:
         "run_host_smoke_check_ready": _host_smoke_ready(root),
         "run_host_smoke_check_missing_allowed_root": _host_smoke_missing_allowed_root(root),
         "plan_dataset_onboarding_ready": _dataset_onboarding_ready(root),
+        "build_review_packet_ready": _review_packet_ready(root),
         "validate_preview_request_ready": _preview_request_ready(root),
         "validate_preview_request_missing_input": _preview_request_missing_input(root),
         "validate_preview_request_outside_allowed_root": _preview_request_outside_allowed_root(root),
@@ -389,6 +391,25 @@ def _dataset_onboarding_ready(root: Path) -> dict[str, Any]:
     return _normalize_paths(report.model_dump(mode="json"), root)
 
 
+def _review_packet_ready(root: Path) -> dict[str, Any]:
+    dataset_root = root / "review-packet" / "images"
+    dataset_root.mkdir(parents=True, exist_ok=True)
+    for name in ("sample-a.png", "sample-b.png"):
+        (dataset_root / name).write_bytes(b"placeholder image")
+    catalog = TransformCatalog()
+    packet = build_review_packet(
+        dataset_path=dataset_root,
+        task="classification",
+        intensity="low",
+        targets=["image"],
+        max_images=2,
+        path_policy=PathPolicy([dataset_root]),
+        pipeline_service=PipelineService(catalog),
+        recipe_builder=recommend_recipe,
+    )
+    return _normalize_paths(packet.model_dump(mode="json"), root)
+
+
 def _preview_request_ready(root: Path) -> dict[str, Any]:
     validator, images_root = _preview_request_validator(root)
     image_path = images_root / "sample.png"
@@ -476,6 +497,7 @@ def _diagnostics_public_surface() -> PublicSurface:
             "run_host_smoke_check",
             "validate_preview_request",
             "plan_dataset_onboarding",
+            "build_review_packet",
         ],
         prompts=[
             "build_robustness_augmentation_session",

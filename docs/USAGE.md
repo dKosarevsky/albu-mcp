@@ -326,10 +326,10 @@ Run executable MCP scenarios locally before changing tool contracts:
 uv run python scripts/run_golden_evals.py
 ```
 
-The golden suite includes a real sample first-preview smoke and a preview-request troubleshooting scenario. They call
-`run_host_smoke_check`, read `albumentationsx://examples/first-preview`, validate filled preview requests, render
-deterministic local sample PNGs, read preview manifests, compare runs with `quality_summary`, and delete generated runs
-through MCP stdio.
+The golden suite includes a real sample first-preview smoke, a Review Packet handoff flow, and a preview-request
+troubleshooting scenario. They call `run_host_smoke_check`, `build_review_packet`, read
+`albumentationsx://examples/first-preview`, validate filled preview requests, render deterministic local sample PNGs,
+read preview manifests, compare runs with `quality_summary`, and delete generated runs through MCP stdio.
 
 Public MCP contract changes should also follow [docs/COMPATIBILITY.md](COMPATIBILITY.md) and update the contract snapshot
 when tool, resource, prompt, or representative output schemas change:

@@ -62,6 +62,19 @@ def test_output_contract_snapshot_includes_preview_request_validation_examples()
     assert "input_path_outside_allowed_root" in {check["code"] for check in outside["checks"]}
 
 
+def test_output_contract_snapshot_includes_review_packet_handoff() -> None:
+    snapshot = json.loads(_SNAPSHOT_PATH.read_text(encoding="utf-8"))
+
+    assert "build_review_packet_ready" in snapshot
+    packet = snapshot["build_review_packet_ready"]
+    assert packet["status"] == "ok"
+    assert packet["preview_ready"] is True
+    assert packet["recommended_next_tool"] == "validate_preview_request"
+    assert packet["preview_request_template"]["tool"] == "render_preview_batch"
+    assert "export_preview_report" in packet["tool_sequence"]
+    assert packet["report_handoff"]["resource"] == "albumentationsx://examples/report-handoff"
+
+
 def test_output_contract_snapshot_includes_interactive_tuning_session_export() -> None:
     snapshot = json.loads(_SNAPSHOT_PATH.read_text(encoding="utf-8"))
 
