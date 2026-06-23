@@ -64,6 +64,7 @@ class DatasetOnboardingReport(StrictModel):
     checks: list[DatasetOnboardingCheck]
     recipe: RecipeRecommendation
     validation: PipelineValidationReport
+    review_brief: list[str] = Field(default_factory=list)
     next_actions: list[str]
     remediation_actions: list[DatasetOnboardingRemediationAction]
     dataset_structure: DatasetStructureProfile | None = None
@@ -119,6 +120,13 @@ def build_dataset_onboarding_report(  # noqa: PLR0913
         checks=checks,
         recipe=recipe,
         validation=validation,
+        review_brief=_review_brief(
+            preview_ready=preview_ready,
+            image_counts=(len(image_paths), len(sample_paths)),
+            recipe=recipe,
+            dataset_structure=dataset_structure,
+            template=template,
+        ),
         next_actions=_next_actions(preview_ready=preview_ready, checks=checks),
         remediation_actions=_remediation_actions(checks),
         dataset_structure=dataset_structure,
@@ -384,6 +392,46 @@ def _next_actions(*, preview_ready: bool, checks: list[DatasetOnboardingCheck]) 
     if not actions:
         actions.append("Resolve dataset onboarding warnings before rendering previews.")
     return actions
+
+
+def _review_brief(
+    *,
+    preview_ready: bool,
+    image_counts: tuple[int, int],
+    recipe: RecipeRecommendation,
+    dataset_structure: DatasetStructureProfile | None,
+    template: DatasetPreviewRequestTemplate | None,
+) -> list[str]:
+    """Build a concise host-facing summary for first-preview review."""
+    image_count, sampled_image_count = image_counts
+    status = "Preview-ready dataset" if preview_ready else "Dataset is not preview-ready"
+    image_word = "image" if image_count == 1 else "images"
+    sampled_word = "image" if sampled_image_count == 1 else "images"
+    brief = [f"{status}: {sampled_image_count} sampled {sampled_word} out of {image_count} supported {image_word}."]
+    if dataset_structure is not None:
+        if dataset_structure.detected_layouts:
+            brief.append(f"Detected layouts: {', '.join(sorted(dataset_structure.detected_layouts))}.")
+        annotation_formats = sorted({item.format for item in dataset_structure.annotation_formats})
+        if annotation_formats:
+            brief.append(f"Annotation formats: {', '.join(annotation_formats)}.")
+        brief.extend(dataset_structure.balance_warnings)
+    if "bboxes" in recipe.targets:
+        brief.append("Bounding boxes require bbox_params-compatible transforms and overlay review before export.")
+    if "mask" in recipe.targets or "masks" in recipe.targets:
+        brief.append("Masks require mask-aware review and coverage checks before accepting geometric transforms.")
+    if template is not None and template.annotation_summary:
+        summary = template.annotation_summary
+        brief.append(
+            "Annotation coverage: "
+            f"{summary['matched_count']}/{summary['sample_count']} samples matched, "
+            f"bbox_count={summary['bbox_count']}, "
+            f"mask_formats={','.join(summary['mask_formats']) or 'none'}."
+        )
+    if preview_ready:
+        brief.append("Validate preview_request_template.request before rendering.")
+    else:
+        brief.append("Resolve remediation_actions before rendering local previews.")
+    return brief
 
 
 def _remediation_actions(checks: list[DatasetOnboardingCheck]) -> list[DatasetOnboardingRemediationAction]:

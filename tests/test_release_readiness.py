@@ -14,6 +14,7 @@ def test_release_readiness_accepts_current_fast_guards(tmp_path: Path) -> None:
         "manual_host_records",
         "host_acceptance_evidence",
         "first_10_minutes",
+        "host_proof_sprint",
         "mcp_contract_snapshot",
         "output_contract_snapshot",
     ]
@@ -22,11 +23,11 @@ def test_release_readiness_accepts_current_fast_guards(tmp_path: Path) -> None:
 
 
 def test_release_readiness_runs_optional_version_check(tmp_path: Path) -> None:
-    report = check_release_readiness(ReleaseReadinessConfig(tag="v1.14.0", contract_output_work_dir=tmp_path))
+    report = check_release_readiness(ReleaseReadinessConfig(tag="v1.15.0", contract_output_work_dir=tmp_path))
 
     assert report.ok is True
     assert report.checks[-1].name == "release_version"
-    assert report.checks[-1].message == "release version 1.14.0 is consistent"
+    assert report.checks[-1].message == "release version 1.15.0 is consistent"
 
 
 def test_release_readiness_reports_version_mismatch(tmp_path: Path) -> None:

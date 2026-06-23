@@ -15,6 +15,7 @@ if not __package__:
 from scripts.check_contract_snapshots import check_contract_snapshots
 from scripts.check_first_10_minutes import check_first_10_minutes
 from scripts.check_host_acceptance_report import check_host_acceptance_report
+from scripts.check_host_proof_sprint import check_host_proof_sprint
 from scripts.check_release_version import validate_release_versions
 from scripts.validate_host_manual_runs import validate_host_manual_runs
 
@@ -69,6 +70,7 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
         _check_manual_host_records(config.manual_runs_path),
         _check_host_acceptance_evidence(root=config.host_report_root, report_path=config.host_report_path),
         _check_first_10_minutes_entrypoints(),
+        _check_host_proof_sprint_entrypoints(),
         *_check_contract_snapshot_freshness(
             mcp_snapshot_path=config.mcp_snapshot_path,
             output_snapshot_path=config.output_snapshot_path,
@@ -169,6 +171,22 @@ def _check_first_10_minutes_entrypoints() -> ReleaseReadinessCheck:
         name="first_10_minutes",
         ok=True,
         message=f"first-10-minutes entrypoints are valid ({len(report.checks)} checks)",
+    )
+
+
+def _check_host_proof_sprint_entrypoints() -> ReleaseReadinessCheck:
+    report = check_host_proof_sprint()
+    failed = [check for check in report.checks if not check.ok]
+    if failed:
+        return ReleaseReadinessCheck(
+            name="host_proof_sprint",
+            ok=False,
+            message="; ".join(f"{check.name}: {check.message}" for check in failed),
+        )
+    return ReleaseReadinessCheck(
+        name="host_proof_sprint",
+        ok=True,
+        message=f"host proof sprint entrypoints are valid ({len(report.checks)} checks)",
     )
 
 

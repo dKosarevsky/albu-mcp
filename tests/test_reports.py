@@ -43,6 +43,9 @@ def test_preview_report_service_exports_markdown_artifact_with_decision_trail(tm
     assert artifact_path.exists()
     assert artifact_path.read_text(encoding="utf-8") == report.content
     assert "# AlbumentationsX MCP Preview Report" in report.content
+    assert "## Review Summary" in report.content
+    assert "- Recommended action: export_pipeline" in report.content
+    assert "- Best candidate: candidate-a (score 100.0, risk low)." in report.content
     assert str(baseline_sheet) in report.content
     assert str(candidate_sheet) in report.content
     assert "decision-a" in report.content
@@ -109,6 +112,8 @@ def test_preview_report_service_exports_html_with_escaped_dynamic_text(tmp_path:
 
     assert report.format == "html"
     assert Path(report.artifact.path).suffix == ".html"
+    assert "<h2>Review Summary</h2>" in report.content
+    assert "Recommended action: export_pipeline" in report.content
     assert "<script>" not in report.content
     assert "candidate-&lt;script&gt;" in report.content
     assert contact_sheet.resolve().as_uri() in report.content

@@ -5,6 +5,15 @@
 - Candidates: 2
 - Best candidate: candidate-a
 
+## Review Summary
+
+- Recommended action: export_pipeline
+- Best candidate: candidate-a (score 100.0, risk low).
+- Feedback trail: 0 concrete record(s), 0 accepted.
+- Decisions: 1 recorded, 1 accepted.
+- Tuning sessions: 0 linked.
+- Guidance: Best dataset candidate is candidate-a.; Best candidate is candidate-a with score 100.0.; The best candidate is marked export-ready.
+
 ## Contact Sheets
 
 ### Baseline
@@ -45,4 +54,3 @@ No interactive tuning sessions matched this report.
 ## Concrete Preview Feedback
 
 No concrete preview feedback matched this report.
-

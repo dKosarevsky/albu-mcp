@@ -17,6 +17,7 @@ from albumentationsx_mcp.models import (
     InteractiveTuningSession,
     PreviewFeedbackRecord,
     PreviewReportExport,
+    RankedPreviewCandidate,
     TuningDecisionRecord,
 )
 
@@ -127,6 +128,10 @@ def _render_markdown_report(  # noqa: PLR0913
         f"- Candidates: {score.candidate_count}",
         f"- Best candidate: {score.best_candidate_run_id or 'none'}",
         "",
+        "## Review Summary",
+        "",
+        *_markdown_review_summary(score, decisions, feedback_records, tuning_sessions),
+        "",
         "## Contact Sheets",
         "",
         "### Baseline",
@@ -226,6 +231,8 @@ def _render_html_report(  # noqa: PLR0913
             f"<li>Candidates: {score.candidate_count}</li>",
             f"<li>Best candidate: {html.escape(score.best_candidate_run_id or 'none')}</li>",
             "</ul>",
+            "<h2>Review Summary</h2>",
+            _html_review_summary(score, decisions, feedback_records, tuning_sessions),
             "<h2>Baseline Contact Sheets</h2>",
             _html_path_list(_contact_sheet_paths(baseline_manifest)),
             "<h2>Candidates</h2>",
@@ -252,6 +259,56 @@ def _render_html_report(  # noqa: PLR0913
 
 def _contact_sheets_by_run_id(manifests: list[dict[str, Any]]) -> dict[str, list[str]]:
     return {str(manifest.get("run_id", "")): _contact_sheet_paths(manifest) for manifest in manifests}
+
+
+def _markdown_review_summary(
+    score: DatasetPreviewScore,
+    decisions: list[TuningDecisionRecord],
+    feedback_records: list[PreviewFeedbackRecord],
+    tuning_sessions: list[InteractiveTuningSession],
+) -> list[str]:
+    candidate = _best_candidate(score)
+    lines = [
+        f"- Recommended action: {_recommended_action(score)}",
+        f"- Best candidate: {_candidate_summary(candidate)}",
+        f"- Feedback trail: {len(feedback_records)} concrete record(s), "
+        f"{sum(record.accepted for record in feedback_records)} accepted.",
+        f"- Decisions: {len(decisions)} recorded, {sum(decision.accepted for decision in decisions)} accepted.",
+        f"- Tuning sessions: {len(tuning_sessions)} linked.",
+    ]
+    if score.decision_guidance:
+        lines.append(f"- Guidance: {'; '.join(score.decision_guidance)}")
+    return lines
+
+
+def _html_review_summary(
+    score: DatasetPreviewScore,
+    decisions: list[TuningDecisionRecord],
+    feedback_records: list[PreviewFeedbackRecord],
+    tuning_sessions: list[InteractiveTuningSession],
+) -> str:
+    lines = _markdown_review_summary(score, decisions, feedback_records, tuning_sessions)
+    return "<ul>" + "".join(f"<li>{html.escape(line.removeprefix('- '))}</li>" for line in lines) + "</ul>"
+
+
+def _best_candidate(score: DatasetPreviewScore) -> RankedPreviewCandidate | None:
+    for candidate in score.ranking.ranked_candidates:
+        if candidate.candidate_run_id == score.best_candidate_run_id:
+            return candidate
+    return score.ranking.ranked_candidates[0] if score.ranking.ranked_candidates else None
+
+
+def _recommended_action(score: DatasetPreviewScore) -> str:
+    candidate = _best_candidate(score)
+    if candidate is not None:
+        return candidate.recommended_next_tool
+    return "render_preview_batch"
+
+
+def _candidate_summary(candidate: RankedPreviewCandidate | None) -> str:
+    if candidate is None:
+        return "none"
+    return f"{candidate.candidate_run_id} (score {candidate.quality_score:.1f}, risk {candidate.quality_risk})."
 
 
 def _contact_sheet_paths(manifest: dict[str, Any]) -> list[str]:

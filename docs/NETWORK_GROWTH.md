@@ -56,28 +56,15 @@ instructions still match the repository.
 
 ## Upstream Outreach
 
-Use GitHub Discussions or issues before opening a docs PR against AlbumentationsX. The first message should be short and
-concrete:
+Status: MERGED.
 
-Current status: upstream issue opened at
-[albumentations-team/AlbumentationsX#285](https://github.com/albumentations-team/AlbumentationsX/issues/285).
-If maintainers are open to it, use [docs/UPSTREAM_PR_PACKET.md](UPSTREAM_PR_PACKET.md) as the source for a small
-community integration docs PR.
+- Upstream PR: [albumentations-team/AlbumentationsX#289](https://github.com/albumentations-team/AlbumentationsX/pull/289)
+- Upstream docs source:
+  [AlbumentationsX docs/integrations/mcp.md](https://github.com/albumentations-team/AlbumentationsX/blob/main/docs/integrations/mcp.md)
+- Local source packet: [docs/UPSTREAM_PR_PACKET.md](UPSTREAM_PR_PACKET.md)
 
-```markdown
-Hi, I built a small MCP server for AlbumentationsX workflows:
-https://github.com/dKosarevsky/albu-mcp
-
-It lets MCP hosts discover transforms, validate pipelines, render deterministic local preview batches, collect concrete
-feedback such as `too_noisy:high`, compare preview runs, and export reproducible pipeline specs.
-
-The target use case is interactive dataset augmentation review: an agent proposes several distorted variants, the user
-rejects examples that are too noisy, and the accepted pipeline is exported for training/review.
-
-Would this fit as a community integration link or example in the AlbumentationsX docs?
-```
-
-Avoid claiming official affiliation unless AlbumentationsX maintainers explicitly approve it.
+Next follow-up: keep local onboarding, first-10-minutes, and host proof docs aligned with the upstream guide. Avoid
+claiming official ownership; describe this project as a community MCP integration accepted into the AlbumentationsX docs.
 
 ## Content Loop
 

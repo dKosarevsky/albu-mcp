@@ -3,7 +3,7 @@
   "name": "io.github.dKosarevsky/albu-mcp",
   "title": "AlbumentationsX MCP",
   "description": "AlbumentationsX MCP for batch previews, compare preview runs, segmentation masks, and exports.",
-  "version": "1.14.0",
+  "version": "1.15.0",
   "websiteUrl": "https://github.com/dKosarevsky/albu-mcp#readme",
   "icons": [
     {
@@ -23,7 +23,7 @@
     {
       "registryType": "pypi",
       "identifier": "albumentationsx-mcp",
-      "version": "1.14.0",
+      "version": "1.15.0",
       "transport": {
         "type": "stdio"
       },

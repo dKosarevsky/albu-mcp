@@ -129,9 +129,12 @@ def test_network_growth_docs_are_linked() -> None:
 
     assert "[docs/NETWORK_GROWTH.md](docs/NETWORK_GROWTH.md)" in readme
     assert "scripts/check_directory_presence.py" in readme
+    assert "albumentations-team/AlbumentationsX/pull/289" in readme
+    assert "AlbumentationsX/blob/main/docs/integrations/mcp.md" in readme
     assert "Official MCP Registry" in docs
     assert "Glama" in docs
-    assert "https://github.com/albumentations-team/AlbumentationsX/issues/285" in docs
+    assert "https://github.com/albumentations-team/AlbumentationsX/pull/289" in docs
+    assert "MERGED" in docs
 
 
 def _write_server_json(tmp_path: Path) -> Path:

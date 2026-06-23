@@ -1,8 +1,7 @@
 # AlbumentationsX MCP
 
-Model Context Protocol server for [AlbumentationsX](https://github.com/albumentations-team/AlbumentationsX):
-transform discovery, pipeline validation, deterministic previews, feedback loops, and reproducible exports for computer
-vision augmentation work.
+Model Context Protocol server for [AlbumentationsX](https://github.com/albumentations-team/AlbumentationsX): transform
+discovery, pipeline validation, deterministic previews, feedback loops, and reproducible exports for computer vision.
 
 <!-- mcp-name: io.github.dKosarevsky/albu-mcp -->
 
@@ -47,9 +46,8 @@ uvx --from albumentationsx-mcp albumentationsx-mcp \
   --artifact-root /absolute/path/to/albu-artifacts
 ```
 
-Copyable host snippets are in [examples](examples/). Full host setup is in [docs/INSTALL.md](docs/INSTALL.md).
-For a guided trial from install to exported pipeline, use
-[docs/FIRST_10_MINUTES.md](docs/FIRST_10_MINUTES.md).
+Copyable host snippets are in [examples](examples/). Full setup is in [docs/INSTALL.md](docs/INSTALL.md); the guided
+trial is [docs/FIRST_10_MINUTES.md](docs/FIRST_10_MINUTES.md).
 
 ## Host Workflow
 
@@ -82,19 +80,23 @@ details and `remediation_actions` are documented in [docs/USAGE.md](docs/USAGE.m
 The public MCP surface is kept stable through reviewed contract snapshots. Compatibility rules are in
 [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
 
+The community guide was accepted upstream in [AlbumentationsX#289](https://github.com/albumentations-team/AlbumentationsX/pull/289);
+source: [docs/integrations/mcp.md](https://github.com/albumentations-team/AlbumentationsX/blob/main/docs/integrations/mcp.md).
+
 ## Documentation
 
 - [docs/INSTALL.md](docs/INSTALL.md): PyPI, MCP Registry, Claude Desktop, Claude Code, Cursor, Codex, bounded roots.
 - [docs/FIRST_10_MINUTES.md](docs/FIRST_10_MINUTES.md): shortest path from install to smoke check, preview,
   feedback, comparison, and export.
+- [docs/HOST_PROOF_SPRINT.md](docs/HOST_PROOF_SPRINT.md): runbook for recording real host replay evidence.
 - [docs/USAGE.md](docs/USAGE.md): end-to-end MCP host workflow and tool details.
 - [docs/RECIPES.md](docs/RECIPES.md): task-specific host recipes.
 - [docs/ADOPTION.md](docs/ADOPTION.md): short trial, host setup, workflow examples, and outreach copy.
 - [docs/COMMUNITY_FEEDBACK.md](docs/COMMUNITY_FEEDBACK.md): privacy-safe GitHub issue intake for host and workflow
   feedback.
 - [docs/NETWORK_GROWTH.md](docs/NETWORK_GROWTH.md): public directory status, registry follow-up, and outreach plan.
-- [docs/UPSTREAM_PR_PACKET.md](docs/UPSTREAM_PR_PACKET.md): copyable community integration packet for AlbumentationsX
-  docs if maintainers approve it.
+- [docs/UPSTREAM_PR_PACKET.md](docs/UPSTREAM_PR_PACKET.md): upstream integration source that became
+  [AlbumentationsX#289](https://github.com/albumentations-team/AlbumentationsX/pull/289).
 - [examples/distortion_review_workflow.md](examples/distortion_review_workflow.md): rejected noisy preview review loop.
 - [docs/DEMO.md](docs/DEMO.md): generated preview comparison demo.
 - [docs/HOST_ACCEPTANCE.md](docs/HOST_ACCEPTANCE.md), [docs/HOST_MATRIX.md](docs/HOST_MATRIX.md), and
@@ -117,6 +119,7 @@ uv run ty check
 uv run python scripts/validate_host_manual_runs.py
 uv run python scripts/check_host_acceptance_report.py
 uv run python scripts/check_first_10_minutes.py
+uv run python scripts/check_host_proof_sprint.py
 uv run python scripts/check_contract_snapshots.py
 uv run python scripts/check_demo_assets.py --output-dir docs/assets/demo --check
 uv run python scripts/check_release_readiness.py

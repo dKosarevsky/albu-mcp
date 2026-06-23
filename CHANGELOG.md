@@ -4,6 +4,17 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 ## Unreleased
 
+## 1.15.0 - 2026-06-23
+
+- Added a Host Proof Sprint runbook and readiness guard for real First 10 Minutes replay evidence across MCP hosts.
+- Added `review_brief` to dataset onboarding reports so hosts can summarize dataset readiness, detected layouts,
+  annotation formats, bbox/mask risks, and the safe next preview step.
+- Added shareable Markdown and HTML review summaries to preview reports with recommended action, best candidate,
+  feedback, decision, and tuning-session counts.
+- Recorded the merged AlbumentationsX upstream integration PR and linked the upstream docs source from README and
+  network-growth docs.
+- Prepared v1.15.0 package and MCP Registry metadata for release.
+
 ## 1.14.0 - 2026-06-21
 
 - Added targeted manual host acceptance packets with per-host filtering, evidence checklists, and explicit

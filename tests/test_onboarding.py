@@ -157,6 +157,11 @@ def test_dataset_onboarding_report_detects_yolo_and_coco_annotations(tmp_path: P
     assert "coco_manifest" in report.dataset_structure.detected_layouts
     assert {item.format for item in report.dataset_structure.annotation_formats} == {"coco", "yolo"}
     assert any("bbox" in hint.lower() or "detection" in hint.lower() for hint in report.dataset_structure.recipe_hints)
+    assert report.review_brief[0] == "Preview-ready dataset: 1 sampled image out of 1 supported image."
+    assert any("Detected layouts: coco_manifest, yolo_labels." in item for item in report.review_brief)
+    assert any("Annotation formats: coco, yolo." in item for item in report.review_brief)
+    assert any("Bounding boxes require bbox_params-compatible transforms" in item for item in report.review_brief)
+    assert any("Validate preview_request_template.request before rendering." in item for item in report.review_brief)
 
 
 def test_dataset_onboarding_report_builds_annotation_aware_preview_template(tmp_path: Path) -> None:
@@ -248,6 +253,8 @@ def test_dataset_onboarding_report_builds_segmentation_mask_preview_template(tmp
         "mask_formats": ["polygons"],
         "warnings": [],
     }
+    assert any("Masks require mask-aware review" in item for item in report.review_brief)
+    assert any("Annotation formats: coco." in item for item in report.review_brief)
     assert any("mask" in instruction.lower() for instruction in report.preview_request_template.instructions)
     assert any("mask_polygons=1" in instruction for instruction in report.preview_request_template.instructions)
 
