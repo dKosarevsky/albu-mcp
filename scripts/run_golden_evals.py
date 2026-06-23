@@ -98,6 +98,9 @@ async def _run_scenario(  # noqa: PLR0911, PLR0912
     if scenario.get("review_packet"):
         await _run_review_packet_flow(session, scenario, images_dir)
         return
+    if scenario.get("dataset_quality_inspection"):
+        await _run_dataset_quality_inspection(session, scenario, images_dir)
+        return
     if scenario.get("recommend_recipe"):
         await _run_recipe_recommendation(session, scenario)
     if scenario.get("real_sample_smoke"):
@@ -1152,6 +1155,50 @@ async def _run_review_packet_flow(session: ClientSession, scenario: dict[str, An
 
     await _delete_preview_run(session, scenario, candidate["run_id"])
     await _delete_preview_run(session, scenario, baseline["run_id"])
+
+
+async def _run_dataset_quality_inspection(session: ClientSession, scenario: dict[str, Any], images_dir: Path) -> None:
+    image_paths = _write_real_sample_inputs(images_dir, scenario)
+    dataset_path = image_paths[0].parent
+    clipped_path = dataset_path / "clipped.png"
+    Image.new("RGB", (64, 48), color=(255, 255, 255)).save(clipped_path)
+    capabilities = await _read_resource_json(session, "albumentationsx://capabilities")
+    if "inspect_dataset_quality" not in capabilities["tools"]:
+        raise AssertionError(f"{scenario['name']} capabilities did not include inspect_dataset_quality: {capabilities}")
+
+    quality = await _call_tool_json(
+        session,
+        "inspect_dataset_quality",
+        {
+            "dataset_path": str(dataset_path),
+            "max_images": int(scenario.get("max_images", scenario.get("input_count", 1))),
+        },
+    )
+    if quality["status"] != "warning":
+        raise AssertionError(f"{scenario['name']} quality report did not surface findings: {quality}")
+    if quality["image_count"] != len(image_paths) + 1:
+        raise AssertionError(f"{scenario['name']} quality report image count mismatch: {quality}")
+    if quality["sampled_image_count"] != int(scenario.get("max_images", len(image_paths))):
+        raise AssertionError(f"{scenario['name']} quality report sample count mismatch: {quality}")
+    if "build_review_packet" not in quality["recommended_next_tools"]:
+        raise AssertionError(f"{scenario['name']} quality report missed review packet next tool: {quality}")
+    finding_codes = {finding["code"] for finding in quality["findings"]}
+    if "dataset_high_clipping" not in finding_codes:
+        raise AssertionError(f"{scenario['name']} quality report missed clipping finding: {quality}")
+
+    packet = await _call_tool_json(
+        session,
+        "build_review_packet",
+        {
+            "dataset_path": str(dataset_path),
+            "task": scenario["task"],
+            "intensity": scenario.get("intensity", "medium"),
+            "targets": scenario["targets"],
+            "max_images": int(scenario.get("max_images", scenario.get("input_count", 1))),
+        },
+    )
+    if packet["preview_ready"] is not True:
+        raise AssertionError(f"{scenario['name']} review packet did not remain usable after quality scan: {packet}")
 
 
 def _assert_annotation_onboarding_report(

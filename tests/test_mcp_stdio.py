@@ -68,4 +68,5 @@ def test_mcp_stdio_lists_documented_tools(tmp_path: Path) -> None:
         "validate_preview_request",
         "plan_dataset_onboarding",
         "build_review_packet",
+        "inspect_dataset_quality",
     }.issubset(tool_names)

@@ -119,6 +119,22 @@ without sending bboxes to pipelines that do not declare `bbox_params`. The templ
 Call `validate_preview_request` with `preview_request_template.request` before rendering. Stable remediation action codes
 include `move_dataset_under_allowed_root`, `fix_dataset_path`, `add_dataset_images`, and `fix_recommended_pipeline`.
 
+## Dataset Quality Inspection
+
+Use `inspect_dataset_quality` before the first real preview when the host needs a cheap read-only signal about the input
+folder. It samples supported images under `--allowed-root`, reports aggregate brightness, contrast, entropy, clipping,
+and unreadable files, then recommends whether to continue with `build_review_packet` or repair the dataset first:
+
+```json
+{
+  "dataset_path": "/absolute/path/to/images",
+  "max_images": 8
+}
+```
+
+The tool does not render augmented variants or mutate files. Treat `findings` as preflight hints; the final review still
+comes from `render_preview_batch`, contact sheets, `compare_preview_runs`, and human feedback.
+
 ## Preview Request Validation
 
 Use `validate_preview_request` after filling `preview_request_template.request` and before rendering user-provided paths.

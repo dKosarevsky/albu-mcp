@@ -729,6 +729,28 @@
       }
     },
     {
+      "description": "Inspect local dataset image quality before first preview rendering.",
+      "name": "inspect_dataset_quality",
+      "parameters": {
+        "properties": {
+          "dataset_path": {
+            "title": "Dataset Path",
+            "type": "string"
+          },
+          "max_images": {
+            "default": 8,
+            "title": "Max Images",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "dataset_path"
+        ],
+        "title": "inspect_dataset_quality_toolArguments",
+        "type": "object"
+      }
+    },
+    {
       "description": "List structured feedback tags accepted by adjust_pipeline.",
       "name": "list_feedback_tags",
       "parameters": {

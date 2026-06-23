@@ -57,6 +57,7 @@ def test_server_exposes_documented_tool_names() -> None:
         "validate_preview_request",
         "plan_dataset_onboarding",
         "build_review_packet",
+        "inspect_dataset_quality",
     }.issubset(tool_names)
 
 
@@ -133,6 +134,7 @@ def test_server_exposes_agent_workflow_resources() -> None:
         "validate_preview_request",
         "plan_dataset_onboarding",
         "build_review_packet",
+        "inspect_dataset_quality",
         "albumentationsx://diagnostics/guide",
         "albumentationsx://recipes/catalog",
         "albumentationsx://examples/client-smoke",

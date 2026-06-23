@@ -10,8 +10,11 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from PIL import Image
+
 from albumentationsx_mcp.catalog import TransformCatalog
 from albumentationsx_mcp.dataset import score_dataset_preview_candidates
+from albumentationsx_mcp.dataset_quality import inspect_dataset_quality
 from albumentationsx_mcp.diagnostics import DiagnosticsReport, DiagnosticsService, PublicSurface
 from albumentationsx_mcp.host_smoke import HostSmokeReport, build_host_smoke_report
 from albumentationsx_mcp.models import (
@@ -75,6 +78,7 @@ def build_output_contract_snapshot(root: Path) -> dict[str, Any]:
         "run_host_smoke_check_missing_allowed_root": _host_smoke_missing_allowed_root(root),
         "plan_dataset_onboarding_ready": _dataset_onboarding_ready(root),
         "build_review_packet_ready": _review_packet_ready(root),
+        "inspect_dataset_quality_ready": _dataset_quality_ready(root),
         "validate_preview_request_ready": _preview_request_ready(root),
         "validate_preview_request_missing_input": _preview_request_missing_input(root),
         "validate_preview_request_outside_allowed_root": _preview_request_outside_allowed_root(root),
@@ -410,6 +414,19 @@ def _review_packet_ready(root: Path) -> dict[str, Any]:
     return _normalize_paths(packet.model_dump(mode="json"), root)
 
 
+def _dataset_quality_ready(root: Path) -> dict[str, Any]:
+    dataset_root = root / "dataset-quality"
+    dataset_root.mkdir(parents=True, exist_ok=True)
+    Image.new("RGB", (24, 16), color=(90, 120, 150)).save(dataset_root / "normal.png")
+    Image.new("RGB", (24, 16), color=(255, 255, 255)).save(dataset_root / "clipped.png")
+    report = inspect_dataset_quality(
+        dataset_path=dataset_root,
+        max_images=2,
+        path_policy=PathPolicy([dataset_root]),
+    )
+    return _normalize_paths(report.model_dump(mode="json"), root)
+
+
 def _preview_request_ready(root: Path) -> dict[str, Any]:
     validator, images_root = _preview_request_validator(root)
     image_path = images_root / "sample.png"
@@ -498,6 +515,7 @@ def _diagnostics_public_surface() -> PublicSurface:
             "validate_preview_request",
             "plan_dataset_onboarding",
             "build_review_packet",
+            "inspect_dataset_quality",
         ],
         prompts=[
             "build_robustness_augmentation_session",

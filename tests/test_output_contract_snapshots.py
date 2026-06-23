@@ -75,6 +75,19 @@ def test_output_contract_snapshot_includes_review_packet_handoff() -> None:
     assert packet["report_handoff"]["resource"] == "albumentationsx://examples/report-handoff"
 
 
+def test_output_contract_snapshot_includes_dataset_quality_report() -> None:
+    snapshot = json.loads(_SNAPSHOT_PATH.read_text(encoding="utf-8"))
+
+    assert "inspect_dataset_quality_ready" in snapshot
+    report = snapshot["inspect_dataset_quality_ready"]
+    assert report["status"] == "warning"
+    assert report["image_count"] == 2
+    assert report["sampled_image_count"] == 2
+    assert report["aggregate"]["image_count"] == 2
+    assert "build_review_packet" in report["recommended_next_tools"]
+    assert "dataset_high_clipping" in {finding["code"] for finding in report["findings"]}
+
+
 def test_output_contract_snapshot_includes_interactive_tuning_session_export() -> None:
     snapshot = json.loads(_SNAPSHOT_PATH.read_text(encoding="utf-8"))
 

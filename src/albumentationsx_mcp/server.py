@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from albumentationsx_mcp.advisor import explain_pipeline, list_feedback_tags
 from albumentationsx_mcp.catalog import TransformCatalog
 from albumentationsx_mcp.dataset import score_dataset_preview_candidates as score_dataset_candidates
+from albumentationsx_mcp.dataset_quality import inspect_dataset_quality
 from albumentationsx_mcp.diagnostics import DiagnosticsService, PublicSurface, build_diagnostics_guide
 from albumentationsx_mcp.host_smoke import build_host_smoke_report
 from albumentationsx_mcp.models import (
@@ -98,6 +99,7 @@ _PUBLIC_TOOLS = [
     "validate_preview_request",
     "plan_dataset_onboarding",
     "build_review_packet",
+    "inspect_dataset_quality",
 ]
 _PUBLIC_PROMPTS = [
     "build_robustness_augmentation_session",
@@ -442,6 +444,15 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
             path_policy=PathPolicy(settings.allowed_roots),
             pipeline_service=pipeline_service,
             recipe_builder=recommend_recipe,
+        ).model_dump(mode="json", exclude_none=True)
+
+    @mcp.tool(name="inspect_dataset_quality")
+    def inspect_dataset_quality_tool(dataset_path: str, max_images: int = 8) -> dict[str, Any]:
+        """Inspect local dataset image quality before first preview rendering."""
+        return inspect_dataset_quality(
+            dataset_path=Path(dataset_path),
+            max_images=max_images,
+            path_policy=PathPolicy(settings.allowed_roots),
         ).model_dump(mode="json", exclude_none=True)
 
     @mcp.tool()
