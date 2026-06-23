@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shlex
 import sys
 from pathlib import Path
 from typing import Any
@@ -47,6 +48,7 @@ def build_v1_launch_report(
         }
         for check in replay.checks
     ]
+    evidence_plan = _evidence_plan(manual_host_ui=manual_host_ui, first_10_minutes_replay=replay_status)
     blockers = _blockers(manual_host_ui=manual_host_ui, first_10_minutes_replay=replay_status)
     return {
         "package": "albumentationsx-mcp",
@@ -58,6 +60,7 @@ def build_v1_launch_report(
         "blockers": blockers,
         "manual_host_ui": manual_host_ui,
         "first_10_minutes_replay": replay_status,
+        "evidence_plan": evidence_plan,
         "recommended_next_actions": _recommended_next_actions(blockers),
     }
 
@@ -87,6 +90,8 @@ def render_v1_launch_report_markdown(report: dict[str, Any]) -> str:
     lines.extend(_host_status_lines(report["manual_host_ui"]))
     lines.extend(["", "## First 10 Minutes Replay", ""])
     lines.extend(_host_status_lines(report["first_10_minutes_replay"]))
+    lines.extend(["", "## Evidence Plan", ""])
+    lines.extend(_evidence_plan_lines(report["evidence_plan"]))
     lines.extend(["", "## Recommended Next Actions", ""])
     lines.extend(f"- {action}" for action in report["recommended_next_actions"])
     return "\n".join(lines) + "\n"
@@ -198,6 +203,96 @@ def _recommended_next_actions(blockers: list[dict[str, str]]) -> list[str]:
 
 def _host_status_lines(items: list[dict[str, Any]]) -> list[str]:
     return [f"- {item['host']}: `{item['status']}` — {item['message']}" for item in items]
+
+
+def _evidence_plan(
+    *,
+    manual_host_ui: list[dict[str, Any]],
+    first_10_minutes_replay: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    manual_by_host = {item["host"]: item for item in manual_host_ui}
+    replay_by_host = {item["host"]: item for item in first_10_minutes_replay}
+    return [
+        {
+            "host": host,
+            "manual_host_ui": _evidence_requirement(
+                item=manual_by_host[host],
+                missing_message="Run the host UI, list MCP tools, and execute run_host_smoke_check.",
+            ),
+            "first_10_minutes_replay": _evidence_requirement(
+                item=replay_by_host[host],
+                missing_message="Replay docs/FIRST_10_MINUTES.md and capture at least one artifact path.",
+            ),
+            "record_commands": {
+                "manual_host_ui": _record_command(host=host, kind="manual-host-ui"),
+                "first_10_minutes_replay": _record_command(host=host, kind="first-10-minutes"),
+            },
+        }
+        for host in HOST_NAMES
+    ]
+
+
+def _evidence_requirement(*, item: dict[str, Any], missing_message: str) -> dict[str, str]:
+    if item["ok"]:
+        return {
+            "status": "recorded",
+            "message": item["message"],
+            "date": item["date"],
+        }
+    return {
+        "status": "missing" if item["status"] == "pending" else item["status"],
+        "message": missing_message if item["status"] == "pending" else item["message"],
+        "date": item["date"],
+    }
+
+
+def _record_command(*, host: HostName, kind: str) -> str:
+    args = [
+        "uv",
+        "run",
+        "python",
+        "scripts/record_host_manual_run.py",
+    ]
+    if kind == "first-10-minutes":
+        args.extend(["--kind", "first-10-minutes"])
+    args.extend(
+        [
+            "--host",
+            host,
+            "--status",
+            "passed",
+            "--date",
+            "YYYY-MM-DD",
+            "--evidence",
+            _evidence_placeholder(host=host, kind=kind),
+        ]
+    )
+    if kind == "first-10-minutes":
+        args.extend(["--artifact", "docs/assets/demo/demo_report.md"])
+    return " ".join(shlex.quote(arg) for arg in args)
+
+
+def _evidence_placeholder(*, host: HostName, kind: str) -> str:
+    if kind == "first-10-minutes":
+        return (
+            f"{host} completed smoke check, preview validation, baseline and candidate render, comparison, "
+            "and pipeline export."
+        )
+    return f"{host} listed MCP tools and completed run_host_smoke_check in the host UI."
+
+
+def _evidence_plan_lines(items: list[dict[str, Any]]) -> list[str]:
+    lines: list[str] = []
+    for item in items:
+        lines.extend(
+            [
+                f"- {item['host']}: manual UI `{item['manual_host_ui']['status']}`, "
+                f"first 10 minutes `{item['first_10_minutes_replay']['status']}`",
+                f"  - Manual UI: `{item['record_commands']['manual_host_ui']}`",
+                f"  - First 10 Minutes: `{item['record_commands']['first_10_minutes_replay']}`",
+            ]
+        )
+    return lines
 
 
 if __name__ == "__main__":

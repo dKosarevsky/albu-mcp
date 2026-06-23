@@ -26,6 +26,19 @@ def test_v1_launch_report_tracks_pending_manual_host_blockers() -> None:
     }
     assert {item["status"] for item in report["manual_host_ui"]} == {"pending"}
     assert {item["status"] for item in report["first_10_minutes_replay"]} == {"pending"}
+    assert {item["host"] for item in report["evidence_plan"]} == {
+        "Claude Desktop",
+        "Claude Code",
+        "Cursor",
+        "Codex",
+    }
+    assert all(item["manual_host_ui"]["status"] == "missing" for item in report["evidence_plan"])
+    assert all(item["first_10_minutes_replay"]["status"] == "missing" for item in report["evidence_plan"])
+    assert all("record_host_manual_run.py" in item["record_commands"]["manual_host_ui"] for item in report["evidence_plan"])
+    assert all(
+        "--kind first-10-minutes" in item["record_commands"]["first_10_minutes_replay"]
+        for item in report["evidence_plan"]
+    )
 
 
 def test_v1_launch_report_markdown_is_reviewable() -> None:
@@ -37,6 +50,9 @@ def test_v1_launch_report_markdown_is_reviewable() -> None:
     assert "manual_host_ui_pending" in markdown
     assert "first_10_minutes_replay_pending" in markdown
     assert "docs/HOST_PROOF_STATUS.md" in markdown
+    assert "## Evidence Plan" in markdown
+    assert "record_host_manual_run.py" in markdown
+    assert "--kind first-10-minutes" in markdown
 
 
 def test_v1_launch_report_cli_outputs_json_and_markdown(tmp_path: Path) -> None:
