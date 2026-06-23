@@ -92,8 +92,7 @@ source: [docs/integrations/mcp.md](https://github.com/albumentations-team/Albume
 - [docs/USAGE.md](docs/USAGE.md): end-to-end MCP host workflow and tool details.
 - [docs/RECIPES.md](docs/RECIPES.md): task-specific host recipes.
 - [docs/ADOPTION.md](docs/ADOPTION.md): short trial, host setup, workflow examples, and outreach copy.
-- [docs/ADOPTION_PACKET.md](docs/ADOPTION_PACKET.md): generated public launch copy, links, host coverage, and workflow.
-- [docs/LAUNCH_KIT.md](docs/LAUNCH_KIT.md): generated distribution checklist, copy blocks, demo assets, and feedback intake.
+- [docs/ADOPTION_PACKET.md](docs/ADOPTION_PACKET.md) and [docs/LAUNCH_KIT.md](docs/LAUNCH_KIT.md): generated public launch copy, distribution checklist, demo assets, and feedback intake.
 - [docs/COMMUNITY_FEEDBACK.md](docs/COMMUNITY_FEEDBACK.md): privacy-safe GitHub issue intake.
 - [docs/NETWORK_GROWTH.md](docs/NETWORK_GROWTH.md): public directory status, registry follow-up, and outreach plan.
 - [docs/UPSTREAM_PR_PACKET.md](docs/UPSTREAM_PR_PACKET.md): upstream source for [AlbumentationsX#289](https://github.com/albumentations-team/AlbumentationsX/pull/289).

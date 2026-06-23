@@ -32,7 +32,7 @@ def test_committed_launch_kit_is_current() -> None:
 def test_launch_kit_cli_writes_markdown(tmp_path: Path) -> None:
     output_path = tmp_path / "launch-kit.md"
 
-    subprocess.run(
+    subprocess.run(  # noqa: S603
         [sys.executable, "scripts/export_launch_kit.py", "--output", str(output_path)],
         check=True,
         capture_output=True,

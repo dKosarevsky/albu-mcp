@@ -7,8 +7,8 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
-from pydantic import Field
 from PIL import Image
+from pydantic import Field
 
 from albumentationsx_mcp.diagnostics import DiagnosticSeverity, DiagnosticStatus
 from albumentationsx_mcp.models import ImageQualityAggregate, ImageQualityMetrics, StrictModel
@@ -36,6 +36,9 @@ _MAX_DUPLICATE_GROUPS = 8
 _CLASS_IMBALANCE_RATIO = 0.5
 _SPLIT_IMBALANCE_RATIO = 0.2
 _ASPECT_RATIO_SPREAD = 3.0
+_MIN_CLASS_PATH_PARTS = 2
+_SPLIT_WITH_CLASS_PATH_PARTS = 3
+_MIN_IMBALANCE_BUCKETS = 2
 
 
 class DatasetQualityFinding(StrictModel):
@@ -66,6 +69,15 @@ class DatasetDuplicateGroup(StrictModel):
     sha256: str
     image_count: int
     sample_paths: list[str] = Field(default_factory=list)
+
+
+class DatasetStructureHealth(StrictModel):
+    """Structural dataset health signals that do not require rendering previews."""
+
+    split_distribution: dict[str, int] = Field(default_factory=dict)
+    class_distribution: dict[str, int] = Field(default_factory=dict)
+    image_size_summary: DatasetImageSizeSummary | None = None
+    duplicate_groups: list[DatasetDuplicateGroup] = Field(default_factory=list)
 
 
 class DatasetQualityReport(StrictModel):
@@ -125,16 +137,11 @@ def inspect_dataset_quality(
     sampled_paths = image_paths[: _bounded_max_images(max_images)]
     metrics, unreadable_paths = _collect_sample_metrics(sampled_paths)
     aggregate = _aggregate_metrics(metrics)
-    structure = _dataset_structure(dataset_path=resolved, image_paths=image_paths)
-    image_size_summary = _image_size_summary(image_paths[:_MAX_METADATA_IMAGES])
-    duplicate_groups = _duplicate_groups(image_paths[:_MAX_METADATA_IMAGES])
+    structure = _structure_health(dataset_path=resolved, image_paths=image_paths)
     findings = _findings(
         aggregate=aggregate,
         unreadable_paths=unreadable_paths,
-        split_distribution=structure["split_distribution"],
-        class_distribution=structure["class_distribution"],
-        image_size_summary=image_size_summary,
-        duplicate_groups=duplicate_groups,
+        structure=structure,
     )
     status = _status(image_paths=image_paths, metrics=metrics, findings=findings)
     return DatasetQualityReport(
@@ -145,13 +152,13 @@ def inspect_dataset_quality(
         sampled_image_count=len(sampled_paths),
         ignored_file_count=ignored_file_count,
         unreadable_image_count=len(unreadable_paths),
-        duplicate_image_count=sum(group.image_count for group in duplicate_groups),
+        duplicate_image_count=sum(group.image_count for group in structure.duplicate_groups),
         sample_paths=[str(path) for path in sampled_paths],
         unreadable_paths=[str(path) for path in unreadable_paths],
-        split_distribution=structure["split_distribution"],
-        class_distribution=structure["class_distribution"],
-        image_size_summary=image_size_summary,
-        duplicate_groups=duplicate_groups,
+        split_distribution=structure.split_distribution,
+        class_distribution=structure.class_distribution,
+        image_size_summary=structure.image_size_summary,
+        duplicate_groups=structure.duplicate_groups,
         aggregate=aggregate,
         sample_metrics=metrics,
         findings=findings,
@@ -228,10 +235,7 @@ def _findings(
     *,
     aggregate: ImageQualityAggregate,
     unreadable_paths: list[Path],
-    split_distribution: dict[str, int],
-    class_distribution: dict[str, int],
-    image_size_summary: DatasetImageSizeSummary | None,
-    duplicate_groups: list[DatasetDuplicateGroup],
+    structure: DatasetStructureHealth,
 ) -> list[DatasetQualityFinding]:
     findings: list[DatasetQualityFinding] = []
     if unreadable_paths:
@@ -243,46 +247,46 @@ def _findings(
                 sample_paths=[str(path) for path in unreadable_paths[:3]],
             )
         )
-    if duplicate_groups:
+    if structure.duplicate_groups:
         findings.append(
             DatasetQualityFinding(
                 code="dataset_exact_duplicate_images",
                 severity="medium",
                 summary="Dataset sample contains exact duplicate image files.",
-                sample_paths=duplicate_groups[0].sample_paths,
+                sample_paths=structure.duplicate_groups[0].sample_paths,
                 details={
-                    "duplicate_group_count": len(duplicate_groups),
-                    "duplicate_image_count": sum(group.image_count for group in duplicate_groups),
+                    "duplicate_group_count": len(structure.duplicate_groups),
+                    "duplicate_image_count": sum(group.image_count for group in structure.duplicate_groups),
                 },
             )
         )
-    if _is_imbalanced(class_distribution, min_ratio=_CLASS_IMBALANCE_RATIO):
+    if _is_imbalanced(structure.class_distribution, min_ratio=_CLASS_IMBALANCE_RATIO):
         findings.append(
             DatasetQualityFinding(
                 code="dataset_class_imbalance",
                 severity="medium",
                 summary="Detected class distribution is imbalanced.",
-                details={"class_distribution": class_distribution},
+                details={"class_distribution": structure.class_distribution},
             )
         )
-    if _is_imbalanced(split_distribution, min_ratio=_SPLIT_IMBALANCE_RATIO):
+    if _is_imbalanced(structure.split_distribution, min_ratio=_SPLIT_IMBALANCE_RATIO):
         findings.append(
             DatasetQualityFinding(
                 code="dataset_split_imbalance",
                 severity="medium",
                 summary="Detected split distribution is imbalanced.",
-                details={"split_distribution": split_distribution},
+                details={"split_distribution": structure.split_distribution},
             )
         )
-    if _has_large_aspect_ratio_spread(image_size_summary):
+    if structure.image_size_summary is not None and _has_large_aspect_ratio_spread(structure.image_size_summary):
         findings.append(
             DatasetQualityFinding(
                 code="dataset_aspect_ratio_spread",
                 severity="info",
                 summary="Sampled image dimensions have a wide aspect-ratio spread.",
                 details={
-                    "aspect_ratio_min": image_size_summary.aspect_ratio_min,
-                    "aspect_ratio_max": image_size_summary.aspect_ratio_max,
+                    "aspect_ratio_min": structure.image_size_summary.aspect_ratio_min,
+                    "aspect_ratio_max": structure.image_size_summary.aspect_ratio_max,
                 },
             )
         )
@@ -417,7 +421,7 @@ def _has_extreme_brightness(aggregate: ImageQualityAggregate) -> bool:
     )
 
 
-def _dataset_structure(*, dataset_path: Path, image_paths: list[Path]) -> dict[str, dict[str, int]]:
+def _structure_health(*, dataset_path: Path, image_paths: list[Path]) -> DatasetStructureHealth:
     split_counts: Counter[str] = Counter()
     class_counts: Counter[str] = Counter()
     for path in image_paths:
@@ -427,18 +431,21 @@ def _dataset_structure(*, dataset_path: Path, image_paths: list[Path]) -> dict[s
             split_counts[split] += 1
         if class_name is not None:
             class_counts[class_name] += 1
-    return {
-        "split_distribution": dict(sorted(split_counts.items())),
-        "class_distribution": dict(sorted(class_counts.items())),
-    }
+    metadata_paths = image_paths[:_MAX_METADATA_IMAGES]
+    return DatasetStructureHealth(
+        split_distribution=dict(sorted(split_counts.items())),
+        class_distribution=dict(sorted(class_counts.items())),
+        image_size_summary=_image_size_summary(metadata_paths),
+        duplicate_groups=_duplicate_groups(metadata_paths),
+    )
 
 
 def _split_and_class(relative_parts: tuple[str, ...]) -> tuple[str | None, str | None]:
-    if len(relative_parts) < 2:
+    if len(relative_parts) < _MIN_CLASS_PATH_PARTS:
         return None, None
     first = relative_parts[0].lower()
     if first in _KNOWN_SPLITS:
-        class_name = relative_parts[1] if len(relative_parts) >= 3 else None
+        class_name = relative_parts[1] if len(relative_parts) >= _SPLIT_WITH_CLASS_PATH_PARTS else None
         return _KNOWN_SPLITS[first], class_name
     return None, relative_parts[0]
 
@@ -446,11 +453,9 @@ def _split_and_class(relative_parts: tuple[str, ...]) -> tuple[str | None, str |
 def _image_size_summary(paths: list[Path]) -> DatasetImageSizeSummary | None:
     sizes: list[tuple[int, int]] = []
     for path in paths:
-        try:
-            with Image.open(path) as image:
-                sizes.append(image.size)
-        except (OSError, ValueError):
-            continue
+        size = _safe_image_size(path)
+        if size is not None:
+            sizes.append(size)
     if not sizes:
         return None
     widths = [width for width, _height in sizes]
@@ -465,6 +470,14 @@ def _image_size_summary(paths: list[Path]) -> DatasetImageSizeSummary | None:
         aspect_ratio_min=round(min(ratios), 6),
         aspect_ratio_max=round(max(ratios), 6),
     )
+
+
+def _safe_image_size(path: Path) -> tuple[int, int] | None:
+    try:
+        with Image.open(path) as image:
+            return image.size
+    except (OSError, ValueError):
+        return None
 
 
 def _duplicate_groups(paths: list[Path]) -> list[DatasetDuplicateGroup]:
@@ -497,7 +510,7 @@ def _safe_sha256(path: Path) -> str | None:
 
 
 def _is_imbalanced(distribution: dict[str, int], *, min_ratio: float) -> bool:
-    if len(distribution) < 2:
+    if len(distribution) < _MIN_IMBALANCE_BUCKETS:
         return False
     counts = [count for count in distribution.values() if count > 0]
     return bool(counts) and min(counts) / max(counts) <= min_ratio

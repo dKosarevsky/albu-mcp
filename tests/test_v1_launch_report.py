@@ -34,7 +34,9 @@ def test_v1_launch_report_tracks_pending_manual_host_blockers() -> None:
     }
     assert all(item["manual_host_ui"]["status"] == "missing" for item in report["evidence_plan"])
     assert all(item["first_10_minutes_replay"]["status"] == "missing" for item in report["evidence_plan"])
-    assert all("record_host_manual_run.py" in item["record_commands"]["manual_host_ui"] for item in report["evidence_plan"])
+    assert all(
+        "record_host_manual_run.py" in item["record_commands"]["manual_host_ui"] for item in report["evidence_plan"]
+    )
     assert all(
         "--kind first-10-minutes" in item["record_commands"]["first_10_minutes_replay"]
         for item in report["evidence_plan"]
