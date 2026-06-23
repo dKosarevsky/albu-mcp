@@ -4,6 +4,8 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 ## Unreleased
 
+- Added a generated adoption packet with install commands, public links, host coverage, first-dataset workflow, and launch
+  copy.
 - Added `inspect_dataset_quality` for read-only local dataset quality preflight before first preview rendering.
 - Added `build_review_packet` for one compact host-facing first-preview handoff that combines dataset onboarding,
   preview request validation, the tuning tool sequence, and report handoff guidance.

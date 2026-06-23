@@ -93,6 +93,7 @@ source: [docs/integrations/mcp.md](https://github.com/albumentations-team/Albume
 - [docs/USAGE.md](docs/USAGE.md): end-to-end MCP host workflow and tool details.
 - [docs/RECIPES.md](docs/RECIPES.md): task-specific host recipes.
 - [docs/ADOPTION.md](docs/ADOPTION.md): short trial, host setup, workflow examples, and outreach copy.
+- [docs/ADOPTION_PACKET.md](docs/ADOPTION_PACKET.md): generated public launch copy, links, host coverage, and workflow.
 - [docs/COMMUNITY_FEEDBACK.md](docs/COMMUNITY_FEEDBACK.md): privacy-safe GitHub issue intake for host and workflow
   feedback.
 - [docs/NETWORK_GROWTH.md](docs/NETWORK_GROWTH.md): public directory status, registry follow-up, and outreach plan.
