@@ -20,6 +20,7 @@ uvx --from albumentationsx-mcp albumentationsx-mcp --allowed-root /absolute/path
 - PyPI: https://pypi.org/project/albumentationsx-mcp/
 - MCP Registry: https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.dKosarevsky/albu-mcp
 - Upstream docs PR: AlbumentationsX#289 (https://github.com/albumentations-team/AlbumentationsX/pull/289)
+- Launch Kit: docs/LAUNCH_KIT.md
 
 ## Host Coverage
 

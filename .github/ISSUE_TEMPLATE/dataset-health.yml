@@ -1,0 +1,55 @@
+name: Dataset health feedback
+description: Share inspect_dataset_quality output for class balance, split balance, sizes, or duplicates.
+title: "[Dataset Health]: "
+labels:
+  - dataset-health
+  - preview-review
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for dataset structure and quality signals before preview rendering.
+        Do not upload private datasets, proprietary training images, credentials, or unredacted private paths.
+  - type: dropdown
+    id: task
+    attributes:
+      label: Task
+      options:
+        - classification
+        - detection
+        - segmentation
+        - OCR
+        - balanced
+        - other
+    validations:
+      required: true
+  - type: input
+    id: host
+    attributes:
+      label: MCP host
+      placeholder: "Claude Desktop / Claude Code / Cursor / Codex"
+  - type: textarea
+    id: quality-output
+    attributes:
+      label: inspect_dataset_quality output
+      description: Paste safe redacted fields such as status, findings, class_distribution, split_distribution, and duplicate_groups.
+      placeholder: |
+        status: warning
+        class_distribution: {"cat": 120, "dog": 8}
+        split_distribution: {"train": 100, "val": 28}
+        duplicate_groups: [...]
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected guidance
+      description: What should the MCP host recommend next?
+      placeholder: "Suggest lighter augmentation for minority classes and review duplicate images before rendering previews."
+    validations:
+      required: true
+  - type: textarea
+    id: safe-artifacts
+    attributes:
+      label: Safe artifact references
+      description: Share only synthetic/demo assets or redacted report/contact-sheet references.
