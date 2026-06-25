@@ -22,6 +22,7 @@ def build_host_evidence_sprint_board() -> dict[str, Any]:
     report = build_v1_launch_report()
     evidence_by_host = {item["host"]: item for item in report["evidence_plan"]}
     hosts = [_host_row(evidence_by_host[host]) for host in _HOST_ORDER]
+    run_queue = [_run_queue_item(run_order=index, host=host) for index, host in enumerate(hosts, start=1)]
     return {
         "package": report["package"],
         "version": report["package_version"],
@@ -36,6 +37,7 @@ def build_host_evidence_sprint_board() -> dict[str, Any]:
             "blocked_hosts": sum(host["next_gate"] == "blocked" for host in hosts),
         },
         "hosts": hosts,
+        "run_queue": run_queue,
         "next_checks": [
             "uv run python scripts/validate_host_manual_runs.py",
             "uv run python scripts/check_first_10_minutes_replay.py",
@@ -80,6 +82,26 @@ def render_host_evidence_sprint_board_markdown(board: dict[str, Any]) -> str:
         f"`{host['next_gate']}` |"
         for host in board["hosts"]
     )
+    lines.extend(
+        [
+            "",
+            "## Run Queue",
+            "",
+            "| Order | Host | Priority | Next Action |",
+            "| --- | --- | --- | --- |",
+        ]
+    )
+    lines.extend(
+        "| "
+        f"{item['run_order']} | "
+        f"{item['host']} | "
+        f"`{item['priority']}` | "
+        f"`{item['next_action']}` |"
+        for item in board["run_queue"]
+    )
+    lines.extend(["", "## Packet Commands", ""])
+    for item in board["run_queue"]:
+        lines.extend([f"### {item['host']}", "", "```bash", item["packet_command"], "```", ""])
     lines.extend(["", "## Host Commands", ""])
     for host in board["hosts"]:
         lines.extend(
@@ -139,6 +161,47 @@ def _next_gate(manual_status: str, replay_status: str) -> str:
     if manual_status != "recorded":
         return "manual_host_ui"
     return "complete"
+
+
+def _run_queue_item(*, run_order: int, host: dict[str, str]) -> dict[str, str | int]:
+    return {
+        "run_order": run_order,
+        "host": host["host"],
+        "priority": host["priority"],
+        "next_action": _next_action(host["next_gate"]),
+        "packet_command": _packet_command(host["host"]),
+    }
+
+
+def _next_action(next_gate: str) -> str:
+    if next_gate == "first_10_minutes_replay":
+        return "run_first_10_minutes_replay"
+    if next_gate == "manual_host_ui":
+        return "run_manual_host_ui"
+    if next_gate == "blocked":
+        return "triage_blocker"
+    return "no_action"
+
+
+def _packet_command(host: str) -> str:
+    output = f"/tmp/albu-host-{_host_slug(host)}.md"
+    return " ".join(
+        shlex.quote(part)
+        for part in [
+            "uv",
+            "run",
+            "python",
+            "scripts/export_manual_host_acceptance_packet.py",
+            "--host",
+            host,
+            "--output",
+            output,
+        ]
+    )
+
+
+def _host_slug(host: str) -> str:
+    return host.lower().replace(" ", "-")
 
 
 def _verify_manual_host_ui_command(host: str) -> str:

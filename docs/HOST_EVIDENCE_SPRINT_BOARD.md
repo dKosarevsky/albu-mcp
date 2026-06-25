@@ -23,6 +23,42 @@ Never mark a host passed until a reviewer runs the real host UI. Do not paste sy
 | Cursor | `p1` | `missing` | `missing` | `first_10_minutes_replay` |
 | Claude Desktop | `p1` | `missing` | `missing` | `first_10_minutes_replay` |
 
+## Run Queue
+
+| Order | Host | Priority | Next Action |
+| --- | --- | --- | --- |
+| 1 | Codex | `p0` | `run_first_10_minutes_replay` |
+| 2 | Claude Code | `p0` | `run_first_10_minutes_replay` |
+| 3 | Cursor | `p1` | `run_first_10_minutes_replay` |
+| 4 | Claude Desktop | `p1` | `run_first_10_minutes_replay` |
+
+## Packet Commands
+
+### Codex
+
+```bash
+uv run python scripts/export_manual_host_acceptance_packet.py --host Codex --output /tmp/albu-host-codex.md
+```
+
+### Claude Code
+
+```bash
+uv run python scripts/export_manual_host_acceptance_packet.py --host 'Claude Code' --output /tmp/albu-host-claude-code.md
+```
+
+### Cursor
+
+```bash
+uv run python scripts/export_manual_host_acceptance_packet.py --host Cursor --output /tmp/albu-host-cursor.md
+```
+
+### Claude Desktop
+
+```bash
+uv run python scripts/export_manual_host_acceptance_packet.py --host 'Claude Desktop' --output /tmp/albu-host-claude-desktop.md
+```
+
+
 ## Host Commands
 
 ### Codex
