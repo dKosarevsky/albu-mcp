@@ -100,7 +100,7 @@ source: [docs/integrations/mcp.md](https://github.com/albumentations-team/Albume
 - [docs/DEMO.md](docs/DEMO.md): generated preview comparison demo.
 - [docs/HOST_ACCEPTANCE.md](docs/HOST_ACCEPTANCE.md), [docs/HOST_MATRIX.md](docs/HOST_MATRIX.md), [docs/HOST_UX_PACKETS.md](docs/HOST_UX_PACKETS.md), and [docs/HOST_ACCEPTANCE_EVIDENCE.md](docs/HOST_ACCEPTANCE_EVIDENCE.md): MCP host acceptance status.
 - [docs/V1_READINESS.md](docs/V1_READINESS.md): v1 compatibility and release audit.
-- [docs/V1_LAUNCH_REPORT.md](docs/V1_LAUNCH_REPORT.md): current machine-readable v1 launch blocker summary.
+- [docs/V1_LAUNCH_REPORT.md](docs/V1_LAUNCH_REPORT.md) and [docs/V1_DECISION_REPORT.md](docs/V1_DECISION_REPORT.md): current v1 launch blockers and go/no-go decision.
 - [docs/RELEASE.md](docs/RELEASE.md): PyPI, GitHub Release, and MCP Registry publication process.
 - [CHANGELOG.md](CHANGELOG.md): release history.
 - [server.json](server.json): public MCP Registry metadata.

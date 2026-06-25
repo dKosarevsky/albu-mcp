@@ -15,6 +15,7 @@ def test_release_readiness_accepts_current_fast_guards(tmp_path: Path) -> None:
         "host_acceptance_evidence",
         "first_10_minutes",
         "host_proof_sprint",
+        "v1_decision_report",
         "mcp_contract_snapshot",
         "output_contract_snapshot",
     ]
@@ -55,6 +56,7 @@ def test_release_readiness_cli_passes_fast_guards(tmp_path: Path) -> None:
 
     assert "release readiness checks passed" in result.stdout
     assert "manual_host_records" in result.stdout
+    assert "v1_decision_report" in result.stdout
     assert "output_contract_snapshot" in result.stdout
 
 
