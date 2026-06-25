@@ -60,7 +60,7 @@ After connecting an MCP host:
 5. Replace or reuse the paths in `preview_request_template.request`.
 6. Call `validate_preview_request` before rendering user-provided paths.
 7. Call `render_preview_batch` on a small local image set.
-8. Inspect the contact sheet, then use `adjust_pipeline`, `compare_preview_runs`, and `export_pipeline`.
+8. Inspect the contact sheet, then use `plan_preview_review` to choose adjustment, audit, or export.
 
 If preview setup fails, read `albumentationsx://diagnostics/guide` and call `diagnose_environment`. Troubleshooting
 details and `remediation_actions` are documented in [docs/USAGE.md](docs/USAGE.md) and [docs/INSTALL.md](docs/INSTALL.md).

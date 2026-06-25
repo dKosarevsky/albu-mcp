@@ -100,6 +100,18 @@ def test_output_contract_snapshot_includes_dataset_quality_report() -> None:
     assert "dataset_out_of_bounds_annotations" in {finding["code"] for finding in report["findings"]}
 
 
+def test_output_contract_snapshot_includes_review_agent_plan() -> None:
+    snapshot = json.loads(_SNAPSHOT_PATH.read_text(encoding="utf-8"))
+
+    plan = snapshot["plan_preview_review"]
+
+    assert plan["decision"] == "revise_candidate"
+    assert plan["recommended_next_tool"] == "adjust_pipeline"
+    assert plan["feedback_tags"] == ["too_noisy:high"]
+    assert plan["tuning_summary"]["quality_risk"] == "medium"
+    assert any("render_preview_batch" in action for action in plan["next_actions"])
+
+
 def test_output_contract_snapshot_includes_interactive_tuning_session_export() -> None:
     snapshot = json.loads(_SNAPSHOT_PATH.read_text(encoding="utf-8"))
 

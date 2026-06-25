@@ -41,6 +41,7 @@ def test_mcp_stdio_lists_documented_tools(tmp_path: Path) -> None:
         "render_preview",
         "render_preview_batch",
         "compare_preview_runs",
+        "plan_preview_review",
         "summarize_tuning_session",
         "start_tuning_session",
         "record_tuning_session_step",

@@ -183,6 +183,10 @@ Call `summarize_tuning_session` after comparing a baseline and candidate. It com
 quality deltas, `quality_score`, `quality_risk`, structured `quality_findings`, and an `export_ready` flag so the host
 can decide whether to ask for more feedback or call `export_pipeline`.
 
+Use `plan_preview_review` when the host needs one action-oriented review handoff. It compares baseline and candidate
+runs, wraps the tuning summary, returns a review checklist, reports blockers such as changed inputs, and recommends the
+next tool: `list_feedback_tags`, `adjust_pipeline`, `render_preview_batch`, or `record_tuning_decision`.
+
 Use `record_tuning_decision` after the user accepts or rejects a candidate. Decisions are stored in
 `tuning_decisions.json` under the configured artifact root. `list_tuning_decisions` can return newest-first history or
 score-ranked candidates with `ranked=true`, and can restrict output to accepted decisions with `accepted_only=true`.

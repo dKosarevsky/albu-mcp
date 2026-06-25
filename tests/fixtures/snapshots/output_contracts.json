@@ -1360,6 +1360,64 @@
       "warnings": []
     }
   },
+  "plan_preview_review": {
+    "accepted": false,
+    "baseline_run_id": "baseline",
+    "blockers": [],
+    "candidate_run_id": "candidate-b",
+    "decision": "revise_candidate",
+    "feedback_tags": [
+      "too_noisy:high"
+    ],
+    "next_actions": [
+      "Apply the selected feedback tags with adjust_pipeline.",
+      "Render the adjusted candidate with render_preview_batch."
+    ],
+    "quality_deltas": {},
+    "quality_risk": "medium",
+    "quality_score": 85.0,
+    "rationale": "Apply the selected feedback tags, validate, and render another candidate.",
+    "recommended_next_tool": "adjust_pipeline",
+    "review_checklist": [
+      "Open the baseline and candidate contact sheets side by side.",
+      "Confirm the candidate preserves label and object readability before accepting.",
+      "too_noisy: Check whether noise hides object boundaries.",
+      "Ask the user which suggested feedback tags apply: too_noisy."
+    ],
+    "suggested_feedback_tags": [
+      "too_noisy"
+    ],
+    "tuning_summary": {
+      "accepted": false,
+      "baseline_run_id": "baseline",
+      "candidate_run_id": "candidate-b",
+      "export_ready": false,
+      "feedback_tags": [
+        "too_noisy:high"
+      ],
+      "quality_deltas": {},
+      "quality_findings": [
+        {
+          "baseline_value": 0.01,
+          "code": "candidate_high_clipping",
+          "message": "Candidate preview has noticeable clipped dark or bright pixels.",
+          "metric": "clipping_fraction",
+          "severity": "medium",
+          "value": 0.18
+        }
+      ],
+      "quality_risk": "medium",
+      "quality_score": 85.0,
+      "rationale": "Apply the selected feedback tags, validate, and render another candidate.",
+      "recommended_next_tool": "adjust_pipeline",
+      "review_notes": [
+        "Review rendered contact sheets."
+      ],
+      "suggested_feedback_tags": [
+        "too_noisy"
+      ]
+    }
+  },
   "recommend_recipe": {
     "explanations": [
       {

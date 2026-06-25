@@ -926,6 +926,60 @@
       }
     },
     {
+      "description": "Plan the next review action for one baseline-to-candidate preview comparison.",
+      "name": "plan_preview_review",
+      "parameters": {
+        "properties": {
+          "accepted": {
+            "default": false,
+            "title": "Accepted",
+            "type": "boolean"
+          },
+          "baseline_run_id": {
+            "title": "Baseline Run Id",
+            "type": "string"
+          },
+          "candidate_run_id": {
+            "title": "Candidate Run Id",
+            "type": "string"
+          },
+          "feedback_tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Feedback Tags"
+          },
+          "quality_profile": {
+            "default": "balanced",
+            "enum": [
+              "balanced",
+              "classification",
+              "detection",
+              "segmentation",
+              "ocr"
+            ],
+            "title": "Quality Profile",
+            "type": "string"
+          }
+        },
+        "required": [
+          "baseline_run_id",
+          "candidate_run_id"
+        ],
+        "title": "plan_preview_reviewArguments",
+        "type": "object"
+      }
+    },
+    {
       "description": "Rank multiple candidate preview runs against one baseline.",
       "name": "rank_preview_candidates",
       "parameters": {

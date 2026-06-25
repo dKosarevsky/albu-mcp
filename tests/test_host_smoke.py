@@ -80,6 +80,7 @@ def _complete_public_surface_with_host_smoke() -> PublicSurface:
             "render_preview_batch",
             "validate_preview_request",
             "compare_preview_runs",
+            "plan_preview_review",
             "summarize_tuning_session",
             "start_tuning_session",
             "record_tuning_session_step",

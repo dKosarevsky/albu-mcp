@@ -365,6 +365,31 @@ class TuningSessionSummary(StrictModel):
     review_notes: list[str] = Field(default_factory=list)
 
 
+class ReviewAgentPlan(StrictModel):
+    """Host-facing review workflow plan for one baseline-to-candidate preview comparison."""
+
+    baseline_run_id: str
+    candidate_run_id: str
+    decision: Literal["collect_feedback", "revise_candidate", "rerender_candidate", "accept_candidate"]
+    accepted: bool = False
+    feedback_tags: list[str] = Field(default_factory=list)
+    recommended_next_tool: Literal[
+        "list_feedback_tags",
+        "adjust_pipeline",
+        "render_preview_batch",
+        "record_tuning_decision",
+    ]
+    rationale: str
+    review_checklist: list[str] = Field(default_factory=list)
+    blockers: list[str] = Field(default_factory=list)
+    next_actions: list[str] = Field(default_factory=list)
+    suggested_feedback_tags: list[str] = Field(default_factory=list)
+    quality_deltas: dict[str, float] = Field(default_factory=dict)
+    quality_score: float = Field(default=100.0, ge=0.0, le=100.0)
+    quality_risk: RiskLevel = "low"
+    tuning_summary: TuningSessionSummary
+
+
 class TuningDecisionRecord(StrictModel):
     """Persisted local tuning decision for one baseline-to-candidate comparison."""
 
