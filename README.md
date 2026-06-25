@@ -88,7 +88,7 @@ source: [docs/integrations/mcp.md](https://github.com/albumentations-team/Albume
 
 - [docs/INSTALL.md](docs/INSTALL.md): PyPI, MCP Registry, Claude Desktop, Claude Code, Cursor, Codex, bounded roots.
 - [docs/FIRST_10_MINUTES.md](docs/FIRST_10_MINUTES.md): shortest path from install to preview, feedback, and export.
-- [docs/HOST_PROOF_SPRINT.md](docs/HOST_PROOF_SPRINT.md): runbook for recording real host replay evidence.
+- [docs/HOST_PROOF_SPRINT.md](docs/HOST_PROOF_SPRINT.md) and [docs/HOST_PROOF_SPRINT_CHECKLIST.md](docs/HOST_PROOF_SPRINT_CHECKLIST.md): runbook and generated checklist for real host replay evidence.
 - [docs/USAGE.md](docs/USAGE.md): end-to-end MCP host workflow and tool details.
 - [docs/RECIPES.md](docs/RECIPES.md): task-specific host recipes.
 - [docs/ADOPTION.md](docs/ADOPTION.md): short trial, host setup, workflow examples, and outreach copy.
@@ -125,6 +125,7 @@ uv run python scripts/check_release_readiness.py
 uv run python scripts/run_golden_evals.py
 uv run python scripts/check_mcp_registry_status.py
 uv run python scripts/check_directory_presence.py
+uv run python scripts/export_host_proof_sprint_checklist.py --output docs/HOST_PROOF_SPRINT_CHECKLIST.md
 uv run python scripts/export_launch_kit.py --output docs/LAUNCH_KIT.md
 uv build
 ```
