@@ -570,11 +570,24 @@ def _annotation_findings(summary: DatasetAnnotationSummary) -> list[DatasetQuali
             DatasetQualityFinding(
                 code="dataset_invalid_annotations",
                 severity="high",
-                summary="Some annotation records are malformed or outside supported bounds.",
+                summary="Some annotation records are malformed.",
                 sample_paths=summary.sample_invalid_references,
                 details={
                     "source_format": summary.source_format,
                     "invalid_annotation_count": summary.invalid_annotation_count,
+                },
+            )
+        )
+    if summary.out_of_bounds_annotation_count:
+        findings.append(
+            DatasetQualityFinding(
+                code="dataset_out_of_bounds_annotations",
+                severity="high",
+                summary="Some annotation boxes fall outside image bounds.",
+                sample_paths=summary.sample_out_of_bounds_references,
+                details={
+                    "source_format": summary.source_format,
+                    "out_of_bounds_annotation_count": summary.out_of_bounds_annotation_count,
                 },
             )
         )

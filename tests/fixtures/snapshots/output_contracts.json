@@ -740,11 +740,15 @@
       "invalid_annotation_count": 0,
       "missing_annotation_count": 1,
       "orphan_annotation_count": 0,
+      "out_of_bounds_annotation_count": 1,
       "sample_invalid_references": [],
       "sample_missing_paths": [
         "<OUTPUT_CONTRACT_ROOT>/dataset-quality/val/cat/clipped.png"
       ],
       "sample_orphan_references": [],
+      "sample_out_of_bounds_references": [
+        "4"
+      ],
       "source_format": "coco"
     },
     "class_distribution": {
@@ -810,6 +814,18 @@
         ],
         "severity": "medium",
         "summary": "Some dataset images do not have matching annotations."
+      },
+      {
+        "code": "dataset_out_of_bounds_annotations",
+        "details": {
+          "out_of_bounds_annotation_count": 1,
+          "source_format": "coco"
+        },
+        "sample_paths": [
+          "4"
+        ],
+        "severity": "high",
+        "summary": "Some annotation boxes fall outside image bounds."
       },
       {
         "code": "dataset_high_clipping",

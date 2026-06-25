@@ -26,10 +26,12 @@ class DatasetAnnotationSummary(StrictModel):
     missing_annotation_count: int
     orphan_annotation_count: int = 0
     invalid_annotation_count: int = 0
+    out_of_bounds_annotation_count: int = 0
     category_count: int = 0
     sample_missing_paths: list[str] = Field(default_factory=list)
     sample_orphan_references: list[str] = Field(default_factory=list)
     sample_invalid_references: list[str] = Field(default_factory=list)
+    sample_out_of_bounds_references: list[str] = Field(default_factory=list)
 
 
 def inspect_annotation_consistency(
@@ -61,6 +63,8 @@ def _coco_summary(
     payload: dict[str, Any],
 ) -> DatasetAnnotationSummary:
     image_ids_by_file = _coco_image_ids_by_file(payload)
+    image_sizes_by_id = _coco_image_sizes_by_id(payload)
+    known_image_ids = set(image_ids_by_file.values())
     matched_image_ids: set[int] = set()
     missing_paths: list[str] = []
     for path in image_paths:
@@ -75,16 +79,21 @@ def _coco_summary(
     annotated_image_ids: set[int] = set()
     orphan_references: list[str] = []
     invalid_references: list[str] = []
+    out_of_bounds_references: list[str] = []
     for item in payload.get("annotations", []):
         if not isinstance(item, dict):
             invalid_references.append("non-object annotation")
             continue
         image_id = item.get("image_id")
-        if not isinstance(image_id, int) or image_id not in image_ids_by_file.values():
+        if not isinstance(image_id, int) or image_id not in known_image_ids:
             orphan_references.append(str(image_id))
             continue
-        if not _valid_coco_bbox(item.get("bbox")):
+        bbox = item.get("bbox")
+        if not _valid_coco_bbox(bbox):
             invalid_references.append(str(item.get("id", image_id)))
+            continue
+        if _coco_bbox_out_of_bounds(bbox, image_sizes_by_id.get(image_id)):
+            out_of_bounds_references.append(str(item.get("id", image_id)))
             continue
         if image_id in matched_image_ids:
             annotated_image_ids.add(image_id)
@@ -104,10 +113,12 @@ def _coco_summary(
         missing_annotation_count=len(set(missing_paths)),
         orphan_annotation_count=len(orphan_references),
         invalid_annotation_count=len(invalid_references),
+        out_of_bounds_annotation_count=len(out_of_bounds_references),
         category_count=sum(isinstance(category, dict) for category in payload.get("categories", [])),
         sample_missing_paths=sorted(set(missing_paths))[:3],
         sample_orphan_references=orphan_references[:3],
         sample_invalid_references=invalid_references[:3],
+        sample_out_of_bounds_references=out_of_bounds_references[:3],
     )
 
 
@@ -185,6 +196,24 @@ def _coco_image_ids_by_file(payload: dict[str, Any]) -> dict[str, int]:
     return image_ids
 
 
+def _coco_image_sizes_by_id(payload: dict[str, Any]) -> dict[int, tuple[float, float]]:
+    sizes: dict[int, tuple[float, float]] = {}
+    for image in payload.get("images", []):
+        if not isinstance(image, dict):
+            continue
+        image_id = image.get("id")
+        if not isinstance(image_id, int):
+            continue
+        try:
+            width = float(image.get("width"))
+            height = float(image.get("height"))
+        except (TypeError, ValueError):
+            continue
+        if width > 0 and height > 0:
+            sizes[image_id] = (width, height)
+    return sizes
+
+
 def _matching_coco_image_ids(
     *,
     dataset_path: Path,
@@ -226,6 +255,17 @@ def _valid_coco_bbox(value: object) -> bool:
     except (TypeError, ValueError):
         return False
     return width > 0 and height > 0
+
+
+def _coco_bbox_out_of_bounds(value: object, size: tuple[float, float] | None) -> bool:
+    if size is None or not isinstance(value, list) or len(value) < _COCO_BBOX_VALUES:
+        return False
+    image_width, image_height = size
+    try:
+        x_min, y_min, width, height = [float(item) for item in value[:_COCO_BBOX_VALUES]]
+    except (TypeError, ValueError):
+        return False
+    return x_min < 0 or y_min < 0 or x_min + width > image_width or y_min + height > image_height
 
 
 def _find_yolo_label_path(*, dataset_path: Path, image_path: Path) -> Path | None:

@@ -446,15 +446,16 @@ def _write_output_contract_coco_manifest(dataset_root: Path) -> None:
         json.dumps(
             {
                 "images": [
-                    {"id": 1, "file_name": "train/cat/duplicate.png"},
-                    {"id": 2, "file_name": "train/cat/normal.png"},
-                    {"id": 3, "file_name": "train/dog/dog.png"},
-                    {"id": 4, "file_name": "val/cat/clipped.png"},
+                    {"id": 1, "file_name": "train/cat/duplicate.png", "width": 24, "height": 16},
+                    {"id": 2, "file_name": "train/cat/normal.png", "width": 24, "height": 16},
+                    {"id": 3, "file_name": "train/dog/dog.png", "width": 20, "height": 20},
+                    {"id": 4, "file_name": "val/cat/clipped.png", "width": 12, "height": 24},
                 ],
                 "annotations": [
                     {"id": 1, "image_id": 1, "bbox": [1, 1, 8, 8], "category_id": 1},
                     {"id": 2, "image_id": 2, "bbox": [1, 1, 8, 8], "category_id": 1},
                     {"id": 3, "image_id": 3, "bbox": [2, 2, 6, 6], "category_id": 2},
+                    {"id": 4, "image_id": 4, "bbox": [10, 1, 8, 4], "category_id": 1},
                 ],
                 "categories": [
                     {"id": 1, "name": "cat"},
