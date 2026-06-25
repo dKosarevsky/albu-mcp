@@ -1,6 +1,7 @@
 # MCP Host Acceptance Matrix
 
 Use this matrix after releases that change tools, resources, prompts, package metadata, or local preview behavior.
+Copy-paste setup packets are generated in [docs/HOST_UX_PACKETS.md](HOST_UX_PACKETS.md).
 Automated stdio, snapshot, release, PyPI, and MCP Registry checks run in CI. Manual app-level host checks are intentionally
 small: one local image under `--allowed-root`, one temporary `--artifact-root`, and the PyPI command from
 `docs/INSTALL.md`.

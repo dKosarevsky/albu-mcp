@@ -98,7 +98,7 @@ source: [docs/integrations/mcp.md](https://github.com/albumentations-team/Albume
 - [docs/UPSTREAM_PR_PACKET.md](docs/UPSTREAM_PR_PACKET.md): upstream source for [AlbumentationsX#289](https://github.com/albumentations-team/AlbumentationsX/pull/289).
 - [examples/distortion_review_workflow.md](examples/distortion_review_workflow.md): rejected noisy preview review loop.
 - [docs/DEMO.md](docs/DEMO.md): generated preview comparison demo.
-- [docs/HOST_ACCEPTANCE.md](docs/HOST_ACCEPTANCE.md), [docs/HOST_MATRIX.md](docs/HOST_MATRIX.md), and [docs/HOST_ACCEPTANCE_EVIDENCE.md](docs/HOST_ACCEPTANCE_EVIDENCE.md): MCP host acceptance status.
+- [docs/HOST_ACCEPTANCE.md](docs/HOST_ACCEPTANCE.md), [docs/HOST_MATRIX.md](docs/HOST_MATRIX.md), [docs/HOST_UX_PACKETS.md](docs/HOST_UX_PACKETS.md), and [docs/HOST_ACCEPTANCE_EVIDENCE.md](docs/HOST_ACCEPTANCE_EVIDENCE.md): MCP host acceptance status.
 - [docs/V1_READINESS.md](docs/V1_READINESS.md): v1 compatibility and release audit.
 - [docs/V1_LAUNCH_REPORT.md](docs/V1_LAUNCH_REPORT.md): current machine-readable v1 launch blocker summary.
 - [docs/RELEASE.md](docs/RELEASE.md): PyPI, GitHub Release, and MCP Registry publication process.
