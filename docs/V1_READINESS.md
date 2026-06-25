@@ -12,6 +12,7 @@ As of 2026-06-23, `v1.15.0` is the latest published pre-v1 release:
 - GitHub release and PyPI Trusted Publishing completed for `v1.15.0`;
 - machine-verifiable host proof status is tracked in `docs/HOST_PROOF_STATUS.md`;
 - the current launch blocker rollup is tracked in `docs/V1_LAUNCH_REPORT.md`;
+- v1 trust gates are separated in `docs/V1_TRUST_GATES.md`;
 - Manual Host UI evidence is still `pending` and must not be treated as passed until dated host screenshots or logs are
   recorded through the host proof sprint runbook.
 
