@@ -733,6 +733,20 @@
     "allowed_roots": [
       "<OUTPUT_CONTRACT_ROOT>/dataset-quality"
     ],
+    "annotation_summary": {
+      "annotated_image_count": 3,
+      "category_count": 2,
+      "image_count": 4,
+      "invalid_annotation_count": 0,
+      "missing_annotation_count": 1,
+      "orphan_annotation_count": 0,
+      "sample_invalid_references": [],
+      "sample_missing_paths": [
+        "<OUTPUT_CONTRACT_ROOT>/dataset-quality/val/cat/clipped.png"
+      ],
+      "sample_orphan_references": [],
+      "source_format": "coco"
+    },
     "class_distribution": {
       "cat": 3,
       "dog": 1
@@ -786,6 +800,18 @@
         "summary": "Sampled image dimensions have a wide aspect-ratio spread."
       },
       {
+        "code": "dataset_missing_annotations",
+        "details": {
+          "missing_annotation_count": 1,
+          "source_format": "coco"
+        },
+        "sample_paths": [
+          "<OUTPUT_CONTRACT_ROOT>/dataset-quality/val/cat/clipped.png"
+        ],
+        "severity": "medium",
+        "summary": "Some dataset images do not have matching annotations."
+      },
+      {
         "code": "dataset_high_clipping",
         "details": {
           "clipping_fraction": 0.25
@@ -813,7 +839,7 @@
         "summary": "Sampled images have low entropy and may be visually uniform."
       }
     ],
-    "ignored_file_count": 0,
+    "ignored_file_count": 1,
     "image_count": 4,
     "image_size_summary": {
       "aspect_ratio_max": 1.5,
@@ -843,6 +869,11 @@
         "code": "review_class_balance",
         "severity": "medium",
         "summary": "Check whether minority classes need more source data or lighter augmentation."
+      },
+      {
+        "code": "review_annotation_consistency",
+        "severity": "medium",
+        "summary": "Review missing, orphan, or invalid annotations before rendering annotated previews."
       }
     ],
     "sample_metrics": [

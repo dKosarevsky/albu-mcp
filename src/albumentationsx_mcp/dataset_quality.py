@@ -10,6 +10,7 @@ from typing import Any
 from PIL import Image
 from pydantic import Field
 
+from albumentationsx_mcp.dataset_intelligence import DatasetAnnotationSummary, inspect_annotation_consistency
 from albumentationsx_mcp.diagnostics import DiagnosticSeverity, DiagnosticStatus
 from albumentationsx_mcp.models import ImageQualityAggregate, ImageQualityMetrics, StrictModel
 from albumentationsx_mcp.preview import PathPolicy
@@ -78,6 +79,7 @@ class DatasetStructureHealth(StrictModel):
     class_distribution: dict[str, int] = Field(default_factory=dict)
     image_size_summary: DatasetImageSizeSummary | None = None
     duplicate_groups: list[DatasetDuplicateGroup] = Field(default_factory=list)
+    annotation_summary: DatasetAnnotationSummary | None = None
 
 
 class DatasetQualityReport(StrictModel):
@@ -97,6 +99,7 @@ class DatasetQualityReport(StrictModel):
     class_distribution: dict[str, int] = Field(default_factory=dict)
     image_size_summary: DatasetImageSizeSummary | None = None
     duplicate_groups: list[DatasetDuplicateGroup] = Field(default_factory=list)
+    annotation_summary: DatasetAnnotationSummary | None = None
     aggregate: ImageQualityAggregate
     sample_metrics: list[ImageQualityMetrics] = Field(default_factory=list)
     findings: list[DatasetQualityFinding] = Field(default_factory=list)
@@ -159,6 +162,7 @@ def inspect_dataset_quality(
         class_distribution=structure.class_distribution,
         image_size_summary=structure.image_size_summary,
         duplicate_groups=structure.duplicate_groups,
+        annotation_summary=structure.annotation_summary,
         aggregate=aggregate,
         sample_metrics=metrics,
         findings=findings,
@@ -290,6 +294,8 @@ def _findings(
                 },
             )
         )
+    if structure.annotation_summary is not None:
+        findings.extend(_annotation_findings(structure.annotation_summary))
     if aggregate.image_count == 0:
         return findings
     if aggregate.clipping_fraction is not None and aggregate.clipping_fraction >= _HIGH_CLIPPING_THRESHOLD:
@@ -399,6 +405,14 @@ def _remediation_actions(findings: list[DatasetQualityFinding]) -> list[dict[str
                 "summary": "Check whether minority classes need more source data or lighter augmentation.",
             }
         )
+    if any(finding.code.startswith("dataset_") and "annotation" in finding.code for finding in findings):
+        actions.append(
+            {
+                "code": "review_annotation_consistency",
+                "severity": "medium",
+                "summary": "Review missing, orphan, or invalid annotations before rendering annotated previews.",
+            }
+        )
     return actions
 
 
@@ -437,6 +451,7 @@ def _structure_health(*, dataset_path: Path, image_paths: list[Path]) -> Dataset
         class_distribution=dict(sorted(class_counts.items())),
         image_size_summary=_image_size_summary(metadata_paths),
         duplicate_groups=_duplicate_groups(metadata_paths),
+        annotation_summary=inspect_annotation_consistency(dataset_path=dataset_path, image_paths=metadata_paths),
     )
 
 
@@ -520,3 +535,47 @@ def _has_large_aspect_ratio_spread(summary: DatasetImageSizeSummary | None) -> b
     if summary is None or summary.aspect_ratio_min <= 0:
         return False
     return summary.aspect_ratio_max / summary.aspect_ratio_min >= _ASPECT_RATIO_SPREAD
+
+
+def _annotation_findings(summary: DatasetAnnotationSummary) -> list[DatasetQualityFinding]:
+    findings: list[DatasetQualityFinding] = []
+    if summary.missing_annotation_count:
+        findings.append(
+            DatasetQualityFinding(
+                code="dataset_missing_annotations",
+                severity="medium",
+                summary="Some dataset images do not have matching annotations.",
+                sample_paths=summary.sample_missing_paths,
+                details={
+                    "source_format": summary.source_format,
+                    "missing_annotation_count": summary.missing_annotation_count,
+                },
+            )
+        )
+    if summary.orphan_annotation_count:
+        findings.append(
+            DatasetQualityFinding(
+                code="dataset_orphan_annotations",
+                severity="medium",
+                summary="Some annotations reference images that were not found in the dataset sample.",
+                sample_paths=summary.sample_orphan_references,
+                details={
+                    "source_format": summary.source_format,
+                    "orphan_annotation_count": summary.orphan_annotation_count,
+                },
+            )
+        )
+    if summary.invalid_annotation_count:
+        findings.append(
+            DatasetQualityFinding(
+                code="dataset_invalid_annotations",
+                severity="high",
+                summary="Some annotation records are malformed or outside supported bounds.",
+                sample_paths=summary.sample_invalid_references,
+                details={
+                    "source_format": summary.source_format,
+                    "invalid_annotation_count": summary.invalid_annotation_count,
+                },
+            )
+        )
+    return findings

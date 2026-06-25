@@ -425,6 +425,7 @@ def _dataset_quality_ready(root: Path) -> dict[str, Any]:
     )
     _write_output_contract_image(dataset_root / "train" / "dog" / "dog.png", color=(80, 90, 100), size=(20, 20))
     _write_output_contract_image(dataset_root / "val" / "cat" / "clipped.png", color=(255, 255, 255), size=(12, 24))
+    _write_output_contract_coco_manifest(dataset_root)
     report = inspect_dataset_quality(
         dataset_path=dataset_root,
         max_images=4,
@@ -436,6 +437,33 @@ def _dataset_quality_ready(root: Path) -> dict[str, Any]:
 def _write_output_contract_image(path: Path, *, color: tuple[int, int, int], size: tuple[int, int]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     Image.new("RGB", size, color=color).save(path)
+
+
+def _write_output_contract_coco_manifest(dataset_root: Path) -> None:
+    annotations_dir = dataset_root / "annotations"
+    annotations_dir.mkdir(parents=True, exist_ok=True)
+    (annotations_dir / "instances_train.json").write_text(
+        json.dumps(
+            {
+                "images": [
+                    {"id": 1, "file_name": "train/cat/duplicate.png"},
+                    {"id": 2, "file_name": "train/cat/normal.png"},
+                    {"id": 3, "file_name": "train/dog/dog.png"},
+                    {"id": 4, "file_name": "val/cat/clipped.png"},
+                ],
+                "annotations": [
+                    {"id": 1, "image_id": 1, "bbox": [1, 1, 8, 8], "category_id": 1},
+                    {"id": 2, "image_id": 2, "bbox": [1, 1, 8, 8], "category_id": 1},
+                    {"id": 3, "image_id": 3, "bbox": [2, 2, 6, 6], "category_id": 2},
+                ],
+                "categories": [
+                    {"id": 1, "name": "cat"},
+                    {"id": 2, "name": "dog"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
 
 
 def _preview_request_ready(root: Path) -> dict[str, Any]:
