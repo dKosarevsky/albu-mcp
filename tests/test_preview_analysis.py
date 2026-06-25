@@ -65,3 +65,6 @@ def test_compare_preview_manifests_suggests_feedback_tags_for_candidate_transfor
 
     assert comparison.suggested_feedback_tags == ["too_noisy"]
     assert any("Suggested feedback tags are review candidates" in note for note in comparison.review_notes)
+    assert comparison.review_guidance[0].feedback_tag == "too_noisy"
+    assert comparison.review_guidance[0].suggested_action == "reduce_noise_intensity"
+    assert "speckle" in comparison.review_guidance[0].review_focus

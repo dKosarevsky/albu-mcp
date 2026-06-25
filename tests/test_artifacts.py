@@ -148,7 +148,7 @@ def test_preview_service_compares_two_recorded_runs(tmp_path: Path) -> None:
     candidate = service.render_preview(
         PreviewRequest(
             input_paths=[image_path],
-            pipeline=ComposeSpec(transforms=[TransformSpec(name="VerticalFlip", p=1.0)], seed=20),
+            pipeline=ComposeSpec(transforms=[TransformSpec(name="GaussNoise", p=1.0)], seed=20),
             variants_per_image=1,
             seed=20,
         ),
@@ -160,6 +160,8 @@ def test_preview_service_compares_two_recorded_runs(tmp_path: Path) -> None:
     assert comparison.candidate.run_id == candidate.run_id
     assert comparison.pipeline_changed is True
     assert comparison.seed_changed is True
+    assert comparison.review_guidance[0].feedback_tag == "too_noisy"
+    assert comparison.review_guidance[0].suggested_action == "reduce_noise_intensity"
 
 
 def test_preview_service_compare_includes_quality_summary(tmp_path: Path) -> None:

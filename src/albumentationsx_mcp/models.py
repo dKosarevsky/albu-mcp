@@ -317,6 +317,15 @@ class PreviewQualitySummary(StrictModel):
     annotation_summary: PreviewAnnotationQualitySummary | None = None
 
 
+class PreviewReviewGuidance(StrictModel):
+    """Actionable review guidance for one suggested feedback tag."""
+
+    feedback_tag: str
+    review_focus: str
+    rationale: str
+    suggested_action: str
+
+
 class PreviewRunComparison(StrictModel):
     """Comparison of two preview run manifests for feedback-driven tuning."""
 
@@ -328,6 +337,7 @@ class PreviewRunComparison(StrictModel):
     artifact_count_delta: int
     review_notes: list[str] = Field(default_factory=list)
     suggested_feedback_tags: list[str] = Field(default_factory=list)
+    review_guidance: list[PreviewReviewGuidance] = Field(default_factory=list)
     quality_summary: PreviewQualitySummary | None = None
     quality_warnings: list[str] = Field(default_factory=list)
 
