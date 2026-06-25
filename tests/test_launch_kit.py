@@ -21,6 +21,7 @@ def test_launch_kit_contains_public_distribution_assets() -> None:
     assert "docs/HOST_PROOF_SPRINT.md" in markdown
     assert "docs/HOST_PROOF_SPRINT_CHECKLIST.md" in markdown
     assert "docs/NETWORK_GROWTH_TRACKER.md" in markdown
+    assert "docs/PUBLIC_ADOPTION_LOOP.md" in markdown
     assert "dataset-health.yml" in markdown
 
 

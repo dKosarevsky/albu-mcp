@@ -48,6 +48,7 @@ def build_adoption_packet(
             "validate_preview_request",
             "render_preview_batch",
             "compare_preview_runs",
+            "plan_preview_review",
             "export_preview_report",
             "export_pipeline",
         ],

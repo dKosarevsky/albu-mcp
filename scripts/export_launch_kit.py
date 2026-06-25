@@ -44,6 +44,7 @@ def build_launch_kit() -> dict[str, Any]:
         "growth_docs": [
             "docs/NETWORK_GROWTH.md",
             "docs/NETWORK_GROWTH_TRACKER.md",
+            "docs/PUBLIC_ADOPTION_LOOP.md",
         ],
         "feedback_templates": [
             ".github/ISSUE_TEMPLATE/host-acceptance.yml",

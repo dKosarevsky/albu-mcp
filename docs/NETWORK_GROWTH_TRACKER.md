@@ -23,6 +23,7 @@ Ready for v1: `false`
 
 - `docs/LAUNCH_KIT.md`
 - `docs/ADOPTION_PACKET.md`
+- `docs/PUBLIC_ADOPTION_LOOP.md`
 - `docs/DEMO.md`
 - `examples/distortion_review_workflow.md`
 
@@ -37,4 +38,5 @@ Ready for v1: `false`
 
 - `uv run python scripts/check_directory_presence.py`
 - `uv run python scripts/check_mcp_registry_status.py`
+- `uv run python scripts/export_public_adoption_loop.py --output docs/PUBLIC_ADOPTION_LOOP.md`
 - `uv run python scripts/export_network_growth_tracker.py --output docs/NETWORK_GROWTH_TRACKER.md`

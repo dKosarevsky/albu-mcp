@@ -39,6 +39,7 @@ AlbumentationsX MCP connects MCP hosts to local computer-vision augmentation wor
 1. `validate_preview_request`
 1. `render_preview_batch`
 1. `compare_preview_runs`
+1. `plan_preview_review`
 1. `export_preview_report`
 1. `export_pipeline`
 
@@ -59,6 +60,7 @@ AlbumentationsX MCP connects MCP hosts to local computer-vision augmentation wor
 
 - `docs/NETWORK_GROWTH.md`
 - `docs/NETWORK_GROWTH_TRACKER.md`
+- `docs/PUBLIC_ADOPTION_LOOP.md`
 
 ## Feedback Intake
 

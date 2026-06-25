@@ -23,8 +23,10 @@ def test_network_growth_tracker_contains_channels_and_next_actions() -> None:
     assert "registry.modelcontextprotocol.io" in markdown
     assert "https://glama.ai/mcp/servers/dKosarevsky/albu-mcp" in markdown
     assert "docs/LAUNCH_KIT.md" in markdown
+    assert "docs/PUBLIC_ADOPTION_LOOP.md" in markdown
     assert "docs/HOST_PROOF_SPRINT_CHECKLIST.md" in markdown
     assert "dataset-health.yml" in markdown
+    assert "export_public_adoption_loop.py" in markdown
 
 
 def test_committed_network_growth_tracker_is_current() -> None:
