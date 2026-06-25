@@ -51,7 +51,9 @@ def build_public_adoption_loop() -> dict[str, Any]:
                 ],
                 "proof_assets": ["tests/fixtures/snapshots/output_contracts.json", "docs/USAGE.md"],
                 "success_metric": "User feedback maps to tags, a next tool, and an auditable tuning decision.",
-                "next_action": "Use `interpret_preview_feedback` and `plan_preview_review` before adjustment or export.",
+                "next_action": (
+                    "Use `interpret_preview_feedback` and `plan_preview_review` before adjustment or export."
+                ),
             },
             {
                 "id": "feedback_intake",

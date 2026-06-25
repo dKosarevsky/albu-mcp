@@ -143,8 +143,7 @@ def _next_gate(manual_status: str, replay_status: str) -> str:
 
 def _verify_manual_host_ui_command(host: str) -> str:
     return " ".join(
-        shlex.quote(part)
-        for part in ["uv", "run", "python", "scripts/check_manual_host_acceptance.py", "--host", host]
+        shlex.quote(part) for part in ["uv", "run", "python", "scripts/check_manual_host_acceptance.py", "--host", host]
     )
 
 

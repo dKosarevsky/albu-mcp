@@ -164,20 +164,18 @@ def _troubleshooting(host: str) -> list[str]:
 
 
 def _first_run_prompt() -> str:
-    return "\n".join(
-        [
-            "Run the AlbumentationsX MCP first-run flow.",
-            "1. Read albumentationsx://examples/client-smoke.",
-            "2. Call run_host_smoke_check.",
-            "3. Call inspect_dataset_quality on the local image folder.",
-            "4. Call build_review_packet.",
-            "5. Validate the generated preview request.",
-            "6. Render a small preview batch.",
-            "7. Compare baseline and candidate previews.",
-            "8. Interpret feedback such as 'example 8 is too noisy'.",
-            "9. Plan the preview review action.",
-            "10. Export the preview report or final pipeline.",
-        ]
+    return (
+        "Run the AlbumentationsX MCP first-run flow.\n"
+        "1. Read albumentationsx://examples/client-smoke.\n"
+        "2. Call run_host_smoke_check.\n"
+        "3. Call inspect_dataset_quality on the local image folder.\n"
+        "4. Call build_review_packet.\n"
+        "5. Validate the generated preview request.\n"
+        "6. Render a small preview batch.\n"
+        "7. Compare baseline and candidate previews.\n"
+        "8. Interpret feedback such as 'example 8 is too noisy'.\n"
+        "9. Plan the preview review action.\n"
+        "10. Export the preview report or final pipeline."
     )
 
 

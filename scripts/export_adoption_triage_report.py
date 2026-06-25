@@ -51,7 +51,9 @@ def build_adoption_triage_report() -> dict[str, Any]:
                 "id": "dataset_health_findings",
                 "source": ".github/ISSUE_TEMPLATE/dataset-health.yml",
                 "measure": "Group reports by inspect_dataset_quality findings.",
-                "response": "Add regression coverage for repeated findings such as dataset_unknown_category_annotations.",
+                "response": (
+                    "Add regression coverage for repeated findings such as dataset_unknown_category_annotations."
+                ),
             },
             {
                 "id": "release_response_items",
@@ -92,11 +94,7 @@ def render_adoption_triage_report_markdown(report: dict[str, Any]) -> str:
         "| --- | --- | --- | --- |",
     ]
     lines.extend(
-        "| "
-        f"`{metric['id']}` | "
-        f"{metric['source']} | "
-        f"{metric['measure']} | "
-        f"{metric['response']} |"
+        f"| `{metric['id']}` | {metric['source']} | {metric['measure']} | {metric['response']} |"
         for metric in report["manual_metrics"]
     )
     lines.extend(["", "## Weekly Triage", ""])

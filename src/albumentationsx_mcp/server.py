@@ -50,7 +50,12 @@ from albumentationsx_mcp.ranking import rank_preview_candidates as rank_candidat
 from albumentationsx_mcp.recipes import list_recipe_catalog, recommend_recipe
 from albumentationsx_mcp.reports import PreviewReportService
 from albumentationsx_mcp.review import PreviewFeedbackStore
-from albumentationsx_mcp.review_agent import build_review_agent_plan, interpret_preview_feedback as interpret_feedback_note
+from albumentationsx_mcp.review_agent import (
+    build_review_agent_plan,
+)
+from albumentationsx_mcp.review_agent import (
+    interpret_preview_feedback as interpret_feedback_note,
+)
 from albumentationsx_mcp.review_packet import build_review_packet
 from albumentationsx_mcp.sessions import InteractiveTuningSessionStore
 from albumentationsx_mcp.tuning import TuningDecisionStore, build_tuning_session_summary
@@ -489,7 +494,7 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
         return interpret_feedback_note(feedback_note).model_dump(mode="json")
 
     @mcp.tool()
-    def plan_preview_review(
+    def plan_preview_review(  # noqa: PLR0913
         baseline_run_id: str,
         candidate_run_id: str,
         feedback_tags: list[str] | None = None,

@@ -12,9 +12,7 @@ from albumentationsx_mcp.review_agent import build_review_agent_plan, interpret_
 
 
 def test_review_agent_interprets_free_form_negative_feedback() -> None:
-    interpretation = interpret_preview_feedback(
-        "Example 8 is maybe too noisy; I can't even recognize the objects."
-    )
+    interpretation = interpret_preview_feedback("Example 8 is maybe too noisy; I can't even recognize the objects.")
 
     assert interpretation.accepted is False
     assert interpretation.decision_hint == "revise"
