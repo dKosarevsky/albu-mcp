@@ -3,6 +3,13 @@
 This plan keeps public discovery work explicit, repeatable, and privacy-safe. It separates source-of-truth registry
 publication from third-party directory visibility and community outreach.
 
+The generated channel tracker is [docs/NETWORK_GROWTH_TRACKER.md](NETWORK_GROWTH_TRACKER.md). Regenerate it after
+release or directory changes:
+
+```bash
+uv run python scripts/export_network_growth_tracker.py --output docs/NETWORK_GROWTH_TRACKER.md
+```
+
 ## Current Directory Status
 
 - Official MCP Registry: listed as active/latest for exact server search `io.github.dKosarevsky/albu-mcp`.

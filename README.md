@@ -94,7 +94,7 @@ source: [docs/integrations/mcp.md](https://github.com/albumentations-team/Albume
 - [docs/ADOPTION.md](docs/ADOPTION.md): short trial, host setup, workflow examples, and outreach copy.
 - [docs/ADOPTION_PACKET.md](docs/ADOPTION_PACKET.md) and [docs/LAUNCH_KIT.md](docs/LAUNCH_KIT.md): generated public launch copy, distribution checklist, demo assets, and feedback intake.
 - [docs/COMMUNITY_FEEDBACK.md](docs/COMMUNITY_FEEDBACK.md): privacy-safe GitHub issue intake.
-- [docs/NETWORK_GROWTH.md](docs/NETWORK_GROWTH.md): public directory status, registry follow-up, and outreach plan.
+- [docs/NETWORK_GROWTH.md](docs/NETWORK_GROWTH.md) and [docs/NETWORK_GROWTH_TRACKER.md](docs/NETWORK_GROWTH_TRACKER.md): directory status, registry follow-up, and outreach tracker.
 - [docs/UPSTREAM_PR_PACKET.md](docs/UPSTREAM_PR_PACKET.md): upstream source for [AlbumentationsX#289](https://github.com/albumentations-team/AlbumentationsX/pull/289).
 - [examples/distortion_review_workflow.md](examples/distortion_review_workflow.md): rejected noisy preview review loop.
 - [docs/DEMO.md](docs/DEMO.md): generated preview comparison demo.
@@ -127,5 +127,6 @@ uv run python scripts/check_mcp_registry_status.py
 uv run python scripts/check_directory_presence.py
 uv run python scripts/export_host_proof_sprint_checklist.py --output docs/HOST_PROOF_SPRINT_CHECKLIST.md
 uv run python scripts/export_launch_kit.py --output docs/LAUNCH_KIT.md
+uv run python scripts/export_network_growth_tracker.py --output docs/NETWORK_GROWTH_TRACKER.md
 uv build
 ```

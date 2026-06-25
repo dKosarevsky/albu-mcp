@@ -51,8 +51,14 @@ AlbumentationsX MCP connects MCP hosts to local computer-vision augmentation wor
 ## Proof Docs
 
 - `docs/HOST_PROOF_SPRINT.md`
+- `docs/HOST_PROOF_SPRINT_CHECKLIST.md`
 - `docs/V1_LAUNCH_REPORT.md`
 - `docs/HOST_ACCEPTANCE_EVIDENCE.md`
+
+## Growth Docs
+
+- `docs/NETWORK_GROWTH.md`
+- `docs/NETWORK_GROWTH_TRACKER.md`
 
 ## Feedback Intake
 

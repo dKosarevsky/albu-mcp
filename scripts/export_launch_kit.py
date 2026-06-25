@@ -37,8 +37,13 @@ def build_launch_kit() -> dict[str, Any]:
         ],
         "proof_docs": [
             "docs/HOST_PROOF_SPRINT.md",
+            "docs/HOST_PROOF_SPRINT_CHECKLIST.md",
             "docs/V1_LAUNCH_REPORT.md",
             "docs/HOST_ACCEPTANCE_EVIDENCE.md",
+        ],
+        "growth_docs": [
+            "docs/NETWORK_GROWTH.md",
+            "docs/NETWORK_GROWTH_TRACKER.md",
         ],
         "feedback_templates": [
             ".github/ISSUE_TEMPLATE/host-acceptance.yml",
@@ -100,6 +105,10 @@ def render_launch_kit_markdown(kit: dict[str, Any]) -> str:
         "## Proof Docs",
         "",
         *[f"- `{doc}`" for doc in kit["proof_docs"]],
+        "",
+        "## Growth Docs",
+        "",
+        *[f"- `{doc}`" for doc in kit["growth_docs"]],
         "",
         "## Feedback Intake",
         "",

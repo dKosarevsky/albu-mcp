@@ -19,6 +19,8 @@ def test_launch_kit_contains_public_distribution_assets() -> None:
     assert "docs/assets/demo/contact_sheet.png" in markdown
     assert "inspect_dataset_quality" in markdown
     assert "docs/HOST_PROOF_SPRINT.md" in markdown
+    assert "docs/HOST_PROOF_SPRINT_CHECKLIST.md" in markdown
+    assert "docs/NETWORK_GROWTH_TRACKER.md" in markdown
     assert "dataset-health.yml" in markdown
 
 
