@@ -74,7 +74,10 @@ def build_manual_host_acceptance_packet(config: ManualHostAcceptancePacketConfig
             "- `status`: `passed`, `blocked`, or `pending`.",
             "- `date`: ISO date of the real host UI run.",
             "- `evidence`: one sentence naming completed tools/resources and the final outcome.",
-            "- `artifacts`: redacted screenshot or transcript excerpt, contact sheet, manifest, report, or exported pipeline.",
+            (
+                "- `artifacts`: redacted screenshot or transcript excerpt, contact sheet, manifest, report, "
+                "or exported pipeline."
+            ),
             "",
             "### Status Rules",
             "",

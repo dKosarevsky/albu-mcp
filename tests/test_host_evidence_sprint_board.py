@@ -32,9 +32,10 @@ def test_host_evidence_sprint_board_exports_run_queue_and_packets() -> None:
     assert [item["host"] for item in board["run_queue"]] == ["Codex", "Claude Code", "Cursor", "Claude Desktop"]
     assert board["run_queue"][0]["run_order"] == 1
     assert board["run_queue"][0]["next_action"] == "run_first_10_minutes_replay"
-    assert "export_manual_host_acceptance_packet.py --host Codex --output /tmp/albu-host-codex.md" in board[
-        "run_queue"
-    ][0]["packet_command"]
+    assert (
+        "export_manual_host_acceptance_packet.py --host Codex --output /tmp/albu-host-codex.md"
+        in board["run_queue"][0]["packet_command"]
+    )
     assert "## Run Queue" in markdown
     assert "| 1 | Codex | `p0` | `run_first_10_minutes_replay` |" in markdown
     assert "## Packet Commands" in markdown

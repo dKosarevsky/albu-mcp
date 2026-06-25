@@ -92,11 +92,7 @@ def render_host_evidence_sprint_board_markdown(board: dict[str, Any]) -> str:
         ]
     )
     lines.extend(
-        "| "
-        f"{item['run_order']} | "
-        f"{item['host']} | "
-        f"`{item['priority']}` | "
-        f"`{item['next_action']}` |"
+        f"| {item['run_order']} | {item['host']} | `{item['priority']}` | `{item['next_action']}` |"
         for item in board["run_queue"]
     )
     lines.extend(["", "## Packet Commands", ""])
@@ -184,7 +180,7 @@ def _next_action(next_gate: str) -> str:
 
 
 def _packet_command(host: str) -> str:
-    output = f"/tmp/albu-host-{_host_slug(host)}.md"
+    output = f"/tmp/albu-host-{_host_slug(host)}.md"  # noqa: S108 - local reviewer packet scratch path.
     return " ".join(
         shlex.quote(part)
         for part in [

@@ -254,7 +254,7 @@ def _host_blocker_next_action(*, gate: str, status: str) -> str:
 
 
 def _packet_command(host: str) -> str:
-    output = f"/tmp/albu-host-{_host_slug(host)}.md"
+    output = f"/tmp/albu-host-{_host_slug(host)}.md"  # noqa: S108 - local reviewer packet scratch path.
     return " ".join(
         shlex.quote(part)
         for part in [

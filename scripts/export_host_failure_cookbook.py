@@ -13,8 +13,9 @@ def build_host_failure_cookbook() -> dict[str, Any]:
     return {
         "title": "Host Failure Cookbook",
         "privacy_policy": (
-            "Keep private datasets, prompts, screenshots, local home paths, tokens, and full host logs out of committed "
-            "evidence. Record only redacted symptoms and the first failing gate."
+            "Keep private datasets, prompts, screenshots, local home paths, tokens, "
+            "and full host logs out of committed evidence. Record only redacted symptoms "
+            "and the first failing gate."
         ),
         "failure_cases": [
             {
@@ -59,8 +60,10 @@ def build_host_failure_cookbook() -> dict[str, Any]:
             },
         ],
         "triage_commands": [
-            "uv run python scripts/export_manual_host_acceptance_packet.py --host '<host>' --output /tmp/albu-host-<host>.md",
-            "uv run python scripts/record_host_manual_run.py --host '<host>' --status blocked --date YYYY-MM-DD --evidence '<redacted blocker note>'",
+            "uv run python scripts/export_manual_host_acceptance_packet.py --host '<host>' "
+            "--output /tmp/albu-host-<host>.md",
+            "uv run python scripts/record_host_manual_run.py --host '<host>' --status blocked "
+            "--date YYYY-MM-DD --evidence '<redacted blocker note>'",
             "uv run python scripts/export_host_acceptance_report.py --output docs/HOST_ACCEPTANCE_EVIDENCE.md",
             "uv run python scripts/export_v1_launch_report.py --output docs/V1_LAUNCH_REPORT.md",
             "uv run python scripts/export_host_evidence_sprint_board.py --output docs/HOST_EVIDENCE_SPRINT_BOARD.md",
