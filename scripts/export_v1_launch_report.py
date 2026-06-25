@@ -21,6 +21,7 @@ _DEFAULT_PYPROJECT_PATH = Path("pyproject.toml")
 _DEFAULT_SERVER_JSON_PATH = Path("server.json")
 _DEFAULT_HOST_PROOF_STATUS_PATH = Path("docs/HOST_PROOF_STATUS.md")
 _VERSION_PATTERN = re.compile(r'^version = "([^"]+)"$', re.MULTILINE)
+_P0_HOSTS = frozenset({"Codex", "Claude Code"})
 
 
 def build_v1_launch_report(
@@ -50,6 +51,7 @@ def build_v1_launch_report(
     ]
     evidence_plan = _evidence_plan(manual_host_ui=manual_host_ui, first_10_minutes_replay=replay_status)
     blockers = _blockers(manual_host_ui=manual_host_ui, first_10_minutes_replay=replay_status)
+    host_blockers = _host_blockers(evidence_plan)
     return {
         "package": "albumentationsx-mcp",
         "mcp_name": server_payload["name"],
@@ -58,6 +60,7 @@ def build_v1_launch_report(
         "host_proof_status_path": str(host_proof_status_path),
         "ready_for_v1": not blockers,
         "blockers": blockers,
+        "host_blockers": host_blockers,
         "manual_host_ui": manual_host_ui,
         "first_10_minutes_replay": replay_status,
         "evidence_plan": evidence_plan,
@@ -86,6 +89,8 @@ def render_v1_launch_report_markdown(report: dict[str, Any]) -> str:
         )
     else:
         lines.append("- none")
+    lines.extend(["", "## Host Blockers", ""])
+    lines.extend(_host_blocker_lines(report["host_blockers"]))
     lines.extend(["", "## Manual Host UI", ""])
     lines.extend(_host_status_lines(report["manual_host_ui"]))
     lines.extend(["", "## First 10 Minutes Replay", ""])
@@ -203,6 +208,91 @@ def _recommended_next_actions(blockers: list[dict[str, str]]) -> list[str]:
 
 def _host_status_lines(items: list[dict[str, Any]]) -> list[str]:
     return [f"- {item['host']}: `{item['status']}` — {item['message']}" for item in items]
+
+
+def _host_blockers(evidence_plan: list[dict[str, Any]]) -> list[dict[str, str]]:
+    blockers: list[dict[str, str]] = []
+    for item in evidence_plan:
+        host = item["host"]
+        for gate in ("first_10_minutes_replay", "manual_host_ui"):
+            requirement = item[gate]
+            if requirement["status"] == "recorded":
+                continue
+            blockers.append(
+                {
+                    "host": host,
+                    "priority": _host_priority(host),
+                    "gate": gate,
+                    "code": _host_blocker_code(gate=gate, status=requirement["status"]),
+                    "severity": "high",
+                    "evidence_status": requirement["status"],
+                    "reason": requirement["message"],
+                    "next_action": _host_blocker_next_action(gate=gate, status=requirement["status"]),
+                    "packet_command": _packet_command(host),
+                    "record_command": item["record_commands"][gate],
+                }
+            )
+    return blockers
+
+
+def _host_priority(host: str) -> str:
+    return "p0" if host in _P0_HOSTS else "p1"
+
+
+def _host_blocker_code(*, gate: str, status: str) -> str:
+    if status == "blocked":
+        return f"{gate}_blocked"
+    return f"{gate}_missing"
+
+
+def _host_blocker_next_action(*, gate: str, status: str) -> str:
+    if status == "blocked":
+        return "triage_blocker"
+    if gate == "first_10_minutes_replay":
+        return "run_first_10_minutes_replay"
+    return "run_manual_host_ui"
+
+
+def _packet_command(host: str) -> str:
+    output = f"/tmp/albu-host-{_host_slug(host)}.md"
+    return " ".join(
+        shlex.quote(part)
+        for part in [
+            "uv",
+            "run",
+            "python",
+            "scripts/export_manual_host_acceptance_packet.py",
+            "--host",
+            host,
+            "--output",
+            output,
+        ]
+    )
+
+
+def _host_slug(host: str) -> str:
+    return host.lower().replace(" ", "-")
+
+
+def _host_blocker_lines(items: list[dict[str, str]]) -> list[str]:
+    if not items:
+        return ["- none"]
+    lines = [
+        "| Host | Priority | Gate | Status | Next Action |",
+        "| --- | --- | --- | --- | --- |",
+    ]
+    lines.extend(
+        "| "
+        f"{item['host']} | "
+        f"`{item['priority']}` | "
+        f"`{item['gate']}` | "
+        f"`{item['evidence_status']}` | "
+        f"`{item['next_action']}` |"
+        for item in items
+    )
+    lines.extend(["", "Packet commands:"])
+    lines.extend(f"- {item['host']} / {item['gate']}: `{item['packet_command']}`" for item in items)
+    return lines
 
 
 def _evidence_plan(

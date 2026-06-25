@@ -12,6 +12,29 @@ Host proof status: `docs/HOST_PROOF_STATUS.md`
 - `manual_host_ui_pending` (high): At least one supported host lacks passed manual UI evidence.
 - `first_10_minutes_replay_pending` (high): At least one supported host lacks passed First 10 Minutes replay evidence.
 
+## Host Blockers
+
+| Host | Priority | Gate | Status | Next Action |
+| --- | --- | --- | --- | --- |
+| Claude Desktop | `p1` | `first_10_minutes_replay` | `missing` | `run_first_10_minutes_replay` |
+| Claude Desktop | `p1` | `manual_host_ui` | `missing` | `run_manual_host_ui` |
+| Claude Code | `p0` | `first_10_minutes_replay` | `missing` | `run_first_10_minutes_replay` |
+| Claude Code | `p0` | `manual_host_ui` | `missing` | `run_manual_host_ui` |
+| Cursor | `p1` | `first_10_minutes_replay` | `missing` | `run_first_10_minutes_replay` |
+| Cursor | `p1` | `manual_host_ui` | `missing` | `run_manual_host_ui` |
+| Codex | `p0` | `first_10_minutes_replay` | `missing` | `run_first_10_minutes_replay` |
+| Codex | `p0` | `manual_host_ui` | `missing` | `run_manual_host_ui` |
+
+Packet commands:
+- Claude Desktop / first_10_minutes_replay: `uv run python scripts/export_manual_host_acceptance_packet.py --host 'Claude Desktop' --output /tmp/albu-host-claude-desktop.md`
+- Claude Desktop / manual_host_ui: `uv run python scripts/export_manual_host_acceptance_packet.py --host 'Claude Desktop' --output /tmp/albu-host-claude-desktop.md`
+- Claude Code / first_10_minutes_replay: `uv run python scripts/export_manual_host_acceptance_packet.py --host 'Claude Code' --output /tmp/albu-host-claude-code.md`
+- Claude Code / manual_host_ui: `uv run python scripts/export_manual_host_acceptance_packet.py --host 'Claude Code' --output /tmp/albu-host-claude-code.md`
+- Cursor / first_10_minutes_replay: `uv run python scripts/export_manual_host_acceptance_packet.py --host Cursor --output /tmp/albu-host-cursor.md`
+- Cursor / manual_host_ui: `uv run python scripts/export_manual_host_acceptance_packet.py --host Cursor --output /tmp/albu-host-cursor.md`
+- Codex / first_10_minutes_replay: `uv run python scripts/export_manual_host_acceptance_packet.py --host Codex --output /tmp/albu-host-codex.md`
+- Codex / manual_host_ui: `uv run python scripts/export_manual_host_acceptance_packet.py --host Codex --output /tmp/albu-host-codex.md`
+
 ## Manual Host UI
 
 - Claude Desktop: `pending` — manual host UI evidence not recorded

@@ -43,6 +43,31 @@ def test_v1_launch_report_tracks_pending_manual_host_blockers() -> None:
     )
 
 
+def test_v1_launch_report_exposes_host_level_blockers() -> None:
+    report = build_v1_launch_report()
+
+    assert len(report["host_blockers"]) == 8
+    codex_blockers = [item for item in report["host_blockers"] if item["host"] == "Codex"]
+    assert {item["code"] for item in codex_blockers} == {
+        "first_10_minutes_replay_missing",
+        "manual_host_ui_missing",
+    }
+    assert all(item["severity"] == "high" for item in codex_blockers)
+    assert codex_blockers[0]["priority"] == "p0"
+    assert codex_blockers[0]["evidence_status"] == "missing"
+    assert "export_manual_host_acceptance_packet.py --host Codex" in codex_blockers[0]["packet_command"]
+    assert "record_host_manual_run.py" in codex_blockers[0]["record_command"]
+
+
+def test_v1_launch_report_markdown_lists_host_blockers() -> None:
+    markdown = render_v1_launch_report_markdown(build_v1_launch_report())
+
+    assert "## Host Blockers" in markdown
+    assert "| Host | Priority | Gate | Status | Next Action |" in markdown
+    assert "| Codex | `p0` | `first_10_minutes_replay` | `missing` |" in markdown
+    assert "export_manual_host_acceptance_packet.py --host Codex" in markdown
+
+
 def test_v1_launch_report_markdown_is_reviewable() -> None:
     markdown = render_v1_launch_report_markdown(build_v1_launch_report())
 
