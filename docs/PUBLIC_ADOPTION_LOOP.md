@@ -15,7 +15,7 @@ Telemetry policy: No automatic telemetry; collect explicit, privacy-safe feedbac
 
 ## Weekly Operating Rhythm
 
-- Review new GitHub issues and directory comments during weekly triage.
+- Review new GitHub issues and directory comments with docs/ADOPTION_TRIAGE_REPORT.md.
 - Group feedback by host setup, dataset health, review workflow, and export workflow.
 - Promote repeated reports into tests, docs, or generated launch assets.
 - Regenerate launch, network growth, and adoption loop docs before release candidates.
@@ -23,5 +23,6 @@ Telemetry policy: No automatic telemetry; collect explicit, privacy-safe feedbac
 ## Next Checks
 
 - `uv run python scripts/export_public_adoption_loop.py --output docs/PUBLIC_ADOPTION_LOOP.md`
+- `uv run python scripts/export_adoption_triage_report.py --output docs/ADOPTION_TRIAGE_REPORT.md`
 - `uv run python scripts/export_network_growth_tracker.py --output docs/NETWORK_GROWTH_TRACKER.md`
 - `uv run python scripts/export_launch_kit.py --output docs/LAUNCH_KIT.md`
