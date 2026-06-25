@@ -45,6 +45,32 @@ def test_manual_host_acceptance_packet_contains_host_configs_and_record_commands
     assert '"status": "passed"' not in packet
 
 
+def test_manual_host_acceptance_packet_defines_privacy_safe_evidence_capture(tmp_path: Path) -> None:
+    config = ManualHostAcceptancePacketConfig(
+        allowed_root=tmp_path / "inputs",
+        artifact_root=tmp_path / "artifacts",
+        sample_image=tmp_path / "inputs" / "sample-grid.png",
+        package_version="1.15.0",
+        run_date="2026-06-26",
+        hosts=("Codex",),
+    )
+
+    packet = build_manual_host_acceptance_packet(config)
+
+    assert "## Privacy-Safe Evidence Capture" in packet
+    assert "Do not commit private images, screenshots, prompts, absolute home paths, tokens, or host logs." in packet
+    assert "### Minimal Evidence Bundle" in packet
+    assert "`host`" in packet
+    assert "`status`" in packet
+    assert "`date`" in packet
+    assert "`evidence`" in packet
+    assert "`artifacts`" in packet
+    assert "redacted screenshot or transcript excerpt" in packet
+    assert "passed only when the real host UI completes the flow" in packet
+    assert "blocked when the host UI fails before evidence can be captured" in packet
+    assert "pending when the host was not tested" in packet
+
+
 def test_manual_host_acceptance_packet_can_target_one_host(tmp_path: Path) -> None:
     config = ManualHostAcceptancePacketConfig(
         allowed_root=tmp_path / "inputs",
