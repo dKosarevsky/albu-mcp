@@ -753,7 +753,11 @@
       "sample_out_of_bounds_references": [
         "4"
       ],
-      "source_format": "coco"
+      "sample_unknown_category_references": [
+        "5"
+      ],
+      "source_format": "coco",
+      "unknown_category_annotation_count": 1
     },
     "class_distribution": {
       "cat": 3,
@@ -830,6 +834,18 @@
         ],
         "severity": "high",
         "summary": "Some annotation boxes fall outside image bounds."
+      },
+      {
+        "code": "dataset_unknown_category_annotations",
+        "details": {
+          "source_format": "coco",
+          "unknown_category_annotation_count": 1
+        },
+        "sample_paths": [
+          "5"
+        ],
+        "severity": "high",
+        "summary": "Some annotations reference category ids missing from the category catalog."
       },
       {
         "code": "dataset_high_clipping",

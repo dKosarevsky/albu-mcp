@@ -93,11 +93,13 @@ def test_output_contract_snapshot_includes_dataset_quality_report() -> None:
     assert report["annotation_summary"]["annotated_image_count"] == 3
     assert report["annotation_summary"]["missing_annotation_count"] == 1
     assert report["annotation_summary"]["out_of_bounds_annotation_count"] == 1
+    assert report["annotation_summary"]["unknown_category_annotation_count"] == 1
     assert "build_review_packet" in report["recommended_next_tools"]
     assert "dataset_high_clipping" in {finding["code"] for finding in report["findings"]}
     assert "dataset_exact_duplicate_images" in {finding["code"] for finding in report["findings"]}
     assert "dataset_missing_annotations" in {finding["code"] for finding in report["findings"]}
     assert "dataset_out_of_bounds_annotations" in {finding["code"] for finding in report["findings"]}
+    assert "dataset_unknown_category_annotations" in {finding["code"] for finding in report["findings"]}
 
 
 def test_output_contract_snapshot_includes_review_agent_plan() -> None:

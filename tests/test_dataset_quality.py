@@ -93,6 +93,7 @@ def test_inspect_dataset_quality_reports_coco_annotation_consistency(tmp_path: P
                     {"id": 2, "image_id": 999, "bbox": [1, 1, 4, 4], "category_id": 7},
                     {"id": 3, "image_id": 1, "bbox": [1, 1, -4, 4], "category_id": 7},
                     {"id": 4, "image_id": 1, "bbox": [20, 1, 10, 4], "category_id": 7},
+                    {"id": 5, "image_id": 1, "bbox": [2, 2, 5, 5], "category_id": 404},
                 ],
                 "categories": [{"id": 7, "name": "object"}],
             }
@@ -109,11 +110,13 @@ def test_inspect_dataset_quality_reports_coco_annotation_consistency(tmp_path: P
     assert report.annotation_summary.orphan_annotation_count == 1
     assert report.annotation_summary.invalid_annotation_count == 1
     assert report.annotation_summary.out_of_bounds_annotation_count == 1
+    assert report.annotation_summary.unknown_category_annotation_count == 1
     finding_codes = {finding.code for finding in report.findings}
     assert "dataset_missing_annotations" in finding_codes
     assert "dataset_orphan_annotations" in finding_codes
     assert "dataset_invalid_annotations" in finding_codes
     assert "dataset_out_of_bounds_annotations" in finding_codes
+    assert "dataset_unknown_category_annotations" in finding_codes
     assert "review_annotation_consistency" in {action["code"] for action in report.remediation_actions}
 
 

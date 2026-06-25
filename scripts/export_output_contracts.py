@@ -492,6 +492,7 @@ def _write_output_contract_coco_manifest(dataset_root: Path) -> None:
                     {"id": 2, "image_id": 2, "bbox": [1, 1, 8, 8], "category_id": 1},
                     {"id": 3, "image_id": 3, "bbox": [2, 2, 6, 6], "category_id": 2},
                     {"id": 4, "image_id": 4, "bbox": [10, 1, 8, 4], "category_id": 1},
+                    {"id": 5, "image_id": 3, "bbox": [3, 3, 5, 5], "category_id": 404},
                 ],
                 "categories": [
                     {"id": 1, "name": "cat"},

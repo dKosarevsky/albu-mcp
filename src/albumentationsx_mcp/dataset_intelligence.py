@@ -27,11 +27,13 @@ class DatasetAnnotationSummary(StrictModel):
     orphan_annotation_count: int = 0
     invalid_annotation_count: int = 0
     out_of_bounds_annotation_count: int = 0
+    unknown_category_annotation_count: int = 0
     category_count: int = 0
     sample_missing_paths: list[str] = Field(default_factory=list)
     sample_orphan_references: list[str] = Field(default_factory=list)
     sample_invalid_references: list[str] = Field(default_factory=list)
     sample_out_of_bounds_references: list[str] = Field(default_factory=list)
+    sample_unknown_category_references: list[str] = Field(default_factory=list)
 
 
 def inspect_annotation_consistency(
@@ -64,6 +66,7 @@ def _coco_summary(
 ) -> DatasetAnnotationSummary:
     image_ids_by_file = _coco_image_ids_by_file(payload)
     image_sizes_by_id = _coco_image_sizes_by_id(payload)
+    category_ids = _coco_category_ids(payload)
     known_image_ids = set(image_ids_by_file.values())
     matched_image_ids: set[int] = set()
     missing_paths: list[str] = []
@@ -80,6 +83,7 @@ def _coco_summary(
     orphan_references: list[str] = []
     invalid_references: list[str] = []
     out_of_bounds_references: list[str] = []
+    unknown_category_references: list[str] = []
     for item in payload.get("annotations", []):
         if not isinstance(item, dict):
             invalid_references.append("non-object annotation")
@@ -94,6 +98,9 @@ def _coco_summary(
             continue
         if _coco_bbox_out_of_bounds(bbox, image_sizes_by_id.get(image_id)):
             out_of_bounds_references.append(str(item.get("id", image_id)))
+            continue
+        if item.get("category_id") not in category_ids:
+            unknown_category_references.append(str(item.get("id", image_id)))
             continue
         if image_id in matched_image_ids:
             annotated_image_ids.add(image_id)
@@ -114,11 +121,13 @@ def _coco_summary(
         orphan_annotation_count=len(orphan_references),
         invalid_annotation_count=len(invalid_references),
         out_of_bounds_annotation_count=len(out_of_bounds_references),
-        category_count=sum(isinstance(category, dict) for category in payload.get("categories", [])),
+        unknown_category_annotation_count=len(unknown_category_references),
+        category_count=len(category_ids),
         sample_missing_paths=sorted(set(missing_paths))[:3],
         sample_orphan_references=orphan_references[:3],
         sample_invalid_references=invalid_references[:3],
         sample_out_of_bounds_references=out_of_bounds_references[:3],
+        sample_unknown_category_references=unknown_category_references[:3],
     )
 
 
@@ -212,6 +221,17 @@ def _coco_image_sizes_by_id(payload: dict[str, Any]) -> dict[int, tuple[float, f
         if width > 0 and height > 0:
             sizes[image_id] = (width, height)
     return sizes
+
+
+def _coco_category_ids(payload: dict[str, Any]) -> set[int]:
+    category_ids: set[int] = set()
+    for category in payload.get("categories", []):
+        if not isinstance(category, dict):
+            continue
+        category_id = category.get("id")
+        if isinstance(category_id, int):
+            category_ids.add(category_id)
+    return category_ids
 
 
 def _matching_coco_image_ids(

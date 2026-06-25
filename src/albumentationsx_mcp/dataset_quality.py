@@ -591,4 +591,17 @@ def _annotation_findings(summary: DatasetAnnotationSummary) -> list[DatasetQuali
                 },
             )
         )
+    if summary.unknown_category_annotation_count:
+        findings.append(
+            DatasetQualityFinding(
+                code="dataset_unknown_category_annotations",
+                severity="high",
+                summary="Some annotations reference category ids missing from the category catalog.",
+                sample_paths=summary.sample_unknown_category_references,
+                details={
+                    "source_format": summary.source_format,
+                    "unknown_category_annotation_count": summary.unknown_category_annotation_count,
+                },
+            )
+        )
     return findings
