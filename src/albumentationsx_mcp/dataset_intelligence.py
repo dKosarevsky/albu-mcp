@@ -64,7 +64,9 @@ def _coco_summary(
     matched_image_ids: set[int] = set()
     missing_paths: list[str] = []
     for path in image_paths:
-        image_ids = _matching_coco_image_ids(dataset_path=dataset_path, image_path=path, image_ids_by_file=image_ids_by_file)
+        image_ids = _matching_coco_image_ids(
+            dataset_path=dataset_path, image_path=path, image_ids_by_file=image_ids_by_file
+        )
         if image_ids:
             matched_image_ids.update(image_ids)
         else:
@@ -91,7 +93,9 @@ def _coco_summary(
     missing_paths.extend(
         str(path)
         for path in image_paths
-        if _path_has_coco_image_id(dataset_path=dataset_path, image_path=path, image_ids=missing_annotation_ids, by_file=image_ids_by_file)
+        if _path_has_coco_image_id(
+            dataset_path=dataset_path, image_path=path, image_ids=missing_annotation_ids, by_file=image_ids_by_file
+        )
     )
     return DatasetAnnotationSummary(
         source_format="coco",
@@ -187,7 +191,10 @@ def _matching_coco_image_ids(
     image_path: Path,
     image_ids_by_file: dict[str, int],
 ) -> set[int]:
-    return {image_ids_by_file[key] for key in _image_keys(dataset_path=dataset_path, image_path=image_path) & image_ids_by_file.keys()}
+    return {
+        image_ids_by_file[key]
+        for key in _image_keys(dataset_path=dataset_path, image_path=image_path) & image_ids_by_file.keys()
+    }
 
 
 def _path_has_coco_image_id(
@@ -197,7 +204,10 @@ def _path_has_coco_image_id(
     image_ids: set[int],
     by_file: dict[str, int],
 ) -> bool:
-    return bool(_matching_coco_image_ids(dataset_path=dataset_path, image_path=image_path, image_ids_by_file=by_file) & image_ids)
+    return bool(
+        _matching_coco_image_ids(dataset_path=dataset_path, image_path=image_path, image_ids_by_file=by_file)
+        & image_ids
+    )
 
 
 def _image_keys(*, dataset_path: Path, image_path: Path) -> set[str]:

@@ -125,8 +125,6 @@ uv run python scripts/check_release_readiness.py
 uv run python scripts/run_golden_evals.py
 uv run python scripts/check_mcp_registry_status.py
 uv run python scripts/check_directory_presence.py
-uv run python scripts/export_host_proof_sprint_checklist.py --output docs/HOST_PROOF_SPRINT_CHECKLIST.md
 uv run python scripts/export_launch_kit.py --output docs/LAUNCH_KIT.md
-uv run python scripts/export_network_growth_tracker.py --output docs/NETWORK_GROWTH_TRACKER.md
 uv build
 ```

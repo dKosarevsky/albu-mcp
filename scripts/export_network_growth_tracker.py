@@ -97,10 +97,10 @@ def render_network_growth_tracker_markdown(tracker: dict[str, Any]) -> str:
         "| Channel | Status | URL | Next Action |",
         "| --- | --- | --- | --- |",
     ]
-    for channel in tracker["channels"]:
-        lines.append(
-            f"| {channel['name']} | `{channel['status']}` | {channel['url']} | {channel['next_action']} |"
-        )
+    lines.extend(
+        f"| {channel['name']} | `{channel['status']}` | {channel['url']} | {channel['next_action']} |"
+        for channel in tracker["channels"]
+    )
     lines.extend(["", "## Proof Assets", ""])
     lines.extend(f"- `{asset}`" for asset in tracker["proof_assets"])
     lines.extend(["", "## Launch Assets", ""])

@@ -35,9 +35,9 @@ def test_committed_host_proof_sprint_checklist_is_current() -> None:
     assert checklist_path.read_text(encoding="utf-8") == render_host_proof_sprint_checklist_markdown(
         build_host_proof_sprint_checklist()
     )
-    assert "[docs/HOST_PROOF_SPRINT_CHECKLIST.md](docs/HOST_PROOF_SPRINT_CHECKLIST.md)" in Path(
-        "README.md"
-    ).read_text(encoding="utf-8")
+    assert "[docs/HOST_PROOF_SPRINT_CHECKLIST.md](docs/HOST_PROOF_SPRINT_CHECKLIST.md)" in Path("README.md").read_text(
+        encoding="utf-8"
+    )
     assert "scripts/export_host_proof_sprint_checklist.py" in Path("docs/HOST_PROOF_SPRINT.md").read_text(
         encoding="utf-8"
     )
