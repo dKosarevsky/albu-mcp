@@ -34,7 +34,7 @@ def test_committed_v1_trust_gates_are_current() -> None:
 
 
 def test_v1_trust_gates_cli_outputs_json_and_markdown(tmp_path: Path) -> None:
-    json_result = subprocess.run(  # noqa: S603
+    json_result = subprocess.run(
         [sys.executable, "scripts/export_v1_trust_gates.py", "--format", "json"],
         check=True,
         capture_output=True,

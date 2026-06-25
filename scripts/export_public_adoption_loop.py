@@ -59,7 +59,9 @@ def build_public_adoption_loop() -> dict[str, Any]:
                     ".github/ISSUE_TEMPLATE/feature-request.yml",
                 ],
                 "proof_assets": ["docs/COMMUNITY_FEEDBACK.md", "docs/NETWORK_GROWTH_TRACKER.md"],
-                "success_metric": "Issues include host, command, sanitized artifact, expected result, and actual result.",
+                "success_metric": (
+                    "Issues include host, command, sanitized artifact, expected result, and actual result."
+                ),
                 "next_action": "Label issues by host, workflow, dataset health, or feature request.",
             },
             {

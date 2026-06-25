@@ -106,9 +106,7 @@ _WORKFLOWS = {
                 instruction=(
                     "After rendering a candidate, build a structured review plan before adjusting or exporting."
                 ),
-                expected_result=(
-                    "A review decision, checklist, recommended next tool, blockers, and tuning summary."
-                ),
+                expected_result=("A review decision, checklist, recommended next tool, blockers, and tuning summary."),
             ),
             WorkflowStep(
                 order=6,

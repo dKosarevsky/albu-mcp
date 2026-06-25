@@ -65,15 +65,10 @@ def _review_checklist(comparison: PreviewRunComparison) -> list[str]:
         "Open the baseline and candidate contact sheets side by side.",
         "Confirm the candidate preserves label and object readability before accepting.",
     ]
-    checklist.extend(
-        f"{guidance.feedback_tag}: {guidance.review_focus}"
-        for guidance in comparison.review_guidance
-    )
+    checklist.extend(f"{guidance.feedback_tag}: {guidance.review_focus}" for guidance in comparison.review_guidance)
     if comparison.suggested_feedback_tags:
         checklist.append(
-            "Ask the user which suggested feedback tags apply: "
-            + ", ".join(comparison.suggested_feedback_tags)
-            + "."
+            "Ask the user which suggested feedback tags apply: " + ", ".join(comparison.suggested_feedback_tags) + "."
         )
     return checklist
 

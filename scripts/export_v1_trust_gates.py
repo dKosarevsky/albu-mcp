@@ -98,27 +98,26 @@ def main() -> None:
 
 
 def _manual_gates(launch_report: dict[str, Any]) -> list[dict[str, str]]:
-    gates: list[dict[str, str]] = []
-    for item in launch_report["manual_host_ui"]:
-        if not item["ok"]:
-            gates.append(
-                {
-                    "host": item["host"],
-                    "kind": "manual Host UI evidence",
-                    "status": item["status"],
-                    "evidence": item["evidence"],
-                }
-            )
-    for item in launch_report["first_10_minutes_replay"]:
-        if not item["ok"]:
-            gates.append(
-                {
-                    "host": item["host"],
-                    "kind": "first 10 minutes replay",
-                    "status": item["status"],
-                    "evidence": item["evidence"],
-                }
-            )
+    gates = [
+        {
+            "host": item["host"],
+            "kind": "manual Host UI evidence",
+            "status": item["status"],
+            "evidence": item["evidence"],
+        }
+        for item in launch_report["manual_host_ui"]
+        if not item["ok"]
+    ]
+    gates.extend(
+        {
+            "host": item["host"],
+            "kind": "first 10 minutes replay",
+            "status": item["status"],
+            "evidence": item["evidence"],
+        }
+        for item in launch_report["first_10_minutes_replay"]
+        if not item["ok"]
+    )
     return gates
 
 
