@@ -488,8 +488,10 @@
             "diagnose_environment",
             "export_preview_report",
             "export_tuning_session",
+            "interpret_preview_feedback",
             "list_tuning_sessions",
             "plan_dataset_onboarding",
+            "plan_preview_review",
             "recommend_recipe",
             "record_tuning_session_step",
             "render_preview_batch",
@@ -610,8 +612,10 @@
             "diagnose_environment",
             "export_preview_report",
             "export_tuning_session",
+            "interpret_preview_feedback",
             "list_tuning_sessions",
             "plan_dataset_onboarding",
+            "plan_preview_review",
             "recommend_recipe",
             "record_tuning_session_step",
             "render_preview_batch",
@@ -948,6 +952,28 @@
     "status": "warning",
     "unreadable_image_count": 0,
     "unreadable_paths": []
+  },
+  "interpret_preview_feedback": {
+    "accepted": false,
+    "decision_hint": "revise",
+    "feedback_note": "Example 8 is too noisy; I cannot recognize the object.",
+    "feedback_tags": [
+      "too_noisy:high",
+      "object_unrecognizable:high"
+    ],
+    "recommended_next_tool": "adjust_pipeline",
+    "signals": [
+      {
+        "evidence": "example 8 is too noisy; i cannot recognize the object.",
+        "feedback_tag": "too_noisy",
+        "severity": "high"
+      },
+      {
+        "evidence": "example 8 is too noisy; i cannot recognize the object.",
+        "feedback_tag": "object_unrecognizable",
+        "severity": "high"
+      }
+    ]
   },
   "list_preview_feedback": {
     "accepted_count": 0,
@@ -1642,8 +1668,10 @@
               "diagnose_environment",
               "export_preview_report",
               "export_tuning_session",
+              "interpret_preview_feedback",
               "list_tuning_sessions",
               "plan_dataset_onboarding",
+              "plan_preview_review",
               "recommend_recipe",
               "record_tuning_session_step",
               "render_preview_batch",
@@ -1845,8 +1873,10 @@
               "diagnose_environment",
               "export_preview_report",
               "export_tuning_session",
+              "interpret_preview_feedback",
               "list_tuning_sessions",
               "plan_dataset_onboarding",
+              "plan_preview_review",
               "recommend_recipe",
               "record_tuning_session_step",
               "render_preview_batch",

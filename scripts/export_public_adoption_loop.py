@@ -43,10 +43,15 @@ def build_public_adoption_loop() -> dict[str, Any]:
                 "id": "review_decision",
                 "name": "Review Decision",
                 "goal": "Convert subjective preview review into structured, reproducible tuning actions.",
-                "channels": ["plan_preview_review", "record_preview_feedback", "export_preview_report"],
+                "channels": [
+                    "interpret_preview_feedback",
+                    "plan_preview_review",
+                    "record_preview_feedback",
+                    "export_preview_report",
+                ],
                 "proof_assets": ["tests/fixtures/snapshots/output_contracts.json", "docs/USAGE.md"],
                 "success_metric": "User feedback maps to tags, a next tool, and an auditable tuning decision.",
-                "next_action": "Use `plan_preview_review` before adjustment, audit, or export.",
+                "next_action": "Use `interpret_preview_feedback` and `plan_preview_review` before adjustment or export.",
             },
             {
                 "id": "feedback_intake",

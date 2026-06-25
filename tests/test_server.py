@@ -29,6 +29,7 @@ def test_server_exposes_documented_tool_names() -> None:
         "render_preview",
         "render_preview_batch",
         "compare_preview_runs",
+        "interpret_preview_feedback",
         "plan_preview_review",
         "summarize_tuning_session",
         "start_tuning_session",
@@ -112,6 +113,7 @@ def test_server_exposes_agent_workflow_resources() -> None:
     expected_capability_terms = {
         "workflow_resources",
         "compare_preview_runs_for_feedback",
+        "interpret_preview_feedback",
         "plan_preview_review",
         "run_first_preview_review",
         "summarize_tuning_session",

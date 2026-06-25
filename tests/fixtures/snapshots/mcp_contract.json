@@ -751,6 +751,23 @@
       }
     },
     {
+      "description": "Convert free-form preview feedback into structured feedback tags.",
+      "name": "interpret_preview_feedback",
+      "parameters": {
+        "properties": {
+          "feedback_note": {
+            "title": "Feedback Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "feedback_note"
+        ],
+        "title": "interpret_preview_feedbackArguments",
+        "type": "object"
+      }
+    },
+    {
       "description": "List structured feedback tags accepted by adjust_pipeline.",
       "name": "list_feedback_tags",
       "parameters": {
@@ -942,6 +959,18 @@
           "candidate_run_id": {
             "title": "Candidate Run Id",
             "type": "string"
+          },
+          "feedback_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Feedback Note"
           },
           "feedback_tags": {
             "anyOf": [

@@ -112,6 +112,16 @@ def test_output_contract_snapshot_includes_review_agent_plan() -> None:
     assert any("render_preview_batch" in action for action in plan["next_actions"])
 
 
+def test_output_contract_snapshot_includes_feedback_interpretation() -> None:
+    snapshot = json.loads(_SNAPSHOT_PATH.read_text(encoding="utf-8"))
+
+    interpretation = snapshot["interpret_preview_feedback"]
+
+    assert interpretation["decision_hint"] == "revise"
+    assert interpretation["recommended_next_tool"] == "adjust_pipeline"
+    assert interpretation["feedback_tags"] == ["too_noisy:high", "object_unrecognizable:high"]
+
+
 def test_output_contract_snapshot_includes_interactive_tuning_session_export() -> None:
     snapshot = json.loads(_SNAPSHOT_PATH.read_text(encoding="utf-8"))
 

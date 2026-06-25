@@ -37,6 +37,7 @@ uvx --from albumentationsx-mcp albumentationsx-mcp --allowed-root /absolute/path
 1. `validate_preview_request`
 1. `render_preview_batch`
 1. `compare_preview_runs`
+1. `interpret_preview_feedback`
 1. `plan_preview_review`
 1. `export_preview_report`
 1. `export_pipeline`

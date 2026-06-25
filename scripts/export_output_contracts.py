@@ -37,7 +37,7 @@ from albumentationsx_mcp.preview_validation import PreviewRequestValidator
 from albumentationsx_mcp.recipes import recommend_recipe
 from albumentationsx_mcp.reports import PreviewReportService
 from albumentationsx_mcp.review import PreviewFeedbackStore
-from albumentationsx_mcp.review_agent import build_review_agent_plan
+from albumentationsx_mcp.review_agent import build_review_agent_plan, interpret_preview_feedback
 from albumentationsx_mcp.review_packet import build_review_packet
 from albumentationsx_mcp.sessions import InteractiveTuningSessionStore
 
@@ -81,6 +81,9 @@ def build_output_contract_snapshot(root: Path) -> dict[str, Any]:
         "plan_dataset_onboarding_ready": _dataset_onboarding_ready(root),
         "build_review_packet_ready": _review_packet_ready(root),
         "inspect_dataset_quality_ready": _dataset_quality_ready(root),
+        "interpret_preview_feedback": interpret_preview_feedback(
+            "Example 8 is too noisy; I cannot recognize the object."
+        ).model_dump(mode="json"),
         "plan_preview_review": _review_agent_plan().model_dump(mode="json"),
         "validate_preview_request_ready": _preview_request_ready(root),
         "validate_preview_request_missing_input": _preview_request_missing_input(root),
@@ -560,6 +563,7 @@ def _diagnostics_public_surface() -> PublicSurface:
             "render_preview",
             "render_preview_batch",
             "compare_preview_runs",
+            "interpret_preview_feedback",
             "plan_preview_review",
             "summarize_tuning_session",
             "start_tuning_session",

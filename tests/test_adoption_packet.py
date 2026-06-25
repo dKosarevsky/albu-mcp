@@ -20,6 +20,7 @@ def test_adoption_packet_contains_public_launch_copy() -> None:
     assert "inspect_dataset_quality" in markdown
     assert "build_review_packet" in markdown
     assert "render_preview_batch" in markdown
+    assert "interpret_preview_feedback" in markdown
     assert "plan_preview_review" in markdown
     assert "export_preview_report" in markdown
 

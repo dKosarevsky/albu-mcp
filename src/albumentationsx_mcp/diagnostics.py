@@ -25,6 +25,8 @@ _REQUIRED_TOOLS = {
     "validate_pipeline",
     "render_preview_batch",
     "compare_preview_runs",
+    "interpret_preview_feedback",
+    "plan_preview_review",
     "start_tuning_session",
     "record_tuning_session_step",
     "list_tuning_sessions",

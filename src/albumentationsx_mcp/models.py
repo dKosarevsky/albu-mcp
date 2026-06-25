@@ -390,6 +390,25 @@ class ReviewAgentPlan(StrictModel):
     tuning_summary: TuningSessionSummary
 
 
+class ReviewFeedbackSignal(StrictModel):
+    """One deterministic signal extracted from free-form preview feedback."""
+
+    feedback_tag: str
+    severity: RiskLevel
+    evidence: str
+
+
+class ReviewFeedbackInterpretation(StrictModel):
+    """Structured feedback tags derived from one user preview review note."""
+
+    feedback_note: str
+    accepted: bool = False
+    feedback_tags: list[str] = Field(default_factory=list)
+    signals: list[ReviewFeedbackSignal] = Field(default_factory=list)
+    decision_hint: Literal["accept", "revise", "clarify"]
+    recommended_next_tool: Literal["record_tuning_decision", "adjust_pipeline", "list_feedback_tags"]
+
+
 class TuningDecisionRecord(StrictModel):
     """Persisted local tuning decision for one baseline-to-candidate comparison."""
 

@@ -135,6 +135,7 @@ def _complete_public_surface() -> PublicSurface:
             "render_preview",
             "render_preview_batch",
             "compare_preview_runs",
+            "interpret_preview_feedback",
             "plan_preview_review",
             "summarize_tuning_session",
             "start_tuning_session",

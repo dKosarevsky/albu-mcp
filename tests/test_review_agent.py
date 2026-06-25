@@ -8,7 +8,31 @@ from albumentationsx_mcp.models import (
     PreviewRunComparison,
     QualityFinding,
 )
-from albumentationsx_mcp.review_agent import build_review_agent_plan
+from albumentationsx_mcp.review_agent import build_review_agent_plan, interpret_preview_feedback
+
+
+def test_review_agent_interprets_free_form_negative_feedback() -> None:
+    interpretation = interpret_preview_feedback(
+        "Example 8 is maybe too noisy; I can't even recognize the objects."
+    )
+
+    assert interpretation.accepted is False
+    assert interpretation.decision_hint == "revise"
+    assert interpretation.recommended_next_tool == "adjust_pipeline"
+    assert interpretation.feedback_tags == ["too_noisy:high", "object_unrecognizable:high"]
+    assert {signal.feedback_tag for signal in interpretation.signals} == {
+        "too_noisy",
+        "object_unrecognizable",
+    }
+
+
+def test_review_agent_interprets_acceptance_feedback() -> None:
+    interpretation = interpret_preview_feedback("That set looks good, thanks.")
+
+    assert interpretation.accepted is True
+    assert interpretation.decision_hint == "accept"
+    assert interpretation.recommended_next_tool == "record_tuning_decision"
+    assert interpretation.feedback_tags == []
 
 
 def test_review_agent_collects_structured_feedback_before_adjusting() -> None:
@@ -28,6 +52,19 @@ def test_review_agent_routes_negative_feedback_to_pipeline_adjustment() -> None:
     assert plan.recommended_next_tool == "adjust_pipeline"
     assert plan.feedback_tags == ["too_noisy:high"]
     assert any("render_preview_batch" in action for action in plan.next_actions)
+
+
+def test_review_agent_uses_free_form_feedback_note_for_plan() -> None:
+    plan = build_review_agent_plan(
+        _comparison(),
+        feedback_tags=[],
+        feedback_note="example 8 is too noisy and object is unrecognizable",
+        accepted=False,
+    )
+
+    assert plan.decision == "revise_candidate"
+    assert plan.recommended_next_tool == "adjust_pipeline"
+    assert plan.feedback_tags == ["too_noisy:high", "object_unrecognizable:high"]
 
 
 def test_review_agent_accepts_candidate_through_audit_decision() -> None:

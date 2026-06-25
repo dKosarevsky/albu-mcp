@@ -19,6 +19,7 @@ def test_public_adoption_loop_covers_product_feedback_cycle() -> None:
         "release_response",
     ]
     assert loop["telemetry_policy"] == "No automatic telemetry; collect explicit, privacy-safe feedback only."
+    assert "interpret_preview_feedback" in markdown
     assert "plan_preview_review" in markdown
     assert "host-acceptance.yml" in markdown
     assert "dataset-health.yml" in markdown
