@@ -18,11 +18,16 @@ from scripts.check_host_acceptance_report import check_host_acceptance_report
 from scripts.check_host_proof_sprint import check_host_proof_sprint
 from scripts.check_release_version import validate_release_versions
 from scripts.export_v1_decision_report import build_v1_decision_report, render_v1_decision_report_markdown
+from scripts.export_v1_rc_readiness_report import (
+    build_v1_rc_readiness_report,
+    render_v1_rc_readiness_report_markdown,
+)
 from scripts.validate_host_manual_runs import validate_host_manual_runs
 
 _DEFAULT_MANUAL_RUNS_PATH = Path("docs/HOST_MANUAL_RUNS.json")
 _DEFAULT_HOST_REPORT_PATH = Path("docs/HOST_ACCEPTANCE_EVIDENCE.md")
 _DEFAULT_V1_DECISION_REPORT_PATH = Path("docs/V1_DECISION_REPORT.md")
+_DEFAULT_V1_RC_READINESS_REPORT_PATH = Path("docs/V1_RC_READINESS.md")
 _DEFAULT_MCP_SNAPSHOT_PATH = Path("tests/fixtures/snapshots/mcp_contract.json")
 _DEFAULT_OUTPUT_SNAPSHOT_PATH = Path("tests/fixtures/snapshots/output_contracts.json")
 _DEFAULT_PYPROJECT_PATH = Path("pyproject.toml")
@@ -38,6 +43,7 @@ class ReleaseReadinessConfig:
     host_report_root: Path = Path()
     host_report_path: Path = _DEFAULT_HOST_REPORT_PATH
     v1_decision_report_path: Path = _DEFAULT_V1_DECISION_REPORT_PATH
+    v1_rc_readiness_report_path: Path = _DEFAULT_V1_RC_READINESS_REPORT_PATH
     mcp_snapshot_path: Path = _DEFAULT_MCP_SNAPSHOT_PATH
     output_snapshot_path: Path = _DEFAULT_OUTPUT_SNAPSHOT_PATH
     contract_output_work_dir: Path | None = None
@@ -75,6 +81,7 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
         _check_first_10_minutes_entrypoints(),
         _check_host_proof_sprint_entrypoints(),
         _check_v1_decision_report(config.v1_decision_report_path),
+        _check_v1_rc_readiness_report(config.v1_rc_readiness_report_path),
         *_check_contract_snapshot_freshness(
             mcp_snapshot_path=config.mcp_snapshot_path,
             output_snapshot_path=config.output_snapshot_path,
@@ -100,6 +107,7 @@ def main() -> None:
     parser.add_argument("--host-report-root", type=Path, default=Path())
     parser.add_argument("--host-report", type=Path, default=None)
     parser.add_argument("--v1-decision-report", type=Path, default=_DEFAULT_V1_DECISION_REPORT_PATH)
+    parser.add_argument("--v1-rc-readiness-report", type=Path, default=_DEFAULT_V1_RC_READINESS_REPORT_PATH)
     parser.add_argument("--mcp-snapshot", type=Path, default=_DEFAULT_MCP_SNAPSHOT_PATH)
     parser.add_argument("--output-snapshot", type=Path, default=_DEFAULT_OUTPUT_SNAPSHOT_PATH)
     parser.add_argument("--contract-output-work-dir", type=Path, default=None)
@@ -118,6 +126,7 @@ def main() -> None:
             host_report_root=args.host_report_root,
             host_report_path=host_report_path,
             v1_decision_report_path=args.v1_decision_report,
+            v1_rc_readiness_report_path=args.v1_rc_readiness_report,
             mcp_snapshot_path=args.mcp_snapshot,
             output_snapshot_path=args.output_snapshot,
             contract_output_work_dir=args.contract_output_work_dir,
@@ -210,6 +219,25 @@ def _check_v1_decision_report(path: Path) -> ReleaseReadinessCheck:
         )
     return ReleaseReadinessCheck(
         name="v1_decision_report",
+        ok=True,
+        message=f"{path} is current",
+    )
+
+
+def _check_v1_rc_readiness_report(path: Path) -> ReleaseReadinessCheck:
+    try:
+        expected = render_v1_rc_readiness_report_markdown(build_v1_rc_readiness_report())
+        current = path.read_text(encoding="utf-8")
+    except (OSError, ValueError) as exc:
+        return ReleaseReadinessCheck(name="v1_rc_readiness_report", ok=False, message=str(exc))
+    if current != expected:
+        return ReleaseReadinessCheck(
+            name="v1_rc_readiness_report",
+            ok=False,
+            message=f"{path} is stale; regenerate it with scripts/export_v1_rc_readiness_report.py",
+        )
+    return ReleaseReadinessCheck(
+        name="v1_rc_readiness_report",
         ok=True,
         message=f"{path} is current",
     )
