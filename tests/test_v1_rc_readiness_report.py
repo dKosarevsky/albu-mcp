@@ -18,9 +18,10 @@ def test_v1_rc_readiness_report_holds_until_p0_hosts_pass() -> None:
     assert [item["host"] for item in report["rc_blockers"][:2]] == ["Codex", "Codex"]
     assert {item["gate"] for item in report["rc_blockers"]} == {"first_10_minutes_replay", "manual_host_ui"}
     assert report["policy"] == "RC requires real P0 host evidence; stable v1 requires every supported host gate."
-    assert "uv run python scripts/export_v1_rc_readiness_report.py --output docs/V1_RC_READINESS.md" in report[
-        "next_checks"
-    ]
+    assert (
+        "uv run python scripts/export_v1_rc_readiness_report.py --output docs/V1_RC_READINESS.md"
+        in report["next_checks"]
+    )
 
 
 def test_v1_rc_readiness_report_markdown_is_reviewable() -> None:

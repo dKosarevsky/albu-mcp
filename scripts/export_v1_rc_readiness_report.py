@@ -36,7 +36,8 @@ def build_v1_rc_readiness_report() -> dict[str, Any]:
         "policy": "RC requires real P0 host evidence; stable v1 requires every supported host gate.",
         "promotion_rule": "Stable v1 requires all supported hosts to pass.",
         "next_checks": [
-            "uv run python scripts/export_real_host_evidence_execution_pack.py --output docs/REAL_HOST_EVIDENCE_EXECUTION.md",
+            "uv run python scripts/export_real_host_evidence_execution_pack.py "
+            "--output docs/REAL_HOST_EVIDENCE_EXECUTION.md",
             "uv run python scripts/export_host_ux_hardening_loop.py --output docs/HOST_UX_HARDENING_LOOP.md",
             "uv run python scripts/export_v1_launch_report.py --output docs/V1_LAUNCH_REPORT.md",
             "uv run python scripts/export_v1_decision_report.py --output docs/V1_DECISION_REPORT.md",

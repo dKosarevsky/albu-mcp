@@ -43,7 +43,8 @@ def build_host_ux_hardening_loop() -> dict[str, Any]:
             "uv run python scripts/export_host_failure_cookbook.py --output docs/HOST_FAILURE_COOKBOOK.md",
             "uv run python scripts/export_v1_launch_report.py --output docs/V1_LAUNCH_REPORT.md",
             "uv run python scripts/export_v1_decision_report.py --output docs/V1_DECISION_REPORT.md",
-            "uv run python scripts/export_real_host_evidence_execution_pack.py --output docs/REAL_HOST_EVIDENCE_EXECUTION.md",
+            "uv run python scripts/export_real_host_evidence_execution_pack.py "
+            "--output docs/REAL_HOST_EVIDENCE_EXECUTION.md",
             "uv run python scripts/export_host_ux_hardening_loop.py --output docs/HOST_UX_HARDENING_LOOP.md",
         ],
     }

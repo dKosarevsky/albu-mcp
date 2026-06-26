@@ -26,9 +26,10 @@ def test_real_host_evidence_execution_pack_tracks_run_queue_and_policy() -> None
         "Host renders baseline and candidate previews under artifact root.",
         "Host compares preview runs and exports a pipeline or report.",
     ]
-    assert "uv run python scripts/export_v1_decision_report.py --output docs/V1_DECISION_REPORT.md" in pack[
-        "after_run_commands"
-    ]
+    assert (
+        "uv run python scripts/export_v1_decision_report.py --output docs/V1_DECISION_REPORT.md"
+        in pack["after_run_commands"]
+    )
 
 
 def test_real_host_evidence_execution_pack_markdown_is_actionable() -> None:
