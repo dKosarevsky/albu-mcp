@@ -404,6 +404,8 @@ class ReviewFeedbackInterpretation(StrictModel):
     feedback_note: str
     accepted: bool = False
     feedback_tags: list[str] = Field(default_factory=list)
+    feedback_intents: list[str] = Field(default_factory=list)
+    transform_guidance: list[str] = Field(default_factory=list)
     signals: list[ReviewFeedbackSignal] = Field(default_factory=list)
     decision_hint: Literal["accept", "revise", "clarify"]
     recommended_next_tool: Literal["record_tuning_decision", "adjust_pipeline", "list_feedback_tags"]

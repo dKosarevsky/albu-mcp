@@ -972,6 +972,10 @@
   "interpret_preview_feedback": {
     "accepted": false,
     "decision_hint": "revise",
+    "feedback_intents": [
+      "reduce_noise",
+      "protect_object_readability"
+    ],
     "feedback_note": "Example 8 is too noisy; I cannot recognize the object.",
     "feedback_tags": [
       "too_noisy:high",
@@ -989,6 +993,10 @@
         "feedback_tag": "object_unrecognizable",
         "severity": "high"
       }
+    ],
+    "transform_guidance": [
+      "Reduce noise transform probability or numeric ranges.",
+      "Reduce destructive transforms until labeled objects remain readable."
     ]
   },
   "list_preview_feedback": {

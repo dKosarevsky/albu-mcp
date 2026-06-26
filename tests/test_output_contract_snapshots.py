@@ -122,6 +122,11 @@ def test_output_contract_snapshot_includes_feedback_interpretation() -> None:
     assert interpretation["decision_hint"] == "revise"
     assert interpretation["recommended_next_tool"] == "adjust_pipeline"
     assert interpretation["feedback_tags"] == ["too_noisy:high", "object_unrecognizable:high"]
+    assert interpretation["feedback_intents"] == ["reduce_noise", "protect_object_readability"]
+    assert interpretation["transform_guidance"] == [
+        "Reduce noise transform probability or numeric ranges.",
+        "Reduce destructive transforms until labeled objects remain readable.",
+    ]
 
 
 def test_output_contract_snapshot_includes_interactive_tuning_session_export() -> None:

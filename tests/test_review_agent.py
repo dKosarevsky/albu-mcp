@@ -33,6 +33,20 @@ def test_review_agent_interprets_acceptance_feedback() -> None:
     assert interpretation.feedback_tags == []
 
 
+def test_review_agent_v3_interprets_color_and_exposure_feedback_with_guidance() -> None:
+    interpretation = interpret_preview_feedback("The examples are washed out, too bright, and the colors look off.")
+
+    assert interpretation.accepted is False
+    assert interpretation.decision_hint == "revise"
+    assert interpretation.recommended_next_tool == "adjust_pipeline"
+    assert interpretation.feedback_tags == ["too_bright:high", "color_shift:high"]
+    assert interpretation.feedback_intents == ["fix_exposure", "reduce_color_shift"]
+    assert interpretation.transform_guidance == [
+        "Reduce brightness/contrast transform probability or numeric ranges.",
+        "Reduce hue, saturation, RGB shift, or color jitter strength.",
+    ]
+
+
 def test_review_agent_collects_structured_feedback_before_adjusting() -> None:
     plan = build_review_agent_plan(_comparison(), feedback_tags=[], accepted=False)
 
@@ -63,6 +77,19 @@ def test_review_agent_uses_free_form_feedback_note_for_plan() -> None:
     assert plan.decision == "revise_candidate"
     assert plan.recommended_next_tool == "adjust_pipeline"
     assert plan.feedback_tags == ["too_noisy:high", "object_unrecognizable:high"]
+
+
+def test_review_agent_plan_uses_v3_feedback_note_tags() -> None:
+    plan = build_review_agent_plan(
+        _comparison(),
+        feedback_tags=[],
+        feedback_note="Too dark and color shifted after augmentation.",
+        accepted=False,
+    )
+
+    assert plan.decision == "revise_candidate"
+    assert plan.recommended_next_tool == "adjust_pipeline"
+    assert plan.feedback_tags == ["too_dark:high", "color_shift:high"]
 
 
 def test_review_agent_accepts_candidate_through_audit_decision() -> None:

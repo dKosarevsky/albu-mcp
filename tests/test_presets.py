@@ -54,6 +54,28 @@ def test_adjust_pipeline_uses_strongest_duplicate_feedback_severity() -> None:
     assert transform.params["std_range"] == (0.025, 0.1)
 
 
+def test_adjust_pipeline_reduces_color_transforms_from_exposure_feedback() -> None:
+    spec = ComposeSpec(
+        transforms=[
+            TransformSpec(
+                name="RandomBrightnessContrast",
+                params={"brightness_limit": (-0.4, 0.4), "contrast_limit": (-0.2, 0.2)},
+                p=0.8,
+            ),
+            TransformSpec(name="HueSaturationValue", params={"hue_shift_limit": (-20, 20)}, p=0.6),
+        ]
+    )
+
+    adjusted = adjust_pipeline(spec, feedback_tags=["too_bright:high", "color_shift:medium"])
+
+    brightness = adjusted.transforms[0]
+    hue = adjusted.transforms[1]
+    assert brightness.p == 0.24
+    assert brightness.params["brightness_limit"] == (-0.12, 0.12)
+    assert hue.p == 0.3
+    assert hue.params["hue_shift_limit"] == (-10, 10)
+
+
 def test_classification_recommendation_uses_current_motion_blur_parameter_name() -> None:
     spec = recommend_pipeline(task="classification", intensity="medium", targets=["image"])
     motion_blur = next(transform for transform in spec.transforms if transform.name == "MotionBlur")
