@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -53,7 +54,7 @@ def test_record_beta_feedback_writes_sorted_valid_records(tmp_path: Path) -> Non
             feedback_id="beta-002",
             workflow_id="dataset_health_before_training",
             triage_bucket="dataset_quality_gap",
-            report_date="2026-06-27",
+            report_date=date(2026, 6, 27),
             reporter_role="Researcher",
             summary="Dataset quality report caught missing annotations before preview.",
             artifact_refs=["docs/assets/demo/demo_report.md"],
