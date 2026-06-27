@@ -23,9 +23,17 @@ from scripts.export_beta_campaign_pack import build_beta_campaign_pack, render_b
 from scripts.export_beta_feedback_intake import build_beta_feedback_intake, render_beta_feedback_intake_markdown
 from scripts.export_beta_feedback_status import build_beta_feedback_status, render_beta_feedback_status_markdown
 from scripts.export_beta_validation_sprint import build_beta_validation_sprint, render_beta_validation_sprint_markdown
+from scripts.export_beta_validation_status import (
+    build_beta_validation_status,
+    render_beta_validation_status_markdown,
+)
 from scripts.export_dataset_quality_depth_plan import (
     build_dataset_quality_depth_plan,
     render_dataset_quality_depth_plan_markdown,
+)
+from scripts.export_distribution_readiness_pack import (
+    build_distribution_readiness_pack,
+    render_distribution_readiness_pack_markdown,
 )
 from scripts.export_p0_blocker_triage import build_p0_blocker_triage, render_p0_blocker_triage_markdown
 from scripts.export_p0_evidence_recorder import build_p0_evidence_recorder, render_p0_evidence_recorder_markdown
@@ -45,6 +53,8 @@ from scripts.export_p0_host_execution_sprint import (
 from scripts.export_p0_host_run_session import build_p0_host_run_session, render_p0_host_run_session_markdown
 from scripts.export_p0_host_runbook import build_p0_host_runbook, render_p0_host_runbook_markdown
 from scripts.export_product_depth_backlog import build_product_depth_backlog, render_product_depth_backlog_markdown
+from scripts.export_product_depth_gate import build_product_depth_gate, render_product_depth_gate_markdown
+from scripts.export_rc_host_evidence_ops import build_rc_host_evidence_ops, render_rc_host_evidence_ops_markdown
 from scripts.export_review_agent_v3_plan import build_review_agent_v3_plan, render_review_agent_v3_plan_markdown
 from scripts.export_v1_decision_report import build_v1_decision_report, render_v1_decision_report_markdown
 from scripts.export_v1_evidence_operator_packet import (
@@ -90,13 +100,17 @@ _DEFAULT_BETA_CAMPAIGN_PACK_PATH = Path("docs/BETA_CAMPAIGN_PACK.md")
 _DEFAULT_BETA_FEEDBACK_INTAKE_PATH = Path("docs/BETA_FEEDBACK_INTAKE.md")
 _DEFAULT_BETA_FEEDBACK_STATUS_PATH = Path("docs/BETA_FEEDBACK_STATUS.md")
 _DEFAULT_BETA_VALIDATION_SPRINT_PATH = Path("docs/BETA_VALIDATION_SPRINT.md")
+_DEFAULT_BETA_VALIDATION_STATUS_PATH = Path("docs/BETA_VALIDATION_STATUS.md")
 _DEFAULT_V1_RC_RELEASE_PACKET_PATH = Path("docs/V1_RC_RELEASE_PACKET.md")
 _DEFAULT_V1_RC_CUTOVER_CHECKLIST_PATH = Path("docs/V1_RC_CUTOVER_CHECKLIST.md")
 _DEFAULT_V1_RC_AUTOMATION_PACK_PATH = Path("docs/V1_RC_AUTOMATION_PACK.md")
 _DEFAULT_V1_RC_CUTOVER_GATE_PATH = Path("docs/V1_RC_CUTOVER_GATE.md")
+_DEFAULT_RC_HOST_EVIDENCE_OPS_PATH = Path("docs/RC_HOST_EVIDENCE_OPS.md")
 _DEFAULT_PRODUCT_DEPTH_BACKLOG_PATH = Path("docs/PRODUCT_DEPTH_BACKLOG.md")
+_DEFAULT_PRODUCT_DEPTH_GATE_PATH = Path("docs/PRODUCT_DEPTH_GATE.md")
 _DEFAULT_REVIEW_AGENT_V3_PLAN_PATH = Path("docs/REVIEW_AGENT_V3_PLAN.md")
 _DEFAULT_DATASET_QUALITY_DEPTH_PLAN_PATH = Path("docs/DATASET_QUALITY_DEPTH_PLAN.md")
+_DEFAULT_DISTRIBUTION_READINESS_PACK_PATH = Path("docs/DISTRIBUTION_READINESS_PACK.md")
 _DEFAULT_MCP_SNAPSHOT_PATH = Path("tests/fixtures/snapshots/mcp_contract.json")
 _DEFAULT_OUTPUT_SNAPSHOT_PATH = Path("tests/fixtures/snapshots/output_contracts.json")
 _DEFAULT_PYPROJECT_PATH = Path("pyproject.toml")
@@ -128,13 +142,17 @@ class ReleaseReadinessConfig:
     beta_feedback_intake_path: Path = _DEFAULT_BETA_FEEDBACK_INTAKE_PATH
     beta_feedback_status_path: Path = _DEFAULT_BETA_FEEDBACK_STATUS_PATH
     beta_validation_sprint_path: Path = _DEFAULT_BETA_VALIDATION_SPRINT_PATH
+    beta_validation_status_path: Path = _DEFAULT_BETA_VALIDATION_STATUS_PATH
     v1_rc_release_packet_path: Path = _DEFAULT_V1_RC_RELEASE_PACKET_PATH
     v1_rc_cutover_checklist_path: Path = _DEFAULT_V1_RC_CUTOVER_CHECKLIST_PATH
     v1_rc_automation_pack_path: Path = _DEFAULT_V1_RC_AUTOMATION_PACK_PATH
     v1_rc_cutover_gate_path: Path = _DEFAULT_V1_RC_CUTOVER_GATE_PATH
+    rc_host_evidence_ops_path: Path = _DEFAULT_RC_HOST_EVIDENCE_OPS_PATH
     product_depth_backlog_path: Path = _DEFAULT_PRODUCT_DEPTH_BACKLOG_PATH
+    product_depth_gate_path: Path = _DEFAULT_PRODUCT_DEPTH_GATE_PATH
     review_agent_v3_plan_path: Path = _DEFAULT_REVIEW_AGENT_V3_PLAN_PATH
     dataset_quality_depth_plan_path: Path = _DEFAULT_DATASET_QUALITY_DEPTH_PLAN_PATH
+    distribution_readiness_pack_path: Path = _DEFAULT_DISTRIBUTION_READINESS_PACK_PATH
     mcp_snapshot_path: Path = _DEFAULT_MCP_SNAPSHOT_PATH
     output_snapshot_path: Path = _DEFAULT_OUTPUT_SNAPSHOT_PATH
     contract_output_work_dir: Path | None = None
@@ -265,6 +283,12 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             exporter="scripts/export_beta_validation_sprint.py",
         ),
         _check_generated_doc(
+            name="beta_validation_status",
+            path=config.beta_validation_status_path,
+            expected=render_beta_validation_status_markdown(build_beta_validation_status()),
+            exporter="scripts/export_beta_validation_status.py --output docs/BETA_VALIDATION_STATUS.md",
+        ),
+        _check_generated_doc(
             name="v1_rc_release_packet",
             path=config.v1_rc_release_packet_path,
             expected=render_v1_rc_release_packet_markdown(build_v1_rc_release_packet()),
@@ -289,10 +313,22 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             exporter="scripts/check_v1_rc_cutover_gate.py --output docs/V1_RC_CUTOVER_GATE.md",
         ),
         _check_generated_doc(
+            name="rc_host_evidence_ops",
+            path=config.rc_host_evidence_ops_path,
+            expected=render_rc_host_evidence_ops_markdown(build_rc_host_evidence_ops()),
+            exporter="scripts/export_rc_host_evidence_ops.py --output docs/RC_HOST_EVIDENCE_OPS.md",
+        ),
+        _check_generated_doc(
             name="product_depth_backlog",
             path=config.product_depth_backlog_path,
             expected=render_product_depth_backlog_markdown(build_product_depth_backlog()),
             exporter="scripts/export_product_depth_backlog.py",
+        ),
+        _check_generated_doc(
+            name="product_depth_gate",
+            path=config.product_depth_gate_path,
+            expected=render_product_depth_gate_markdown(build_product_depth_gate()),
+            exporter="scripts/export_product_depth_gate.py --output docs/PRODUCT_DEPTH_GATE.md",
         ),
         _check_generated_doc(
             name="review_agent_v3_plan",
@@ -305,6 +341,12 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             path=config.dataset_quality_depth_plan_path,
             expected=render_dataset_quality_depth_plan_markdown(build_dataset_quality_depth_plan()),
             exporter="scripts/export_dataset_quality_depth_plan.py",
+        ),
+        _check_generated_doc(
+            name="distribution_readiness_pack",
+            path=config.distribution_readiness_pack_path,
+            expected=render_distribution_readiness_pack_markdown(build_distribution_readiness_pack()),
+            exporter="scripts/export_distribution_readiness_pack.py --output docs/DISTRIBUTION_READINESS_PACK.md",
         ),
         *_check_contract_snapshot_freshness(
             mcp_snapshot_path=config.mcp_snapshot_path,
