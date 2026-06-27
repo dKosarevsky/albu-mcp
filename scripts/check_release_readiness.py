@@ -17,17 +17,29 @@ from scripts.check_first_10_minutes import check_first_10_minutes
 from scripts.check_host_acceptance_report import check_host_acceptance_report
 from scripts.check_host_proof_sprint import check_host_proof_sprint
 from scripts.check_release_version import validate_release_versions
+from scripts.export_beta_feedback_intake import build_beta_feedback_intake, render_beta_feedback_intake_markdown
+from scripts.export_p0_blocker_triage import build_p0_blocker_triage, render_p0_blocker_triage_markdown
+from scripts.export_p0_evidence_recorder import build_p0_evidence_recorder, render_p0_evidence_recorder_markdown
+from scripts.export_p0_evidence_status import build_p0_evidence_status, render_p0_evidence_status_markdown
+from scripts.export_p0_host_runbook import build_p0_host_runbook, render_p0_host_runbook_markdown
 from scripts.export_v1_decision_report import build_v1_decision_report, render_v1_decision_report_markdown
 from scripts.export_v1_rc_readiness_report import (
     build_v1_rc_readiness_report,
     render_v1_rc_readiness_report_markdown,
 )
+from scripts.export_v1_rc_release_packet import build_v1_rc_release_packet, render_v1_rc_release_packet_markdown
 from scripts.validate_host_manual_runs import validate_host_manual_runs
 
 _DEFAULT_MANUAL_RUNS_PATH = Path("docs/HOST_MANUAL_RUNS.json")
 _DEFAULT_HOST_REPORT_PATH = Path("docs/HOST_ACCEPTANCE_EVIDENCE.md")
 _DEFAULT_V1_DECISION_REPORT_PATH = Path("docs/V1_DECISION_REPORT.md")
 _DEFAULT_V1_RC_READINESS_REPORT_PATH = Path("docs/V1_RC_READINESS.md")
+_DEFAULT_P0_HOST_RUNBOOK_PATH = Path("docs/P0_HOST_RUNBOOK.md")
+_DEFAULT_P0_EVIDENCE_RECORDER_PATH = Path("docs/P0_EVIDENCE_RECORDER.md")
+_DEFAULT_P0_EVIDENCE_STATUS_PATH = Path("docs/P0_EVIDENCE_STATUS.md")
+_DEFAULT_P0_BLOCKER_TRIAGE_PATH = Path("docs/P0_BLOCKER_TRIAGE.md")
+_DEFAULT_BETA_FEEDBACK_INTAKE_PATH = Path("docs/BETA_FEEDBACK_INTAKE.md")
+_DEFAULT_V1_RC_RELEASE_PACKET_PATH = Path("docs/V1_RC_RELEASE_PACKET.md")
 _DEFAULT_MCP_SNAPSHOT_PATH = Path("tests/fixtures/snapshots/mcp_contract.json")
 _DEFAULT_OUTPUT_SNAPSHOT_PATH = Path("tests/fixtures/snapshots/output_contracts.json")
 _DEFAULT_PYPROJECT_PATH = Path("pyproject.toml")
@@ -44,6 +56,12 @@ class ReleaseReadinessConfig:
     host_report_path: Path = _DEFAULT_HOST_REPORT_PATH
     v1_decision_report_path: Path = _DEFAULT_V1_DECISION_REPORT_PATH
     v1_rc_readiness_report_path: Path = _DEFAULT_V1_RC_READINESS_REPORT_PATH
+    p0_host_runbook_path: Path = _DEFAULT_P0_HOST_RUNBOOK_PATH
+    p0_evidence_recorder_path: Path = _DEFAULT_P0_EVIDENCE_RECORDER_PATH
+    p0_evidence_status_path: Path = _DEFAULT_P0_EVIDENCE_STATUS_PATH
+    p0_blocker_triage_path: Path = _DEFAULT_P0_BLOCKER_TRIAGE_PATH
+    beta_feedback_intake_path: Path = _DEFAULT_BETA_FEEDBACK_INTAKE_PATH
+    v1_rc_release_packet_path: Path = _DEFAULT_V1_RC_RELEASE_PACKET_PATH
     mcp_snapshot_path: Path = _DEFAULT_MCP_SNAPSHOT_PATH
     output_snapshot_path: Path = _DEFAULT_OUTPUT_SNAPSHOT_PATH
     contract_output_work_dir: Path | None = None
@@ -82,6 +100,42 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
         _check_host_proof_sprint_entrypoints(),
         _check_v1_decision_report(config.v1_decision_report_path),
         _check_v1_rc_readiness_report(config.v1_rc_readiness_report_path),
+        _check_generated_doc(
+            name="p0_host_runbook",
+            path=config.p0_host_runbook_path,
+            expected=render_p0_host_runbook_markdown(build_p0_host_runbook()),
+            exporter="scripts/export_p0_host_runbook.py",
+        ),
+        _check_generated_doc(
+            name="p0_evidence_recorder",
+            path=config.p0_evidence_recorder_path,
+            expected=render_p0_evidence_recorder_markdown(build_p0_evidence_recorder()),
+            exporter="scripts/export_p0_evidence_recorder.py",
+        ),
+        _check_generated_doc(
+            name="p0_evidence_status",
+            path=config.p0_evidence_status_path,
+            expected=render_p0_evidence_status_markdown(build_p0_evidence_status()),
+            exporter="scripts/export_p0_evidence_status.py",
+        ),
+        _check_generated_doc(
+            name="p0_blocker_triage",
+            path=config.p0_blocker_triage_path,
+            expected=render_p0_blocker_triage_markdown(build_p0_blocker_triage()),
+            exporter="scripts/export_p0_blocker_triage.py",
+        ),
+        _check_generated_doc(
+            name="beta_feedback_intake",
+            path=config.beta_feedback_intake_path,
+            expected=render_beta_feedback_intake_markdown(build_beta_feedback_intake()),
+            exporter="scripts/export_beta_feedback_intake.py",
+        ),
+        _check_generated_doc(
+            name="v1_rc_release_packet",
+            path=config.v1_rc_release_packet_path,
+            expected=render_v1_rc_release_packet_markdown(build_v1_rc_release_packet()),
+            exporter="scripts/export_v1_rc_release_packet.py",
+        ),
         *_check_contract_snapshot_freshness(
             mcp_snapshot_path=config.mcp_snapshot_path,
             output_snapshot_path=config.output_snapshot_path,
@@ -108,6 +162,12 @@ def main() -> None:
     parser.add_argument("--host-report", type=Path, default=None)
     parser.add_argument("--v1-decision-report", type=Path, default=_DEFAULT_V1_DECISION_REPORT_PATH)
     parser.add_argument("--v1-rc-readiness-report", type=Path, default=_DEFAULT_V1_RC_READINESS_REPORT_PATH)
+    parser.add_argument("--p0-host-runbook", type=Path, default=_DEFAULT_P0_HOST_RUNBOOK_PATH)
+    parser.add_argument("--p0-evidence-recorder", type=Path, default=_DEFAULT_P0_EVIDENCE_RECORDER_PATH)
+    parser.add_argument("--p0-evidence-status", type=Path, default=_DEFAULT_P0_EVIDENCE_STATUS_PATH)
+    parser.add_argument("--p0-blocker-triage", type=Path, default=_DEFAULT_P0_BLOCKER_TRIAGE_PATH)
+    parser.add_argument("--beta-feedback-intake", type=Path, default=_DEFAULT_BETA_FEEDBACK_INTAKE_PATH)
+    parser.add_argument("--v1-rc-release-packet", type=Path, default=_DEFAULT_V1_RC_RELEASE_PACKET_PATH)
     parser.add_argument("--mcp-snapshot", type=Path, default=_DEFAULT_MCP_SNAPSHOT_PATH)
     parser.add_argument("--output-snapshot", type=Path, default=_DEFAULT_OUTPUT_SNAPSHOT_PATH)
     parser.add_argument("--contract-output-work-dir", type=Path, default=None)
@@ -127,6 +187,12 @@ def main() -> None:
             host_report_path=host_report_path,
             v1_decision_report_path=args.v1_decision_report,
             v1_rc_readiness_report_path=args.v1_rc_readiness_report,
+            p0_host_runbook_path=args.p0_host_runbook,
+            p0_evidence_recorder_path=args.p0_evidence_recorder,
+            p0_evidence_status_path=args.p0_evidence_status,
+            p0_blocker_triage_path=args.p0_blocker_triage,
+            beta_feedback_intake_path=args.beta_feedback_intake,
+            v1_rc_release_packet_path=args.v1_rc_release_packet,
             mcp_snapshot_path=args.mcp_snapshot,
             output_snapshot_path=args.output_snapshot,
             contract_output_work_dir=args.contract_output_work_dir,
@@ -241,6 +307,20 @@ def _check_v1_rc_readiness_report(path: Path) -> ReleaseReadinessCheck:
         ok=True,
         message=f"{path} is current",
     )
+
+
+def _check_generated_doc(*, name: str, path: Path, expected: str, exporter: str) -> ReleaseReadinessCheck:
+    try:
+        current = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        return ReleaseReadinessCheck(name=name, ok=False, message=str(exc))
+    if current != expected:
+        return ReleaseReadinessCheck(
+            name=name,
+            ok=False,
+            message=f"{path} is stale; regenerate it with {exporter}",
+        )
+    return ReleaseReadinessCheck(name=name, ok=True, message=f"{path} is current")
 
 
 def _check_contract_snapshot_freshness(
