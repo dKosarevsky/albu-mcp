@@ -104,6 +104,15 @@ def test_output_contract_snapshot_includes_dataset_quality_report() -> None:
     assert report["annotation_summary"]["missing_annotation_count"] == 1
     assert report["annotation_summary"]["out_of_bounds_annotation_count"] == 1
     assert report["annotation_summary"]["unknown_category_annotation_count"] == 1
+    assert report["preview_ready"] is False
+    assert report["preview_guard"] == "blocked_by_preview_blockers"
+    assert {finding["code"] for finding in report["preview_blockers"]} == {
+        "dataset_out_of_bounds_annotations",
+        "dataset_unknown_category_annotations",
+    }
+    assert report["preview_guard_actions"] == [
+        "Fix high-severity annotation blockers before rendering annotated previews."
+    ]
     assert "build_review_packet" in report["recommended_next_tools"]
     assert "dataset_high_clipping" in {finding["code"] for finding in report["findings"]}
     assert "dataset_exact_duplicate_images" in {finding["code"] for finding in report["findings"]}

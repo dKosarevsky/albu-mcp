@@ -103,6 +103,10 @@ class DatasetQualityReport(StrictModel):
     aggregate: ImageQualityAggregate
     sample_metrics: list[ImageQualityMetrics] = Field(default_factory=list)
     findings: list[DatasetQualityFinding] = Field(default_factory=list)
+    preview_ready: bool = True
+    preview_guard: str = "ready"
+    preview_blockers: list[DatasetQualityFinding] = Field(default_factory=list)
+    preview_guard_actions: list[str] = Field(default_factory=list)
     recommended_next_tools: list[str] = Field(default_factory=list)
     next_actions: list[str] = Field(default_factory=list)
     remediation_actions: list[dict[str, Any]] = Field(default_factory=list)
@@ -124,6 +128,10 @@ def inspect_dataset_quality(
             allowed_roots=[str(root) for root in path_policy.allowed_roots],
             aggregate=ImageQualityAggregate(image_count=0),
             findings=[path_error],
+            preview_ready=False,
+            preview_guard="blocked_by_path_policy",
+            preview_blockers=[path_error],
+            preview_guard_actions=["Fix the dataset path before rendering previews."],
             recommended_next_tools=["fix_dataset_path"],
             next_actions=["Move the dataset under an allowed root or restart the MCP server with --allowed-root."],
             remediation_actions=[
@@ -146,6 +154,7 @@ def inspect_dataset_quality(
         unreadable_paths=unreadable_paths,
         structure=structure,
     )
+    preview_blockers = _preview_blockers(findings)
     status = _status(image_paths=image_paths, metrics=metrics, findings=findings)
     return DatasetQualityReport(
         status=status,
@@ -166,6 +175,10 @@ def inspect_dataset_quality(
         aggregate=aggregate,
         sample_metrics=metrics,
         findings=findings,
+        preview_ready=not preview_blockers,
+        preview_guard=_preview_guard(preview_blockers),
+        preview_blockers=preview_blockers,
+        preview_guard_actions=_preview_guard_actions(preview_blockers),
         recommended_next_tools=_recommended_next_tools(status=status, findings=findings),
         next_actions=_next_actions(status=status, findings=findings),
         remediation_actions=_remediation_actions(findings),
@@ -414,6 +427,29 @@ def _remediation_actions(findings: list[DatasetQualityFinding]) -> list[dict[str
             }
         )
     return actions
+
+
+def _preview_blockers(findings: list[DatasetQualityFinding]) -> list[DatasetQualityFinding]:
+    return [
+        finding for finding in findings if finding.code == "sample_unreadable_images" or _is_annotation_blocker(finding)
+    ]
+
+
+def _preview_guard(preview_blockers: list[DatasetQualityFinding]) -> str:
+    return "blocked_by_preview_blockers" if preview_blockers else "ready"
+
+
+def _preview_guard_actions(preview_blockers: list[DatasetQualityFinding]) -> list[str]:
+    actions: list[str] = []
+    if any(finding.code == "sample_unreadable_images" for finding in preview_blockers):
+        actions.append("Repair unreadable images before rendering previews.")
+    if any(_is_annotation_blocker(finding) for finding in preview_blockers):
+        actions.append("Fix high-severity annotation blockers before rendering annotated previews.")
+    return actions
+
+
+def _is_annotation_blocker(finding: DatasetQualityFinding) -> bool:
+    return finding.severity == "high" and finding.code.startswith("dataset_") and "annotation" in finding.code
 
 
 def _bounded_max_images(max_images: int) -> int:

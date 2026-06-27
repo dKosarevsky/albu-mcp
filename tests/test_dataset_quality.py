@@ -42,6 +42,11 @@ def test_inspect_dataset_quality_reports_unreadable_images(tmp_path: Path) -> No
     assert report.unreadable_image_count == 1
     assert report.aggregate.image_count == 0
     assert report.findings[0].code == "sample_unreadable_images"
+    assert report.preview_ready is False
+    assert report.preview_guard == "blocked_by_preview_blockers"
+    assert [finding.code for finding in report.preview_blockers] == ["sample_unreadable_images"]
+    assert report.preview_guard_actions == ["Repair unreadable images before rendering previews."]
+    assert "render_preview_batch" not in report.recommended_next_tools
     assert report.remediation_actions[0]["code"] == "fix_unreadable_images"
 
 
@@ -73,6 +78,10 @@ def test_inspect_dataset_quality_reports_split_class_size_and_duplicates(tmp_pat
     finding_codes = {finding.code for finding in report.findings}
     assert "dataset_class_imbalance" in finding_codes
     assert "dataset_exact_duplicate_images" in finding_codes
+    assert report.preview_ready is True
+    assert report.preview_guard == "ready"
+    assert report.preview_blockers == []
+    assert "render_preview_batch" in report.recommended_next_tools
 
 
 def test_inspect_dataset_quality_reports_coco_annotation_consistency(tmp_path: Path) -> None:
@@ -117,6 +126,17 @@ def test_inspect_dataset_quality_reports_coco_annotation_consistency(tmp_path: P
     assert "dataset_invalid_annotations" in finding_codes
     assert "dataset_out_of_bounds_annotations" in finding_codes
     assert "dataset_unknown_category_annotations" in finding_codes
+    assert report.preview_ready is False
+    assert report.preview_guard == "blocked_by_preview_blockers"
+    assert [finding.code for finding in report.preview_blockers] == [
+        "dataset_invalid_annotations",
+        "dataset_out_of_bounds_annotations",
+        "dataset_unknown_category_annotations",
+    ]
+    assert report.preview_guard_actions == [
+        "Fix high-severity annotation blockers before rendering annotated previews."
+    ]
+    assert "render_preview_batch" in report.recommended_next_tools
     assert "review_annotation_consistency" in {action["code"] for action in report.remediation_actions}
 
 

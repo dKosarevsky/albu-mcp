@@ -890,6 +890,37 @@
       "Review quality findings before accepting augmentation intensity.",
       "Start with low intensity and inspect the contact sheet before increasing variants."
     ],
+    "preview_blockers": [
+      {
+        "code": "dataset_out_of_bounds_annotations",
+        "details": {
+          "out_of_bounds_annotation_count": 1,
+          "source_format": "coco"
+        },
+        "sample_paths": [
+          "4"
+        ],
+        "severity": "high",
+        "summary": "Some annotation boxes fall outside image bounds."
+      },
+      {
+        "code": "dataset_unknown_category_annotations",
+        "details": {
+          "source_format": "coco",
+          "unknown_category_annotation_count": 1
+        },
+        "sample_paths": [
+          "5"
+        ],
+        "severity": "high",
+        "summary": "Some annotations reference category ids missing from the category catalog."
+      }
+    ],
+    "preview_guard": "blocked_by_preview_blockers",
+    "preview_guard_actions": [
+      "Fix high-severity annotation blockers before rendering annotated previews."
+    ],
+    "preview_ready": false,
     "recommended_next_tools": [
       "build_review_packet",
       "render_preview_batch",
