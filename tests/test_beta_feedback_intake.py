@@ -43,9 +43,7 @@ def test_beta_feedback_intake_markdown_is_copyable() -> None:
 def test_committed_beta_feedback_intake_is_current() -> None:
     intake_path = Path("docs/BETA_FEEDBACK_INTAKE.md")
 
-    assert intake_path.read_text(encoding="utf-8") == render_beta_feedback_intake_markdown(
-        build_beta_feedback_intake()
-    )
+    assert intake_path.read_text(encoding="utf-8") == render_beta_feedback_intake_markdown(build_beta_feedback_intake())
     assert "[docs/BETA_FEEDBACK_INTAKE.md](docs/BETA_FEEDBACK_INTAKE.md)" in Path("README.md").read_text(
         encoding="utf-8"
     )

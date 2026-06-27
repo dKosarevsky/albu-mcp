@@ -36,9 +36,7 @@ def test_v1_rc_release_packet_markdown_is_actionable() -> None:
 def test_committed_v1_rc_release_packet_is_current() -> None:
     packet_path = Path("docs/V1_RC_RELEASE_PACKET.md")
 
-    assert packet_path.read_text(encoding="utf-8") == render_v1_rc_release_packet_markdown(
-        build_v1_rc_release_packet()
-    )
+    assert packet_path.read_text(encoding="utf-8") == render_v1_rc_release_packet_markdown(build_v1_rc_release_packet())
     assert "[docs/V1_RC_RELEASE_PACKET.md](docs/V1_RC_RELEASE_PACKET.md)" in Path("README.md").read_text(
         encoding="utf-8"
     )

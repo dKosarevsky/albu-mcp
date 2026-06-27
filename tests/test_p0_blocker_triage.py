@@ -44,9 +44,7 @@ def test_p0_blocker_triage_markdown_is_actionable() -> None:
 def test_committed_p0_blocker_triage_is_current() -> None:
     triage_path = Path("docs/P0_BLOCKER_TRIAGE.md")
 
-    assert triage_path.read_text(encoding="utf-8") == render_p0_blocker_triage_markdown(
-        build_p0_blocker_triage()
-    )
+    assert triage_path.read_text(encoding="utf-8") == render_p0_blocker_triage_markdown(build_p0_blocker_triage())
     assert "[docs/P0_BLOCKER_TRIAGE.md](docs/P0_BLOCKER_TRIAGE.md)" in Path("README.md").read_text(encoding="utf-8")
 
 

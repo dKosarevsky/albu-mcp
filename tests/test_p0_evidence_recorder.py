@@ -15,12 +15,14 @@ def test_p0_evidence_recorder_exposes_safe_recording_contract() -> None:
     assert recorder["required_fields"] == ["host", "gate", "status", "date", "evidence", "artifact"]
     assert [item["host"] for item in recorder["records"]] == ["Codex", "Claude Code"]
     assert set(recorder["records"][0]["gates"]) == {"first_10_minutes_replay", "manual_host_ui"}
-    assert "record_host_manual_run.py --host Codex --status passed" in recorder["records"][0]["commands"][
-        "manual_host_ui"
-    ]["passed"]
-    assert "--kind first-10-minutes --host Codex --status blocked" in recorder["records"][0]["commands"][
-        "first_10_minutes_replay"
-    ]["blocked"]
+    assert (
+        "record_host_manual_run.py --host Codex --status passed"
+        in recorder["records"][0]["commands"]["manual_host_ui"]["passed"]
+    )
+    assert (
+        "--kind first-10-minutes --host Codex --status blocked"
+        in recorder["records"][0]["commands"]["first_10_minutes_replay"]["blocked"]
+    )
 
 
 def test_p0_evidence_recorder_markdown_is_copyable() -> None:

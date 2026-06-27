@@ -55,11 +55,7 @@ def render_p0_host_runbook_markdown(runbook: dict[str, Any]) -> str:
         "| --- | --- | --- | --- |",
     ]
     lines.extend(
-        "| "
-        f"{item['run_order']} | "
-        f"{item['host']} | "
-        f"`{item['next_action']}` | "
-        f"`{item['packet_command']}` |"
+        f"| {item['run_order']} | {item['host']} | `{item['next_action']}` | `{item['packet_command']}` |"
         for item in runbook["run_queue"]
     )
     lines.extend(["", "## Record Commands", ""])

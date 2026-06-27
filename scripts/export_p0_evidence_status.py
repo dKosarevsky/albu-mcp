@@ -69,11 +69,7 @@ def render_p0_evidence_status_markdown(status: dict[str, Any]) -> str:
     )
     for item in status["host_statuses"]:
         lines.extend(
-            "| "
-            f"{item['host']} | "
-            f"`{gate['gate']}` | "
-            f"`{gate['status']}` | "
-            f"`{gate['next_action']}` |"
+            f"| {item['host']} | `{gate['gate']}` | `{gate['status']}` | `{gate['next_action']}` |"
             for gate in item["gates"]
         )
     lines.extend(["", "## Next Action", "", status["next_action"]])

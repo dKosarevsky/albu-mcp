@@ -16,12 +16,14 @@ def test_p0_host_runbook_contains_only_p0_hosts() -> None:
     assert all(item["next_action"] == "run_first_10_minutes_replay" for item in runbook["run_queue"])
     assert "Cursor" not in {item["host"] for item in runbook["run_queue"]}
     assert "Claude Desktop" not in {item["host"] for item in runbook["run_queue"]}
-    assert "uv run python scripts/export_manual_host_acceptance_packet.py --host Codex" in runbook["run_queue"][0][
-        "packet_command"
-    ]
-    assert "uv run python scripts/record_host_manual_run.py --host Codex" in runbook["run_queue"][0][
-        "manual_record_command"
-    ]
+    assert (
+        "uv run python scripts/export_manual_host_acceptance_packet.py --host Codex"
+        in runbook["run_queue"][0]["packet_command"]
+    )
+    assert (
+        "uv run python scripts/record_host_manual_run.py --host Codex"
+        in runbook["run_queue"][0]["manual_record_command"]
+    )
     assert "--kind first-10-minutes --host Codex" in runbook["run_queue"][0]["first_10_minutes_record_command"]
 
 
