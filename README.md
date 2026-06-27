@@ -100,7 +100,7 @@ source: [docs/integrations/mcp.md](https://github.com/albumentations-team/Albume
 - [docs/DEMO.md](docs/DEMO.md): generated preview comparison demo.
 - [docs/HOST_ACCEPTANCE.md](docs/HOST_ACCEPTANCE.md), [docs/HOST_MATRIX.md](docs/HOST_MATRIX.md), [docs/HOST_UX_PACKETS.md](docs/HOST_UX_PACKETS.md), and [docs/HOST_ACCEPTANCE_EVIDENCE.md](docs/HOST_ACCEPTANCE_EVIDENCE.md): MCP host acceptance status.
 - [docs/V1_READINESS.md](docs/V1_READINESS.md): v1 compatibility and release audit.
-- [docs/V1_LAUNCH_REPORT.md](docs/V1_LAUNCH_REPORT.md), [docs/V1_DECISION_REPORT.md](docs/V1_DECISION_REPORT.md), [docs/V1_RC_READINESS.md](docs/V1_RC_READINESS.md), [docs/V1_RC_RELEASE_PACKET.md](docs/V1_RC_RELEASE_PACKET.md), [docs/V1_RC_CUTOVER_CHECKLIST.md](docs/V1_RC_CUTOVER_CHECKLIST.md), and [docs/P0_EVIDENCE_STATUS.md](docs/P0_EVIDENCE_STATUS.md): current v1 launch blockers, go/no-go decision, RC gate, gated RC packet, RC cutover checklist, and P0 evidence status.
+- [docs/V1_LAUNCH_REPORT.md](docs/V1_LAUNCH_REPORT.md), [docs/V1_DECISION_REPORT.md](docs/V1_DECISION_REPORT.md), [docs/V1_RC_READINESS.md](docs/V1_RC_READINESS.md), [docs/V1_RC_RELEASE_PACKET.md](docs/V1_RC_RELEASE_PACKET.md), [docs/V1_RC_CUTOVER_CHECKLIST.md](docs/V1_RC_CUTOVER_CHECKLIST.md), [docs/V1_RC_AUTOMATION_PACK.md](docs/V1_RC_AUTOMATION_PACK.md), and [docs/P0_EVIDENCE_STATUS.md](docs/P0_EVIDENCE_STATUS.md): current v1 launch blockers, go/no-go decision, RC gate, gated RC packet, RC cutover checklist, RC automation, and P0 evidence status.
 - [docs/RELEASE.md](docs/RELEASE.md): PyPI, GitHub Release, and MCP Registry publication process.
 - [CHANGELOG.md](CHANGELOG.md): release history.
 - [server.json](server.json): public MCP Registry metadata.
