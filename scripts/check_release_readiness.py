@@ -49,6 +49,7 @@ from scripts.export_p0_host_execution_sprint import (
 from scripts.export_p0_host_run_session import build_p0_host_run_session, render_p0_host_run_session_markdown
 from scripts.export_p0_host_runbook import build_p0_host_runbook, render_p0_host_runbook_markdown
 from scripts.export_product_depth_backlog import build_product_depth_backlog, render_product_depth_backlog_markdown
+from scripts.export_product_depth_gate import build_product_depth_gate, render_product_depth_gate_markdown
 from scripts.export_rc_host_evidence_ops import build_rc_host_evidence_ops, render_rc_host_evidence_ops_markdown
 from scripts.export_review_agent_v3_plan import build_review_agent_v3_plan, render_review_agent_v3_plan_markdown
 from scripts.export_v1_decision_report import build_v1_decision_report, render_v1_decision_report_markdown
@@ -102,6 +103,7 @@ _DEFAULT_V1_RC_AUTOMATION_PACK_PATH = Path("docs/V1_RC_AUTOMATION_PACK.md")
 _DEFAULT_V1_RC_CUTOVER_GATE_PATH = Path("docs/V1_RC_CUTOVER_GATE.md")
 _DEFAULT_RC_HOST_EVIDENCE_OPS_PATH = Path("docs/RC_HOST_EVIDENCE_OPS.md")
 _DEFAULT_PRODUCT_DEPTH_BACKLOG_PATH = Path("docs/PRODUCT_DEPTH_BACKLOG.md")
+_DEFAULT_PRODUCT_DEPTH_GATE_PATH = Path("docs/PRODUCT_DEPTH_GATE.md")
 _DEFAULT_REVIEW_AGENT_V3_PLAN_PATH = Path("docs/REVIEW_AGENT_V3_PLAN.md")
 _DEFAULT_DATASET_QUALITY_DEPTH_PLAN_PATH = Path("docs/DATASET_QUALITY_DEPTH_PLAN.md")
 _DEFAULT_MCP_SNAPSHOT_PATH = Path("tests/fixtures/snapshots/mcp_contract.json")
@@ -142,6 +144,7 @@ class ReleaseReadinessConfig:
     v1_rc_cutover_gate_path: Path = _DEFAULT_V1_RC_CUTOVER_GATE_PATH
     rc_host_evidence_ops_path: Path = _DEFAULT_RC_HOST_EVIDENCE_OPS_PATH
     product_depth_backlog_path: Path = _DEFAULT_PRODUCT_DEPTH_BACKLOG_PATH
+    product_depth_gate_path: Path = _DEFAULT_PRODUCT_DEPTH_GATE_PATH
     review_agent_v3_plan_path: Path = _DEFAULT_REVIEW_AGENT_V3_PLAN_PATH
     dataset_quality_depth_plan_path: Path = _DEFAULT_DATASET_QUALITY_DEPTH_PLAN_PATH
     mcp_snapshot_path: Path = _DEFAULT_MCP_SNAPSHOT_PATH
@@ -314,6 +317,12 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             path=config.product_depth_backlog_path,
             expected=render_product_depth_backlog_markdown(build_product_depth_backlog()),
             exporter="scripts/export_product_depth_backlog.py",
+        ),
+        _check_generated_doc(
+            name="product_depth_gate",
+            path=config.product_depth_gate_path,
+            expected=render_product_depth_gate_markdown(build_product_depth_gate()),
+            exporter="scripts/export_product_depth_gate.py --output docs/PRODUCT_DEPTH_GATE.md",
         ),
         _check_generated_doc(
             name="review_agent_v3_plan",
