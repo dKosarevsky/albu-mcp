@@ -36,6 +36,7 @@ def test_release_readiness_accepts_current_fast_guards(tmp_path: Path) -> None:
         "v1_rc_release_packet",
         "v1_rc_cutover_checklist",
         "v1_rc_automation_pack",
+        "v1_rc_cutover_gate",
         "product_depth_backlog",
         "review_agent_v3_plan",
         "dataset_quality_depth_plan",
@@ -93,6 +94,7 @@ def test_release_readiness_cli_passes_fast_guards(tmp_path: Path) -> None:
     assert "v1_rc_release_packet" in result.stdout
     assert "v1_rc_cutover_checklist" in result.stdout
     assert "v1_rc_automation_pack" in result.stdout
+    assert "v1_rc_cutover_gate" in result.stdout
     assert "product_depth_backlog" in result.stdout
     assert "dataset_quality_depth_plan" in result.stdout
     assert "output_contract_snapshot" in result.stdout
