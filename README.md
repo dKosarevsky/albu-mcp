@@ -88,7 +88,7 @@ source: [docs/integrations/mcp.md](https://github.com/albumentations-team/Albume
 
 - [docs/INSTALL.md](docs/INSTALL.md): PyPI, MCP Registry, Claude Desktop, Claude Code, Cursor, Codex, bounded roots.
 - [docs/FIRST_10_MINUTES.md](docs/FIRST_10_MINUTES.md): shortest path from install to preview, feedback, and export.
-- [docs/HOST_PROOF_SPRINT.md](docs/HOST_PROOF_SPRINT.md), [docs/HOST_PROOF_SPRINT_CHECKLIST.md](docs/HOST_PROOF_SPRINT_CHECKLIST.md), [docs/HOST_EVIDENCE_SPRINT_BOARD.md](docs/HOST_EVIDENCE_SPRINT_BOARD.md), [docs/P0_HOST_RUNBOOK.md](docs/P0_HOST_RUNBOOK.md), [docs/P0_EVIDENCE_RECORDER.md](docs/P0_EVIDENCE_RECORDER.md), [docs/P0_HOST_EXECUTION_SPRINT.md](docs/P0_HOST_EXECUTION_SPRINT.md), [docs/P0_HOST_EVIDENCE_LEDGER.md](docs/P0_HOST_EVIDENCE_LEDGER.md), [docs/P0_BLOCKER_TRIAGE.md](docs/P0_BLOCKER_TRIAGE.md), [docs/REAL_HOST_EVIDENCE_EXECUTION.md](docs/REAL_HOST_EVIDENCE_EXECUTION.md), [docs/HOST_UX_HARDENING_LOOP.md](docs/HOST_UX_HARDENING_LOOP.md), and [docs/HOST_FAILURE_COOKBOOK.md](docs/HOST_FAILURE_COOKBOOK.md): real host replay runbook, checklist, sprint board, P0 runbook, recorder, execution sprint, evidence ledger, blocker triage, execution pack, hardening loop, and failure triage.
+- [docs/HOST_PROOF_SPRINT.md](docs/HOST_PROOF_SPRINT.md), [docs/HOST_PROOF_SPRINT_CHECKLIST.md](docs/HOST_PROOF_SPRINT_CHECKLIST.md), [docs/HOST_EVIDENCE_SPRINT_BOARD.md](docs/HOST_EVIDENCE_SPRINT_BOARD.md), [docs/P0_HOST_RUNBOOK.md](docs/P0_HOST_RUNBOOK.md), [docs/P0_HOST_RUN_SESSION.md](docs/P0_HOST_RUN_SESSION.md), [docs/P0_HOST_RUN_PREFLIGHT.md](docs/P0_HOST_RUN_PREFLIGHT.md), [docs/P0_EVIDENCE_RECORDER.md](docs/P0_EVIDENCE_RECORDER.md), [docs/P0_EVIDENCE_IMPORT_GUIDE.md](docs/P0_EVIDENCE_IMPORT_GUIDE.md), [docs/P0_EVIDENCE_REGENERATION_PACK.md](docs/P0_EVIDENCE_REGENERATION_PACK.md), [docs/P0_HOST_EXECUTION_SPRINT.md](docs/P0_HOST_EXECUTION_SPRINT.md), [docs/P0_HOST_EVIDENCE_LEDGER.md](docs/P0_HOST_EVIDENCE_LEDGER.md), [docs/P0_BLOCKER_TRIAGE.md](docs/P0_BLOCKER_TRIAGE.md), [docs/REAL_HOST_EVIDENCE_EXECUTION.md](docs/REAL_HOST_EVIDENCE_EXECUTION.md), [docs/HOST_UX_HARDENING_LOOP.md](docs/HOST_UX_HARDENING_LOOP.md), and [docs/HOST_FAILURE_COOKBOOK.md](docs/HOST_FAILURE_COOKBOOK.md): real host replay runbook, checklist, sprint board, P0 runbook, run session, preflight, recorder, verify-only import guide, gated regeneration pack, execution sprint, evidence ledger, blocker triage, execution pack, hardening loop, and failure triage.
 - [docs/USAGE.md](docs/USAGE.md): end-to-end MCP host workflow and tool details.
 - [docs/RECIPES.md](docs/RECIPES.md): task-specific host recipes.
 - [docs/ADOPTION.md](docs/ADOPTION.md), [docs/BETA_WORKFLOW_PACK.md](docs/BETA_WORKFLOW_PACK.md), [docs/BETA_CAMPAIGN_PACK.md](docs/BETA_CAMPAIGN_PACK.md), [docs/BETA_FEEDBACK_INTAKE.md](docs/BETA_FEEDBACK_INTAKE.md), [docs/BETA_FEEDBACK_RECORDS.json](docs/BETA_FEEDBACK_RECORDS.json), [docs/BETA_FEEDBACK_STATUS.md](docs/BETA_FEEDBACK_STATUS.md), and [docs/BETA_VALIDATION_SPRINT.md](docs/BETA_VALIDATION_SPRINT.md): short trial, beta CV workflows, campaign pack, feedback intake, beta records, validation, host setup, workflow examples, and outreach copy.
@@ -100,16 +100,13 @@ source: [docs/integrations/mcp.md](https://github.com/albumentations-team/Albume
 - [docs/DEMO.md](docs/DEMO.md): generated preview comparison demo.
 - [docs/HOST_ACCEPTANCE.md](docs/HOST_ACCEPTANCE.md), [docs/HOST_MATRIX.md](docs/HOST_MATRIX.md), [docs/HOST_UX_PACKETS.md](docs/HOST_UX_PACKETS.md), and [docs/HOST_ACCEPTANCE_EVIDENCE.md](docs/HOST_ACCEPTANCE_EVIDENCE.md): MCP host acceptance status.
 - [docs/V1_READINESS.md](docs/V1_READINESS.md): v1 compatibility and release audit.
-- [docs/V1_LAUNCH_REPORT.md](docs/V1_LAUNCH_REPORT.md), [docs/V1_DECISION_REPORT.md](docs/V1_DECISION_REPORT.md), [docs/V1_EVIDENCE_OPERATOR_PACKET.md](docs/V1_EVIDENCE_OPERATOR_PACKET.md), [docs/V1_GROWTH_CUTOVER_REPORT.md](docs/V1_GROWTH_CUTOVER_REPORT.md), [docs/V1_RC_READINESS.md](docs/V1_RC_READINESS.md), [docs/V1_RC_RELEASE_PACKET.md](docs/V1_RC_RELEASE_PACKET.md), [docs/V1_RC_CUTOVER_CHECKLIST.md](docs/V1_RC_CUTOVER_CHECKLIST.md), [docs/V1_RC_AUTOMATION_PACK.md](docs/V1_RC_AUTOMATION_PACK.md), and [docs/P0_EVIDENCE_STATUS.md](docs/P0_EVIDENCE_STATUS.md): current v1 launch blockers, go/no-go decision, operator evidence packet, growth cutover, RC gate, gated RC packet, RC cutover checklist, RC automation, and P0 evidence status.
+- [docs/V1_LAUNCH_REPORT.md](docs/V1_LAUNCH_REPORT.md), [docs/V1_DECISION_REPORT.md](docs/V1_DECISION_REPORT.md), [docs/V1_EVIDENCE_OPERATOR_PACKET.md](docs/V1_EVIDENCE_OPERATOR_PACKET.md), [docs/V1_GROWTH_CUTOVER_REPORT.md](docs/V1_GROWTH_CUTOVER_REPORT.md), [docs/V1_RC_READINESS.md](docs/V1_RC_READINESS.md), [docs/V1_RC_RELEASE_PACKET.md](docs/V1_RC_RELEASE_PACKET.md), [docs/V1_RC_CUTOVER_CHECKLIST.md](docs/V1_RC_CUTOVER_CHECKLIST.md), [docs/V1_RC_AUTOMATION_PACK.md](docs/V1_RC_AUTOMATION_PACK.md), [docs/V1_RC_CUTOVER_GATE.md](docs/V1_RC_CUTOVER_GATE.md), and [docs/P0_EVIDENCE_STATUS.md](docs/P0_EVIDENCE_STATUS.md): current v1 launch blockers, go/no-go decision, operator evidence packet, growth cutover, RC gate, gated RC packet, RC cutover checklist, RC automation, hard RC cutover gate, and P0 evidence status.
 - [docs/RELEASE.md](docs/RELEASE.md): PyPI, GitHub Release, and MCP Registry publication process.
 - [CHANGELOG.md](CHANGELOG.md): release history.
 - [server.json](server.json): public MCP Registry metadata.
-- [evals/golden_mcp_scenarios.yaml](evals/golden_mcp_scenarios.yaml): executable MCP scenarios.
-
-Operational scripts live in [scripts](scripts/) and are covered by the verification commands below.
+- [evals/golden_mcp_scenarios.yaml](evals/golden_mcp_scenarios.yaml): executable MCP scenarios. Operational scripts live in [scripts](scripts/).
 
 ## Verification
-
 ```bash
 uv run pytest
 uv run ruff check .
@@ -119,8 +116,11 @@ uv run python scripts/validate_host_manual_runs.py
 uv run python scripts/check_host_acceptance_report.py
 uv run python scripts/check_first_10_minutes.py
 uv run python scripts/check_host_proof_sprint.py
+uv run python scripts/verify_host_evidence_import.py --output docs/P0_EVIDENCE_IMPORT_GUIDE.md
+uv run python scripts/export_p0_evidence_regeneration_pack.py --output docs/P0_EVIDENCE_REGENERATION_PACK.md
 uv run python scripts/check_contract_snapshots.py
 uv run python scripts/check_demo_assets.py --output-dir docs/assets/demo --check
+uv run python scripts/check_v1_rc_cutover_gate.py --output docs/V1_RC_CUTOVER_GATE.md
 uv run python scripts/check_release_readiness.py
 uv run python scripts/run_golden_evals.py
 uv run python scripts/check_mcp_registry_status.py

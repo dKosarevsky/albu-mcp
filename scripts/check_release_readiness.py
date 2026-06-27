@@ -16,7 +16,9 @@ from scripts.check_contract_snapshots import check_contract_snapshots
 from scripts.check_first_10_minutes import check_first_10_minutes
 from scripts.check_host_acceptance_report import check_host_acceptance_report
 from scripts.check_host_proof_sprint import check_host_proof_sprint
+from scripts.check_p0_host_run_preflight import check_p0_host_run_preflight
 from scripts.check_release_version import validate_release_versions
+from scripts.check_v1_rc_cutover_gate import build_v1_rc_cutover_gate, render_v1_rc_cutover_gate_markdown
 from scripts.export_beta_campaign_pack import build_beta_campaign_pack, render_beta_campaign_pack_markdown
 from scripts.export_beta_feedback_intake import build_beta_feedback_intake, render_beta_feedback_intake_markdown
 from scripts.export_beta_feedback_status import build_beta_feedback_status, render_beta_feedback_status_markdown
@@ -27,6 +29,10 @@ from scripts.export_dataset_quality_depth_plan import (
 )
 from scripts.export_p0_blocker_triage import build_p0_blocker_triage, render_p0_blocker_triage_markdown
 from scripts.export_p0_evidence_recorder import build_p0_evidence_recorder, render_p0_evidence_recorder_markdown
+from scripts.export_p0_evidence_regeneration_pack import (
+    build_p0_evidence_regeneration_pack,
+    render_p0_evidence_regeneration_pack_markdown,
+)
 from scripts.export_p0_evidence_status import build_p0_evidence_status, render_p0_evidence_status_markdown
 from scripts.export_p0_host_evidence_ledger import (
     build_p0_host_evidence_ledger,
@@ -36,6 +42,7 @@ from scripts.export_p0_host_execution_sprint import (
     build_p0_host_execution_sprint,
     render_p0_host_execution_sprint_markdown,
 )
+from scripts.export_p0_host_run_session import build_p0_host_run_session, render_p0_host_run_session_markdown
 from scripts.export_p0_host_runbook import build_p0_host_runbook, render_p0_host_runbook_markdown
 from scripts.export_product_depth_backlog import build_product_depth_backlog, render_product_depth_backlog_markdown
 from scripts.export_review_agent_v3_plan import build_review_agent_v3_plan, render_review_agent_v3_plan_markdown
@@ -59,6 +66,10 @@ from scripts.export_v1_rc_readiness_report import (
 )
 from scripts.export_v1_rc_release_packet import build_v1_rc_release_packet, render_v1_rc_release_packet_markdown
 from scripts.validate_host_manual_runs import validate_host_manual_runs
+from scripts.verify_host_evidence_import import (
+    build_host_evidence_import_guide,
+    render_host_evidence_import_guide_markdown,
+)
 
 _DEFAULT_MANUAL_RUNS_PATH = Path("docs/HOST_MANUAL_RUNS.json")
 _DEFAULT_HOST_REPORT_PATH = Path("docs/HOST_ACCEPTANCE_EVIDENCE.md")
@@ -67,7 +78,10 @@ _DEFAULT_V1_EVIDENCE_OPERATOR_PACKET_PATH = Path("docs/V1_EVIDENCE_OPERATOR_PACK
 _DEFAULT_V1_GROWTH_CUTOVER_REPORT_PATH = Path("docs/V1_GROWTH_CUTOVER_REPORT.md")
 _DEFAULT_V1_RC_READINESS_REPORT_PATH = Path("docs/V1_RC_READINESS.md")
 _DEFAULT_P0_HOST_RUNBOOK_PATH = Path("docs/P0_HOST_RUNBOOK.md")
+_DEFAULT_P0_HOST_RUN_SESSION_PATH = Path("docs/P0_HOST_RUN_SESSION.md")
 _DEFAULT_P0_EVIDENCE_RECORDER_PATH = Path("docs/P0_EVIDENCE_RECORDER.md")
+_DEFAULT_P0_EVIDENCE_IMPORT_GUIDE_PATH = Path("docs/P0_EVIDENCE_IMPORT_GUIDE.md")
+_DEFAULT_P0_EVIDENCE_REGENERATION_PACK_PATH = Path("docs/P0_EVIDENCE_REGENERATION_PACK.md")
 _DEFAULT_P0_HOST_EXECUTION_SPRINT_PATH = Path("docs/P0_HOST_EXECUTION_SPRINT.md")
 _DEFAULT_P0_HOST_EVIDENCE_LEDGER_PATH = Path("docs/P0_HOST_EVIDENCE_LEDGER.md")
 _DEFAULT_P0_EVIDENCE_STATUS_PATH = Path("docs/P0_EVIDENCE_STATUS.md")
@@ -79,6 +93,7 @@ _DEFAULT_BETA_VALIDATION_SPRINT_PATH = Path("docs/BETA_VALIDATION_SPRINT.md")
 _DEFAULT_V1_RC_RELEASE_PACKET_PATH = Path("docs/V1_RC_RELEASE_PACKET.md")
 _DEFAULT_V1_RC_CUTOVER_CHECKLIST_PATH = Path("docs/V1_RC_CUTOVER_CHECKLIST.md")
 _DEFAULT_V1_RC_AUTOMATION_PACK_PATH = Path("docs/V1_RC_AUTOMATION_PACK.md")
+_DEFAULT_V1_RC_CUTOVER_GATE_PATH = Path("docs/V1_RC_CUTOVER_GATE.md")
 _DEFAULT_PRODUCT_DEPTH_BACKLOG_PATH = Path("docs/PRODUCT_DEPTH_BACKLOG.md")
 _DEFAULT_REVIEW_AGENT_V3_PLAN_PATH = Path("docs/REVIEW_AGENT_V3_PLAN.md")
 _DEFAULT_DATASET_QUALITY_DEPTH_PLAN_PATH = Path("docs/DATASET_QUALITY_DEPTH_PLAN.md")
@@ -101,7 +116,10 @@ class ReleaseReadinessConfig:
     v1_growth_cutover_report_path: Path = _DEFAULT_V1_GROWTH_CUTOVER_REPORT_PATH
     v1_rc_readiness_report_path: Path = _DEFAULT_V1_RC_READINESS_REPORT_PATH
     p0_host_runbook_path: Path = _DEFAULT_P0_HOST_RUNBOOK_PATH
+    p0_host_run_session_path: Path = _DEFAULT_P0_HOST_RUN_SESSION_PATH
     p0_evidence_recorder_path: Path = _DEFAULT_P0_EVIDENCE_RECORDER_PATH
+    p0_evidence_import_guide_path: Path = _DEFAULT_P0_EVIDENCE_IMPORT_GUIDE_PATH
+    p0_evidence_regeneration_pack_path: Path = _DEFAULT_P0_EVIDENCE_REGENERATION_PACK_PATH
     p0_host_execution_sprint_path: Path = _DEFAULT_P0_HOST_EXECUTION_SPRINT_PATH
     p0_host_evidence_ledger_path: Path = _DEFAULT_P0_HOST_EVIDENCE_LEDGER_PATH
     p0_evidence_status_path: Path = _DEFAULT_P0_EVIDENCE_STATUS_PATH
@@ -113,6 +131,7 @@ class ReleaseReadinessConfig:
     v1_rc_release_packet_path: Path = _DEFAULT_V1_RC_RELEASE_PACKET_PATH
     v1_rc_cutover_checklist_path: Path = _DEFAULT_V1_RC_CUTOVER_CHECKLIST_PATH
     v1_rc_automation_pack_path: Path = _DEFAULT_V1_RC_AUTOMATION_PACK_PATH
+    v1_rc_cutover_gate_path: Path = _DEFAULT_V1_RC_CUTOVER_GATE_PATH
     product_depth_backlog_path: Path = _DEFAULT_PRODUCT_DEPTH_BACKLOG_PATH
     review_agent_v3_plan_path: Path = _DEFAULT_REVIEW_AGENT_V3_PLAN_PATH
     dataset_quality_depth_plan_path: Path = _DEFAULT_DATASET_QUALITY_DEPTH_PLAN_PATH
@@ -152,6 +171,7 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
         _check_host_acceptance_evidence(root=config.host_report_root, report_path=config.host_report_path),
         _check_first_10_minutes_entrypoints(),
         _check_host_proof_sprint_entrypoints(),
+        _check_p0_host_run_preflight(),
         _check_v1_decision_report(config.v1_decision_report_path),
         _check_generated_doc(
             name="v1_evidence_operator_packet",
@@ -173,10 +193,28 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             exporter="scripts/export_p0_host_runbook.py",
         ),
         _check_generated_doc(
+            name="p0_host_run_session",
+            path=config.p0_host_run_session_path,
+            expected=render_p0_host_run_session_markdown(build_p0_host_run_session()),
+            exporter="scripts/export_p0_host_run_session.py",
+        ),
+        _check_generated_doc(
             name="p0_evidence_recorder",
             path=config.p0_evidence_recorder_path,
             expected=render_p0_evidence_recorder_markdown(build_p0_evidence_recorder()),
             exporter="scripts/export_p0_evidence_recorder.py",
+        ),
+        _check_generated_doc(
+            name="p0_evidence_import_guide",
+            path=config.p0_evidence_import_guide_path,
+            expected=render_host_evidence_import_guide_markdown(build_host_evidence_import_guide()),
+            exporter="scripts/verify_host_evidence_import.py --output docs/P0_EVIDENCE_IMPORT_GUIDE.md",
+        ),
+        _check_generated_doc(
+            name="p0_evidence_regeneration_pack",
+            path=config.p0_evidence_regeneration_pack_path,
+            expected=render_p0_evidence_regeneration_pack_markdown(build_p0_evidence_regeneration_pack()),
+            exporter="scripts/export_p0_evidence_regeneration_pack.py --output docs/P0_EVIDENCE_REGENERATION_PACK.md",
         ),
         _check_generated_doc(
             name="p0_host_execution_sprint",
@@ -245,6 +283,12 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             exporter="scripts/export_v1_rc_automation_pack.py",
         ),
         _check_generated_doc(
+            name="v1_rc_cutover_gate",
+            path=config.v1_rc_cutover_gate_path,
+            expected=render_v1_rc_cutover_gate_markdown(build_v1_rc_cutover_gate()),
+            exporter="scripts/check_v1_rc_cutover_gate.py --output docs/V1_RC_CUTOVER_GATE.md",
+        ),
+        _check_generated_doc(
             name="product_depth_backlog",
             path=config.product_depth_backlog_path,
             expected=render_product_depth_backlog_markdown(build_product_depth_backlog()),
@@ -291,7 +335,14 @@ def main() -> None:
     parser.add_argument("--v1-growth-cutover-report", type=Path, default=_DEFAULT_V1_GROWTH_CUTOVER_REPORT_PATH)
     parser.add_argument("--v1-rc-readiness-report", type=Path, default=_DEFAULT_V1_RC_READINESS_REPORT_PATH)
     parser.add_argument("--p0-host-runbook", type=Path, default=_DEFAULT_P0_HOST_RUNBOOK_PATH)
+    parser.add_argument("--p0-host-run-session", type=Path, default=_DEFAULT_P0_HOST_RUN_SESSION_PATH)
     parser.add_argument("--p0-evidence-recorder", type=Path, default=_DEFAULT_P0_EVIDENCE_RECORDER_PATH)
+    parser.add_argument("--p0-evidence-import-guide", type=Path, default=_DEFAULT_P0_EVIDENCE_IMPORT_GUIDE_PATH)
+    parser.add_argument(
+        "--p0-evidence-regeneration-pack",
+        type=Path,
+        default=_DEFAULT_P0_EVIDENCE_REGENERATION_PACK_PATH,
+    )
     parser.add_argument("--p0-host-execution-sprint", type=Path, default=_DEFAULT_P0_HOST_EXECUTION_SPRINT_PATH)
     parser.add_argument("--p0-host-evidence-ledger", type=Path, default=_DEFAULT_P0_HOST_EVIDENCE_LEDGER_PATH)
     parser.add_argument("--p0-evidence-status", type=Path, default=_DEFAULT_P0_EVIDENCE_STATUS_PATH)
@@ -303,6 +354,7 @@ def main() -> None:
     parser.add_argument("--v1-rc-release-packet", type=Path, default=_DEFAULT_V1_RC_RELEASE_PACKET_PATH)
     parser.add_argument("--v1-rc-cutover-checklist", type=Path, default=_DEFAULT_V1_RC_CUTOVER_CHECKLIST_PATH)
     parser.add_argument("--v1-rc-automation-pack", type=Path, default=_DEFAULT_V1_RC_AUTOMATION_PACK_PATH)
+    parser.add_argument("--v1-rc-cutover-gate", type=Path, default=_DEFAULT_V1_RC_CUTOVER_GATE_PATH)
     parser.add_argument("--product-depth-backlog", type=Path, default=_DEFAULT_PRODUCT_DEPTH_BACKLOG_PATH)
     parser.add_argument("--review-agent-v3-plan", type=Path, default=_DEFAULT_REVIEW_AGENT_V3_PLAN_PATH)
     parser.add_argument("--dataset-quality-depth-plan", type=Path, default=_DEFAULT_DATASET_QUALITY_DEPTH_PLAN_PATH)
@@ -328,7 +380,10 @@ def main() -> None:
             v1_growth_cutover_report_path=args.v1_growth_cutover_report,
             v1_rc_readiness_report_path=args.v1_rc_readiness_report,
             p0_host_runbook_path=args.p0_host_runbook,
+            p0_host_run_session_path=args.p0_host_run_session,
             p0_evidence_recorder_path=args.p0_evidence_recorder,
+            p0_evidence_import_guide_path=args.p0_evidence_import_guide,
+            p0_evidence_regeneration_pack_path=args.p0_evidence_regeneration_pack,
             p0_host_execution_sprint_path=args.p0_host_execution_sprint,
             p0_host_evidence_ledger_path=args.p0_host_evidence_ledger,
             p0_evidence_status_path=args.p0_evidence_status,
@@ -340,6 +395,7 @@ def main() -> None:
             v1_rc_release_packet_path=args.v1_rc_release_packet,
             v1_rc_cutover_checklist_path=args.v1_rc_cutover_checklist,
             v1_rc_automation_pack_path=args.v1_rc_automation_pack,
+            v1_rc_cutover_gate_path=args.v1_rc_cutover_gate,
             product_depth_backlog_path=args.product_depth_backlog,
             review_agent_v3_plan_path=args.review_agent_v3_plan,
             dataset_quality_depth_plan_path=args.dataset_quality_depth_plan,
@@ -418,6 +474,22 @@ def _check_host_proof_sprint_entrypoints() -> ReleaseReadinessCheck:
         name="host_proof_sprint",
         ok=True,
         message=f"host proof sprint entrypoints are valid ({len(report.checks)} checks)",
+    )
+
+
+def _check_p0_host_run_preflight() -> ReleaseReadinessCheck:
+    report = check_p0_host_run_preflight()
+    failed = [check for check in report.checks if not check.ok]
+    if failed:
+        return ReleaseReadinessCheck(
+            name="p0_host_run_preflight",
+            ok=False,
+            message="; ".join(f"{check.name}: {check.message}" for check in failed),
+        )
+    return ReleaseReadinessCheck(
+        name="p0_host_run_preflight",
+        ok=True,
+        message=f"p0 host run preflight is valid ({len(report.checks)} checks)",
     )
 
 

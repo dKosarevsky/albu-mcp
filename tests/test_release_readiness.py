@@ -15,12 +15,16 @@ def test_release_readiness_accepts_current_fast_guards(tmp_path: Path) -> None:
         "host_acceptance_evidence",
         "first_10_minutes",
         "host_proof_sprint",
+        "p0_host_run_preflight",
         "v1_decision_report",
         "v1_evidence_operator_packet",
         "v1_growth_cutover_report",
         "v1_rc_readiness_report",
         "p0_host_runbook",
+        "p0_host_run_session",
         "p0_evidence_recorder",
+        "p0_evidence_import_guide",
+        "p0_evidence_regeneration_pack",
         "p0_host_execution_sprint",
         "p0_host_evidence_ledger",
         "p0_evidence_status",
@@ -32,6 +36,7 @@ def test_release_readiness_accepts_current_fast_guards(tmp_path: Path) -> None:
         "v1_rc_release_packet",
         "v1_rc_cutover_checklist",
         "v1_rc_automation_pack",
+        "v1_rc_cutover_gate",
         "product_depth_backlog",
         "review_agent_v3_plan",
         "dataset_quality_depth_plan",
@@ -75,16 +80,21 @@ def test_release_readiness_cli_passes_fast_guards(tmp_path: Path) -> None:
 
     assert "release readiness checks passed" in result.stdout
     assert "manual_host_records" in result.stdout
+    assert "p0_host_run_preflight" in result.stdout
     assert "v1_decision_report" in result.stdout
     assert "v1_evidence_operator_packet" in result.stdout
     assert "v1_growth_cutover_report" in result.stdout
     assert "v1_rc_readiness_report" in result.stdout
+    assert "p0_host_run_session" in result.stdout
+    assert "p0_evidence_import_guide" in result.stdout
+    assert "p0_evidence_regeneration_pack" in result.stdout
     assert "p0_evidence_status" in result.stdout
     assert "beta_campaign_pack" in result.stdout
     assert "beta_feedback_intake" in result.stdout
     assert "v1_rc_release_packet" in result.stdout
     assert "v1_rc_cutover_checklist" in result.stdout
     assert "v1_rc_automation_pack" in result.stdout
+    assert "v1_rc_cutover_gate" in result.stdout
     assert "product_depth_backlog" in result.stdout
     assert "dataset_quality_depth_plan" in result.stdout
     assert "output_contract_snapshot" in result.stdout
