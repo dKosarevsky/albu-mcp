@@ -31,6 +31,10 @@ from scripts.export_dataset_quality_depth_plan import (
     build_dataset_quality_depth_plan,
     render_dataset_quality_depth_plan_markdown,
 )
+from scripts.export_distribution_readiness_pack import (
+    build_distribution_readiness_pack,
+    render_distribution_readiness_pack_markdown,
+)
 from scripts.export_p0_blocker_triage import build_p0_blocker_triage, render_p0_blocker_triage_markdown
 from scripts.export_p0_evidence_recorder import build_p0_evidence_recorder, render_p0_evidence_recorder_markdown
 from scripts.export_p0_evidence_regeneration_pack import (
@@ -106,6 +110,7 @@ _DEFAULT_PRODUCT_DEPTH_BACKLOG_PATH = Path("docs/PRODUCT_DEPTH_BACKLOG.md")
 _DEFAULT_PRODUCT_DEPTH_GATE_PATH = Path("docs/PRODUCT_DEPTH_GATE.md")
 _DEFAULT_REVIEW_AGENT_V3_PLAN_PATH = Path("docs/REVIEW_AGENT_V3_PLAN.md")
 _DEFAULT_DATASET_QUALITY_DEPTH_PLAN_PATH = Path("docs/DATASET_QUALITY_DEPTH_PLAN.md")
+_DEFAULT_DISTRIBUTION_READINESS_PACK_PATH = Path("docs/DISTRIBUTION_READINESS_PACK.md")
 _DEFAULT_MCP_SNAPSHOT_PATH = Path("tests/fixtures/snapshots/mcp_contract.json")
 _DEFAULT_OUTPUT_SNAPSHOT_PATH = Path("tests/fixtures/snapshots/output_contracts.json")
 _DEFAULT_PYPROJECT_PATH = Path("pyproject.toml")
@@ -147,6 +152,7 @@ class ReleaseReadinessConfig:
     product_depth_gate_path: Path = _DEFAULT_PRODUCT_DEPTH_GATE_PATH
     review_agent_v3_plan_path: Path = _DEFAULT_REVIEW_AGENT_V3_PLAN_PATH
     dataset_quality_depth_plan_path: Path = _DEFAULT_DATASET_QUALITY_DEPTH_PLAN_PATH
+    distribution_readiness_pack_path: Path = _DEFAULT_DISTRIBUTION_READINESS_PACK_PATH
     mcp_snapshot_path: Path = _DEFAULT_MCP_SNAPSHOT_PATH
     output_snapshot_path: Path = _DEFAULT_OUTPUT_SNAPSHOT_PATH
     contract_output_work_dir: Path | None = None
@@ -335,6 +341,12 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             path=config.dataset_quality_depth_plan_path,
             expected=render_dataset_quality_depth_plan_markdown(build_dataset_quality_depth_plan()),
             exporter="scripts/export_dataset_quality_depth_plan.py",
+        ),
+        _check_generated_doc(
+            name="distribution_readiness_pack",
+            path=config.distribution_readiness_pack_path,
+            expected=render_distribution_readiness_pack_markdown(build_distribution_readiness_pack()),
+            exporter="scripts/export_distribution_readiness_pack.py --output docs/DISTRIBUTION_READINESS_PACK.md",
         ),
         *_check_contract_snapshot_freshness(
             mcp_snapshot_path=config.mcp_snapshot_path,

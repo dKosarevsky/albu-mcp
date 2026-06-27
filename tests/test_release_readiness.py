@@ -43,6 +43,7 @@ def test_release_readiness_accepts_current_fast_guards(tmp_path: Path) -> None:
         "product_depth_gate",
         "review_agent_v3_plan",
         "dataset_quality_depth_plan",
+        "distribution_readiness_pack",
         "mcp_contract_snapshot",
         "output_contract_snapshot",
     ]
@@ -103,6 +104,7 @@ def test_release_readiness_cli_passes_fast_guards(tmp_path: Path) -> None:
     assert "product_depth_backlog" in result.stdout
     assert "product_depth_gate" in result.stdout
     assert "dataset_quality_depth_plan" in result.stdout
+    assert "distribution_readiness_pack" in result.stdout
     assert "output_contract_snapshot" in result.stdout
 
 
