@@ -20,13 +20,18 @@ def test_release_readiness_accepts_current_fast_guards(tmp_path: Path) -> None:
         "p0_host_runbook",
         "p0_evidence_recorder",
         "p0_host_execution_sprint",
+        "p0_host_evidence_ledger",
         "p0_evidence_status",
         "p0_blocker_triage",
         "beta_feedback_intake",
+        "beta_feedback_status",
         "beta_validation_sprint",
         "v1_rc_release_packet",
         "v1_rc_cutover_checklist",
+        "v1_rc_automation_pack",
         "product_depth_backlog",
+        "review_agent_v3_plan",
+        "dataset_quality_depth_plan",
         "mcp_contract_snapshot",
         "output_contract_snapshot",
     ]
@@ -73,7 +78,9 @@ def test_release_readiness_cli_passes_fast_guards(tmp_path: Path) -> None:
     assert "beta_feedback_intake" in result.stdout
     assert "v1_rc_release_packet" in result.stdout
     assert "v1_rc_cutover_checklist" in result.stdout
+    assert "v1_rc_automation_pack" in result.stdout
     assert "product_depth_backlog" in result.stdout
+    assert "dataset_quality_depth_plan" in result.stdout
     assert "output_contract_snapshot" in result.stdout
 
 
