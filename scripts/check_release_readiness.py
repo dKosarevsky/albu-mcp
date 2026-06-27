@@ -39,6 +39,10 @@ from scripts.export_p0_host_runbook import build_p0_host_runbook, render_p0_host
 from scripts.export_product_depth_backlog import build_product_depth_backlog, render_product_depth_backlog_markdown
 from scripts.export_review_agent_v3_plan import build_review_agent_v3_plan, render_review_agent_v3_plan_markdown
 from scripts.export_v1_decision_report import build_v1_decision_report, render_v1_decision_report_markdown
+from scripts.export_v1_evidence_operator_packet import (
+    build_v1_evidence_operator_packet,
+    render_v1_evidence_operator_packet_markdown,
+)
 from scripts.export_v1_rc_automation_pack import build_v1_rc_automation_pack, render_v1_rc_automation_pack_markdown
 from scripts.export_v1_rc_cutover_checklist import (
     build_v1_rc_cutover_checklist,
@@ -54,6 +58,7 @@ from scripts.validate_host_manual_runs import validate_host_manual_runs
 _DEFAULT_MANUAL_RUNS_PATH = Path("docs/HOST_MANUAL_RUNS.json")
 _DEFAULT_HOST_REPORT_PATH = Path("docs/HOST_ACCEPTANCE_EVIDENCE.md")
 _DEFAULT_V1_DECISION_REPORT_PATH = Path("docs/V1_DECISION_REPORT.md")
+_DEFAULT_V1_EVIDENCE_OPERATOR_PACKET_PATH = Path("docs/V1_EVIDENCE_OPERATOR_PACKET.md")
 _DEFAULT_V1_RC_READINESS_REPORT_PATH = Path("docs/V1_RC_READINESS.md")
 _DEFAULT_P0_HOST_RUNBOOK_PATH = Path("docs/P0_HOST_RUNBOOK.md")
 _DEFAULT_P0_EVIDENCE_RECORDER_PATH = Path("docs/P0_EVIDENCE_RECORDER.md")
@@ -85,6 +90,7 @@ class ReleaseReadinessConfig:
     host_report_root: Path = Path()
     host_report_path: Path = _DEFAULT_HOST_REPORT_PATH
     v1_decision_report_path: Path = _DEFAULT_V1_DECISION_REPORT_PATH
+    v1_evidence_operator_packet_path: Path = _DEFAULT_V1_EVIDENCE_OPERATOR_PACKET_PATH
     v1_rc_readiness_report_path: Path = _DEFAULT_V1_RC_READINESS_REPORT_PATH
     p0_host_runbook_path: Path = _DEFAULT_P0_HOST_RUNBOOK_PATH
     p0_evidence_recorder_path: Path = _DEFAULT_P0_EVIDENCE_RECORDER_PATH
@@ -138,6 +144,12 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
         _check_first_10_minutes_entrypoints(),
         _check_host_proof_sprint_entrypoints(),
         _check_v1_decision_report(config.v1_decision_report_path),
+        _check_generated_doc(
+            name="v1_evidence_operator_packet",
+            path=config.v1_evidence_operator_packet_path,
+            expected=render_v1_evidence_operator_packet_markdown(build_v1_evidence_operator_packet()),
+            exporter="scripts/export_v1_evidence_operator_packet.py",
+        ),
         _check_v1_rc_readiness_report(config.v1_rc_readiness_report_path),
         _check_generated_doc(
             name="p0_host_runbook",
@@ -254,6 +266,7 @@ def main() -> None:
     parser.add_argument("--host-report-root", type=Path, default=Path())
     parser.add_argument("--host-report", type=Path, default=None)
     parser.add_argument("--v1-decision-report", type=Path, default=_DEFAULT_V1_DECISION_REPORT_PATH)
+    parser.add_argument("--v1-evidence-operator-packet", type=Path, default=_DEFAULT_V1_EVIDENCE_OPERATOR_PACKET_PATH)
     parser.add_argument("--v1-rc-readiness-report", type=Path, default=_DEFAULT_V1_RC_READINESS_REPORT_PATH)
     parser.add_argument("--p0-host-runbook", type=Path, default=_DEFAULT_P0_HOST_RUNBOOK_PATH)
     parser.add_argument("--p0-evidence-recorder", type=Path, default=_DEFAULT_P0_EVIDENCE_RECORDER_PATH)
@@ -288,6 +301,7 @@ def main() -> None:
             host_report_root=args.host_report_root,
             host_report_path=host_report_path,
             v1_decision_report_path=args.v1_decision_report,
+            v1_evidence_operator_packet_path=args.v1_evidence_operator_packet,
             v1_rc_readiness_report_path=args.v1_rc_readiness_report,
             p0_host_runbook_path=args.p0_host_runbook,
             p0_evidence_recorder_path=args.p0_evidence_recorder,
