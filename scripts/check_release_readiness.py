@@ -18,17 +18,28 @@ from scripts.check_host_acceptance_report import check_host_acceptance_report
 from scripts.check_host_proof_sprint import check_host_proof_sprint
 from scripts.check_release_version import validate_release_versions
 from scripts.export_beta_feedback_intake import build_beta_feedback_intake, render_beta_feedback_intake_markdown
+from scripts.export_beta_feedback_status import build_beta_feedback_status, render_beta_feedback_status_markdown
 from scripts.export_beta_validation_sprint import build_beta_validation_sprint, render_beta_validation_sprint_markdown
+from scripts.export_dataset_quality_depth_plan import (
+    build_dataset_quality_depth_plan,
+    render_dataset_quality_depth_plan_markdown,
+)
 from scripts.export_p0_blocker_triage import build_p0_blocker_triage, render_p0_blocker_triage_markdown
 from scripts.export_p0_evidence_recorder import build_p0_evidence_recorder, render_p0_evidence_recorder_markdown
 from scripts.export_p0_evidence_status import build_p0_evidence_status, render_p0_evidence_status_markdown
+from scripts.export_p0_host_evidence_ledger import (
+    build_p0_host_evidence_ledger,
+    render_p0_host_evidence_ledger_markdown,
+)
 from scripts.export_p0_host_execution_sprint import (
     build_p0_host_execution_sprint,
     render_p0_host_execution_sprint_markdown,
 )
 from scripts.export_p0_host_runbook import build_p0_host_runbook, render_p0_host_runbook_markdown
 from scripts.export_product_depth_backlog import build_product_depth_backlog, render_product_depth_backlog_markdown
+from scripts.export_review_agent_v3_plan import build_review_agent_v3_plan, render_review_agent_v3_plan_markdown
 from scripts.export_v1_decision_report import build_v1_decision_report, render_v1_decision_report_markdown
+from scripts.export_v1_rc_automation_pack import build_v1_rc_automation_pack, render_v1_rc_automation_pack_markdown
 from scripts.export_v1_rc_cutover_checklist import (
     build_v1_rc_cutover_checklist,
     render_v1_rc_cutover_checklist_markdown,
@@ -47,13 +58,18 @@ _DEFAULT_V1_RC_READINESS_REPORT_PATH = Path("docs/V1_RC_READINESS.md")
 _DEFAULT_P0_HOST_RUNBOOK_PATH = Path("docs/P0_HOST_RUNBOOK.md")
 _DEFAULT_P0_EVIDENCE_RECORDER_PATH = Path("docs/P0_EVIDENCE_RECORDER.md")
 _DEFAULT_P0_HOST_EXECUTION_SPRINT_PATH = Path("docs/P0_HOST_EXECUTION_SPRINT.md")
+_DEFAULT_P0_HOST_EVIDENCE_LEDGER_PATH = Path("docs/P0_HOST_EVIDENCE_LEDGER.md")
 _DEFAULT_P0_EVIDENCE_STATUS_PATH = Path("docs/P0_EVIDENCE_STATUS.md")
 _DEFAULT_P0_BLOCKER_TRIAGE_PATH = Path("docs/P0_BLOCKER_TRIAGE.md")
 _DEFAULT_BETA_FEEDBACK_INTAKE_PATH = Path("docs/BETA_FEEDBACK_INTAKE.md")
+_DEFAULT_BETA_FEEDBACK_STATUS_PATH = Path("docs/BETA_FEEDBACK_STATUS.md")
 _DEFAULT_BETA_VALIDATION_SPRINT_PATH = Path("docs/BETA_VALIDATION_SPRINT.md")
 _DEFAULT_V1_RC_RELEASE_PACKET_PATH = Path("docs/V1_RC_RELEASE_PACKET.md")
 _DEFAULT_V1_RC_CUTOVER_CHECKLIST_PATH = Path("docs/V1_RC_CUTOVER_CHECKLIST.md")
+_DEFAULT_V1_RC_AUTOMATION_PACK_PATH = Path("docs/V1_RC_AUTOMATION_PACK.md")
 _DEFAULT_PRODUCT_DEPTH_BACKLOG_PATH = Path("docs/PRODUCT_DEPTH_BACKLOG.md")
+_DEFAULT_REVIEW_AGENT_V3_PLAN_PATH = Path("docs/REVIEW_AGENT_V3_PLAN.md")
+_DEFAULT_DATASET_QUALITY_DEPTH_PLAN_PATH = Path("docs/DATASET_QUALITY_DEPTH_PLAN.md")
 _DEFAULT_MCP_SNAPSHOT_PATH = Path("tests/fixtures/snapshots/mcp_contract.json")
 _DEFAULT_OUTPUT_SNAPSHOT_PATH = Path("tests/fixtures/snapshots/output_contracts.json")
 _DEFAULT_PYPROJECT_PATH = Path("pyproject.toml")
@@ -73,13 +89,18 @@ class ReleaseReadinessConfig:
     p0_host_runbook_path: Path = _DEFAULT_P0_HOST_RUNBOOK_PATH
     p0_evidence_recorder_path: Path = _DEFAULT_P0_EVIDENCE_RECORDER_PATH
     p0_host_execution_sprint_path: Path = _DEFAULT_P0_HOST_EXECUTION_SPRINT_PATH
+    p0_host_evidence_ledger_path: Path = _DEFAULT_P0_HOST_EVIDENCE_LEDGER_PATH
     p0_evidence_status_path: Path = _DEFAULT_P0_EVIDENCE_STATUS_PATH
     p0_blocker_triage_path: Path = _DEFAULT_P0_BLOCKER_TRIAGE_PATH
     beta_feedback_intake_path: Path = _DEFAULT_BETA_FEEDBACK_INTAKE_PATH
+    beta_feedback_status_path: Path = _DEFAULT_BETA_FEEDBACK_STATUS_PATH
     beta_validation_sprint_path: Path = _DEFAULT_BETA_VALIDATION_SPRINT_PATH
     v1_rc_release_packet_path: Path = _DEFAULT_V1_RC_RELEASE_PACKET_PATH
     v1_rc_cutover_checklist_path: Path = _DEFAULT_V1_RC_CUTOVER_CHECKLIST_PATH
+    v1_rc_automation_pack_path: Path = _DEFAULT_V1_RC_AUTOMATION_PACK_PATH
     product_depth_backlog_path: Path = _DEFAULT_PRODUCT_DEPTH_BACKLOG_PATH
+    review_agent_v3_plan_path: Path = _DEFAULT_REVIEW_AGENT_V3_PLAN_PATH
+    dataset_quality_depth_plan_path: Path = _DEFAULT_DATASET_QUALITY_DEPTH_PLAN_PATH
     mcp_snapshot_path: Path = _DEFAULT_MCP_SNAPSHOT_PATH
     output_snapshot_path: Path = _DEFAULT_OUTPUT_SNAPSHOT_PATH
     contract_output_work_dir: Path | None = None
@@ -137,6 +158,12 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             exporter="scripts/export_p0_host_execution_sprint.py",
         ),
         _check_generated_doc(
+            name="p0_host_evidence_ledger",
+            path=config.p0_host_evidence_ledger_path,
+            expected=render_p0_host_evidence_ledger_markdown(build_p0_host_evidence_ledger()),
+            exporter="scripts/export_p0_host_evidence_ledger.py",
+        ),
+        _check_generated_doc(
             name="p0_evidence_status",
             path=config.p0_evidence_status_path,
             expected=render_p0_evidence_status_markdown(build_p0_evidence_status()),
@@ -153,6 +180,12 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             path=config.beta_feedback_intake_path,
             expected=render_beta_feedback_intake_markdown(build_beta_feedback_intake()),
             exporter="scripts/export_beta_feedback_intake.py",
+        ),
+        _check_generated_doc(
+            name="beta_feedback_status",
+            path=config.beta_feedback_status_path,
+            expected=render_beta_feedback_status_markdown(build_beta_feedback_status()),
+            exporter="scripts/export_beta_feedback_status.py",
         ),
         _check_generated_doc(
             name="beta_validation_sprint",
@@ -173,10 +206,28 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             exporter="scripts/export_v1_rc_cutover_checklist.py",
         ),
         _check_generated_doc(
+            name="v1_rc_automation_pack",
+            path=config.v1_rc_automation_pack_path,
+            expected=render_v1_rc_automation_pack_markdown(build_v1_rc_automation_pack()),
+            exporter="scripts/export_v1_rc_automation_pack.py",
+        ),
+        _check_generated_doc(
             name="product_depth_backlog",
             path=config.product_depth_backlog_path,
             expected=render_product_depth_backlog_markdown(build_product_depth_backlog()),
             exporter="scripts/export_product_depth_backlog.py",
+        ),
+        _check_generated_doc(
+            name="review_agent_v3_plan",
+            path=config.review_agent_v3_plan_path,
+            expected=render_review_agent_v3_plan_markdown(build_review_agent_v3_plan()),
+            exporter="scripts/export_review_agent_v3_plan.py",
+        ),
+        _check_generated_doc(
+            name="dataset_quality_depth_plan",
+            path=config.dataset_quality_depth_plan_path,
+            expected=render_dataset_quality_depth_plan_markdown(build_dataset_quality_depth_plan()),
+            exporter="scripts/export_dataset_quality_depth_plan.py",
         ),
         *_check_contract_snapshot_freshness(
             mcp_snapshot_path=config.mcp_snapshot_path,
@@ -207,13 +258,18 @@ def main() -> None:
     parser.add_argument("--p0-host-runbook", type=Path, default=_DEFAULT_P0_HOST_RUNBOOK_PATH)
     parser.add_argument("--p0-evidence-recorder", type=Path, default=_DEFAULT_P0_EVIDENCE_RECORDER_PATH)
     parser.add_argument("--p0-host-execution-sprint", type=Path, default=_DEFAULT_P0_HOST_EXECUTION_SPRINT_PATH)
+    parser.add_argument("--p0-host-evidence-ledger", type=Path, default=_DEFAULT_P0_HOST_EVIDENCE_LEDGER_PATH)
     parser.add_argument("--p0-evidence-status", type=Path, default=_DEFAULT_P0_EVIDENCE_STATUS_PATH)
     parser.add_argument("--p0-blocker-triage", type=Path, default=_DEFAULT_P0_BLOCKER_TRIAGE_PATH)
     parser.add_argument("--beta-feedback-intake", type=Path, default=_DEFAULT_BETA_FEEDBACK_INTAKE_PATH)
+    parser.add_argument("--beta-feedback-status", type=Path, default=_DEFAULT_BETA_FEEDBACK_STATUS_PATH)
     parser.add_argument("--beta-validation-sprint", type=Path, default=_DEFAULT_BETA_VALIDATION_SPRINT_PATH)
     parser.add_argument("--v1-rc-release-packet", type=Path, default=_DEFAULT_V1_RC_RELEASE_PACKET_PATH)
     parser.add_argument("--v1-rc-cutover-checklist", type=Path, default=_DEFAULT_V1_RC_CUTOVER_CHECKLIST_PATH)
+    parser.add_argument("--v1-rc-automation-pack", type=Path, default=_DEFAULT_V1_RC_AUTOMATION_PACK_PATH)
     parser.add_argument("--product-depth-backlog", type=Path, default=_DEFAULT_PRODUCT_DEPTH_BACKLOG_PATH)
+    parser.add_argument("--review-agent-v3-plan", type=Path, default=_DEFAULT_REVIEW_AGENT_V3_PLAN_PATH)
+    parser.add_argument("--dataset-quality-depth-plan", type=Path, default=_DEFAULT_DATASET_QUALITY_DEPTH_PLAN_PATH)
     parser.add_argument("--mcp-snapshot", type=Path, default=_DEFAULT_MCP_SNAPSHOT_PATH)
     parser.add_argument("--output-snapshot", type=Path, default=_DEFAULT_OUTPUT_SNAPSHOT_PATH)
     parser.add_argument("--contract-output-work-dir", type=Path, default=None)
@@ -236,13 +292,18 @@ def main() -> None:
             p0_host_runbook_path=args.p0_host_runbook,
             p0_evidence_recorder_path=args.p0_evidence_recorder,
             p0_host_execution_sprint_path=args.p0_host_execution_sprint,
+            p0_host_evidence_ledger_path=args.p0_host_evidence_ledger,
             p0_evidence_status_path=args.p0_evidence_status,
             p0_blocker_triage_path=args.p0_blocker_triage,
             beta_feedback_intake_path=args.beta_feedback_intake,
+            beta_feedback_status_path=args.beta_feedback_status,
             beta_validation_sprint_path=args.beta_validation_sprint,
             v1_rc_release_packet_path=args.v1_rc_release_packet,
             v1_rc_cutover_checklist_path=args.v1_rc_cutover_checklist,
+            v1_rc_automation_pack_path=args.v1_rc_automation_pack,
             product_depth_backlog_path=args.product_depth_backlog,
+            review_agent_v3_plan_path=args.review_agent_v3_plan,
+            dataset_quality_depth_plan_path=args.dataset_quality_depth_plan,
             mcp_snapshot_path=args.mcp_snapshot,
             output_snapshot_path=args.output_snapshot,
             contract_output_work_dir=args.contract_output_work_dir,
