@@ -65,6 +65,8 @@ _WORKFLOWS = {
             "validate_pipeline",
             "explain_pipeline",
             "render_preview",
+            "interpret_preview_feedback",
+            "plan_preview_review",
             "list_feedback_tags",
             "start_tuning_session",
             "adjust_pipeline",
@@ -101,12 +103,26 @@ _WORKFLOWS = {
             ),
             WorkflowStep(
                 order=5,
+                tool="interpret_preview_feedback",
+                instruction="Convert free-form user comments about preview examples into structured feedback tags.",
+                expected_result="Feedback tags with severity, acceptance hint, and the recommended next tool.",
+            ),
+            WorkflowStep(
+                order=6,
+                tool="plan_preview_review",
+                instruction=(
+                    "After rendering a candidate, build a structured review plan before adjusting or exporting."
+                ),
+                expected_result=("A review decision, checklist, recommended next tool, blockers, and tuning summary."),
+            ),
+            WorkflowStep(
+                order=7,
                 tool="list_feedback_tags",
                 instruction="Show the relevant feedback tag vocabulary and ask the user for structured feedback.",
                 expected_result="Tags such as too_noisy, too_blurry, too_distorted, or acceptable.",
             ),
             WorkflowStep(
-                order=6,
+                order=8,
                 tool="start_tuning_session",
                 instruction="Start an interactive tuning session linked to the baseline preview run.",
                 expected_result=(
@@ -114,7 +130,7 @@ _WORKFLOWS = {
                 ),
             ),
             WorkflowStep(
-                order=7,
+                order=9,
                 tool="adjust_pipeline",
                 instruction=(
                     "Apply structured feedback tags, revalidate, and re-render until the user accepts the preview set."
@@ -122,7 +138,7 @@ _WORKFLOWS = {
                 expected_result="An adjusted pipeline that reduces the observed preview issue.",
             ),
             WorkflowStep(
-                order=8,
+                order=10,
                 tool="record_tuning_session_step",
                 instruction="Record each candidate comparison, feedback tags, reviewer notes, and acceptance state.",
                 expected_result=(
@@ -130,7 +146,7 @@ _WORKFLOWS = {
                 ),
             ),
             WorkflowStep(
-                order=9,
+                order=11,
                 tool="export_tuning_session",
                 instruction="Export the interactive session as Markdown for handoff or JSON for automation.",
                 expected_result=(
@@ -138,7 +154,7 @@ _WORKFLOWS = {
                 ),
             ),
             WorkflowStep(
-                order=10,
+                order=12,
                 tool="export_pipeline",
                 instruction="Export the accepted pipeline in the requested format with the preview manifest run id.",
                 expected_result="Reproducible Python, JSON, or YAML pipeline content.",

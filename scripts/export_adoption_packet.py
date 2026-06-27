@@ -34,6 +34,7 @@ def build_adoption_packet(
         "registry_url": "https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.dKosarevsky/albu-mcp",
         "pypi_url": f"https://pypi.org/project/{package['identifier']}/",
         "upstream_pr_url": "https://github.com/albumentations-team/AlbumentationsX/pull/289",
+        "launch_kit_path": "docs/LAUNCH_KIT.md",
         "install_command": f"uvx --from {package['identifier']} albumentationsx-mcp",
         "preview_command": (
             f"uvx --from {package['identifier']} albumentationsx-mcp "
@@ -47,6 +48,8 @@ def build_adoption_packet(
             "validate_preview_request",
             "render_preview_batch",
             "compare_preview_runs",
+            "interpret_preview_feedback",
+            "plan_preview_review",
             "export_preview_report",
             "export_pipeline",
         ],
@@ -78,6 +81,7 @@ def render_adoption_packet_markdown(packet: dict[str, Any]) -> str:
         f"- PyPI: {packet['pypi_url']}",
         f"- MCP Registry: {packet['registry_url']}",
         f"- Upstream docs PR: AlbumentationsX#289 ({packet['upstream_pr_url']})",
+        f"- Launch Kit: {packet['launch_kit_path']}",
         "",
         "## Host Coverage",
         "",

@@ -11,11 +11,21 @@ _DEFAULT_SEVERITY: FeedbackSeverity = "medium"
 _SEVERITY_ORDER: dict[FeedbackSeverity, int] = {"low": 0, "medium": 1, "high": 2}
 _SEVERITY_MULTIPLIER: dict[FeedbackSeverity, float] = {"low": 1.5, "medium": 1.0, "high": 0.5}
 _MAX_REDUCTION_FACTOR = 0.95
-_TAG_PRIORITY = ["too_noisy", "too_blurry", "too_distorted", "object_unrecognizable"]
+_TAG_PRIORITY = [
+    "too_noisy",
+    "too_blurry",
+    "too_distorted",
+    "too_dark",
+    "too_bright",
+    "color_shift",
+    "object_unrecognizable",
+]
 _TRANSFORM_FEEDBACK_RULES = [
     (("noise",), ("too_noisy",)),
     (("blur",), ("too_blurry",)),
     (("affine", "perspective", "distortion", "elastic", "grid", "rotate"), ("too_distorted",)),
+    (("brightness", "contrast"), ("too_dark", "too_bright")),
+    (("hue", "saturation", "rgb", "color"), ("color_shift",)),
     (("compression", "jpeg", "dropout", "erase", "coarse"), ("object_unrecognizable",)),
 ]
 

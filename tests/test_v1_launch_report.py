@@ -26,6 +26,46 @@ def test_v1_launch_report_tracks_pending_manual_host_blockers() -> None:
     }
     assert {item["status"] for item in report["manual_host_ui"]} == {"pending"}
     assert {item["status"] for item in report["first_10_minutes_replay"]} == {"pending"}
+    assert {item["host"] for item in report["evidence_plan"]} == {
+        "Claude Desktop",
+        "Claude Code",
+        "Cursor",
+        "Codex",
+    }
+    assert all(item["manual_host_ui"]["status"] == "missing" for item in report["evidence_plan"])
+    assert all(item["first_10_minutes_replay"]["status"] == "missing" for item in report["evidence_plan"])
+    assert all(
+        "record_host_manual_run.py" in item["record_commands"]["manual_host_ui"] for item in report["evidence_plan"]
+    )
+    assert all(
+        "--kind first-10-minutes" in item["record_commands"]["first_10_minutes_replay"]
+        for item in report["evidence_plan"]
+    )
+
+
+def test_v1_launch_report_exposes_host_level_blockers() -> None:
+    report = build_v1_launch_report()
+
+    assert len(report["host_blockers"]) == 8
+    codex_blockers = [item for item in report["host_blockers"] if item["host"] == "Codex"]
+    assert {item["code"] for item in codex_blockers} == {
+        "first_10_minutes_replay_missing",
+        "manual_host_ui_missing",
+    }
+    assert all(item["severity"] == "high" for item in codex_blockers)
+    assert codex_blockers[0]["priority"] == "p0"
+    assert codex_blockers[0]["evidence_status"] == "missing"
+    assert "export_manual_host_acceptance_packet.py --host Codex" in codex_blockers[0]["packet_command"]
+    assert "record_host_manual_run.py" in codex_blockers[0]["record_command"]
+
+
+def test_v1_launch_report_markdown_lists_host_blockers() -> None:
+    markdown = render_v1_launch_report_markdown(build_v1_launch_report())
+
+    assert "## Host Blockers" in markdown
+    assert "| Host | Priority | Gate | Status | Next Action |" in markdown
+    assert "| Codex | `p0` | `first_10_minutes_replay` | `missing` |" in markdown
+    assert "export_manual_host_acceptance_packet.py --host Codex" in markdown
 
 
 def test_v1_launch_report_markdown_is_reviewable() -> None:
@@ -37,6 +77,9 @@ def test_v1_launch_report_markdown_is_reviewable() -> None:
     assert "manual_host_ui_pending" in markdown
     assert "first_10_minutes_replay_pending" in markdown
     assert "docs/HOST_PROOF_STATUS.md" in markdown
+    assert "## Evidence Plan" in markdown
+    assert "record_host_manual_run.py" in markdown
+    assert "--kind first-10-minutes" in markdown
 
 
 def test_v1_launch_report_cli_outputs_json_and_markdown(tmp_path: Path) -> None:

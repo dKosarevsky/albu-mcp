@@ -50,6 +50,12 @@ from albumentationsx_mcp.ranking import rank_preview_candidates as rank_candidat
 from albumentationsx_mcp.recipes import list_recipe_catalog, recommend_recipe
 from albumentationsx_mcp.reports import PreviewReportService
 from albumentationsx_mcp.review import PreviewFeedbackStore
+from albumentationsx_mcp.review_agent import (
+    build_review_agent_plan,
+)
+from albumentationsx_mcp.review_agent import (
+    interpret_preview_feedback as interpret_feedback_note,
+)
 from albumentationsx_mcp.review_packet import build_review_packet
 from albumentationsx_mcp.sessions import InteractiveTuningSessionStore
 from albumentationsx_mcp.tuning import TuningDecisionStore, build_tuning_session_summary
@@ -71,6 +77,8 @@ _PUBLIC_TOOLS = [
     "render_preview",
     "render_preview_batch",
     "compare_preview_runs",
+    "interpret_preview_feedback",
+    "plan_preview_review",
     "summarize_tuning_session",
     "start_tuning_session",
     "record_tuning_session_step",
@@ -478,6 +486,33 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
             baseline_run_id,
             candidate_run_id,
             quality_profile=quality_profile,
+        ).model_dump(mode="json")
+
+    @mcp.tool()
+    def interpret_preview_feedback(feedback_note: str) -> dict[str, Any]:
+        """Convert free-form preview feedback into structured feedback tags."""
+        return interpret_feedback_note(feedback_note).model_dump(mode="json")
+
+    @mcp.tool()
+    def plan_preview_review(  # noqa: PLR0913
+        baseline_run_id: str,
+        candidate_run_id: str,
+        feedback_tags: list[str] | None = None,
+        feedback_note: str | None = None,
+        accepted: bool = False,  # noqa: FBT001, FBT002
+        quality_profile: QualityProfileName = "balanced",
+    ) -> dict[str, Any]:
+        """Plan the next review action for one baseline-to-candidate preview comparison."""
+        comparison = preview_service.compare_preview_runs(
+            baseline_run_id,
+            candidate_run_id,
+            quality_profile=quality_profile,
+        )
+        return build_review_agent_plan(
+            comparison,
+            feedback_tags=feedback_tags or [],
+            feedback_note=feedback_note,
+            accepted=accepted,
         ).model_dump(mode="json")
 
     @mcp.tool()

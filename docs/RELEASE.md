@@ -8,6 +8,9 @@ This project is a Python MCP stdio server. The community publishing model has tw
 
 Tools are not published separately. They are runtime capabilities exposed by the server after an MCP host starts it.
 
+For stable v1 planning, use the generated release train checklist:
+[docs/V1_RELEASE_TRAIN.md](V1_RELEASE_TRAIN.md).
+
 ## Registry Identity
 
 The public MCP Registry name is:

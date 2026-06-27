@@ -7,6 +7,7 @@ def test_github_issue_templates_collect_actionable_mcp_feedback() -> None:
     templates_dir = Path(".github/ISSUE_TEMPLATE")
     host_template = yaml.safe_load((templates_dir / "host-acceptance.yml").read_text(encoding="utf-8"))
     workflow_template = yaml.safe_load((templates_dir / "workflow-feedback.yml").read_text(encoding="utf-8"))
+    dataset_template = yaml.safe_load((templates_dir / "dataset-health.yml").read_text(encoding="utf-8"))
     feature_template = yaml.safe_load((templates_dir / "feature-request.yml").read_text(encoding="utf-8"))
     config = yaml.safe_load((templates_dir / "config.yml").read_text(encoding="utf-8"))
 
@@ -23,6 +24,12 @@ def test_github_issue_templates_collect_actionable_mcp_feedback() -> None:
     assert "compare_preview_runs" in _template_text(workflow_template)
     assert "export_preview_report" in _template_text(workflow_template)
 
+    assert dataset_template["name"] == "Dataset health feedback"
+    assert "dataset-health" in dataset_template["labels"]
+    assert "inspect_dataset_quality" in _template_text(dataset_template)
+    assert "class_distribution" in _template_text(dataset_template)
+    assert "duplicate_groups" in _template_text(dataset_template)
+
     assert feature_template["name"] == "Feature request"
     assert "enhancement" in feature_template["labels"]
     assert "MCP host" in _template_text(feature_template)
@@ -38,9 +45,11 @@ def test_community_feedback_guide_is_linked_and_privacy_safe() -> None:
     assert "[docs/COMMUNITY_FEEDBACK.md](docs/COMMUNITY_FEEDBACK.md)" in readme
     assert "host-acceptance.yml" in guide
     assert "workflow-feedback.yml" in guide
+    assert "dataset-health.yml" in guide
     assert "feature-request.yml" in guide
     assert "Do not upload private datasets" in guide
     assert "export_manual_host_acceptance_packet.py" in guide
+    assert "inspect_dataset_quality" in guide
     assert "albumentationsx://examples/distortion-review" in guide
 
 

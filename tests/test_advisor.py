@@ -16,10 +16,19 @@ class FakeCatalog:
 def test_list_feedback_tags_documents_adjustment_contract() -> None:
     tags = {tag.name: tag for tag in list_feedback_tags()}
 
-    assert {"too_noisy", "too_blurry", "too_distorted", "object_unrecognizable"}.issubset(tags)
+    assert {
+        "too_noisy",
+        "too_blurry",
+        "too_distorted",
+        "too_dark",
+        "too_bright",
+        "color_shift",
+        "object_unrecognizable",
+    }.issubset(tags)
     assert tags["too_noisy"].description
     assert "noise" in tags["too_noisy"].applies_to
     assert ":high" in tags["too_noisy"].mitigation
+    assert "color" in tags["color_shift"].applies_to
 
 
 def test_explain_pipeline_flags_high_noise_and_suggests_feedback_tag() -> None:

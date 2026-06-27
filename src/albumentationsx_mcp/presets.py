@@ -78,6 +78,14 @@ def adjust_pipeline(pipeline: ComposeSpec, feedback_tags: list[str]) -> ComposeS
             severity = tags["too_distorted"]
             _scale_probability(transform, severity_scaled_factor(0.6, severity))
             _scale_numeric_ranges(transform, severity_scaled_factor(0.75, severity))
+        if any(tag in tags for tag in ["too_dark", "too_bright"]) and _is_exposure_transform(name):
+            severity = tags.get("too_dark", tags.get("too_bright", "medium"))
+            _scale_probability(transform, severity_scaled_factor(0.6, severity))
+            _scale_numeric_ranges(transform, severity_scaled_factor(0.6, severity))
+        if "color_shift" in tags and _is_color_shift_transform(name):
+            severity = tags["color_shift"]
+            _scale_probability(transform, severity_scaled_factor(0.5, severity))
+            _scale_numeric_ranges(transform, severity_scaled_factor(0.5, severity))
         if "object_unrecognizable" in tags:
             severity = tags["object_unrecognizable"]
             _scale_probability(transform, severity_scaled_factor(0.7, severity))
@@ -90,6 +98,14 @@ def adjust_pipeline(pipeline: ComposeSpec, feedback_tags: list[str]) -> ComposeS
 def _scale_probability(transform: TransformSpec, factor: float) -> None:
     current = 0.5 if transform.p is None else transform.p
     transform.p = round(max(0.0, min(1.0, current * factor)), 4)
+
+
+def _is_exposure_transform(name: str) -> bool:
+    return any(token in name for token in ["brightness", "contrast"])
+
+
+def _is_color_shift_transform(name: str) -> bool:
+    return any(token in name for token in ["hue", "saturation", "rgb", "color"])
 
 
 def _scale_numeric_ranges(transform: TransformSpec, factor: float) -> None:

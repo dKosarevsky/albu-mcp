@@ -6,6 +6,9 @@ actually runs the host UI.
 Current machine-verifiable status is tracked in [docs/HOST_PROOF_STATUS.md](HOST_PROOF_STATUS.md). It does not replace
 manual host UI evidence.
 
+The generated host-by-host execution checklist is [docs/HOST_PROOF_SPRINT_CHECKLIST.md](HOST_PROOF_SPRINT_CHECKLIST.md).
+The current manual evidence sprint board is [docs/HOST_EVIDENCE_SPRINT_BOARD.md](HOST_EVIDENCE_SPRINT_BOARD.md).
+
 ## Goal
 
 Record dated `first_10_minutes_replay` evidence for at least:
@@ -25,6 +28,8 @@ Generate a host-specific packet:
 ```bash
 uv run python scripts/export_manual_host_acceptance_packet.py --host Codex --output /tmp/albu-host-codex.md
 uv run python scripts/export_manual_host_acceptance_packet.py --host "Claude Code" --output /tmp/albu-host-claude-code.md
+uv run python scripts/export_host_proof_sprint_checklist.py --output docs/HOST_PROOF_SPRINT_CHECKLIST.md
+uv run python scripts/export_host_evidence_sprint_board.py --output docs/HOST_EVIDENCE_SPRINT_BOARD.md
 ```
 
 Each packet includes host config, bounded roots, the sample image path, the full acceptance prompt, and recording
@@ -88,6 +93,9 @@ Regenerate the review artifact after recording evidence:
 
 ```bash
 uv run python scripts/export_host_acceptance_report.py --output docs/HOST_ACCEPTANCE_EVIDENCE.md
+uv run python scripts/export_v1_launch_report.py --output docs/V1_LAUNCH_REPORT.md
+uv run python scripts/export_host_proof_sprint_checklist.py --output docs/HOST_PROOF_SPRINT_CHECKLIST.md
+uv run python scripts/export_host_evidence_sprint_board.py --output docs/HOST_EVIDENCE_SPRINT_BOARD.md
 uv run python scripts/check_host_acceptance_report.py
 ```
 

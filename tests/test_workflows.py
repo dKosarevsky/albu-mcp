@@ -23,6 +23,8 @@ def test_agent_workflow_catalog_contains_preview_tuning_contract() -> None:
         "render_preview",
     ]
     assert "start_tuning_session" in preview_tuning.recommended_tools
+    assert "interpret_preview_feedback" in preview_tuning.recommended_tools
+    assert "plan_preview_review" in preview_tuning.recommended_tools
     assert "record_tuning_session_step" in preview_tuning.recommended_tools
     assert "export_tuning_session" in preview_tuning.recommended_tools
     assert "ask the user for structured feedback" in " ".join(step.instruction for step in preview_tuning.steps)

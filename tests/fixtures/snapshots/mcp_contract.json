@@ -751,6 +751,23 @@
       }
     },
     {
+      "description": "Convert free-form preview feedback into structured feedback tags.",
+      "name": "interpret_preview_feedback",
+      "parameters": {
+        "properties": {
+          "feedback_note": {
+            "title": "Feedback Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "feedback_note"
+        ],
+        "title": "interpret_preview_feedbackArguments",
+        "type": "object"
+      }
+    },
+    {
       "description": "List structured feedback tags accepted by adjust_pipeline.",
       "name": "list_feedback_tags",
       "parameters": {
@@ -922,6 +939,72 @@
           "dataset_path"
         ],
         "title": "plan_dataset_onboarding_toolArguments",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Plan the next review action for one baseline-to-candidate preview comparison.",
+      "name": "plan_preview_review",
+      "parameters": {
+        "properties": {
+          "accepted": {
+            "default": false,
+            "title": "Accepted",
+            "type": "boolean"
+          },
+          "baseline_run_id": {
+            "title": "Baseline Run Id",
+            "type": "string"
+          },
+          "candidate_run_id": {
+            "title": "Candidate Run Id",
+            "type": "string"
+          },
+          "feedback_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Feedback Note"
+          },
+          "feedback_tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Feedback Tags"
+          },
+          "quality_profile": {
+            "default": "balanced",
+            "enum": [
+              "balanced",
+              "classification",
+              "detection",
+              "segmentation",
+              "ocr"
+            ],
+            "title": "Quality Profile",
+            "type": "string"
+          }
+        },
+        "required": [
+          "baseline_run_id",
+          "candidate_run_id"
+        ],
+        "title": "plan_preview_reviewArguments",
         "type": "object"
       }
     },

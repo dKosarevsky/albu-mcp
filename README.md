@@ -60,7 +60,7 @@ After connecting an MCP host:
 5. Replace or reuse the paths in `preview_request_template.request`.
 6. Call `validate_preview_request` before rendering user-provided paths.
 7. Call `render_preview_batch` on a small local image set.
-8. Inspect the contact sheet, then use `adjust_pipeline`, `compare_preview_runs`, and `export_pipeline`.
+8. Inspect the contact sheet, then use `plan_preview_review` to choose adjustment, audit, or export.
 
 If preview setup fails, read `albumentationsx://diagnostics/guide` and call `diagnose_environment`. Troubleshooting
 details and `remediation_actions` are documented in [docs/USAGE.md](docs/USAGE.md) and [docs/INSTALL.md](docs/INSTALL.md).
@@ -88,19 +88,19 @@ source: [docs/integrations/mcp.md](https://github.com/albumentations-team/Albume
 
 - [docs/INSTALL.md](docs/INSTALL.md): PyPI, MCP Registry, Claude Desktop, Claude Code, Cursor, Codex, bounded roots.
 - [docs/FIRST_10_MINUTES.md](docs/FIRST_10_MINUTES.md): shortest path from install to preview, feedback, and export.
-- [docs/HOST_PROOF_SPRINT.md](docs/HOST_PROOF_SPRINT.md): runbook for recording real host replay evidence.
+- [docs/HOST_PROOF_SPRINT.md](docs/HOST_PROOF_SPRINT.md), [docs/HOST_PROOF_SPRINT_CHECKLIST.md](docs/HOST_PROOF_SPRINT_CHECKLIST.md), [docs/HOST_EVIDENCE_SPRINT_BOARD.md](docs/HOST_EVIDENCE_SPRINT_BOARD.md), [docs/P0_HOST_RUNBOOK.md](docs/P0_HOST_RUNBOOK.md), [docs/P0_EVIDENCE_RECORDER.md](docs/P0_EVIDENCE_RECORDER.md), [docs/P0_BLOCKER_TRIAGE.md](docs/P0_BLOCKER_TRIAGE.md), [docs/REAL_HOST_EVIDENCE_EXECUTION.md](docs/REAL_HOST_EVIDENCE_EXECUTION.md), [docs/HOST_UX_HARDENING_LOOP.md](docs/HOST_UX_HARDENING_LOOP.md), and [docs/HOST_FAILURE_COOKBOOK.md](docs/HOST_FAILURE_COOKBOOK.md): real host replay runbook, checklist, sprint board, P0 runbook, recorder, blocker triage, execution pack, hardening loop, and failure triage.
 - [docs/USAGE.md](docs/USAGE.md): end-to-end MCP host workflow and tool details.
 - [docs/RECIPES.md](docs/RECIPES.md): task-specific host recipes.
-- [docs/ADOPTION.md](docs/ADOPTION.md): short trial, host setup, workflow examples, and outreach copy.
-- [docs/ADOPTION_PACKET.md](docs/ADOPTION_PACKET.md): generated public launch copy, links, host coverage, and workflow.
+- [docs/ADOPTION.md](docs/ADOPTION.md), [docs/BETA_WORKFLOW_PACK.md](docs/BETA_WORKFLOW_PACK.md), and [docs/BETA_FEEDBACK_INTAKE.md](docs/BETA_FEEDBACK_INTAKE.md): short trial, beta CV workflows, feedback intake, host setup, workflow examples, and outreach copy.
+- [docs/ADOPTION_PACKET.md](docs/ADOPTION_PACKET.md) and [docs/LAUNCH_KIT.md](docs/LAUNCH_KIT.md): generated public launch copy, distribution checklist, demo assets, and feedback intake.
 - [docs/COMMUNITY_FEEDBACK.md](docs/COMMUNITY_FEEDBACK.md): privacy-safe GitHub issue intake.
-- [docs/NETWORK_GROWTH.md](docs/NETWORK_GROWTH.md): public directory status, registry follow-up, and outreach plan.
+- [docs/NETWORK_GROWTH.md](docs/NETWORK_GROWTH.md), [docs/NETWORK_GROWTH_TRACKER.md](docs/NETWORK_GROWTH_TRACKER.md), [docs/PUBLIC_ADOPTION_LOOP.md](docs/PUBLIC_ADOPTION_LOOP.md), and [docs/ADOPTION_TRIAGE_REPORT.md](docs/ADOPTION_TRIAGE_REPORT.md): directory status, registry follow-up, and adoption loop.
 - [docs/UPSTREAM_PR_PACKET.md](docs/UPSTREAM_PR_PACKET.md): upstream source for [AlbumentationsX#289](https://github.com/albumentations-team/AlbumentationsX/pull/289).
 - [examples/distortion_review_workflow.md](examples/distortion_review_workflow.md): rejected noisy preview review loop.
 - [docs/DEMO.md](docs/DEMO.md): generated preview comparison demo.
-- [docs/HOST_ACCEPTANCE.md](docs/HOST_ACCEPTANCE.md), [docs/HOST_MATRIX.md](docs/HOST_MATRIX.md), and [docs/HOST_ACCEPTANCE_EVIDENCE.md](docs/HOST_ACCEPTANCE_EVIDENCE.md): MCP host acceptance status.
+- [docs/HOST_ACCEPTANCE.md](docs/HOST_ACCEPTANCE.md), [docs/HOST_MATRIX.md](docs/HOST_MATRIX.md), [docs/HOST_UX_PACKETS.md](docs/HOST_UX_PACKETS.md), and [docs/HOST_ACCEPTANCE_EVIDENCE.md](docs/HOST_ACCEPTANCE_EVIDENCE.md): MCP host acceptance status.
 - [docs/V1_READINESS.md](docs/V1_READINESS.md): v1 compatibility and release audit.
-- [docs/V1_LAUNCH_REPORT.md](docs/V1_LAUNCH_REPORT.md): current machine-readable v1 launch blocker summary.
+- [docs/V1_LAUNCH_REPORT.md](docs/V1_LAUNCH_REPORT.md), [docs/V1_DECISION_REPORT.md](docs/V1_DECISION_REPORT.md), [docs/V1_RC_READINESS.md](docs/V1_RC_READINESS.md), [docs/V1_RC_RELEASE_PACKET.md](docs/V1_RC_RELEASE_PACKET.md), and [docs/P0_EVIDENCE_STATUS.md](docs/P0_EVIDENCE_STATUS.md): current v1 launch blockers, go/no-go decision, RC gate, gated RC packet, and P0 evidence status.
 - [docs/RELEASE.md](docs/RELEASE.md): PyPI, GitHub Release, and MCP Registry publication process.
 - [CHANGELOG.md](CHANGELOG.md): release history.
 - [server.json](server.json): public MCP Registry metadata.
@@ -125,5 +125,6 @@ uv run python scripts/check_release_readiness.py
 uv run python scripts/run_golden_evals.py
 uv run python scripts/check_mcp_registry_status.py
 uv run python scripts/check_directory_presence.py
+uv run python scripts/export_launch_kit.py --output docs/LAUNCH_KIT.md
 uv build
 ```

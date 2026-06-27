@@ -488,8 +488,10 @@
             "diagnose_environment",
             "export_preview_report",
             "export_tuning_session",
+            "interpret_preview_feedback",
             "list_tuning_sessions",
             "plan_dataset_onboarding",
+            "plan_preview_review",
             "recommend_recipe",
             "record_tuning_session_step",
             "render_preview_batch",
@@ -610,8 +612,10 @@
             "diagnose_environment",
             "export_preview_report",
             "export_tuning_session",
+            "interpret_preview_feedback",
             "list_tuning_sessions",
             "plan_dataset_onboarding",
+            "plan_preview_review",
             "recommend_recipe",
             "record_tuning_session_step",
             "render_preview_batch",
@@ -721,24 +725,132 @@
   },
   "inspect_dataset_quality_ready": {
     "aggregate": {
-      "brightness_mean": 184.5,
-      "clipping_fraction": 0.5,
-      "colorfulness_score": 8.1125,
+      "brightness_mean": 142.75,
+      "clipping_fraction": 0.25,
+      "colorfulness_score": 9.464575,
       "contrast_std": 0.0,
       "entropy_bits": 0.0,
-      "image_count": 2,
-      "saturation_mean": 51.0,
+      "image_count": 4,
+      "saturation_mean": 63.75,
       "sharpness_score": 0.0
     },
     "allowed_roots": [
       "<OUTPUT_CONTRACT_ROOT>/dataset-quality"
     ],
+    "annotation_summary": {
+      "annotated_image_count": 3,
+      "category_count": 2,
+      "image_count": 4,
+      "invalid_annotation_count": 0,
+      "missing_annotation_count": 1,
+      "orphan_annotation_count": 0,
+      "out_of_bounds_annotation_count": 1,
+      "sample_invalid_references": [],
+      "sample_missing_paths": [
+        "<OUTPUT_CONTRACT_ROOT>/dataset-quality/val/cat/clipped.png"
+      ],
+      "sample_orphan_references": [],
+      "sample_out_of_bounds_references": [
+        "4"
+      ],
+      "sample_unknown_category_references": [
+        "5"
+      ],
+      "source_format": "coco",
+      "unknown_category_annotation_count": 1
+    },
+    "class_distribution": {
+      "cat": 3,
+      "dog": 1
+    },
     "dataset_path": "<OUTPUT_CONTRACT_ROOT>/dataset-quality",
+    "duplicate_groups": [
+      {
+        "image_count": 2,
+        "sample_paths": [
+          "<OUTPUT_CONTRACT_ROOT>/dataset-quality/train/cat/duplicate.png",
+          "<OUTPUT_CONTRACT_ROOT>/dataset-quality/train/cat/normal.png"
+        ],
+        "sha256": "<sha256>"
+      }
+    ],
+    "duplicate_image_count": 2,
     "findings": [
+      {
+        "code": "dataset_exact_duplicate_images",
+        "details": {
+          "duplicate_group_count": 1,
+          "duplicate_image_count": 2
+        },
+        "sample_paths": [
+          "<OUTPUT_CONTRACT_ROOT>/dataset-quality/train/cat/duplicate.png",
+          "<OUTPUT_CONTRACT_ROOT>/dataset-quality/train/cat/normal.png"
+        ],
+        "severity": "medium",
+        "summary": "Dataset sample contains exact duplicate image files."
+      },
+      {
+        "code": "dataset_class_imbalance",
+        "details": {
+          "class_distribution": {
+            "cat": 3,
+            "dog": 1
+          }
+        },
+        "sample_paths": [],
+        "severity": "medium",
+        "summary": "Detected class distribution is imbalanced."
+      },
+      {
+        "code": "dataset_aspect_ratio_spread",
+        "details": {
+          "aspect_ratio_max": 1.5,
+          "aspect_ratio_min": 0.5
+        },
+        "sample_paths": [],
+        "severity": "info",
+        "summary": "Sampled image dimensions have a wide aspect-ratio spread."
+      },
+      {
+        "code": "dataset_missing_annotations",
+        "details": {
+          "missing_annotation_count": 1,
+          "source_format": "coco"
+        },
+        "sample_paths": [
+          "<OUTPUT_CONTRACT_ROOT>/dataset-quality/val/cat/clipped.png"
+        ],
+        "severity": "medium",
+        "summary": "Some dataset images do not have matching annotations."
+      },
+      {
+        "code": "dataset_out_of_bounds_annotations",
+        "details": {
+          "out_of_bounds_annotation_count": 1,
+          "source_format": "coco"
+        },
+        "sample_paths": [
+          "4"
+        ],
+        "severity": "high",
+        "summary": "Some annotation boxes fall outside image bounds."
+      },
+      {
+        "code": "dataset_unknown_category_annotations",
+        "details": {
+          "source_format": "coco",
+          "unknown_category_annotation_count": 1
+        },
+        "sample_paths": [
+          "5"
+        ],
+        "severity": "high",
+        "summary": "Some annotations reference category ids missing from the category catalog."
+      },
       {
         "code": "dataset_high_clipping",
         "details": {
-          "clipping_fraction": 0.5
+          "clipping_fraction": 0.25
         },
         "sample_paths": [],
         "severity": "medium",
@@ -763,8 +875,17 @@
         "summary": "Sampled images have low entropy and may be visually uniform."
       }
     ],
-    "ignored_file_count": 0,
-    "image_count": 2,
+    "ignored_file_count": 1,
+    "image_count": 4,
+    "image_size_summary": {
+      "aspect_ratio_max": 1.5,
+      "aspect_ratio_min": 0.5,
+      "image_count": 4,
+      "max_height": 24,
+      "max_width": 24,
+      "min_height": 16,
+      "min_width": 12
+    },
     "next_actions": [
       "Review quality findings before accepting augmentation intensity.",
       "Start with low intensity and inspect the contact sheet before increasing variants."
@@ -774,16 +895,32 @@
       "render_preview_batch",
       "compare_preview_runs"
     ],
-    "remediation_actions": [],
+    "remediation_actions": [
+      {
+        "code": "review_duplicate_images",
+        "severity": "medium",
+        "summary": "Review exact duplicate groups before splitting or sampling the dataset."
+      },
+      {
+        "code": "review_class_balance",
+        "severity": "medium",
+        "summary": "Check whether minority classes need more source data or lighter augmentation."
+      },
+      {
+        "code": "review_annotation_consistency",
+        "severity": "medium",
+        "summary": "Review missing, orphan, or invalid annotations before rendering annotated previews."
+      }
+    ],
     "sample_metrics": [
       {
-        "brightness_mean": 255.0,
-        "clipping_fraction": 1.0,
-        "colorfulness_score": 0.0,
+        "brightness_mean": 114.0,
+        "clipping_fraction": 0.0,
+        "colorfulness_score": 16.225,
         "contrast_std": 0.0,
         "entropy_bits": -0.0,
-        "path": "<OUTPUT_CONTRACT_ROOT>/dataset-quality/clipped.png",
-        "saturation_mean": 0.0,
+        "path": "<OUTPUT_CONTRACT_ROOT>/dataset-quality/train/cat/duplicate.png",
+        "saturation_mean": 102.0,
         "sharpness_score": 0.0
       },
       {
@@ -792,19 +929,75 @@
         "colorfulness_score": 16.225,
         "contrast_std": 0.0,
         "entropy_bits": -0.0,
-        "path": "<OUTPUT_CONTRACT_ROOT>/dataset-quality/normal.png",
+        "path": "<OUTPUT_CONTRACT_ROOT>/dataset-quality/train/cat/normal.png",
         "saturation_mean": 102.0,
+        "sharpness_score": 0.0
+      },
+      {
+        "brightness_mean": 88.0,
+        "clipping_fraction": 0.0,
+        "colorfulness_score": 5.4083,
+        "contrast_std": 0.0,
+        "entropy_bits": -0.0,
+        "path": "<OUTPUT_CONTRACT_ROOT>/dataset-quality/train/dog/dog.png",
+        "saturation_mean": 51.0,
+        "sharpness_score": 0.0
+      },
+      {
+        "brightness_mean": 255.0,
+        "clipping_fraction": 1.0,
+        "colorfulness_score": 0.0,
+        "contrast_std": 0.0,
+        "entropy_bits": -0.0,
+        "path": "<OUTPUT_CONTRACT_ROOT>/dataset-quality/val/cat/clipped.png",
+        "saturation_mean": 0.0,
         "sharpness_score": 0.0
       }
     ],
     "sample_paths": [
-      "<OUTPUT_CONTRACT_ROOT>/dataset-quality/clipped.png",
-      "<OUTPUT_CONTRACT_ROOT>/dataset-quality/normal.png"
+      "<OUTPUT_CONTRACT_ROOT>/dataset-quality/train/cat/duplicate.png",
+      "<OUTPUT_CONTRACT_ROOT>/dataset-quality/train/cat/normal.png",
+      "<OUTPUT_CONTRACT_ROOT>/dataset-quality/train/dog/dog.png",
+      "<OUTPUT_CONTRACT_ROOT>/dataset-quality/val/cat/clipped.png"
     ],
-    "sampled_image_count": 2,
+    "sampled_image_count": 4,
+    "split_distribution": {
+      "train": 3,
+      "val": 1
+    },
     "status": "warning",
     "unreadable_image_count": 0,
     "unreadable_paths": []
+  },
+  "interpret_preview_feedback": {
+    "accepted": false,
+    "decision_hint": "revise",
+    "feedback_intents": [
+      "reduce_noise",
+      "protect_object_readability"
+    ],
+    "feedback_note": "Example 8 is too noisy; I cannot recognize the object.",
+    "feedback_tags": [
+      "too_noisy:high",
+      "object_unrecognizable:high"
+    ],
+    "recommended_next_tool": "adjust_pipeline",
+    "signals": [
+      {
+        "evidence": "example 8 is too noisy; i cannot recognize the object.",
+        "feedback_tag": "too_noisy",
+        "severity": "high"
+      },
+      {
+        "evidence": "example 8 is too noisy; i cannot recognize the object.",
+        "feedback_tag": "object_unrecognizable",
+        "severity": "high"
+      }
+    ],
+    "transform_guidance": [
+      "Reduce noise transform probability or numeric ranges.",
+      "Reduce destructive transforms until labeled objects remain readable."
+    ]
   },
   "list_preview_feedback": {
     "accepted_count": 0,
@@ -1217,6 +1410,64 @@
       "warnings": []
     }
   },
+  "plan_preview_review": {
+    "accepted": false,
+    "baseline_run_id": "baseline",
+    "blockers": [],
+    "candidate_run_id": "candidate-b",
+    "decision": "revise_candidate",
+    "feedback_tags": [
+      "too_noisy:high"
+    ],
+    "next_actions": [
+      "Apply the selected feedback tags with adjust_pipeline.",
+      "Render the adjusted candidate with render_preview_batch."
+    ],
+    "quality_deltas": {},
+    "quality_risk": "medium",
+    "quality_score": 85.0,
+    "rationale": "Apply the selected feedback tags, validate, and render another candidate.",
+    "recommended_next_tool": "adjust_pipeline",
+    "review_checklist": [
+      "Open the baseline and candidate contact sheets side by side.",
+      "Confirm the candidate preserves label and object readability before accepting.",
+      "too_noisy: Check whether noise hides object boundaries.",
+      "Ask the user which suggested feedback tags apply: too_noisy."
+    ],
+    "suggested_feedback_tags": [
+      "too_noisy"
+    ],
+    "tuning_summary": {
+      "accepted": false,
+      "baseline_run_id": "baseline",
+      "candidate_run_id": "candidate-b",
+      "export_ready": false,
+      "feedback_tags": [
+        "too_noisy:high"
+      ],
+      "quality_deltas": {},
+      "quality_findings": [
+        {
+          "baseline_value": 0.01,
+          "code": "candidate_high_clipping",
+          "message": "Candidate preview has noticeable clipped dark or bright pixels.",
+          "metric": "clipping_fraction",
+          "severity": "medium",
+          "value": 0.18
+        }
+      ],
+      "quality_risk": "medium",
+      "quality_score": 85.0,
+      "rationale": "Apply the selected feedback tags, validate, and render another candidate.",
+      "recommended_next_tool": "adjust_pipeline",
+      "review_notes": [
+        "Review rendered contact sheets."
+      ],
+      "suggested_feedback_tags": [
+        "too_noisy"
+      ]
+    }
+  },
   "recommend_recipe": {
     "explanations": [
       {
@@ -1441,8 +1692,10 @@
               "diagnose_environment",
               "export_preview_report",
               "export_tuning_session",
+              "interpret_preview_feedback",
               "list_tuning_sessions",
               "plan_dataset_onboarding",
+              "plan_preview_review",
               "recommend_recipe",
               "record_tuning_session_step",
               "render_preview_batch",
@@ -1644,8 +1897,10 @@
               "diagnose_environment",
               "export_preview_report",
               "export_tuning_session",
+              "interpret_preview_feedback",
               "list_tuning_sessions",
               "plan_dataset_onboarding",
+              "plan_preview_review",
               "recommend_recipe",
               "record_tuning_session_step",
               "render_preview_batch",

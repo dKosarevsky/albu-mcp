@@ -317,6 +317,15 @@ class PreviewQualitySummary(StrictModel):
     annotation_summary: PreviewAnnotationQualitySummary | None = None
 
 
+class PreviewReviewGuidance(StrictModel):
+    """Actionable review guidance for one suggested feedback tag."""
+
+    feedback_tag: str
+    review_focus: str
+    rationale: str
+    suggested_action: str
+
+
 class PreviewRunComparison(StrictModel):
     """Comparison of two preview run manifests for feedback-driven tuning."""
 
@@ -328,6 +337,7 @@ class PreviewRunComparison(StrictModel):
     artifact_count_delta: int
     review_notes: list[str] = Field(default_factory=list)
     suggested_feedback_tags: list[str] = Field(default_factory=list)
+    review_guidance: list[PreviewReviewGuidance] = Field(default_factory=list)
     quality_summary: PreviewQualitySummary | None = None
     quality_warnings: list[str] = Field(default_factory=list)
 
@@ -353,6 +363,52 @@ class TuningSessionSummary(StrictModel):
     quality_risk: RiskLevel = "low"
     quality_findings: list[QualityFinding] = Field(default_factory=list)
     review_notes: list[str] = Field(default_factory=list)
+
+
+class ReviewAgentPlan(StrictModel):
+    """Host-facing review workflow plan for one baseline-to-candidate preview comparison."""
+
+    baseline_run_id: str
+    candidate_run_id: str
+    decision: Literal["collect_feedback", "revise_candidate", "rerender_candidate", "accept_candidate"]
+    accepted: bool = False
+    feedback_tags: list[str] = Field(default_factory=list)
+    recommended_next_tool: Literal[
+        "list_feedback_tags",
+        "adjust_pipeline",
+        "render_preview_batch",
+        "record_tuning_decision",
+    ]
+    rationale: str
+    review_checklist: list[str] = Field(default_factory=list)
+    blockers: list[str] = Field(default_factory=list)
+    next_actions: list[str] = Field(default_factory=list)
+    suggested_feedback_tags: list[str] = Field(default_factory=list)
+    quality_deltas: dict[str, float] = Field(default_factory=dict)
+    quality_score: float = Field(default=100.0, ge=0.0, le=100.0)
+    quality_risk: RiskLevel = "low"
+    tuning_summary: TuningSessionSummary
+
+
+class ReviewFeedbackSignal(StrictModel):
+    """One deterministic signal extracted from free-form preview feedback."""
+
+    feedback_tag: str
+    severity: RiskLevel
+    evidence: str
+
+
+class ReviewFeedbackInterpretation(StrictModel):
+    """Structured feedback tags derived from one user preview review note."""
+
+    feedback_note: str
+    accepted: bool = False
+    feedback_tags: list[str] = Field(default_factory=list)
+    feedback_intents: list[str] = Field(default_factory=list)
+    transform_guidance: list[str] = Field(default_factory=list)
+    signals: list[ReviewFeedbackSignal] = Field(default_factory=list)
+    decision_hint: Literal["accept", "revise", "clarify"]
+    recommended_next_tool: Literal["record_tuning_decision", "adjust_pipeline", "list_feedback_tags"]
 
 
 class TuningDecisionRecord(StrictModel):

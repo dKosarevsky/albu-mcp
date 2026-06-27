@@ -6,7 +6,7 @@ from collections import Counter
 from typing import Any
 
 from albumentationsx_mcp.feedback import suggested_feedback_tags_for_transform_names
-from albumentationsx_mcp.models import PreviewManifestSummary, PreviewRunComparison
+from albumentationsx_mcp.models import PreviewManifestSummary, PreviewReviewGuidance, PreviewRunComparison
 
 _CONTACT_SHEET_KINDS = {"contact_sheet", "overlay_contact_sheet"}
 
@@ -85,4 +85,47 @@ def compare_preview_manifests(
         artifact_count_delta=artifact_count_delta,
         review_notes=review_notes,
         suggested_feedback_tags=suggested_feedback_tags,
+        review_guidance=_review_guidance(suggested_feedback_tags),
+    )
+
+
+def _review_guidance(feedback_tags: list[str]) -> list[PreviewReviewGuidance]:
+    return [_guidance_for_tag(tag) for tag in feedback_tags]
+
+
+def _guidance_for_tag(tag: str) -> PreviewReviewGuidance:
+    guidance = {
+        "too_noisy": PreviewReviewGuidance(
+            feedback_tag="too_noisy",
+            review_focus="Look for speckle, grain, or artifacts that make objects hard to recognize.",
+            rationale="Noise-heavy transforms often need lower probability or lower std_range before export.",
+            suggested_action="reduce_noise_intensity",
+        ),
+        "too_blurry": PreviewReviewGuidance(
+            feedback_tag="too_blurry",
+            review_focus="Check whether object edges, text, or small structures became unreadable.",
+            rationale="Blur transforms can erase task-critical detail even when the image still looks plausible.",
+            suggested_action="reduce_blur_intensity",
+        ),
+        "too_dark": PreviewReviewGuidance(
+            feedback_tag="too_dark",
+            review_focus="Check whether foreground objects remain visible in dark regions.",
+            rationale="Brightness transforms should preserve recognizability for the target task.",
+            suggested_action="raise_brightness_floor",
+        ),
+        "too_distorted": PreviewReviewGuidance(
+            feedback_tag="too_distorted",
+            review_focus="Check whether geometry changes destroy object shape, boxes, masks, or OCR layout.",
+            rationale="Geometric transforms need task-aware limits before they are safe for training data.",
+            suggested_action="reduce_geometric_intensity",
+        ),
+    }
+    return guidance.get(
+        tag,
+        PreviewReviewGuidance(
+            feedback_tag=tag,
+            review_focus="Compare the candidate contact sheet against the baseline for task-specific failures.",
+            rationale="The tag is a review candidate and still needs visual confirmation.",
+            suggested_action="collect_concrete_feedback",
+        ),
     )

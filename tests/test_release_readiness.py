@@ -15,6 +15,14 @@ def test_release_readiness_accepts_current_fast_guards(tmp_path: Path) -> None:
         "host_acceptance_evidence",
         "first_10_minutes",
         "host_proof_sprint",
+        "v1_decision_report",
+        "v1_rc_readiness_report",
+        "p0_host_runbook",
+        "p0_evidence_recorder",
+        "p0_evidence_status",
+        "p0_blocker_triage",
+        "beta_feedback_intake",
+        "v1_rc_release_packet",
         "mcp_contract_snapshot",
         "output_contract_snapshot",
     ]
@@ -55,7 +63,27 @@ def test_release_readiness_cli_passes_fast_guards(tmp_path: Path) -> None:
 
     assert "release readiness checks passed" in result.stdout
     assert "manual_host_records" in result.stdout
+    assert "v1_decision_report" in result.stdout
+    assert "v1_rc_readiness_report" in result.stdout
+    assert "p0_evidence_status" in result.stdout
+    assert "beta_feedback_intake" in result.stdout
+    assert "v1_rc_release_packet" in result.stdout
     assert "output_contract_snapshot" in result.stdout
+
+
+def test_release_readiness_reports_stale_generated_doc(tmp_path: Path) -> None:
+    stale_path = tmp_path / "BETA_FEEDBACK_INTAKE.md"
+    stale_path.write_text("# stale\n", encoding="utf-8")
+
+    report = check_release_readiness(
+        ReleaseReadinessConfig(contract_output_work_dir=tmp_path, beta_feedback_intake_path=stale_path)
+    )
+
+    failed = [check for check in report.checks if not check.ok]
+    assert report.ok is False
+    assert len(failed) == 1
+    assert failed[0].name == "beta_feedback_intake"
+    assert "is stale; regenerate it with scripts/export_beta_feedback_intake.py" in failed[0].message
 
 
 def test_release_readiness_cli_prints_failed_check(tmp_path: Path) -> None:

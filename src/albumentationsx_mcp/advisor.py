@@ -62,6 +62,33 @@ _FEEDBACK_TAGS = [
         ),
     ),
     FeedbackTagInfo(
+        name="too_dark",
+        description="Exposure changes make objects, text, or boundaries too dark to inspect.",
+        applies_to=["color"],
+        mitigation=(
+            "Reduce brightness and contrast transform probabilities and ranges; "
+            "append :low, :medium, or :high for severity."
+        ),
+    ),
+    FeedbackTagInfo(
+        name="too_bright",
+        description="Exposure changes wash out or overexpose task evidence.",
+        applies_to=["color"],
+        mitigation=(
+            "Reduce brightness and contrast transform probabilities and ranges; "
+            "append :low, :medium, or :high for severity."
+        ),
+    ),
+    FeedbackTagInfo(
+        name="color_shift",
+        description="Hue, saturation, RGB, or color jitter changes make samples look unrealistic.",
+        applies_to=["color"],
+        mitigation=(
+            "Reduce hue, saturation, RGB shift, and color jitter probabilities and ranges; "
+            "append :low, :medium, or :high for severity."
+        ),
+    ),
+    FeedbackTagInfo(
         name="object_unrecognizable",
         description="The augmented sample no longer preserves the labeled object or class evidence.",
         applies_to=["noise", "blur", "compression", "occlusion", "geometric"],

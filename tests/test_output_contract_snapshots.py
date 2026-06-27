@@ -81,11 +81,62 @@ def test_output_contract_snapshot_includes_dataset_quality_report() -> None:
     assert "inspect_dataset_quality_ready" in snapshot
     report = snapshot["inspect_dataset_quality_ready"]
     assert report["status"] == "warning"
-    assert report["image_count"] == 2
-    assert report["sampled_image_count"] == 2
-    assert report["aggregate"]["image_count"] == 2
+    assert report["image_count"] == 4
+    assert report["sampled_image_count"] == 4
+    assert report["aggregate"]["image_count"] == 4
+    assert report["split_distribution"] == {"train": 3, "val": 1}
+    assert report["class_distribution"] == {"cat": 3, "dog": 1}
+    assert report["image_size_summary"]["aspect_ratio_min"] == 0.5
+    assert report["image_size_summary"]["aspect_ratio_max"] == 1.5
+    assert report["duplicate_image_count"] == 2
+    assert report["duplicate_groups"] == [
+        {
+            "image_count": 2,
+            "sample_paths": [
+                "<OUTPUT_CONTRACT_ROOT>/dataset-quality/train/cat/duplicate.png",
+                "<OUTPUT_CONTRACT_ROOT>/dataset-quality/train/cat/normal.png",
+            ],
+            "sha256": "<sha256>",
+        }
+    ]
+    assert report["annotation_summary"]["source_format"] == "coco"
+    assert report["annotation_summary"]["annotated_image_count"] == 3
+    assert report["annotation_summary"]["missing_annotation_count"] == 1
+    assert report["annotation_summary"]["out_of_bounds_annotation_count"] == 1
+    assert report["annotation_summary"]["unknown_category_annotation_count"] == 1
     assert "build_review_packet" in report["recommended_next_tools"]
     assert "dataset_high_clipping" in {finding["code"] for finding in report["findings"]}
+    assert "dataset_exact_duplicate_images" in {finding["code"] for finding in report["findings"]}
+    assert "dataset_missing_annotations" in {finding["code"] for finding in report["findings"]}
+    assert "dataset_out_of_bounds_annotations" in {finding["code"] for finding in report["findings"]}
+    assert "dataset_unknown_category_annotations" in {finding["code"] for finding in report["findings"]}
+
+
+def test_output_contract_snapshot_includes_review_agent_plan() -> None:
+    snapshot = json.loads(_SNAPSHOT_PATH.read_text(encoding="utf-8"))
+
+    plan = snapshot["plan_preview_review"]
+
+    assert plan["decision"] == "revise_candidate"
+    assert plan["recommended_next_tool"] == "adjust_pipeline"
+    assert plan["feedback_tags"] == ["too_noisy:high"]
+    assert plan["tuning_summary"]["quality_risk"] == "medium"
+    assert any("render_preview_batch" in action for action in plan["next_actions"])
+
+
+def test_output_contract_snapshot_includes_feedback_interpretation() -> None:
+    snapshot = json.loads(_SNAPSHOT_PATH.read_text(encoding="utf-8"))
+
+    interpretation = snapshot["interpret_preview_feedback"]
+
+    assert interpretation["decision_hint"] == "revise"
+    assert interpretation["recommended_next_tool"] == "adjust_pipeline"
+    assert interpretation["feedback_tags"] == ["too_noisy:high", "object_unrecognizable:high"]
+    assert interpretation["feedback_intents"] == ["reduce_noise", "protect_object_readability"]
+    assert interpretation["transform_guidance"] == [
+        "Reduce noise transform probability or numeric ranges.",
+        "Reduce destructive transforms until labeled objects remain readable.",
+    ]
 
 
 def test_output_contract_snapshot_includes_interactive_tuning_session_export() -> None:

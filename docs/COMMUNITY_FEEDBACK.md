@@ -11,6 +11,8 @@ small synthetic images, the committed demo assets in `docs/assets/demo/`, or red
   Codex, or another host.
 - `.github/ISSUE_TEMPLATE/workflow-feedback.yml`: augmentation review loops such as "example 8 is too noisy" using
   `albumentationsx://examples/distortion-review`, `compare_preview_runs`, and `export_preview_report`.
+- `.github/ISSUE_TEMPLATE/dataset-health.yml`: `inspect_dataset_quality` feedback for `class_distribution`,
+  `split_distribution`, image size spread, duplicate groups, and next-step guidance.
 - `.github/ISSUE_TEMPLATE/feature-request.yml`: new MCP host workflows, tools, resources, prompts, or docs.
 
 ## Host Acceptance Reports
@@ -35,3 +37,13 @@ Good feedback includes:
 - safe preview run IDs, synthetic contact sheets, or redacted report excerpts.
 
 Avoid broad requests like "make augmentations better" without a concrete preview artifact, task, and expected behavior.
+
+## Dataset Health Feedback
+
+Good dataset health feedback includes:
+
+- task and target type;
+- redacted `inspect_dataset_quality` fields such as `findings`, `class_distribution`, `split_distribution`, and
+  `duplicate_groups`;
+- what guidance the host gave after the report;
+- what guidance would have been more useful before rendering previews.

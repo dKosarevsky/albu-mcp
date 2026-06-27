@@ -23,6 +23,7 @@ from albumentationsx_mcp.models import (
     PreviewFeedbackRecord,
     PreviewManifestSummary,
     PreviewQualitySummary,
+    PreviewReviewGuidance,
     PreviewRunComparison,
     QualityFinding,
     TargetSpec,
@@ -36,6 +37,7 @@ from albumentationsx_mcp.preview_validation import PreviewRequestValidator
 from albumentationsx_mcp.recipes import recommend_recipe
 from albumentationsx_mcp.reports import PreviewReportService
 from albumentationsx_mcp.review import PreviewFeedbackStore
+from albumentationsx_mcp.review_agent import build_review_agent_plan, interpret_preview_feedback
 from albumentationsx_mcp.review_packet import build_review_packet
 from albumentationsx_mcp.sessions import InteractiveTuningSessionStore
 
@@ -79,6 +81,10 @@ def build_output_contract_snapshot(root: Path) -> dict[str, Any]:
         "plan_dataset_onboarding_ready": _dataset_onboarding_ready(root),
         "build_review_packet_ready": _review_packet_ready(root),
         "inspect_dataset_quality_ready": _dataset_quality_ready(root),
+        "interpret_preview_feedback": interpret_preview_feedback(
+            "Example 8 is too noisy; I cannot recognize the object."
+        ).model_dump(mode="json"),
+        "plan_preview_review": _review_agent_plan().model_dump(mode="json"),
         "validate_preview_request_ready": _preview_request_ready(root),
         "validate_preview_request_missing_input": _preview_request_missing_input(root),
         "validate_preview_request_outside_allowed_root": _preview_request_outside_allowed_root(root),
@@ -159,12 +165,42 @@ def _comparison(
         artifact_count_delta=0,
         review_notes=["Review rendered contact sheets."],
         suggested_feedback_tags=["too_noisy"],
+        review_guidance=[
+            PreviewReviewGuidance(
+                feedback_tag="too_noisy",
+                review_focus="Check whether noise hides object boundaries.",
+                rationale="Candidate uses a noise transform.",
+                suggested_action="reduce_noise_intensity",
+            )
+        ],
         quality_summary=PreviewQualitySummary(
             quality_profile="classification",
             baseline=ImageQualityAggregate(image_count=2, brightness_mean=120.0, clipping_fraction=0.01),
             candidate=ImageQualityAggregate(image_count=2, brightness_mean=brightness, clipping_fraction=clipping),
             findings=findings,
         ),
+    )
+
+
+def _review_agent_plan() -> Any:
+    return build_review_agent_plan(
+        _comparison(
+            "candidate-b",
+            brightness=78.0,
+            clipping=0.18,
+            findings=[
+                QualityFinding(
+                    code="candidate_high_clipping",
+                    severity="medium",
+                    message="Candidate preview has noticeable clipped dark or bright pixels.",
+                    metric="clipping_fraction",
+                    value=0.18,
+                    baseline_value=0.01,
+                )
+            ],
+        ),
+        feedback_tags=["too_noisy:high"],
+        accepted=False,
     )
 
 
@@ -417,14 +453,55 @@ def _review_packet_ready(root: Path) -> dict[str, Any]:
 def _dataset_quality_ready(root: Path) -> dict[str, Any]:
     dataset_root = root / "dataset-quality"
     dataset_root.mkdir(parents=True, exist_ok=True)
-    Image.new("RGB", (24, 16), color=(90, 120, 150)).save(dataset_root / "normal.png")
-    Image.new("RGB", (24, 16), color=(255, 255, 255)).save(dataset_root / "clipped.png")
+    _write_output_contract_image(dataset_root / "train" / "cat" / "normal.png", color=(90, 120, 150), size=(24, 16))
+    _write_output_contract_image(
+        dataset_root / "train" / "cat" / "duplicate.png",
+        color=(90, 120, 150),
+        size=(24, 16),
+    )
+    _write_output_contract_image(dataset_root / "train" / "dog" / "dog.png", color=(80, 90, 100), size=(20, 20))
+    _write_output_contract_image(dataset_root / "val" / "cat" / "clipped.png", color=(255, 255, 255), size=(12, 24))
+    _write_output_contract_coco_manifest(dataset_root)
     report = inspect_dataset_quality(
         dataset_path=dataset_root,
-        max_images=2,
+        max_images=4,
         path_policy=PathPolicy([dataset_root]),
     )
-    return _normalize_paths(report.model_dump(mode="json"), root)
+    return _normalize_dataset_quality_report(_normalize_paths(report.model_dump(mode="json"), root))
+
+
+def _write_output_contract_image(path: Path, *, color: tuple[int, int, int], size: tuple[int, int]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    Image.new("RGB", size, color=color).save(path)
+
+
+def _write_output_contract_coco_manifest(dataset_root: Path) -> None:
+    annotations_dir = dataset_root / "annotations"
+    annotations_dir.mkdir(parents=True, exist_ok=True)
+    (annotations_dir / "instances_train.json").write_text(
+        json.dumps(
+            {
+                "images": [
+                    {"id": 1, "file_name": "train/cat/duplicate.png", "width": 24, "height": 16},
+                    {"id": 2, "file_name": "train/cat/normal.png", "width": 24, "height": 16},
+                    {"id": 3, "file_name": "train/dog/dog.png", "width": 20, "height": 20},
+                    {"id": 4, "file_name": "val/cat/clipped.png", "width": 12, "height": 24},
+                ],
+                "annotations": [
+                    {"id": 1, "image_id": 1, "bbox": [1, 1, 8, 8], "category_id": 1},
+                    {"id": 2, "image_id": 2, "bbox": [1, 1, 8, 8], "category_id": 1},
+                    {"id": 3, "image_id": 3, "bbox": [2, 2, 6, 6], "category_id": 2},
+                    {"id": 4, "image_id": 4, "bbox": [10, 1, 8, 4], "category_id": 1},
+                    {"id": 5, "image_id": 3, "bbox": [3, 3, 5, 5], "category_id": 404},
+                ],
+                "categories": [
+                    {"id": 1, "name": "cat"},
+                    {"id": 2, "name": "dog"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
 
 
 def _preview_request_ready(root: Path) -> dict[str, Any]:
@@ -487,6 +564,8 @@ def _diagnostics_public_surface() -> PublicSurface:
             "render_preview",
             "render_preview_batch",
             "compare_preview_runs",
+            "interpret_preview_feedback",
+            "plan_preview_review",
             "summarize_tuning_session",
             "start_tuning_session",
             "record_tuning_session_step",
@@ -591,6 +670,14 @@ def _normalize_session_artifact(artifact: dict[str, Any]) -> dict[str, Any]:
     normalized["path"] = f"<artifact-path>/tuning-session-<session-id>.{suffix}"
     normalized["sha256"] = "<sha256>"
     normalized["size_bytes"] = "<size-bytes>"
+    return normalized
+
+
+def _normalize_dataset_quality_report(payload: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(payload)
+    normalized["duplicate_groups"] = [
+        {**group, "sha256": "<sha256>"} for group in normalized.get("duplicate_groups", [])
+    ]
     return normalized
 
 
