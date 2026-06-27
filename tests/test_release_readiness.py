@@ -24,6 +24,7 @@ def test_release_readiness_accepts_current_fast_guards(tmp_path: Path) -> None:
         "p0_host_run_session",
         "p0_evidence_recorder",
         "p0_evidence_import_guide",
+        "p0_evidence_regeneration_pack",
         "p0_host_execution_sprint",
         "p0_host_evidence_ledger",
         "p0_evidence_status",
@@ -85,6 +86,7 @@ def test_release_readiness_cli_passes_fast_guards(tmp_path: Path) -> None:
     assert "v1_rc_readiness_report" in result.stdout
     assert "p0_host_run_session" in result.stdout
     assert "p0_evidence_import_guide" in result.stdout
+    assert "p0_evidence_regeneration_pack" in result.stdout
     assert "p0_evidence_status" in result.stdout
     assert "beta_campaign_pack" in result.stdout
     assert "beta_feedback_intake" in result.stdout

@@ -28,6 +28,10 @@ from scripts.export_dataset_quality_depth_plan import (
 )
 from scripts.export_p0_blocker_triage import build_p0_blocker_triage, render_p0_blocker_triage_markdown
 from scripts.export_p0_evidence_recorder import build_p0_evidence_recorder, render_p0_evidence_recorder_markdown
+from scripts.export_p0_evidence_regeneration_pack import (
+    build_p0_evidence_regeneration_pack,
+    render_p0_evidence_regeneration_pack_markdown,
+)
 from scripts.export_p0_evidence_status import build_p0_evidence_status, render_p0_evidence_status_markdown
 from scripts.export_p0_host_evidence_ledger import (
     build_p0_host_evidence_ledger,
@@ -76,6 +80,7 @@ _DEFAULT_P0_HOST_RUNBOOK_PATH = Path("docs/P0_HOST_RUNBOOK.md")
 _DEFAULT_P0_HOST_RUN_SESSION_PATH = Path("docs/P0_HOST_RUN_SESSION.md")
 _DEFAULT_P0_EVIDENCE_RECORDER_PATH = Path("docs/P0_EVIDENCE_RECORDER.md")
 _DEFAULT_P0_EVIDENCE_IMPORT_GUIDE_PATH = Path("docs/P0_EVIDENCE_IMPORT_GUIDE.md")
+_DEFAULT_P0_EVIDENCE_REGENERATION_PACK_PATH = Path("docs/P0_EVIDENCE_REGENERATION_PACK.md")
 _DEFAULT_P0_HOST_EXECUTION_SPRINT_PATH = Path("docs/P0_HOST_EXECUTION_SPRINT.md")
 _DEFAULT_P0_HOST_EVIDENCE_LEDGER_PATH = Path("docs/P0_HOST_EVIDENCE_LEDGER.md")
 _DEFAULT_P0_EVIDENCE_STATUS_PATH = Path("docs/P0_EVIDENCE_STATUS.md")
@@ -112,6 +117,7 @@ class ReleaseReadinessConfig:
     p0_host_run_session_path: Path = _DEFAULT_P0_HOST_RUN_SESSION_PATH
     p0_evidence_recorder_path: Path = _DEFAULT_P0_EVIDENCE_RECORDER_PATH
     p0_evidence_import_guide_path: Path = _DEFAULT_P0_EVIDENCE_IMPORT_GUIDE_PATH
+    p0_evidence_regeneration_pack_path: Path = _DEFAULT_P0_EVIDENCE_REGENERATION_PACK_PATH
     p0_host_execution_sprint_path: Path = _DEFAULT_P0_HOST_EXECUTION_SPRINT_PATH
     p0_host_evidence_ledger_path: Path = _DEFAULT_P0_HOST_EVIDENCE_LEDGER_PATH
     p0_evidence_status_path: Path = _DEFAULT_P0_EVIDENCE_STATUS_PATH
@@ -200,6 +206,13 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             path=config.p0_evidence_import_guide_path,
             expected=render_host_evidence_import_guide_markdown(build_host_evidence_import_guide()),
             exporter="scripts/verify_host_evidence_import.py --output docs/P0_EVIDENCE_IMPORT_GUIDE.md",
+        ),
+        _check_generated_doc(
+            name="p0_evidence_regeneration_pack",
+            path=config.p0_evidence_regeneration_pack_path,
+            expected=render_p0_evidence_regeneration_pack_markdown(build_p0_evidence_regeneration_pack()),
+            exporter="scripts/export_p0_evidence_regeneration_pack.py --output "
+            "docs/P0_EVIDENCE_REGENERATION_PACK.md",
         ),
         _check_generated_doc(
             name="p0_host_execution_sprint",
@@ -317,6 +330,11 @@ def main() -> None:
     parser.add_argument("--p0-host-run-session", type=Path, default=_DEFAULT_P0_HOST_RUN_SESSION_PATH)
     parser.add_argument("--p0-evidence-recorder", type=Path, default=_DEFAULT_P0_EVIDENCE_RECORDER_PATH)
     parser.add_argument("--p0-evidence-import-guide", type=Path, default=_DEFAULT_P0_EVIDENCE_IMPORT_GUIDE_PATH)
+    parser.add_argument(
+        "--p0-evidence-regeneration-pack",
+        type=Path,
+        default=_DEFAULT_P0_EVIDENCE_REGENERATION_PACK_PATH,
+    )
     parser.add_argument("--p0-host-execution-sprint", type=Path, default=_DEFAULT_P0_HOST_EXECUTION_SPRINT_PATH)
     parser.add_argument("--p0-host-evidence-ledger", type=Path, default=_DEFAULT_P0_HOST_EVIDENCE_LEDGER_PATH)
     parser.add_argument("--p0-evidence-status", type=Path, default=_DEFAULT_P0_EVIDENCE_STATUS_PATH)
@@ -356,6 +374,7 @@ def main() -> None:
             p0_host_run_session_path=args.p0_host_run_session,
             p0_evidence_recorder_path=args.p0_evidence_recorder,
             p0_evidence_import_guide_path=args.p0_evidence_import_guide,
+            p0_evidence_regeneration_pack_path=args.p0_evidence_regeneration_pack,
             p0_host_execution_sprint_path=args.p0_host_execution_sprint,
             p0_host_evidence_ledger_path=args.p0_host_evidence_ledger,
             p0_evidence_status_path=args.p0_evidence_status,
