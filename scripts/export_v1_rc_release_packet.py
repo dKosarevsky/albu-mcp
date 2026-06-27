@@ -25,7 +25,9 @@ def build_v1_rc_release_packet() -> dict[str, Any]:
         "release_candidate_allowed": rc_report["rc_release_candidate_allowed"],
         "required_hosts": rc_report["required_rc_hosts"],
         "p0_summary": p0_status["summary"],
-        "blocked_release_steps": _blocked_release_steps(rc_report["rc_release_candidate_allowed"]),
+        "blocked_release_steps": _blocked_release_steps(
+            release_candidate_allowed=rc_report["rc_release_candidate_allowed"]
+        ),
         "ready_release_steps": [
             "uv run pytest -q",
             "uv run ruff check .",
@@ -76,7 +78,7 @@ def main() -> None:
     args.output.write_text(content, encoding="utf-8")
 
 
-def _blocked_release_steps(release_candidate_allowed: bool) -> list[str]:
+def _blocked_release_steps(*, release_candidate_allowed: bool) -> list[str]:
     if release_candidate_allowed:
         return ["No RC blockers remain."]
     return [

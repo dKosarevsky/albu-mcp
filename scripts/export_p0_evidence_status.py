@@ -41,7 +41,7 @@ def build_p0_evidence_status() -> dict[str, Any]:
             "missing_gate_count": sum(gate["status"] == "missing" for gate in gates),
         },
         "host_statuses": host_statuses,
-        "next_action": _next_action(rc_report["rc_release_candidate_allowed"]),
+        "next_action": _next_action(rc_ready=rc_report["rc_release_candidate_allowed"]),
     }
 
 
@@ -105,7 +105,7 @@ def _gate_status(*, host: str, gate: str, blocker: dict[str, str] | None) -> dic
     }
 
 
-def _next_action(rc_ready: bool) -> str:
+def _next_action(*, rc_ready: bool) -> str:
     if rc_ready:
         return "Prepare the v1 RC release packet."
     return "Run P0 host runbook and record real UI evidence."
