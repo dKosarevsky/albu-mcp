@@ -89,6 +89,16 @@ def test_output_contract_snapshot_includes_dataset_quality_report() -> None:
     assert report["image_size_summary"]["aspect_ratio_min"] == 0.5
     assert report["image_size_summary"]["aspect_ratio_max"] == 1.5
     assert report["duplicate_image_count"] == 2
+    assert report["duplicate_groups"] == [
+        {
+            "image_count": 2,
+            "sample_paths": [
+                "<OUTPUT_CONTRACT_ROOT>/dataset-quality/train/cat/duplicate.png",
+                "<OUTPUT_CONTRACT_ROOT>/dataset-quality/train/cat/normal.png",
+            ],
+            "sha256": "<sha256>",
+        }
+    ]
     assert report["annotation_summary"]["source_format"] == "coco"
     assert report["annotation_summary"]["annotated_image_count"] == 3
     assert report["annotation_summary"]["missing_annotation_count"] == 1

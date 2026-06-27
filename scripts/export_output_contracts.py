@@ -467,7 +467,7 @@ def _dataset_quality_ready(root: Path) -> dict[str, Any]:
         max_images=4,
         path_policy=PathPolicy([dataset_root]),
     )
-    return _normalize_paths(report.model_dump(mode="json"), root)
+    return _normalize_dataset_quality_report(_normalize_paths(report.model_dump(mode="json"), root))
 
 
 def _write_output_contract_image(path: Path, *, color: tuple[int, int, int], size: tuple[int, int]) -> None:
@@ -670,6 +670,14 @@ def _normalize_session_artifact(artifact: dict[str, Any]) -> dict[str, Any]:
     normalized["path"] = f"<artifact-path>/tuning-session-<session-id>.{suffix}"
     normalized["sha256"] = "<sha256>"
     normalized["size_bytes"] = "<size-bytes>"
+    return normalized
+
+
+def _normalize_dataset_quality_report(payload: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(payload)
+    normalized["duplicate_groups"] = [
+        {**group, "sha256": "<sha256>"} for group in normalized.get("duplicate_groups", [])
+    ]
     return normalized
 
 

@@ -771,7 +771,7 @@
           "<OUTPUT_CONTRACT_ROOT>/dataset-quality/train/cat/duplicate.png",
           "<OUTPUT_CONTRACT_ROOT>/dataset-quality/train/cat/normal.png"
         ],
-        "sha256": "d6cda8a27e6a3dede12179ff967bc9a269e7ce2b286367599419b96493ad823e"
+        "sha256": "<sha256>"
       }
     ],
     "duplicate_image_count": 2,
