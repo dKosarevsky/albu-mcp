@@ -61,6 +61,10 @@ from scripts.export_v1_rc_readiness_report import (
 )
 from scripts.export_v1_rc_release_packet import build_v1_rc_release_packet, render_v1_rc_release_packet_markdown
 from scripts.validate_host_manual_runs import validate_host_manual_runs
+from scripts.verify_host_evidence_import import (
+    build_host_evidence_import_guide,
+    render_host_evidence_import_guide_markdown,
+)
 
 _DEFAULT_MANUAL_RUNS_PATH = Path("docs/HOST_MANUAL_RUNS.json")
 _DEFAULT_HOST_REPORT_PATH = Path("docs/HOST_ACCEPTANCE_EVIDENCE.md")
@@ -71,6 +75,7 @@ _DEFAULT_V1_RC_READINESS_REPORT_PATH = Path("docs/V1_RC_READINESS.md")
 _DEFAULT_P0_HOST_RUNBOOK_PATH = Path("docs/P0_HOST_RUNBOOK.md")
 _DEFAULT_P0_HOST_RUN_SESSION_PATH = Path("docs/P0_HOST_RUN_SESSION.md")
 _DEFAULT_P0_EVIDENCE_RECORDER_PATH = Path("docs/P0_EVIDENCE_RECORDER.md")
+_DEFAULT_P0_EVIDENCE_IMPORT_GUIDE_PATH = Path("docs/P0_EVIDENCE_IMPORT_GUIDE.md")
 _DEFAULT_P0_HOST_EXECUTION_SPRINT_PATH = Path("docs/P0_HOST_EXECUTION_SPRINT.md")
 _DEFAULT_P0_HOST_EVIDENCE_LEDGER_PATH = Path("docs/P0_HOST_EVIDENCE_LEDGER.md")
 _DEFAULT_P0_EVIDENCE_STATUS_PATH = Path("docs/P0_EVIDENCE_STATUS.md")
@@ -106,6 +111,7 @@ class ReleaseReadinessConfig:
     p0_host_runbook_path: Path = _DEFAULT_P0_HOST_RUNBOOK_PATH
     p0_host_run_session_path: Path = _DEFAULT_P0_HOST_RUN_SESSION_PATH
     p0_evidence_recorder_path: Path = _DEFAULT_P0_EVIDENCE_RECORDER_PATH
+    p0_evidence_import_guide_path: Path = _DEFAULT_P0_EVIDENCE_IMPORT_GUIDE_PATH
     p0_host_execution_sprint_path: Path = _DEFAULT_P0_HOST_EXECUTION_SPRINT_PATH
     p0_host_evidence_ledger_path: Path = _DEFAULT_P0_HOST_EVIDENCE_LEDGER_PATH
     p0_evidence_status_path: Path = _DEFAULT_P0_EVIDENCE_STATUS_PATH
@@ -188,6 +194,12 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             path=config.p0_evidence_recorder_path,
             expected=render_p0_evidence_recorder_markdown(build_p0_evidence_recorder()),
             exporter="scripts/export_p0_evidence_recorder.py",
+        ),
+        _check_generated_doc(
+            name="p0_evidence_import_guide",
+            path=config.p0_evidence_import_guide_path,
+            expected=render_host_evidence_import_guide_markdown(build_host_evidence_import_guide()),
+            exporter="scripts/verify_host_evidence_import.py --output docs/P0_EVIDENCE_IMPORT_GUIDE.md",
         ),
         _check_generated_doc(
             name="p0_host_execution_sprint",
@@ -304,6 +316,7 @@ def main() -> None:
     parser.add_argument("--p0-host-runbook", type=Path, default=_DEFAULT_P0_HOST_RUNBOOK_PATH)
     parser.add_argument("--p0-host-run-session", type=Path, default=_DEFAULT_P0_HOST_RUN_SESSION_PATH)
     parser.add_argument("--p0-evidence-recorder", type=Path, default=_DEFAULT_P0_EVIDENCE_RECORDER_PATH)
+    parser.add_argument("--p0-evidence-import-guide", type=Path, default=_DEFAULT_P0_EVIDENCE_IMPORT_GUIDE_PATH)
     parser.add_argument("--p0-host-execution-sprint", type=Path, default=_DEFAULT_P0_HOST_EXECUTION_SPRINT_PATH)
     parser.add_argument("--p0-host-evidence-ledger", type=Path, default=_DEFAULT_P0_HOST_EVIDENCE_LEDGER_PATH)
     parser.add_argument("--p0-evidence-status", type=Path, default=_DEFAULT_P0_EVIDENCE_STATUS_PATH)
@@ -342,6 +355,7 @@ def main() -> None:
             p0_host_runbook_path=args.p0_host_runbook,
             p0_host_run_session_path=args.p0_host_run_session,
             p0_evidence_recorder_path=args.p0_evidence_recorder,
+            p0_evidence_import_guide_path=args.p0_evidence_import_guide,
             p0_host_execution_sprint_path=args.p0_host_execution_sprint,
             p0_host_evidence_ledger_path=args.p0_host_evidence_ledger,
             p0_evidence_status_path=args.p0_evidence_status,
