@@ -36,6 +36,7 @@ from scripts.export_p0_host_execution_sprint import (
     build_p0_host_execution_sprint,
     render_p0_host_execution_sprint_markdown,
 )
+from scripts.export_p0_host_run_session import build_p0_host_run_session, render_p0_host_run_session_markdown
 from scripts.export_p0_host_runbook import build_p0_host_runbook, render_p0_host_runbook_markdown
 from scripts.export_product_depth_backlog import build_product_depth_backlog, render_product_depth_backlog_markdown
 from scripts.export_review_agent_v3_plan import build_review_agent_v3_plan, render_review_agent_v3_plan_markdown
@@ -67,6 +68,7 @@ _DEFAULT_V1_EVIDENCE_OPERATOR_PACKET_PATH = Path("docs/V1_EVIDENCE_OPERATOR_PACK
 _DEFAULT_V1_GROWTH_CUTOVER_REPORT_PATH = Path("docs/V1_GROWTH_CUTOVER_REPORT.md")
 _DEFAULT_V1_RC_READINESS_REPORT_PATH = Path("docs/V1_RC_READINESS.md")
 _DEFAULT_P0_HOST_RUNBOOK_PATH = Path("docs/P0_HOST_RUNBOOK.md")
+_DEFAULT_P0_HOST_RUN_SESSION_PATH = Path("docs/P0_HOST_RUN_SESSION.md")
 _DEFAULT_P0_EVIDENCE_RECORDER_PATH = Path("docs/P0_EVIDENCE_RECORDER.md")
 _DEFAULT_P0_HOST_EXECUTION_SPRINT_PATH = Path("docs/P0_HOST_EXECUTION_SPRINT.md")
 _DEFAULT_P0_HOST_EVIDENCE_LEDGER_PATH = Path("docs/P0_HOST_EVIDENCE_LEDGER.md")
@@ -101,6 +103,7 @@ class ReleaseReadinessConfig:
     v1_growth_cutover_report_path: Path = _DEFAULT_V1_GROWTH_CUTOVER_REPORT_PATH
     v1_rc_readiness_report_path: Path = _DEFAULT_V1_RC_READINESS_REPORT_PATH
     p0_host_runbook_path: Path = _DEFAULT_P0_HOST_RUNBOOK_PATH
+    p0_host_run_session_path: Path = _DEFAULT_P0_HOST_RUN_SESSION_PATH
     p0_evidence_recorder_path: Path = _DEFAULT_P0_EVIDENCE_RECORDER_PATH
     p0_host_execution_sprint_path: Path = _DEFAULT_P0_HOST_EXECUTION_SPRINT_PATH
     p0_host_evidence_ledger_path: Path = _DEFAULT_P0_HOST_EVIDENCE_LEDGER_PATH
@@ -171,6 +174,12 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             path=config.p0_host_runbook_path,
             expected=render_p0_host_runbook_markdown(build_p0_host_runbook()),
             exporter="scripts/export_p0_host_runbook.py",
+        ),
+        _check_generated_doc(
+            name="p0_host_run_session",
+            path=config.p0_host_run_session_path,
+            expected=render_p0_host_run_session_markdown(build_p0_host_run_session()),
+            exporter="scripts/export_p0_host_run_session.py",
         ),
         _check_generated_doc(
             name="p0_evidence_recorder",
@@ -291,6 +300,7 @@ def main() -> None:
     parser.add_argument("--v1-growth-cutover-report", type=Path, default=_DEFAULT_V1_GROWTH_CUTOVER_REPORT_PATH)
     parser.add_argument("--v1-rc-readiness-report", type=Path, default=_DEFAULT_V1_RC_READINESS_REPORT_PATH)
     parser.add_argument("--p0-host-runbook", type=Path, default=_DEFAULT_P0_HOST_RUNBOOK_PATH)
+    parser.add_argument("--p0-host-run-session", type=Path, default=_DEFAULT_P0_HOST_RUN_SESSION_PATH)
     parser.add_argument("--p0-evidence-recorder", type=Path, default=_DEFAULT_P0_EVIDENCE_RECORDER_PATH)
     parser.add_argument("--p0-host-execution-sprint", type=Path, default=_DEFAULT_P0_HOST_EXECUTION_SPRINT_PATH)
     parser.add_argument("--p0-host-evidence-ledger", type=Path, default=_DEFAULT_P0_HOST_EVIDENCE_LEDGER_PATH)
@@ -328,6 +338,7 @@ def main() -> None:
             v1_growth_cutover_report_path=args.v1_growth_cutover_report,
             v1_rc_readiness_report_path=args.v1_rc_readiness_report,
             p0_host_runbook_path=args.p0_host_runbook,
+            p0_host_run_session_path=args.p0_host_run_session,
             p0_evidence_recorder_path=args.p0_evidence_recorder,
             p0_host_execution_sprint_path=args.p0_host_execution_sprint,
             p0_host_evidence_ledger_path=args.p0_host_evidence_ledger,
