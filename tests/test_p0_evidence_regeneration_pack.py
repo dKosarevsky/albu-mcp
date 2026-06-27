@@ -19,9 +19,10 @@ def test_p0_evidence_regeneration_pack_blocks_until_p0_evidence_passes() -> None
     assert pack["summary"]["missing_gate_count"] == 4
     assert pack["blocked_reason"] == "p0_host_evidence_missing_or_blocked"
     assert "uv run python scripts/verify_host_evidence_import.py" in pack["safe_anytime_commands"]
-    assert "uv run python scripts/export_v1_rc_readiness_report.py --output docs/V1_RC_READINESS.md" in pack[
-        "gated_regeneration_commands"
-    ]
+    assert (
+        "uv run python scripts/export_v1_rc_readiness_report.py --output docs/V1_RC_READINESS.md"
+        in pack["gated_regeneration_commands"]
+    )
 
 
 def test_p0_evidence_regeneration_pack_markdown_is_operator_readable() -> None:
@@ -33,8 +34,7 @@ def test_p0_evidence_regeneration_pack_markdown_is_operator_readable() -> None:
     assert "Do not treat generated RC artifacts as release-ready" in markdown
     assert "| Codex | `first_10_minutes_replay` | `missing` |" in markdown
     assert (
-        "uv run python scripts/export_v1_growth_cutover_report.py --output docs/V1_GROWTH_CUTOVER_REPORT.md"
-        in markdown
+        "uv run python scripts/export_v1_growth_cutover_report.py --output docs/V1_GROWTH_CUTOVER_REPORT.md" in markdown
     )
 
 

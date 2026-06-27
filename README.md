@@ -104,12 +104,9 @@ source: [docs/integrations/mcp.md](https://github.com/albumentations-team/Albume
 - [docs/RELEASE.md](docs/RELEASE.md): PyPI, GitHub Release, and MCP Registry publication process.
 - [CHANGELOG.md](CHANGELOG.md): release history.
 - [server.json](server.json): public MCP Registry metadata.
-- [evals/golden_mcp_scenarios.yaml](evals/golden_mcp_scenarios.yaml): executable MCP scenarios.
-
-Operational scripts live in [scripts](scripts/) and are covered by the verification commands below.
+- [evals/golden_mcp_scenarios.yaml](evals/golden_mcp_scenarios.yaml): executable MCP scenarios. Operational scripts live in [scripts](scripts/).
 
 ## Verification
-
 ```bash
 uv run pytest
 uv run ruff check .

@@ -38,9 +38,7 @@ def build_v1_rc_cutover_gate(
         "cutover_allowed": cutover_allowed,
         "rc_decision": automation_pack["rc_decision"],
         "blocked_reason": "none" if cutover_allowed else "p0_host_evidence_missing_or_blocked",
-        "gate_policy": (
-            "The RC cutover gate refuses release while any P0 real-host evidence gate is not passed."
-        ),
+        "gate_policy": ("The RC cutover gate refuses release while any P0 real-host evidence gate is not passed."),
         "p0_summary": ledger["summary"],
         "failed_gates": failed_gates,
         "preflight_commands": automation_pack["preflight_commands"],

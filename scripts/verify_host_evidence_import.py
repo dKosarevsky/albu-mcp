@@ -82,8 +82,8 @@ class HostEvidenceImportReport:
     records_path: str
     import_status: ImportStatus
     write_performed: bool
-    valid_records: list[dict[str, object]]
-    rejected_records: list[dict[str, object]]
+    valid_records: list[dict[str, Any]]
+    rejected_records: list[dict[str, Any]]
     missing_required_gates: list[tuple[str, str]]
     record_commands: list[str]
     non_fabrication_policy: str = _NON_FABRICATION_POLICY
@@ -108,8 +108,7 @@ def build_host_evidence_import_guide() -> dict[str, Any]:
         "required_gates": list(_P0_GATES),
         "non_fabrication_policy": _NON_FABRICATION_POLICY,
         "verification_command": (
-            "uv run python scripts/verify_host_evidence_import.py "
-            "--input /path/to/host-evidence-candidate.json"
+            "uv run python scripts/verify_host_evidence_import.py --input /path/to/host-evidence-candidate.json"
         ),
         "recording_command_source": "The verifier returns copyable scripts/record_host_manual_run.py commands.",
         "after_recording_commands": [
@@ -314,7 +313,7 @@ def _load_candidate_records(source_path: Path) -> dict[str, list[Any]]:
 
     raw_records = _raw_candidate_records(payload)
     candidates: list[HostEvidenceCandidate] = []
-    rejected_records: list[dict[str, object]] = []
+    rejected_records: list[dict[str, Any]] = []
     for index, raw in enumerate(raw_records, start=1):
         if not isinstance(raw, dict):
             rejected_records.append(
@@ -364,13 +363,13 @@ def _missing_required_gates(candidates: list[HostEvidenceCandidate]) -> list[tup
     return [(host, gate) for host in _P0_HOSTS for gate in _P0_GATES if (host, gate) not in passed]
 
 
-def _rejected_record(candidate: HostEvidenceCandidate, *, issues: list[str]) -> dict[str, object]:
+def _rejected_record(candidate: HostEvidenceCandidate, *, issues: list[str]) -> dict[str, Any]:
     payload = _candidate_payload(candidate)
     payload["issues"] = issues
     return payload
 
 
-def _rejected_raw_record(*, index: int, raw: dict[str, Any], exc: ValidationError) -> dict[str, object]:
+def _rejected_raw_record(*, index: int, raw: dict[str, Any], exc: ValidationError) -> dict[str, Any]:
     return {
         "index": index,
         "kind": str(raw.get("kind", "unknown")),

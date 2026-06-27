@@ -214,8 +214,7 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             name="p0_evidence_regeneration_pack",
             path=config.p0_evidence_regeneration_pack_path,
             expected=render_p0_evidence_regeneration_pack_markdown(build_p0_evidence_regeneration_pack()),
-            exporter="scripts/export_p0_evidence_regeneration_pack.py --output "
-            "docs/P0_EVIDENCE_REGENERATION_PACK.md",
+            exporter="scripts/export_p0_evidence_regeneration_pack.py --output docs/P0_EVIDENCE_REGENERATION_PACK.md",
         ),
         _check_generated_doc(
             name="p0_host_execution_sprint",

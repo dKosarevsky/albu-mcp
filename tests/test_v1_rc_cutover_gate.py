@@ -64,9 +64,7 @@ def test_committed_v1_rc_cutover_gate_is_current() -> None:
     gate_path = Path("docs/V1_RC_CUTOVER_GATE.md")
 
     assert gate_path.read_text(encoding="utf-8") == render_v1_rc_cutover_gate_markdown(build_v1_rc_cutover_gate())
-    assert "[docs/V1_RC_CUTOVER_GATE.md](docs/V1_RC_CUTOVER_GATE.md)" in Path("README.md").read_text(
-        encoding="utf-8"
-    )
+    assert "[docs/V1_RC_CUTOVER_GATE.md](docs/V1_RC_CUTOVER_GATE.md)" in Path("README.md").read_text(encoding="utf-8")
 
 
 def test_v1_rc_cutover_gate_cli_writes_markdown(tmp_path: Path) -> None:
