@@ -83,6 +83,24 @@ _TRANSFORM_GUIDANCE_BY_TAG = {
     "color_shift": "Reduce hue, saturation, RGB shift, or color jitter strength.",
     "object_unrecognizable": "Reduce destructive transforms until labeled objects remain readable.",
 }
+_ADJUSTMENT_STRATEGY_BY_TAG = {
+    "too_noisy": "Lower noise probability or numeric ranges, then rerender the same reviewed inputs.",
+    "too_blurry": "Reduce blur strength and verify boundary detail before changing other transforms.",
+    "too_distorted": "Reduce geometric distortion strength before adding more spatial transforms.",
+    "too_dark": "Move exposure settings toward the baseline before changing color transforms.",
+    "too_bright": "Move exposure settings toward the baseline before changing color transforms.",
+    "color_shift": "Reduce color-shift transforms before changing geometric or noise transforms.",
+    "object_unrecognizable": "Prioritize object readability before adding more augmentation variety.",
+}
+_SAFETY_CHECKS_BY_TAG = {
+    "too_noisy": "Confirm the same object remains recognizable in the next contact sheet.",
+    "too_blurry": "Confirm object boundaries or text remain inspectable after the next render.",
+    "too_distorted": "Confirm labels still match the visible object geometry after the next render.",
+    "too_dark": "Confirm low-light regions still expose the target object after the next render.",
+    "too_bright": "Confirm highlights do not hide the target object after the next render.",
+    "color_shift": "Confirm class or label evidence is not changed by color after the next render.",
+    "object_unrecognizable": "Do not add additional destructive transforms until readability is restored.",
+}
 
 
 def build_review_agent_plan(
@@ -102,6 +120,7 @@ def build_review_agent_plan(
         accepted=effective_accepted,
     )
     decision = _decision(tuning_summary)
+    base_feedback_tags = [_base_tag(tag) for tag in effective_feedback_tags]
     return ReviewAgentPlan(
         baseline_run_id=tuning_summary.baseline_run_id,
         candidate_run_id=tuning_summary.candidate_run_id,
@@ -113,6 +132,8 @@ def build_review_agent_plan(
         review_checklist=_review_checklist(comparison),
         blockers=_blockers(decision),
         next_actions=_next_actions(decision),
+        adjustment_strategy=_adjustment_strategy(base_feedback_tags),
+        safety_checks=_safety_checks(base_feedback_tags),
         suggested_feedback_tags=tuning_summary.suggested_feedback_tags,
         quality_deltas=tuning_summary.quality_deltas,
         quality_score=tuning_summary.quality_score,
@@ -136,6 +157,7 @@ def interpret_preview_feedback(feedback_note: str) -> ReviewFeedbackInterpretati
     feedback_tags = [f"{signal.feedback_tag}:{signal.severity}" for signal in signals]
     feedback_intents = _unique(_INTENT_BY_TAG[signal.feedback_tag] for signal in signals)
     transform_guidance = _unique(_TRANSFORM_GUIDANCE_BY_TAG[signal.feedback_tag] for signal in signals)
+    base_feedback_tags = [signal.feedback_tag for signal in signals]
     accepted = bool(normalized) and not signals and any(pattern in normalized for pattern in _ACCEPTANCE_PATTERNS)
     if feedback_tags:
         decision_hint: Literal["accept", "revise", "clarify"] = "revise"
@@ -154,6 +176,8 @@ def interpret_preview_feedback(feedback_note: str) -> ReviewFeedbackInterpretati
         feedback_tags=feedback_tags,
         feedback_intents=feedback_intents,
         transform_guidance=transform_guidance,
+        adjustment_strategy=_adjustment_strategy(base_feedback_tags),
+        safety_checks=_safety_checks(base_feedback_tags),
         signals=signals,
         decision_hint=decision_hint,
         recommended_next_tool=recommended_next_tool,
@@ -241,6 +265,18 @@ def _signal_evidence(feedback_tag: str, normalized_note: str) -> str:
     if not normalized_note:
         return feedback_tag
     return normalized_note[:160]
+
+
+def _base_tag(feedback_tag: str) -> str:
+    return feedback_tag.split(":", maxsplit=1)[0]
+
+
+def _adjustment_strategy(feedback_tags: Iterable[str]) -> list[str]:
+    return _unique(_ADJUSTMENT_STRATEGY_BY_TAG[tag] for tag in feedback_tags if tag in _ADJUSTMENT_STRATEGY_BY_TAG)
+
+
+def _safety_checks(feedback_tags: Iterable[str]) -> list[str]:
+    return _unique(_SAFETY_CHECKS_BY_TAG[tag] for tag in feedback_tags if tag in _SAFETY_CHECKS_BY_TAG)
 
 
 def _unique(items: Iterable[str]) -> list[str]:

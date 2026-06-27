@@ -22,6 +22,14 @@ def test_review_agent_interprets_free_form_negative_feedback() -> None:
         "too_noisy",
         "object_unrecognizable",
     }
+    assert interpretation.adjustment_strategy == [
+        "Lower noise probability or numeric ranges, then rerender the same reviewed inputs.",
+        "Prioritize object readability before adding more augmentation variety.",
+    ]
+    assert interpretation.safety_checks == [
+        "Confirm the same object remains recognizable in the next contact sheet.",
+        "Do not add additional destructive transforms until readability is restored.",
+    ]
 
 
 def test_review_agent_interprets_acceptance_feedback() -> None:
@@ -63,6 +71,10 @@ def test_review_agent_routes_negative_feedback_to_pipeline_adjustment() -> None:
     assert plan.decision == "revise_candidate"
     assert plan.recommended_next_tool == "adjust_pipeline"
     assert plan.feedback_tags == ["too_noisy:high"]
+    assert plan.adjustment_strategy == [
+        "Lower noise probability or numeric ranges, then rerender the same reviewed inputs."
+    ]
+    assert plan.safety_checks == ["Confirm the same object remains recognizable in the next contact sheet."]
     assert any("render_preview_batch" in action for action in plan.next_actions)
 
 
@@ -77,6 +89,8 @@ def test_review_agent_uses_free_form_feedback_note_for_plan() -> None:
     assert plan.decision == "revise_candidate"
     assert plan.recommended_next_tool == "adjust_pipeline"
     assert plan.feedback_tags == ["too_noisy:high", "object_unrecognizable:high"]
+    assert "Prioritize object readability before adding more augmentation variety." in plan.adjustment_strategy
+    assert "Do not add additional destructive transforms until readability is restored." in plan.safety_checks
 
 
 def test_review_agent_plan_uses_v3_feedback_note_tags() -> None:

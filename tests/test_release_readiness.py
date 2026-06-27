@@ -16,6 +16,8 @@ def test_release_readiness_accepts_current_fast_guards(tmp_path: Path) -> None:
         "first_10_minutes",
         "host_proof_sprint",
         "v1_decision_report",
+        "v1_evidence_operator_packet",
+        "v1_growth_cutover_report",
         "v1_rc_readiness_report",
         "p0_host_runbook",
         "p0_evidence_recorder",
@@ -23,6 +25,7 @@ def test_release_readiness_accepts_current_fast_guards(tmp_path: Path) -> None:
         "p0_host_evidence_ledger",
         "p0_evidence_status",
         "p0_blocker_triage",
+        "beta_campaign_pack",
         "beta_feedback_intake",
         "beta_feedback_status",
         "beta_validation_sprint",
@@ -73,8 +76,11 @@ def test_release_readiness_cli_passes_fast_guards(tmp_path: Path) -> None:
     assert "release readiness checks passed" in result.stdout
     assert "manual_host_records" in result.stdout
     assert "v1_decision_report" in result.stdout
+    assert "v1_evidence_operator_packet" in result.stdout
+    assert "v1_growth_cutover_report" in result.stdout
     assert "v1_rc_readiness_report" in result.stdout
     assert "p0_evidence_status" in result.stdout
+    assert "beta_campaign_pack" in result.stdout
     assert "beta_feedback_intake" in result.stdout
     assert "v1_rc_release_packet" in result.stdout
     assert "v1_rc_cutover_checklist" in result.stdout
