@@ -142,8 +142,7 @@ def _next_action(*, rc_cutover_allowed: bool) -> str:
     if rc_cutover_allowed:
         return "Run the hard RC gate with --require-open, then prepare the release candidate."
     return (
-        "Run real Codex and Claude Code host UI sessions, verify evidence candidates, "
-        "and record only observed results."
+        "Run real Codex and Claude Code host UI sessions, verify evidence candidates, and record only observed results."
     )
 
 

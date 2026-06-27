@@ -34,9 +34,7 @@ def test_committed_product_depth_gate_is_current() -> None:
     gate_path = Path("docs/PRODUCT_DEPTH_GATE.md")
 
     assert gate_path.read_text(encoding="utf-8") == render_product_depth_gate_markdown(build_product_depth_gate())
-    assert "[docs/PRODUCT_DEPTH_GATE.md](docs/PRODUCT_DEPTH_GATE.md)" in Path("README.md").read_text(
-        encoding="utf-8"
-    )
+    assert "[docs/PRODUCT_DEPTH_GATE.md](docs/PRODUCT_DEPTH_GATE.md)" in Path("README.md").read_text(encoding="utf-8")
 
 
 def test_product_depth_gate_cli_writes_markdown(tmp_path: Path) -> None:

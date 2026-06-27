@@ -79,11 +79,7 @@ def render_product_depth_gate_markdown(gate: dict[str, Any]) -> str:
         ]
     )
     lines.extend(
-        "| "
-        f"`{item['product_area']}` | "
-        f"`{item['priority']}` | "
-        f"{item['candidate']} | "
-        f"{item['success_signal']} |"
+        f"| `{item['product_area']}` | `{item['priority']}` | {item['candidate']} | {item['success_signal']} |"
         for item in gate["candidate_items"]
     )
     lines.extend(["", "## Source Docs", ""])
