@@ -971,6 +971,10 @@
   },
   "interpret_preview_feedback": {
     "accepted": false,
+    "adjustment_strategy": [
+      "Lower noise probability or numeric ranges, then rerender the same reviewed inputs.",
+      "Prioritize object readability before adding more augmentation variety."
+    ],
     "decision_hint": "revise",
     "feedback_intents": [
       "reduce_noise",
@@ -982,6 +986,10 @@
       "object_unrecognizable:high"
     ],
     "recommended_next_tool": "adjust_pipeline",
+    "safety_checks": [
+      "Confirm the same object remains recognizable in the next contact sheet.",
+      "Do not add additional destructive transforms until readability is restored."
+    ],
     "signals": [
       {
         "evidence": "example 8 is too noisy; i cannot recognize the object.",
@@ -1412,6 +1420,9 @@
   },
   "plan_preview_review": {
     "accepted": false,
+    "adjustment_strategy": [
+      "Lower noise probability or numeric ranges, then rerender the same reviewed inputs."
+    ],
     "baseline_run_id": "baseline",
     "blockers": [],
     "candidate_run_id": "candidate-b",
@@ -1433,6 +1444,9 @@
       "Confirm the candidate preserves label and object readability before accepting.",
       "too_noisy: Check whether noise hides object boundaries.",
       "Ask the user which suggested feedback tags apply: too_noisy."
+    ],
+    "safety_checks": [
+      "Confirm the same object remains recognizable in the next contact sheet."
     ],
     "suggested_feedback_tags": [
       "too_noisy"

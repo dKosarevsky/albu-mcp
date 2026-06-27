@@ -121,6 +121,10 @@ def test_output_contract_snapshot_includes_review_agent_plan() -> None:
     assert plan["recommended_next_tool"] == "adjust_pipeline"
     assert plan["feedback_tags"] == ["too_noisy:high"]
     assert plan["tuning_summary"]["quality_risk"] == "medium"
+    assert plan["adjustment_strategy"] == [
+        "Lower noise probability or numeric ranges, then rerender the same reviewed inputs."
+    ]
+    assert plan["safety_checks"] == ["Confirm the same object remains recognizable in the next contact sheet."]
     assert any("render_preview_batch" in action for action in plan["next_actions"])
 
 
@@ -133,6 +137,14 @@ def test_output_contract_snapshot_includes_feedback_interpretation() -> None:
     assert interpretation["recommended_next_tool"] == "adjust_pipeline"
     assert interpretation["feedback_tags"] == ["too_noisy:high", "object_unrecognizable:high"]
     assert interpretation["feedback_intents"] == ["reduce_noise", "protect_object_readability"]
+    assert interpretation["adjustment_strategy"] == [
+        "Lower noise probability or numeric ranges, then rerender the same reviewed inputs.",
+        "Prioritize object readability before adding more augmentation variety.",
+    ]
+    assert interpretation["safety_checks"] == [
+        "Confirm the same object remains recognizable in the next contact sheet.",
+        "Do not add additional destructive transforms until readability is restored.",
+    ]
     assert interpretation["transform_guidance"] == [
         "Reduce noise transform probability or numeric ranges.",
         "Reduce destructive transforms until labeled objects remain readable.",

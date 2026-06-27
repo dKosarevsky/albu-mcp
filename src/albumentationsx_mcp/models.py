@@ -383,6 +383,8 @@ class ReviewAgentPlan(StrictModel):
     review_checklist: list[str] = Field(default_factory=list)
     blockers: list[str] = Field(default_factory=list)
     next_actions: list[str] = Field(default_factory=list)
+    adjustment_strategy: list[str] = Field(default_factory=list)
+    safety_checks: list[str] = Field(default_factory=list)
     suggested_feedback_tags: list[str] = Field(default_factory=list)
     quality_deltas: dict[str, float] = Field(default_factory=dict)
     quality_score: float = Field(default=100.0, ge=0.0, le=100.0)
@@ -406,6 +408,8 @@ class ReviewFeedbackInterpretation(StrictModel):
     feedback_tags: list[str] = Field(default_factory=list)
     feedback_intents: list[str] = Field(default_factory=list)
     transform_guidance: list[str] = Field(default_factory=list)
+    adjustment_strategy: list[str] = Field(default_factory=list)
+    safety_checks: list[str] = Field(default_factory=list)
     signals: list[ReviewFeedbackSignal] = Field(default_factory=list)
     decision_hint: Literal["accept", "revise", "clarify"]
     recommended_next_tool: Literal["record_tuning_decision", "adjust_pipeline", "list_feedback_tags"]
