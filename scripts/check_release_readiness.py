@@ -16,6 +16,7 @@ from scripts.check_contract_snapshots import check_contract_snapshots
 from scripts.check_first_10_minutes import check_first_10_minutes
 from scripts.check_host_acceptance_report import check_host_acceptance_report
 from scripts.check_host_proof_sprint import check_host_proof_sprint
+from scripts.check_p0_host_run_preflight import check_p0_host_run_preflight
 from scripts.check_release_version import validate_release_versions
 from scripts.export_beta_campaign_pack import build_beta_campaign_pack, render_beta_campaign_pack_markdown
 from scripts.export_beta_feedback_intake import build_beta_feedback_intake, render_beta_feedback_intake_markdown
@@ -155,6 +156,7 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
         _check_host_acceptance_evidence(root=config.host_report_root, report_path=config.host_report_path),
         _check_first_10_minutes_entrypoints(),
         _check_host_proof_sprint_entrypoints(),
+        _check_p0_host_run_preflight(),
         _check_v1_decision_report(config.v1_decision_report_path),
         _check_generated_doc(
             name="v1_evidence_operator_packet",
@@ -429,6 +431,22 @@ def _check_host_proof_sprint_entrypoints() -> ReleaseReadinessCheck:
         name="host_proof_sprint",
         ok=True,
         message=f"host proof sprint entrypoints are valid ({len(report.checks)} checks)",
+    )
+
+
+def _check_p0_host_run_preflight() -> ReleaseReadinessCheck:
+    report = check_p0_host_run_preflight()
+    failed = [check for check in report.checks if not check.ok]
+    if failed:
+        return ReleaseReadinessCheck(
+            name="p0_host_run_preflight",
+            ok=False,
+            message="; ".join(f"{check.name}: {check.message}" for check in failed),
+        )
+    return ReleaseReadinessCheck(
+        name="p0_host_run_preflight",
+        ok=True,
+        message=f"p0 host run preflight is valid ({len(report.checks)} checks)",
     )
 
 

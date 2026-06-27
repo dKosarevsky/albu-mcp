@@ -15,6 +15,7 @@ def test_release_readiness_accepts_current_fast_guards(tmp_path: Path) -> None:
         "host_acceptance_evidence",
         "first_10_minutes",
         "host_proof_sprint",
+        "p0_host_run_preflight",
         "v1_decision_report",
         "v1_evidence_operator_packet",
         "v1_growth_cutover_report",
@@ -76,6 +77,7 @@ def test_release_readiness_cli_passes_fast_guards(tmp_path: Path) -> None:
 
     assert "release readiness checks passed" in result.stdout
     assert "manual_host_records" in result.stdout
+    assert "p0_host_run_preflight" in result.stdout
     assert "v1_decision_report" in result.stdout
     assert "v1_evidence_operator_packet" in result.stdout
     assert "v1_growth_cutover_report" in result.stdout
