@@ -33,6 +33,7 @@ def test_release_readiness_accepts_current_fast_guards(tmp_path: Path) -> None:
         "beta_feedback_intake",
         "beta_feedback_status",
         "beta_validation_sprint",
+        "beta_validation_status",
         "v1_rc_release_packet",
         "v1_rc_cutover_checklist",
         "v1_rc_automation_pack",
@@ -92,6 +93,7 @@ def test_release_readiness_cli_passes_fast_guards(tmp_path: Path) -> None:
     assert "p0_evidence_status" in result.stdout
     assert "beta_campaign_pack" in result.stdout
     assert "beta_feedback_intake" in result.stdout
+    assert "beta_validation_status" in result.stdout
     assert "v1_rc_release_packet" in result.stdout
     assert "v1_rc_cutover_checklist" in result.stdout
     assert "v1_rc_automation_pack" in result.stdout

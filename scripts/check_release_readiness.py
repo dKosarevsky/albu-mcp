@@ -23,6 +23,10 @@ from scripts.export_beta_campaign_pack import build_beta_campaign_pack, render_b
 from scripts.export_beta_feedback_intake import build_beta_feedback_intake, render_beta_feedback_intake_markdown
 from scripts.export_beta_feedback_status import build_beta_feedback_status, render_beta_feedback_status_markdown
 from scripts.export_beta_validation_sprint import build_beta_validation_sprint, render_beta_validation_sprint_markdown
+from scripts.export_beta_validation_status import (
+    build_beta_validation_status,
+    render_beta_validation_status_markdown,
+)
 from scripts.export_dataset_quality_depth_plan import (
     build_dataset_quality_depth_plan,
     render_dataset_quality_depth_plan_markdown,
@@ -91,6 +95,7 @@ _DEFAULT_BETA_CAMPAIGN_PACK_PATH = Path("docs/BETA_CAMPAIGN_PACK.md")
 _DEFAULT_BETA_FEEDBACK_INTAKE_PATH = Path("docs/BETA_FEEDBACK_INTAKE.md")
 _DEFAULT_BETA_FEEDBACK_STATUS_PATH = Path("docs/BETA_FEEDBACK_STATUS.md")
 _DEFAULT_BETA_VALIDATION_SPRINT_PATH = Path("docs/BETA_VALIDATION_SPRINT.md")
+_DEFAULT_BETA_VALIDATION_STATUS_PATH = Path("docs/BETA_VALIDATION_STATUS.md")
 _DEFAULT_V1_RC_RELEASE_PACKET_PATH = Path("docs/V1_RC_RELEASE_PACKET.md")
 _DEFAULT_V1_RC_CUTOVER_CHECKLIST_PATH = Path("docs/V1_RC_CUTOVER_CHECKLIST.md")
 _DEFAULT_V1_RC_AUTOMATION_PACK_PATH = Path("docs/V1_RC_AUTOMATION_PACK.md")
@@ -130,6 +135,7 @@ class ReleaseReadinessConfig:
     beta_feedback_intake_path: Path = _DEFAULT_BETA_FEEDBACK_INTAKE_PATH
     beta_feedback_status_path: Path = _DEFAULT_BETA_FEEDBACK_STATUS_PATH
     beta_validation_sprint_path: Path = _DEFAULT_BETA_VALIDATION_SPRINT_PATH
+    beta_validation_status_path: Path = _DEFAULT_BETA_VALIDATION_STATUS_PATH
     v1_rc_release_packet_path: Path = _DEFAULT_V1_RC_RELEASE_PACKET_PATH
     v1_rc_cutover_checklist_path: Path = _DEFAULT_V1_RC_CUTOVER_CHECKLIST_PATH
     v1_rc_automation_pack_path: Path = _DEFAULT_V1_RC_AUTOMATION_PACK_PATH
@@ -266,6 +272,12 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             path=config.beta_validation_sprint_path,
             expected=render_beta_validation_sprint_markdown(build_beta_validation_sprint()),
             exporter="scripts/export_beta_validation_sprint.py",
+        ),
+        _check_generated_doc(
+            name="beta_validation_status",
+            path=config.beta_validation_status_path,
+            expected=render_beta_validation_status_markdown(build_beta_validation_status()),
+            exporter="scripts/export_beta_validation_status.py --output docs/BETA_VALIDATION_STATUS.md",
         ),
         _check_generated_doc(
             name="v1_rc_release_packet",
