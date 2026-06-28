@@ -5,78 +5,136 @@ from pathlib import Path
 
 from scripts.check_release_readiness import ReleaseReadinessConfig, check_release_readiness
 
+EXPECTED_RELEASE_READINESS_CHECKS = [
+    "manual_host_records",
+    "host_acceptance_evidence",
+    "first_10_minutes",
+    "host_proof_sprint",
+    "p0_host_run_preflight",
+    "v1_decision_report",
+    "v1_evidence_operator_packet",
+    "v1_growth_cutover_report",
+    "v1_stabilization_plan",
+    "v1_trust_gates",
+    "v1_rc_readiness_report",
+    "p0_host_runbook",
+    "p0_host_run_session",
+    "p0_evidence_recorder",
+    "p0_evidence_import_guide",
+    "p0_evidence_regeneration_pack",
+    "p0_host_execution_sprint",
+    "p0_host_evidence_ledger",
+    "p0_evidence_status",
+    "p0_blocker_triage",
+    "p0_host_unblock_pack",
+    "p0_host_evidence_recovery",
+    "host_evidence_runner",
+    "codex_cancellation_triage",
+    "claude_code_setup_path",
+    "host_setup_probe",
+    "real_host_evidence_command_center",
+    "host_evidence_capture_kit",
+    "beta_attempt_capture_kit",
+    "beta_campaign_pack",
+    "beta_campaign_execution",
+    "beta_feedback_intake",
+    "beta_feedback_status",
+    "beta_to_backlog_triage",
+    "beta_validation_intake",
+    "beta_validation_loop",
+    "beta_validation_recording_pack",
+    "beta_validation_sprint",
+    "beta_validation_status",
+    "v1_rc_release_packet",
+    "v1_rc_cutover_checklist",
+    "v1_rc_automation_pack",
+    "v1_rc_rehearsal_plan",
+    "v1_rc_cutover_gate",
+    "rc_cutover_recovery_plan",
+    "rc_dry_run",
+    "rc_evidence_reopen_flow",
+    "rc_gate_reopen_packet",
+    "rc_host_evidence_ops",
+    "product_depth_backlog",
+    "product_depth_gate",
+    "product_depth_selection",
+    "policy_assistant_plan",
+    "policy_assistant_mvp_contract",
+    "product_iteration_governor",
+    "host_onboarding_depth_plan",
+    "review_agent_v3_plan",
+    "dataset_quality_depth_plan",
+    "distribution_readiness_pack",
+    "distribution_rollout_packet",
+    "evidence_first_cycle_report",
+    "rc_release_decision_report",
+    "governed_100_iteration_report",
+    "mcp_contract_snapshot",
+    "output_contract_snapshot",
+]
+
+CLI_OUTPUT_CHECK_NAMES = [
+    "manual_host_records",
+    "p0_host_run_preflight",
+    "v1_decision_report",
+    "v1_evidence_operator_packet",
+    "v1_growth_cutover_report",
+    "v1_stabilization_plan",
+    "v1_trust_gates",
+    "v1_rc_readiness_report",
+    "p0_host_run_session",
+    "p0_evidence_import_guide",
+    "p0_evidence_regeneration_pack",
+    "p0_evidence_status",
+    "p0_host_unblock_pack",
+    "p0_host_evidence_recovery",
+    "host_evidence_runner",
+    "codex_cancellation_triage",
+    "claude_code_setup_path",
+    "host_setup_probe",
+    "real_host_evidence_command_center",
+    "host_evidence_capture_kit",
+    "beta_attempt_capture_kit",
+    "beta_campaign_pack",
+    "beta_campaign_execution",
+    "beta_feedback_intake",
+    "beta_to_backlog_triage",
+    "beta_validation_intake",
+    "beta_validation_loop",
+    "beta_validation_recording_pack",
+    "beta_validation_status",
+    "v1_rc_release_packet",
+    "v1_rc_cutover_checklist",
+    "v1_rc_automation_pack",
+    "v1_rc_rehearsal_plan",
+    "v1_rc_cutover_gate",
+    "rc_cutover_recovery_plan",
+    "rc_dry_run",
+    "rc_evidence_reopen_flow",
+    "rc_gate_reopen_packet",
+    "rc_host_evidence_ops",
+    "product_depth_backlog",
+    "product_depth_gate",
+    "product_depth_selection",
+    "policy_assistant_plan",
+    "policy_assistant_mvp_contract",
+    "product_iteration_governor",
+    "host_onboarding_depth_plan",
+    "dataset_quality_depth_plan",
+    "distribution_readiness_pack",
+    "distribution_rollout_packet",
+    "evidence_first_cycle_report",
+    "rc_release_decision_report",
+    "governed_100_iteration_report",
+    "output_contract_snapshot",
+]
+
 
 def test_release_readiness_accepts_current_fast_guards(tmp_path: Path) -> None:
     report = check_release_readiness(ReleaseReadinessConfig(contract_output_work_dir=tmp_path))
 
     assert report.ok is True
-    assert [check.name for check in report.checks] == [
-        "manual_host_records",
-        "host_acceptance_evidence",
-        "first_10_minutes",
-        "host_proof_sprint",
-        "p0_host_run_preflight",
-        "v1_decision_report",
-        "v1_evidence_operator_packet",
-        "v1_growth_cutover_report",
-        "v1_stabilization_plan",
-        "v1_trust_gates",
-        "v1_rc_readiness_report",
-        "p0_host_runbook",
-        "p0_host_run_session",
-        "p0_evidence_recorder",
-        "p0_evidence_import_guide",
-        "p0_evidence_regeneration_pack",
-        "p0_host_execution_sprint",
-        "p0_host_evidence_ledger",
-        "p0_evidence_status",
-        "p0_blocker_triage",
-        "p0_host_unblock_pack",
-        "p0_host_evidence_recovery",
-        "host_evidence_runner",
-        "codex_cancellation_triage",
-        "claude_code_setup_path",
-        "host_setup_probe",
-        "real_host_evidence_command_center",
-        "host_evidence_capture_kit",
-        "beta_attempt_capture_kit",
-        "beta_campaign_pack",
-        "beta_campaign_execution",
-        "beta_feedback_intake",
-        "beta_feedback_status",
-        "beta_to_backlog_triage",
-        "beta_validation_intake",
-        "beta_validation_loop",
-        "beta_validation_recording_pack",
-        "beta_validation_sprint",
-        "beta_validation_status",
-        "v1_rc_release_packet",
-        "v1_rc_cutover_checklist",
-        "v1_rc_automation_pack",
-        "v1_rc_rehearsal_plan",
-        "v1_rc_cutover_gate",
-        "rc_cutover_recovery_plan",
-        "rc_dry_run",
-        "rc_evidence_reopen_flow",
-        "rc_gate_reopen_packet",
-        "rc_host_evidence_ops",
-        "product_depth_backlog",
-        "product_depth_gate",
-        "product_depth_selection",
-        "policy_assistant_plan",
-        "policy_assistant_mvp_contract",
-        "product_iteration_governor",
-        "host_onboarding_depth_plan",
-        "review_agent_v3_plan",
-        "dataset_quality_depth_plan",
-        "distribution_readiness_pack",
-        "distribution_rollout_packet",
-        "evidence_first_cycle_report",
-        "rc_release_decision_report",
-        "governed_100_iteration_report",
-        "mcp_contract_snapshot",
-        "output_contract_snapshot",
-    ]
+    assert [check.name for check in report.checks] == EXPECTED_RELEASE_READINESS_CHECKS
     assert all(check.message for check in report.checks)
     assert all(not check.diff for check in report.checks)
 
@@ -113,59 +171,8 @@ def test_release_readiness_cli_passes_fast_guards(tmp_path: Path) -> None:
     )
 
     assert "release readiness checks passed" in result.stdout
-    assert "manual_host_records" in result.stdout
-    assert "p0_host_run_preflight" in result.stdout
-    assert "v1_decision_report" in result.stdout
-    assert "v1_evidence_operator_packet" in result.stdout
-    assert "v1_growth_cutover_report" in result.stdout
-    assert "v1_stabilization_plan" in result.stdout
-    assert "v1_trust_gates" in result.stdout
-    assert "v1_rc_readiness_report" in result.stdout
-    assert "p0_host_run_session" in result.stdout
-    assert "p0_evidence_import_guide" in result.stdout
-    assert "p0_evidence_regeneration_pack" in result.stdout
-    assert "p0_evidence_status" in result.stdout
-    assert "p0_host_unblock_pack" in result.stdout
-    assert "p0_host_evidence_recovery" in result.stdout
-    assert "host_evidence_runner" in result.stdout
-    assert "codex_cancellation_triage" in result.stdout
-    assert "claude_code_setup_path" in result.stdout
-    assert "host_setup_probe" in result.stdout
-    assert "real_host_evidence_command_center" in result.stdout
-    assert "host_evidence_capture_kit" in result.stdout
-    assert "beta_attempt_capture_kit" in result.stdout
-    assert "beta_campaign_pack" in result.stdout
-    assert "beta_campaign_execution" in result.stdout
-    assert "beta_feedback_intake" in result.stdout
-    assert "beta_to_backlog_triage" in result.stdout
-    assert "beta_validation_intake" in result.stdout
-    assert "beta_validation_loop" in result.stdout
-    assert "beta_validation_recording_pack" in result.stdout
-    assert "beta_validation_status" in result.stdout
-    assert "v1_rc_release_packet" in result.stdout
-    assert "v1_rc_cutover_checklist" in result.stdout
-    assert "v1_rc_automation_pack" in result.stdout
-    assert "v1_rc_rehearsal_plan" in result.stdout
-    assert "v1_rc_cutover_gate" in result.stdout
-    assert "rc_cutover_recovery_plan" in result.stdout
-    assert "rc_dry_run" in result.stdout
-    assert "rc_evidence_reopen_flow" in result.stdout
-    assert "rc_gate_reopen_packet" in result.stdout
-    assert "rc_host_evidence_ops" in result.stdout
-    assert "product_depth_backlog" in result.stdout
-    assert "product_depth_gate" in result.stdout
-    assert "product_depth_selection" in result.stdout
-    assert "policy_assistant_plan" in result.stdout
-    assert "policy_assistant_mvp_contract" in result.stdout
-    assert "product_iteration_governor" in result.stdout
-    assert "host_onboarding_depth_plan" in result.stdout
-    assert "dataset_quality_depth_plan" in result.stdout
-    assert "distribution_readiness_pack" in result.stdout
-    assert "distribution_rollout_packet" in result.stdout
-    assert "evidence_first_cycle_report" in result.stdout
-    assert "rc_release_decision_report" in result.stdout
-    assert "governed_100_iteration_report" in result.stdout
-    assert "output_contract_snapshot" in result.stdout
+    for check_name in CLI_OUTPUT_CHECK_NAMES:
+        assert check_name in result.stdout
 
 
 def test_release_readiness_reports_stale_generated_doc(tmp_path: Path) -> None:

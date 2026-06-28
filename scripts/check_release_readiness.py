@@ -20,13 +20,13 @@ from scripts.check_host_setup_probe import build_host_setup_probe, render_host_s
 from scripts.check_p0_host_run_preflight import check_p0_host_run_preflight
 from scripts.check_release_version import validate_release_versions
 from scripts.check_v1_rc_cutover_gate import build_v1_rc_cutover_gate, render_v1_rc_cutover_gate_markdown
-from scripts.export_beta_campaign_execution import (
-    build_beta_campaign_execution,
-    render_beta_campaign_execution_markdown,
-)
 from scripts.export_beta_attempt_capture_kit import (
     build_beta_attempt_capture_kit,
     render_beta_attempt_capture_kit_markdown,
+)
+from scripts.export_beta_campaign_execution import (
+    build_beta_campaign_execution,
+    render_beta_campaign_execution_markdown,
 )
 from scripts.export_beta_campaign_pack import build_beta_campaign_pack, render_beta_campaign_pack_markdown
 from scripts.export_beta_feedback_intake import build_beta_feedback_intake, render_beta_feedback_intake_markdown
@@ -108,11 +108,11 @@ from scripts.export_p0_host_execution_sprint import (
 from scripts.export_p0_host_run_session import build_p0_host_run_session, render_p0_host_run_session_markdown
 from scripts.export_p0_host_runbook import build_p0_host_runbook, render_p0_host_runbook_markdown
 from scripts.export_p0_host_unblock_pack import build_p0_host_unblock_pack, render_p0_host_unblock_pack_markdown
-from scripts.export_policy_assistant_plan import build_policy_assistant_plan, render_policy_assistant_plan_markdown
 from scripts.export_policy_assistant_mvp_contract import (
     build_policy_assistant_mvp_contract,
     render_policy_assistant_mvp_contract_markdown,
 )
+from scripts.export_policy_assistant_plan import build_policy_assistant_plan, render_policy_assistant_plan_markdown
 from scripts.export_product_depth_backlog import build_product_depth_backlog, render_product_depth_backlog_markdown
 from scripts.export_product_depth_gate import build_product_depth_gate, render_product_depth_gate_markdown
 from scripts.export_product_depth_selection import (
@@ -684,8 +684,7 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             path=config.governed_100_iteration_report_path,
             expected=render_governed_iteration_execution_report_markdown(build_governed_iteration_execution_report()),
             exporter=(
-                "scripts/export_governed_iteration_execution_report.py "
-                "--output docs/GOVERNED_100_ITERATION_REPORT.md"
+                "scripts/export_governed_iteration_execution_report.py --output docs/GOVERNED_100_ITERATION_REPORT.md"
             ),
         ),
         *_check_contract_snapshot_freshness(
