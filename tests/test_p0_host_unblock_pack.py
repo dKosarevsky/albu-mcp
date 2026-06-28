@@ -22,7 +22,9 @@ def test_p0_host_unblock_pack_maps_blocked_hosts_to_recovery_lanes() -> None:
         "codex_tool_call_cancelled",
         "claude_cli_missing",
     }
-    assert all(lane["acceptance_criterion"].startswith("Replace this blocked record") for lane in pack["recovery_lanes"])
+    assert all(
+        lane["acceptance_criterion"].startswith("Replace this blocked record") for lane in pack["recovery_lanes"]
+    )
     assert all("record_host_manual_run.py" in lane["record_command"] for lane in pack["recovery_lanes"])
 
 
@@ -40,9 +42,7 @@ def test_p0_host_unblock_pack_markdown_is_operator_focused() -> None:
 def test_committed_p0_host_unblock_pack_is_current() -> None:
     pack_path = Path("docs/P0_HOST_UNBLOCK_PACK.md")
 
-    assert pack_path.read_text(encoding="utf-8") == render_p0_host_unblock_pack_markdown(
-        build_p0_host_unblock_pack()
-    )
+    assert pack_path.read_text(encoding="utf-8") == render_p0_host_unblock_pack_markdown(build_p0_host_unblock_pack())
 
 
 def test_p0_host_unblock_pack_cli_writes_markdown(tmp_path: Path) -> None:

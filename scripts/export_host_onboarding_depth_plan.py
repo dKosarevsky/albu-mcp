@@ -109,11 +109,7 @@ def render_host_onboarding_depth_plan_markdown(plan: dict[str, Any]) -> str:
         ]
     )
     lines.extend(
-        "| "
-        f"`{item['deliverable']}` | "
-        f"`{item['status']}` | "
-        f"{item['outcome']} | "
-        f"{item['test_focus']} |"
+        f"| `{item['deliverable']}` | `{item['status']}` | {item['outcome']} | {item['test_focus']} |"
         for item in plan["implementation_slices"]
     )
     lines.extend(["", "## Failure Classes To Cover", ""])
@@ -121,8 +117,7 @@ def render_host_onboarding_depth_plan_markdown(plan: dict[str, Any]) -> str:
     lines.extend(["", "## Active P0 Blockers", ""])
     if plan["active_p0_blockers"]:
         lines.extend(
-            f"- {item['host']} / `{item['gate']}`: `{item['failure_class']}`"
-            for item in plan["active_p0_blockers"]
+            f"- {item['host']} / `{item['gate']}`: `{item['failure_class']}`" for item in plan["active_p0_blockers"]
         )
     else:
         lines.append("- none")

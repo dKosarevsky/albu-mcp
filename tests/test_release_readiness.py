@@ -19,6 +19,7 @@ def test_release_readiness_accepts_current_fast_guards(tmp_path: Path) -> None:
         "v1_decision_report",
         "v1_evidence_operator_packet",
         "v1_growth_cutover_report",
+        "v1_stabilization_plan",
         "v1_rc_readiness_report",
         "p0_host_runbook",
         "p0_host_run_session",
@@ -29,7 +30,9 @@ def test_release_readiness_accepts_current_fast_guards(tmp_path: Path) -> None:
         "p0_host_evidence_ledger",
         "p0_evidence_status",
         "p0_blocker_triage",
+        "p0_host_unblock_pack",
         "beta_campaign_pack",
+        "beta_campaign_execution",
         "beta_feedback_intake",
         "beta_feedback_status",
         "beta_validation_sprint",
@@ -39,10 +42,12 @@ def test_release_readiness_accepts_current_fast_guards(tmp_path: Path) -> None:
         "v1_rc_automation_pack",
         "v1_rc_rehearsal_plan",
         "v1_rc_cutover_gate",
+        "rc_cutover_recovery_plan",
         "rc_host_evidence_ops",
         "product_depth_backlog",
         "product_depth_gate",
         "product_depth_selection",
+        "host_onboarding_depth_plan",
         "review_agent_v3_plan",
         "dataset_quality_depth_plan",
         "distribution_readiness_pack",
@@ -91,12 +96,15 @@ def test_release_readiness_cli_passes_fast_guards(tmp_path: Path) -> None:
     assert "v1_decision_report" in result.stdout
     assert "v1_evidence_operator_packet" in result.stdout
     assert "v1_growth_cutover_report" in result.stdout
+    assert "v1_stabilization_plan" in result.stdout
     assert "v1_rc_readiness_report" in result.stdout
     assert "p0_host_run_session" in result.stdout
     assert "p0_evidence_import_guide" in result.stdout
     assert "p0_evidence_regeneration_pack" in result.stdout
     assert "p0_evidence_status" in result.stdout
+    assert "p0_host_unblock_pack" in result.stdout
     assert "beta_campaign_pack" in result.stdout
+    assert "beta_campaign_execution" in result.stdout
     assert "beta_feedback_intake" in result.stdout
     assert "beta_validation_status" in result.stdout
     assert "v1_rc_release_packet" in result.stdout
@@ -104,10 +112,12 @@ def test_release_readiness_cli_passes_fast_guards(tmp_path: Path) -> None:
     assert "v1_rc_automation_pack" in result.stdout
     assert "v1_rc_rehearsal_plan" in result.stdout
     assert "v1_rc_cutover_gate" in result.stdout
+    assert "rc_cutover_recovery_plan" in result.stdout
     assert "rc_host_evidence_ops" in result.stdout
     assert "product_depth_backlog" in result.stdout
     assert "product_depth_gate" in result.stdout
     assert "product_depth_selection" in result.stdout
+    assert "host_onboarding_depth_plan" in result.stdout
     assert "dataset_quality_depth_plan" in result.stdout
     assert "distribution_readiness_pack" in result.stdout
     assert "distribution_rollout_packet" in result.stdout

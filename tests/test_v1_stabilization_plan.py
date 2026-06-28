@@ -40,9 +40,7 @@ def test_v1_stabilization_plan_markdown_lists_scope_and_exit_criteria() -> None:
 def test_committed_v1_stabilization_plan_is_current() -> None:
     plan_path = Path("docs/V1_STABILIZATION_PLAN.md")
 
-    assert plan_path.read_text(encoding="utf-8") == render_v1_stabilization_plan_markdown(
-        build_v1_stabilization_plan()
-    )
+    assert plan_path.read_text(encoding="utf-8") == render_v1_stabilization_plan_markdown(build_v1_stabilization_plan())
 
 
 def test_v1_stabilization_plan_cli_writes_markdown(tmp_path: Path) -> None:

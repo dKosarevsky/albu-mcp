@@ -113,9 +113,7 @@ def render_v1_stabilization_plan_markdown(plan: dict[str, Any]) -> str:
             "| --- | --- | --- |",
         ]
     )
-    lines.extend(
-        f"| `{item['item']}` | `{item['status']}` | {item['candidate']} |" for item in plan["post_v1_backlog"]
-    )
+    lines.extend(f"| `{item['item']}` | `{item['status']}` | {item['candidate']} |" for item in plan["post_v1_backlog"])
     lines.extend(["", "## Source Docs", ""])
     lines.extend(f"- `{source}`" for source in plan["source_docs"])
     return "\n".join(lines) + "\n"

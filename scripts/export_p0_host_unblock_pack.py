@@ -148,8 +148,7 @@ def _recovery_lane(item: dict[str, Any]) -> dict[str, Any]:
         "failure_class": failure_class,
         "diagnostic_steps": _DIAGNOSTIC_BY_FAILURE[failure_class],
         "acceptance_criterion": (
-            "Replace this blocked record with a dated passed record only after the real host completes "
-            f"{item['gate']}."
+            f"Replace this blocked record with a dated passed record only after the real host completes {item['gate']}."
         ),
         "record_command": _record_command(host=item["host"], gate=item["gate"]),
     }

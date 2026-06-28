@@ -457,49 +457,7 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
 
 def main() -> None:
     """CLI entrypoint for CI and local release readiness checks."""
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--tag", default=None, help="Optional release tag, for example v1.10.0.")
-    parser.add_argument("--manual-runs", type=Path, default=_DEFAULT_MANUAL_RUNS_PATH)
-    parser.add_argument("--host-report-root", type=Path, default=Path())
-    parser.add_argument("--host-report", type=Path, default=None)
-    parser.add_argument("--v1-decision-report", type=Path, default=_DEFAULT_V1_DECISION_REPORT_PATH)
-    parser.add_argument("--v1-evidence-operator-packet", type=Path, default=_DEFAULT_V1_EVIDENCE_OPERATOR_PACKET_PATH)
-    parser.add_argument("--v1-growth-cutover-report", type=Path, default=_DEFAULT_V1_GROWTH_CUTOVER_REPORT_PATH)
-    parser.add_argument("--v1-stabilization-plan", type=Path, default=_DEFAULT_V1_STABILIZATION_PLAN_PATH)
-    parser.add_argument("--v1-rc-readiness-report", type=Path, default=_DEFAULT_V1_RC_READINESS_REPORT_PATH)
-    parser.add_argument("--p0-host-runbook", type=Path, default=_DEFAULT_P0_HOST_RUNBOOK_PATH)
-    parser.add_argument("--p0-host-run-session", type=Path, default=_DEFAULT_P0_HOST_RUN_SESSION_PATH)
-    parser.add_argument("--p0-evidence-recorder", type=Path, default=_DEFAULT_P0_EVIDENCE_RECORDER_PATH)
-    parser.add_argument("--p0-evidence-import-guide", type=Path, default=_DEFAULT_P0_EVIDENCE_IMPORT_GUIDE_PATH)
-    parser.add_argument(
-        "--p0-evidence-regeneration-pack",
-        type=Path,
-        default=_DEFAULT_P0_EVIDENCE_REGENERATION_PACK_PATH,
-    )
-    parser.add_argument("--p0-host-execution-sprint", type=Path, default=_DEFAULT_P0_HOST_EXECUTION_SPRINT_PATH)
-    parser.add_argument("--p0-host-evidence-ledger", type=Path, default=_DEFAULT_P0_HOST_EVIDENCE_LEDGER_PATH)
-    parser.add_argument("--p0-evidence-status", type=Path, default=_DEFAULT_P0_EVIDENCE_STATUS_PATH)
-    parser.add_argument("--p0-blocker-triage", type=Path, default=_DEFAULT_P0_BLOCKER_TRIAGE_PATH)
-    parser.add_argument("--p0-host-unblock-pack", type=Path, default=_DEFAULT_P0_HOST_UNBLOCK_PACK_PATH)
-    parser.add_argument("--beta-campaign-pack", type=Path, default=_DEFAULT_BETA_CAMPAIGN_PACK_PATH)
-    parser.add_argument("--beta-campaign-execution", type=Path, default=_DEFAULT_BETA_CAMPAIGN_EXECUTION_PATH)
-    parser.add_argument("--beta-feedback-intake", type=Path, default=_DEFAULT_BETA_FEEDBACK_INTAKE_PATH)
-    parser.add_argument("--beta-feedback-status", type=Path, default=_DEFAULT_BETA_FEEDBACK_STATUS_PATH)
-    parser.add_argument("--beta-validation-sprint", type=Path, default=_DEFAULT_BETA_VALIDATION_SPRINT_PATH)
-    _add_v1_rc_doc_arguments(parser)
-    parser.add_argument("--product-depth-backlog", type=Path, default=_DEFAULT_PRODUCT_DEPTH_BACKLOG_PATH)
-    parser.add_argument("--product-depth-selection", type=Path, default=_DEFAULT_PRODUCT_DEPTH_SELECTION_PATH)
-    parser.add_argument("--host-onboarding-depth-plan", type=Path, default=_DEFAULT_HOST_ONBOARDING_DEPTH_PLAN_PATH)
-    parser.add_argument("--review-agent-v3-plan", type=Path, default=_DEFAULT_REVIEW_AGENT_V3_PLAN_PATH)
-    parser.add_argument("--dataset-quality-depth-plan", type=Path, default=_DEFAULT_DATASET_QUALITY_DEPTH_PLAN_PATH)
-    parser.add_argument("--distribution-rollout-packet", type=Path, default=_DEFAULT_DISTRIBUTION_ROLLOUT_PACKET_PATH)
-    parser.add_argument("--mcp-snapshot", type=Path, default=_DEFAULT_MCP_SNAPSHOT_PATH)
-    parser.add_argument("--output-snapshot", type=Path, default=_DEFAULT_OUTPUT_SNAPSHOT_PATH)
-    parser.add_argument("--contract-output-work-dir", type=Path, default=None)
-    parser.add_argument("--pyproject", type=Path, default=_DEFAULT_PYPROJECT_PATH)
-    parser.add_argument("--server-json", type=Path, default=_DEFAULT_SERVER_JSON_PATH)
-    parser.add_argument("--format", choices=["text", "json"], default="text")
-    args = parser.parse_args()
+    args = _build_arg_parser().parse_args()
 
     host_report_path = (
         args.host_report if args.host_report is not None else args.host_report_root / _DEFAULT_HOST_REPORT_PATH
@@ -561,6 +519,52 @@ def main() -> None:
     if args.format == "text":
         checked = ", ".join(check.name for check in report.checks)
         sys.stdout.write(f"release readiness checks passed: {checked}\n")
+
+
+def _build_arg_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--tag", default=None, help="Optional release tag, for example v1.10.0.")
+    parser.add_argument("--manual-runs", type=Path, default=_DEFAULT_MANUAL_RUNS_PATH)
+    parser.add_argument("--host-report-root", type=Path, default=Path())
+    parser.add_argument("--host-report", type=Path, default=None)
+    parser.add_argument("--v1-decision-report", type=Path, default=_DEFAULT_V1_DECISION_REPORT_PATH)
+    parser.add_argument("--v1-evidence-operator-packet", type=Path, default=_DEFAULT_V1_EVIDENCE_OPERATOR_PACKET_PATH)
+    parser.add_argument("--v1-growth-cutover-report", type=Path, default=_DEFAULT_V1_GROWTH_CUTOVER_REPORT_PATH)
+    parser.add_argument("--v1-stabilization-plan", type=Path, default=_DEFAULT_V1_STABILIZATION_PLAN_PATH)
+    parser.add_argument("--v1-rc-readiness-report", type=Path, default=_DEFAULT_V1_RC_READINESS_REPORT_PATH)
+    parser.add_argument("--p0-host-runbook", type=Path, default=_DEFAULT_P0_HOST_RUNBOOK_PATH)
+    parser.add_argument("--p0-host-run-session", type=Path, default=_DEFAULT_P0_HOST_RUN_SESSION_PATH)
+    parser.add_argument("--p0-evidence-recorder", type=Path, default=_DEFAULT_P0_EVIDENCE_RECORDER_PATH)
+    parser.add_argument("--p0-evidence-import-guide", type=Path, default=_DEFAULT_P0_EVIDENCE_IMPORT_GUIDE_PATH)
+    parser.add_argument(
+        "--p0-evidence-regeneration-pack",
+        type=Path,
+        default=_DEFAULT_P0_EVIDENCE_REGENERATION_PACK_PATH,
+    )
+    parser.add_argument("--p0-host-execution-sprint", type=Path, default=_DEFAULT_P0_HOST_EXECUTION_SPRINT_PATH)
+    parser.add_argument("--p0-host-evidence-ledger", type=Path, default=_DEFAULT_P0_HOST_EVIDENCE_LEDGER_PATH)
+    parser.add_argument("--p0-evidence-status", type=Path, default=_DEFAULT_P0_EVIDENCE_STATUS_PATH)
+    parser.add_argument("--p0-blocker-triage", type=Path, default=_DEFAULT_P0_BLOCKER_TRIAGE_PATH)
+    parser.add_argument("--p0-host-unblock-pack", type=Path, default=_DEFAULT_P0_HOST_UNBLOCK_PACK_PATH)
+    parser.add_argument("--beta-campaign-pack", type=Path, default=_DEFAULT_BETA_CAMPAIGN_PACK_PATH)
+    parser.add_argument("--beta-campaign-execution", type=Path, default=_DEFAULT_BETA_CAMPAIGN_EXECUTION_PATH)
+    parser.add_argument("--beta-feedback-intake", type=Path, default=_DEFAULT_BETA_FEEDBACK_INTAKE_PATH)
+    parser.add_argument("--beta-feedback-status", type=Path, default=_DEFAULT_BETA_FEEDBACK_STATUS_PATH)
+    parser.add_argument("--beta-validation-sprint", type=Path, default=_DEFAULT_BETA_VALIDATION_SPRINT_PATH)
+    _add_v1_rc_doc_arguments(parser)
+    parser.add_argument("--product-depth-backlog", type=Path, default=_DEFAULT_PRODUCT_DEPTH_BACKLOG_PATH)
+    parser.add_argument("--product-depth-selection", type=Path, default=_DEFAULT_PRODUCT_DEPTH_SELECTION_PATH)
+    parser.add_argument("--host-onboarding-depth-plan", type=Path, default=_DEFAULT_HOST_ONBOARDING_DEPTH_PLAN_PATH)
+    parser.add_argument("--review-agent-v3-plan", type=Path, default=_DEFAULT_REVIEW_AGENT_V3_PLAN_PATH)
+    parser.add_argument("--dataset-quality-depth-plan", type=Path, default=_DEFAULT_DATASET_QUALITY_DEPTH_PLAN_PATH)
+    parser.add_argument("--distribution-rollout-packet", type=Path, default=_DEFAULT_DISTRIBUTION_ROLLOUT_PACKET_PATH)
+    parser.add_argument("--mcp-snapshot", type=Path, default=_DEFAULT_MCP_SNAPSHOT_PATH)
+    parser.add_argument("--output-snapshot", type=Path, default=_DEFAULT_OUTPUT_SNAPSHOT_PATH)
+    parser.add_argument("--contract-output-work-dir", type=Path, default=None)
+    parser.add_argument("--pyproject", type=Path, default=_DEFAULT_PYPROJECT_PATH)
+    parser.add_argument("--server-json", type=Path, default=_DEFAULT_SERVER_JSON_PATH)
+    parser.add_argument("--format", choices=["text", "json"], default="text")
+    return parser
 
 
 def _add_v1_rc_doc_arguments(parser: argparse.ArgumentParser) -> None:
