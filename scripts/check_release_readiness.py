@@ -69,6 +69,10 @@ from scripts.export_host_onboarding_depth_plan import (
     build_host_onboarding_depth_plan,
     render_host_onboarding_depth_plan_markdown,
 )
+from scripts.export_real_host_evidence_command_center import (
+    build_real_host_evidence_command_center,
+    render_real_host_evidence_command_center_markdown,
+)
 from scripts.export_p0_blocker_triage import build_p0_blocker_triage, render_p0_blocker_triage_markdown
 from scripts.export_p0_evidence_recorder import build_p0_evidence_recorder, render_p0_evidence_recorder_markdown
 from scripts.export_p0_evidence_regeneration_pack import (
@@ -157,6 +161,7 @@ _DEFAULT_HOST_EVIDENCE_RUNNER_PATH = Path("docs/HOST_EVIDENCE_RUNNER.md")
 _DEFAULT_CODEX_CANCELLATION_TRIAGE_PATH = Path("docs/CODEX_CANCELLATION_TRIAGE.md")
 _DEFAULT_CLAUDE_CODE_SETUP_PATH = Path("docs/CLAUDE_CODE_SETUP_PATH.md")
 _DEFAULT_HOST_SETUP_PROBE_PATH = Path("docs/HOST_SETUP_PROBE.md")
+_DEFAULT_REAL_HOST_EVIDENCE_COMMAND_CENTER_PATH = Path("docs/REAL_HOST_EVIDENCE_COMMAND_CENTER.md")
 _DEFAULT_BETA_CAMPAIGN_PACK_PATH = Path("docs/BETA_CAMPAIGN_PACK.md")
 _DEFAULT_BETA_CAMPAIGN_EXECUTION_PATH = Path("docs/BETA_CAMPAIGN_EXECUTION.md")
 _DEFAULT_BETA_FEEDBACK_INTAKE_PATH = Path("docs/BETA_FEEDBACK_INTAKE.md")
@@ -217,6 +222,7 @@ class ReleaseReadinessConfig:
     codex_cancellation_triage_path: Path = _DEFAULT_CODEX_CANCELLATION_TRIAGE_PATH
     claude_code_setup_path: Path = _DEFAULT_CLAUDE_CODE_SETUP_PATH
     host_setup_probe_path: Path = _DEFAULT_HOST_SETUP_PROBE_PATH
+    real_host_evidence_command_center_path: Path = _DEFAULT_REAL_HOST_EVIDENCE_COMMAND_CENTER_PATH
     beta_campaign_pack_path: Path = _DEFAULT_BETA_CAMPAIGN_PACK_PATH
     beta_campaign_execution_path: Path = _DEFAULT_BETA_CAMPAIGN_EXECUTION_PATH
     beta_feedback_intake_path: Path = _DEFAULT_BETA_FEEDBACK_INTAKE_PATH
@@ -389,6 +395,15 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             path=config.host_setup_probe_path,
             expected=render_host_setup_probe_markdown(build_host_setup_probe()),
             exporter="scripts/check_host_setup_probe.py --output docs/HOST_SETUP_PROBE.md",
+        ),
+        _check_generated_doc(
+            name="real_host_evidence_command_center",
+            path=config.real_host_evidence_command_center_path,
+            expected=render_real_host_evidence_command_center_markdown(build_real_host_evidence_command_center()),
+            exporter=(
+                "scripts/export_real_host_evidence_command_center.py "
+                "--output docs/REAL_HOST_EVIDENCE_COMMAND_CENTER.md"
+            ),
         ),
         _check_generated_doc(
             name="beta_campaign_pack",

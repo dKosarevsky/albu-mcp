@@ -36,6 +36,7 @@ def test_release_readiness_accepts_current_fast_guards(tmp_path: Path) -> None:
         "codex_cancellation_triage",
         "claude_code_setup_path",
         "host_setup_probe",
+        "real_host_evidence_command_center",
         "beta_campaign_pack",
         "beta_campaign_execution",
         "beta_feedback_intake",
@@ -118,6 +119,7 @@ def test_release_readiness_cli_passes_fast_guards(tmp_path: Path) -> None:
     assert "codex_cancellation_triage" in result.stdout
     assert "claude_code_setup_path" in result.stdout
     assert "host_setup_probe" in result.stdout
+    assert "real_host_evidence_command_center" in result.stdout
     assert "beta_campaign_pack" in result.stdout
     assert "beta_campaign_execution" in result.stdout
     assert "beta_feedback_intake" in result.stdout
