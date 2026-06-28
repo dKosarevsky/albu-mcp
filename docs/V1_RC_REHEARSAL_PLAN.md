@@ -15,8 +15,8 @@ Do not create tags, GitHub Releases, or PyPI uploads during rehearsal.
 
 - required_gate_count: `4`
 - recorded_gate_count: `0`
-- missing_gate_count: `4`
-- blocked_gate_count: `0`
+- missing_gate_count: `0`
+- blocked_gate_count: `4`
 
 ## Dry-Run Commands
 

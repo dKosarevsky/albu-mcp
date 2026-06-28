@@ -25,8 +25,8 @@ Ready for v1: `false`
 
 ### Claude Code
 
-- Manual UI status: `missing`
-- First 10 Minutes status: `missing`
+- Manual UI status: `blocked`
+- First 10 Minutes status: `blocked`
 - Run the packet prompt in the real host UI before recording evidence.
 - Manual UI record command: `uv run python scripts/record_host_manual_run.py --host 'Claude Code' --status passed --date YYYY-MM-DD --evidence 'Claude Code listed MCP tools and completed run_host_smoke_check in the host UI.'`
 - First 10 Minutes record command: `uv run python scripts/record_host_manual_run.py --kind first-10-minutes --host 'Claude Code' --status passed --date YYYY-MM-DD --evidence 'Claude Code completed smoke check, preview validation, baseline and candidate render, comparison, and pipeline export.' --artifact docs/assets/demo/demo_report.md`
@@ -41,8 +41,8 @@ Ready for v1: `false`
 
 ### Codex
 
-- Manual UI status: `missing`
-- First 10 Minutes status: `missing`
+- Manual UI status: `blocked`
+- First 10 Minutes status: `blocked`
 - Run the packet prompt in the real host UI before recording evidence.
 - Manual UI record command: `uv run python scripts/record_host_manual_run.py --host Codex --status passed --date YYYY-MM-DD --evidence 'Codex listed MCP tools and completed run_host_smoke_check in the host UI.'`
 - First 10 Minutes record command: `uv run python scripts/record_host_manual_run.py --kind first-10-minutes --host Codex --status passed --date YYYY-MM-DD --evidence 'Codex completed smoke check, preview validation, baseline and candidate render, comparison, and pipeline export.' --artifact docs/assets/demo/demo_report.md`

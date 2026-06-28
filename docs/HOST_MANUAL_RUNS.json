@@ -1,4 +1,34 @@
 {
-  "first_10_minutes_replay": [],
-  "manual_host_ui": []
+  "first_10_minutes_replay": [
+    {
+      "artifacts": [],
+      "date": "2026-06-28",
+      "evidence": "Claude Code host run could not start in this environment because claude CLI was not found in PATH; first-10-minutes replay was not executed.",
+      "host": "Claude Code",
+      "status": "blocked"
+    },
+    {
+      "artifacts": [
+        "/private/tmp/albu-mcp-codex-host-run.txt"
+      ],
+      "date": "2026-06-28",
+      "evidence": "Codex CLI host run reached AlbumentationsX MCP discovery and read albumentationsx://examples/client-smoke, but run_host_smoke_check returned user cancelled MCP tool call twice; preview_ready was not confirmed.",
+      "host": "Codex",
+      "status": "blocked"
+    }
+  ],
+  "manual_host_ui": [
+    {
+      "date": "2026-06-28",
+      "evidence": "Claude Code manual host UI run could not start in this environment because claude CLI was not found in PATH; MCP tools/resources were not observed in Claude Code.",
+      "host": "Claude Code",
+      "status": "blocked"
+    },
+    {
+      "date": "2026-06-28",
+      "evidence": "Codex CLI host listed AlbumentationsX MCP resources/tools and read client-smoke, but run_host_smoke_check was cancelled twice before preview_ready could be confirmed.",
+      "host": "Codex",
+      "status": "blocked"
+    }
+  ]
 }

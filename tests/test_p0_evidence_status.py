@@ -7,7 +7,7 @@ from pathlib import Path
 from scripts.export_p0_evidence_status import build_p0_evidence_status, render_p0_evidence_status_markdown
 
 
-def test_p0_evidence_status_tracks_rc_hosts_and_missing_gates() -> None:
+def test_p0_evidence_status_tracks_rc_hosts_and_blocked_gates() -> None:
     status = build_p0_evidence_status()
 
     assert status["target_hosts"] == ["Codex", "Claude Code"]
@@ -17,11 +17,11 @@ def test_p0_evidence_status_tracks_rc_hosts_and_missing_gates() -> None:
         "host_count": 2,
         "passed_gate_count": 0,
         "required_gate_count": 4,
-        "blocked_gate_count": 0,
-        "missing_gate_count": 4,
+        "blocked_gate_count": 4,
+        "missing_gate_count": 0,
     }
     assert [item["host"] for item in status["host_statuses"]] == ["Codex", "Claude Code"]
-    assert all(gate["status"] == "missing" for item in status["host_statuses"] for gate in item["gates"])
+    assert all(gate["status"] == "blocked" for item in status["host_statuses"] for gate in item["gates"])
     assert status["next_action"] == "Run P0 host runbook and record real UI evidence."
 
 
@@ -31,8 +31,8 @@ def test_p0_evidence_status_markdown_is_reviewable() -> None:
     assert markdown.startswith("# P0 Evidence Status\n")
     assert "RC decision: `hold_rc`" in markdown
     assert "RC ready: `false`" in markdown
-    assert "| Codex | `first_10_minutes_replay` | `missing` |" in markdown
-    assert "| Claude Code | `manual_host_ui` | `missing` |" in markdown
+    assert "| Codex | `first_10_minutes_replay` | `blocked` |" in markdown
+    assert "| Claude Code | `manual_host_ui` | `blocked` |" in markdown
     assert "Run P0 host runbook and record real UI evidence." in markdown
 
 

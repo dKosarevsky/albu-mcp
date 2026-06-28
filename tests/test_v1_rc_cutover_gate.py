@@ -31,7 +31,7 @@ def test_v1_rc_cutover_gate_markdown_is_release_operator_focused() -> None:
     assert "Gate status: `blocked`" in markdown
     assert "Cutover allowed: `false`" in markdown
     assert "The RC cutover gate refuses release" in markdown
-    assert "| Codex | `first_10_minutes_replay` | `missing` |" in markdown
+    assert "| Codex | `first_10_minutes_replay` | `blocked` | `2026-06-28` |" in markdown
     assert "## Blocked Publish Commands" in markdown
     assert "`git tag vX.Y.Z-rc.1`" in markdown
 

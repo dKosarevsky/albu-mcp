@@ -5,8 +5,8 @@
 - Registry name: io.github.dKosarevsky/albu-mcp
 - PyPI package: albumentationsx-mcp==1.15.0
 - Automated Coverage: recorded
-- Manual Host UI: pending
-- First 10 Minutes Replay: pending
+- Manual Host UI: blocked
+- First 10 Minutes Replay: blocked
 
 ## Automated Coverage
 
@@ -26,18 +26,18 @@
 | Host | Status | Date | Evidence |
 | --- | --- | --- | --- |
 | Claude Desktop | pending | none | manual UI run not recorded |
-| Claude Code | pending | none | manual UI run not recorded |
+| Claude Code | blocked | 2026-06-28 | Claude Code manual host UI run could not start in this environment because claude CLI was not found in PATH; MCP tools/resources were not observed in Claude Code. |
 | Cursor | pending | none | manual UI run not recorded |
-| Codex | pending | none | manual UI run not recorded |
+| Codex | blocked | 2026-06-28 | Codex CLI host listed AlbumentationsX MCP resources/tools and read client-smoke, but run_host_smoke_check was cancelled twice before preview_ready could be confirmed. |
 
 ## First 10 Minutes Replay
 
 | Host | Status | Date | Evidence | Artifacts |
 | --- | --- | --- | --- | --- |
 | Claude Desktop | pending | none | first 10 minutes replay not recorded |  |
-| Claude Code | pending | none | first 10 minutes replay not recorded |  |
+| Claude Code | blocked | 2026-06-28 | Claude Code host run could not start in this environment because claude CLI was not found in PATH; first-10-minutes replay was not executed. |  |
 | Cursor | pending | none | first 10 minutes replay not recorded |  |
-| Codex | pending | none | first 10 minutes replay not recorded |  |
+| Codex | blocked | 2026-06-28 | Codex CLI host run reached AlbumentationsX MCP discovery and read albumentationsx://examples/client-smoke, but run_host_smoke_check returned user cancelled MCP tool call twice; preview_ready was not confirmed. | /private/tmp/albu-mcp-codex-host-run.txt |
 
 ## Minimum Release Acceptance
 

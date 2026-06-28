@@ -13,7 +13,7 @@ def test_p0_host_runbook_contains_only_p0_hosts() -> None:
     assert runbook["target_hosts"] == ["Codex", "Claude Code"]
     assert [item["host"] for item in runbook["run_queue"]] == ["Codex", "Claude Code"]
     assert all(item["priority"] == "p0" for item in runbook["run_queue"])
-    assert all(item["next_action"] == "run_first_10_minutes_replay" for item in runbook["run_queue"])
+    assert all(item["next_action"] == "triage_blocker" for item in runbook["run_queue"])
     assert "Cursor" not in {item["host"] for item in runbook["run_queue"]}
     assert "Claude Desktop" not in {item["host"] for item in runbook["run_queue"]}
     assert (
@@ -33,8 +33,8 @@ def test_p0_host_runbook_markdown_is_short_and_actionable() -> None:
     assert markdown.startswith("# P0 Host Runbook\n")
     assert "Target hosts: `Codex, Claude Code`" in markdown
     assert "## P0 Queue" in markdown
-    assert "| 1 | Codex | `run_first_10_minutes_replay` |" in markdown
-    assert "| 2 | Claude Code | `run_first_10_minutes_replay` |" in markdown
+    assert "| 1 | Codex | `triage_blocker` |" in markdown
+    assert "| 2 | Claude Code | `triage_blocker` |" in markdown
     assert "## Record Commands" in markdown
     assert "record_host_manual_run.py --host Codex" in markdown
     assert "record_host_manual_run.py --kind first-10-minutes --host Codex" in markdown

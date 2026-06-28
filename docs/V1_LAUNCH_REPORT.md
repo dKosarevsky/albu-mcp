@@ -18,12 +18,12 @@ Host proof status: `docs/HOST_PROOF_STATUS.md`
 | --- | --- | --- | --- | --- |
 | Claude Desktop | `p1` | `first_10_minutes_replay` | `missing` | `run_first_10_minutes_replay` |
 | Claude Desktop | `p1` | `manual_host_ui` | `missing` | `run_manual_host_ui` |
-| Claude Code | `p0` | `first_10_minutes_replay` | `missing` | `run_first_10_minutes_replay` |
-| Claude Code | `p0` | `manual_host_ui` | `missing` | `run_manual_host_ui` |
+| Claude Code | `p0` | `first_10_minutes_replay` | `blocked` | `triage_blocker` |
+| Claude Code | `p0` | `manual_host_ui` | `blocked` | `triage_blocker` |
 | Cursor | `p1` | `first_10_minutes_replay` | `missing` | `run_first_10_minutes_replay` |
 | Cursor | `p1` | `manual_host_ui` | `missing` | `run_manual_host_ui` |
-| Codex | `p0` | `first_10_minutes_replay` | `missing` | `run_first_10_minutes_replay` |
-| Codex | `p0` | `manual_host_ui` | `missing` | `run_manual_host_ui` |
+| Codex | `p0` | `first_10_minutes_replay` | `blocked` | `triage_blocker` |
+| Codex | `p0` | `manual_host_ui` | `blocked` | `triage_blocker` |
 
 Packet commands:
 - Claude Desktop / first_10_minutes_replay: `uv run python scripts/export_manual_host_acceptance_packet.py --host 'Claude Desktop' --output /tmp/albu-host-claude-desktop.md`
@@ -38,29 +38,29 @@ Packet commands:
 ## Manual Host UI
 
 - Claude Desktop: `pending` — manual host UI evidence not recorded
-- Claude Code: `pending` — manual host UI evidence not recorded
+- Claude Code: `blocked` — Claude Code manual host UI evidence is blocked
 - Cursor: `pending` — manual host UI evidence not recorded
-- Codex: `pending` — manual host UI evidence not recorded
+- Codex: `blocked` — Codex manual host UI evidence is blocked
 
 ## First 10 Minutes Replay
 
 - Claude Desktop: `pending` — first 10 minutes replay not recorded
-- Claude Code: `pending` — first 10 minutes replay not recorded
+- Claude Code: `blocked` — Claude Code first 10 minutes replay is blocked
 - Cursor: `pending` — first 10 minutes replay not recorded
-- Codex: `pending` — first 10 minutes replay not recorded
+- Codex: `blocked` — Codex first 10 minutes replay is blocked
 
 ## Evidence Plan
 
 - Claude Desktop: manual UI `missing`, first 10 minutes `missing`
   - Manual UI: `uv run python scripts/record_host_manual_run.py --host 'Claude Desktop' --status passed --date YYYY-MM-DD --evidence 'Claude Desktop listed MCP tools and completed run_host_smoke_check in the host UI.'`
   - First 10 Minutes: `uv run python scripts/record_host_manual_run.py --kind first-10-minutes --host 'Claude Desktop' --status passed --date YYYY-MM-DD --evidence 'Claude Desktop completed smoke check, preview validation, baseline and candidate render, comparison, and pipeline export.' --artifact docs/assets/demo/demo_report.md`
-- Claude Code: manual UI `missing`, first 10 minutes `missing`
+- Claude Code: manual UI `blocked`, first 10 minutes `blocked`
   - Manual UI: `uv run python scripts/record_host_manual_run.py --host 'Claude Code' --status passed --date YYYY-MM-DD --evidence 'Claude Code listed MCP tools and completed run_host_smoke_check in the host UI.'`
   - First 10 Minutes: `uv run python scripts/record_host_manual_run.py --kind first-10-minutes --host 'Claude Code' --status passed --date YYYY-MM-DD --evidence 'Claude Code completed smoke check, preview validation, baseline and candidate render, comparison, and pipeline export.' --artifact docs/assets/demo/demo_report.md`
 - Cursor: manual UI `missing`, first 10 minutes `missing`
   - Manual UI: `uv run python scripts/record_host_manual_run.py --host Cursor --status passed --date YYYY-MM-DD --evidence 'Cursor listed MCP tools and completed run_host_smoke_check in the host UI.'`
   - First 10 Minutes: `uv run python scripts/record_host_manual_run.py --kind first-10-minutes --host Cursor --status passed --date YYYY-MM-DD --evidence 'Cursor completed smoke check, preview validation, baseline and candidate render, comparison, and pipeline export.' --artifact docs/assets/demo/demo_report.md`
-- Codex: manual UI `missing`, first 10 minutes `missing`
+- Codex: manual UI `blocked`, first 10 minutes `blocked`
   - Manual UI: `uv run python scripts/record_host_manual_run.py --host Codex --status passed --date YYYY-MM-DD --evidence 'Codex listed MCP tools and completed run_host_smoke_check in the host UI.'`
   - First 10 Minutes: `uv run python scripts/record_host_manual_run.py --kind first-10-minutes --host Codex --status passed --date YYYY-MM-DD --evidence 'Codex completed smoke check, preview validation, baseline and candidate render, comparison, and pipeline export.' --artifact docs/assets/demo/demo_report.md`
 

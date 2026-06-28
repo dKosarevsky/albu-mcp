@@ -13,9 +13,10 @@ def test_p0_host_run_session_tracks_real_host_sessions_without_evidence_claims()
     assert session["session_status"] == "manual_evidence_required"
     assert session["required_hosts"] == ["Codex", "Claude Code"]
     assert session["non_fabrication_policy"] == "Record only reviewer-observed real host UI evidence."
-    assert session["summary"]["missing_gate_count"] == 4
+    assert session["summary"]["missing_gate_count"] == 0
+    assert session["summary"]["blocked_gate_count"] == 4
     assert [item["host"] for item in session["host_sessions"]] == ["Codex", "Claude Code"]
-    assert all(item["session_status"] == "not_started" for item in session["host_sessions"])
+    assert all(item["session_status"] == "blocked" for item in session["host_sessions"])
     assert all("run_host_smoke_check" in item["host_prompt"] for item in session["host_sessions"])
     assert all(
         "scripts/record_host_manual_run.py" in command

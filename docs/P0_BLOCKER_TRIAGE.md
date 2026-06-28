@@ -10,10 +10,10 @@
 
 | Host | Gate | Evidence Status | Triage Action | Entrypoints |
 | --- | --- | --- | --- | --- |
-| Codex | `first_10_minutes_replay` | `missing` | `run_p0_host_runbook` | `docs/P0_HOST_RUNBOOK.md`, `docs/P0_EVIDENCE_RECORDER.md`, `docs/HOST_FAILURE_COOKBOOK.md` |
-| Codex | `manual_host_ui` | `missing` | `run_p0_host_runbook` | `docs/P0_HOST_RUNBOOK.md`, `docs/P0_EVIDENCE_RECORDER.md`, `docs/HOST_FAILURE_COOKBOOK.md` |
-| Claude Code | `first_10_minutes_replay` | `missing` | `run_p0_host_runbook` | `docs/P0_HOST_RUNBOOK.md`, `docs/P0_EVIDENCE_RECORDER.md`, `docs/HOST_FAILURE_COOKBOOK.md` |
-| Claude Code | `manual_host_ui` | `missing` | `run_p0_host_runbook` | `docs/P0_HOST_RUNBOOK.md`, `docs/P0_EVIDENCE_RECORDER.md`, `docs/HOST_FAILURE_COOKBOOK.md` |
+| Codex | `first_10_minutes_replay` | `blocked` | `triage_blocker` | `docs/P0_HOST_RUNBOOK.md`, `docs/P0_EVIDENCE_RECORDER.md`, `docs/HOST_FAILURE_COOKBOOK.md` |
+| Codex | `manual_host_ui` | `blocked` | `triage_blocker` | `docs/P0_HOST_RUNBOOK.md`, `docs/P0_EVIDENCE_RECORDER.md`, `docs/HOST_FAILURE_COOKBOOK.md` |
+| Claude Code | `first_10_minutes_replay` | `blocked` | `triage_blocker` | `docs/P0_HOST_RUNBOOK.md`, `docs/P0_EVIDENCE_RECORDER.md`, `docs/HOST_FAILURE_COOKBOOK.md` |
+| Claude Code | `manual_host_ui` | `blocked` | `triage_blocker` | `docs/P0_HOST_RUNBOOK.md`, `docs/P0_EVIDENCE_RECORDER.md`, `docs/HOST_FAILURE_COOKBOOK.md` |
 
 ## Failure Classes
 

@@ -32,7 +32,7 @@ def test_v1_rc_readiness_report_markdown_is_reviewable() -> None:
     assert "RC release candidate allowed: `false`" in markdown
     assert "Stable v1 allowed: `false`" in markdown
     assert "## RC Blockers" in markdown
-    assert "| Codex | `p0` | `first_10_minutes_replay` | `missing` |" in markdown
+    assert "| Codex | `p0` | `first_10_minutes_replay` | `blocked` | `triage_blocker` |" in markdown
     assert "## Promotion Rule" in markdown
     assert "Stable v1 requires all supported hosts to pass." in markdown
 

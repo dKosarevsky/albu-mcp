@@ -21,8 +21,13 @@ def test_host_proof_sprint_checklist_contains_actionable_host_steps() -> None:
         "Cursor",
         "Codex",
     }
-    assert all(host["manual_host_ui"]["status"] == "missing" for host in checklist["hosts"])
-    assert all(host["first_10_minutes_replay"]["status"] == "missing" for host in checklist["hosts"])
+    status_by_host = {host["host"]: host for host in checklist["hosts"]}
+    assert status_by_host["Codex"]["manual_host_ui"]["status"] == "blocked"
+    assert status_by_host["Codex"]["first_10_minutes_replay"]["status"] == "blocked"
+    assert status_by_host["Claude Code"]["manual_host_ui"]["status"] == "blocked"
+    assert status_by_host["Claude Code"]["first_10_minutes_replay"]["status"] == "blocked"
+    assert status_by_host["Cursor"]["manual_host_ui"]["status"] == "missing"
+    assert status_by_host["Claude Desktop"]["first_10_minutes_replay"]["status"] == "missing"
     assert "scripts/export_manual_host_acceptance_packet.py" in markdown
     assert "scripts/record_host_manual_run.py" in markdown
     assert "scripts/export_v1_launch_report.py --output docs/V1_LAUNCH_REPORT.md" in markdown

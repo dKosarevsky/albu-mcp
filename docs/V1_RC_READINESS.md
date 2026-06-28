@@ -14,10 +14,10 @@ RC requires real P0 host evidence; stable v1 requires every supported host gate.
 
 | Host | Priority | Gate | Evidence Status | Next Action |
 | --- | --- | --- | --- | --- |
-| Codex | `p0` | `first_10_minutes_replay` | `missing` | `run_first_10_minutes_replay` |
-| Codex | `p0` | `manual_host_ui` | `missing` | `run_manual_host_ui` |
-| Claude Code | `p0` | `first_10_minutes_replay` | `missing` | `run_first_10_minutes_replay` |
-| Claude Code | `p0` | `manual_host_ui` | `missing` | `run_manual_host_ui` |
+| Codex | `p0` | `first_10_minutes_replay` | `blocked` | `triage_blocker` |
+| Codex | `p0` | `manual_host_ui` | `blocked` | `triage_blocker` |
+| Claude Code | `p0` | `first_10_minutes_replay` | `blocked` | `triage_blocker` |
+| Claude Code | `p0` | `manual_host_ui` | `blocked` | `triage_blocker` |
 
 ## Promotion Rule
 
