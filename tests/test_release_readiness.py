@@ -31,6 +31,7 @@ def test_release_readiness_accepts_current_fast_guards(tmp_path: Path) -> None:
         "p0_evidence_status",
         "p0_blocker_triage",
         "p0_host_unblock_pack",
+        "host_evidence_runner",
         "beta_campaign_pack",
         "beta_campaign_execution",
         "beta_feedback_intake",
@@ -103,6 +104,7 @@ def test_release_readiness_cli_passes_fast_guards(tmp_path: Path) -> None:
     assert "p0_evidence_regeneration_pack" in result.stdout
     assert "p0_evidence_status" in result.stdout
     assert "p0_host_unblock_pack" in result.stdout
+    assert "host_evidence_runner" in result.stdout
     assert "beta_campaign_pack" in result.stdout
     assert "beta_campaign_execution" in result.stdout
     assert "beta_feedback_intake" in result.stdout

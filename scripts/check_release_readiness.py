@@ -43,6 +43,7 @@ from scripts.export_distribution_rollout_packet import (
     build_distribution_rollout_packet,
     render_distribution_rollout_packet_markdown,
 )
+from scripts.export_host_evidence_runner import build_host_evidence_runner, render_host_evidence_runner_markdown
 from scripts.export_host_onboarding_depth_plan import (
     build_host_onboarding_depth_plan,
     render_host_onboarding_depth_plan_markdown,
@@ -124,6 +125,7 @@ _DEFAULT_P0_HOST_EVIDENCE_LEDGER_PATH = Path("docs/P0_HOST_EVIDENCE_LEDGER.md")
 _DEFAULT_P0_EVIDENCE_STATUS_PATH = Path("docs/P0_EVIDENCE_STATUS.md")
 _DEFAULT_P0_BLOCKER_TRIAGE_PATH = Path("docs/P0_BLOCKER_TRIAGE.md")
 _DEFAULT_P0_HOST_UNBLOCK_PACK_PATH = Path("docs/P0_HOST_UNBLOCK_PACK.md")
+_DEFAULT_HOST_EVIDENCE_RUNNER_PATH = Path("docs/HOST_EVIDENCE_RUNNER.md")
 _DEFAULT_BETA_CAMPAIGN_PACK_PATH = Path("docs/BETA_CAMPAIGN_PACK.md")
 _DEFAULT_BETA_CAMPAIGN_EXECUTION_PATH = Path("docs/BETA_CAMPAIGN_EXECUTION.md")
 _DEFAULT_BETA_FEEDBACK_INTAKE_PATH = Path("docs/BETA_FEEDBACK_INTAKE.md")
@@ -174,6 +176,7 @@ class ReleaseReadinessConfig:
     p0_evidence_status_path: Path = _DEFAULT_P0_EVIDENCE_STATUS_PATH
     p0_blocker_triage_path: Path = _DEFAULT_P0_BLOCKER_TRIAGE_PATH
     p0_host_unblock_pack_path: Path = _DEFAULT_P0_HOST_UNBLOCK_PACK_PATH
+    host_evidence_runner_path: Path = _DEFAULT_HOST_EVIDENCE_RUNNER_PATH
     beta_campaign_pack_path: Path = _DEFAULT_BETA_CAMPAIGN_PACK_PATH
     beta_campaign_execution_path: Path = _DEFAULT_BETA_CAMPAIGN_EXECUTION_PATH
     beta_feedback_intake_path: Path = _DEFAULT_BETA_FEEDBACK_INTAKE_PATH
@@ -311,6 +314,12 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             path=config.p0_host_unblock_pack_path,
             expected=render_p0_host_unblock_pack_markdown(build_p0_host_unblock_pack()),
             exporter="scripts/export_p0_host_unblock_pack.py --output docs/P0_HOST_UNBLOCK_PACK.md",
+        ),
+        _check_generated_doc(
+            name="host_evidence_runner",
+            path=config.host_evidence_runner_path,
+            expected=render_host_evidence_runner_markdown(build_host_evidence_runner()),
+            exporter="scripts/export_host_evidence_runner.py --output docs/HOST_EVIDENCE_RUNNER.md",
         ),
         _check_generated_doc(
             name="beta_campaign_pack",
@@ -483,6 +492,7 @@ def main() -> None:
             p0_evidence_status_path=args.p0_evidence_status,
             p0_blocker_triage_path=args.p0_blocker_triage,
             p0_host_unblock_pack_path=args.p0_host_unblock_pack,
+            host_evidence_runner_path=args.host_evidence_runner,
             beta_campaign_pack_path=args.beta_campaign_pack,
             beta_campaign_execution_path=args.beta_campaign_execution,
             beta_feedback_intake_path=args.beta_feedback_intake,
@@ -546,6 +556,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--p0-evidence-status", type=Path, default=_DEFAULT_P0_EVIDENCE_STATUS_PATH)
     parser.add_argument("--p0-blocker-triage", type=Path, default=_DEFAULT_P0_BLOCKER_TRIAGE_PATH)
     parser.add_argument("--p0-host-unblock-pack", type=Path, default=_DEFAULT_P0_HOST_UNBLOCK_PACK_PATH)
+    parser.add_argument("--host-evidence-runner", type=Path, default=_DEFAULT_HOST_EVIDENCE_RUNNER_PATH)
     parser.add_argument("--beta-campaign-pack", type=Path, default=_DEFAULT_BETA_CAMPAIGN_PACK_PATH)
     parser.add_argument("--beta-campaign-execution", type=Path, default=_DEFAULT_BETA_CAMPAIGN_EXECUTION_PATH)
     parser.add_argument("--beta-feedback-intake", type=Path, default=_DEFAULT_BETA_FEEDBACK_INTAKE_PATH)
