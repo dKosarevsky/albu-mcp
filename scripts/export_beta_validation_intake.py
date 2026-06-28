@@ -45,8 +45,7 @@ def build_beta_validation_intake(records_path: Path = _DEFAULT_RECORDS_PATH) -> 
             "target_beta_records": execution["summary"]["target_beta_records"],
         },
         "minimum_signal": (
-            "Record at least one privacy-safe attempt for every beta workflow before product-depth "
-            "reprioritization."
+            "Record at least one privacy-safe attempt for every beta workflow before product-depth reprioritization."
         ),
         "privacy_checklist": [
             "Do not request or commit private datasets, raw images, credentials, or unredacted local paths.",
