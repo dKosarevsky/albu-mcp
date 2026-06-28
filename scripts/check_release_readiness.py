@@ -97,6 +97,10 @@ from scripts.export_v1_rc_readiness_report import (
 )
 from scripts.export_v1_rc_rehearsal_plan import build_v1_rc_rehearsal_plan, render_v1_rc_rehearsal_plan_markdown
 from scripts.export_v1_rc_release_packet import build_v1_rc_release_packet, render_v1_rc_release_packet_markdown
+from scripts.export_v1_stabilization_plan import (
+    build_v1_stabilization_plan,
+    render_v1_stabilization_plan_markdown,
+)
 from scripts.validate_host_manual_runs import validate_host_manual_runs
 from scripts.verify_host_evidence_import import (
     build_host_evidence_import_guide,
@@ -108,6 +112,7 @@ _DEFAULT_HOST_REPORT_PATH = Path("docs/HOST_ACCEPTANCE_EVIDENCE.md")
 _DEFAULT_V1_DECISION_REPORT_PATH = Path("docs/V1_DECISION_REPORT.md")
 _DEFAULT_V1_EVIDENCE_OPERATOR_PACKET_PATH = Path("docs/V1_EVIDENCE_OPERATOR_PACKET.md")
 _DEFAULT_V1_GROWTH_CUTOVER_REPORT_PATH = Path("docs/V1_GROWTH_CUTOVER_REPORT.md")
+_DEFAULT_V1_STABILIZATION_PLAN_PATH = Path("docs/V1_STABILIZATION_PLAN.md")
 _DEFAULT_V1_RC_READINESS_REPORT_PATH = Path("docs/V1_RC_READINESS.md")
 _DEFAULT_P0_HOST_RUNBOOK_PATH = Path("docs/P0_HOST_RUNBOOK.md")
 _DEFAULT_P0_HOST_RUN_SESSION_PATH = Path("docs/P0_HOST_RUN_SESSION.md")
@@ -157,6 +162,7 @@ class ReleaseReadinessConfig:
     v1_decision_report_path: Path = _DEFAULT_V1_DECISION_REPORT_PATH
     v1_evidence_operator_packet_path: Path = _DEFAULT_V1_EVIDENCE_OPERATOR_PACKET_PATH
     v1_growth_cutover_report_path: Path = _DEFAULT_V1_GROWTH_CUTOVER_REPORT_PATH
+    v1_stabilization_plan_path: Path = _DEFAULT_V1_STABILIZATION_PLAN_PATH
     v1_rc_readiness_report_path: Path = _DEFAULT_V1_RC_READINESS_REPORT_PATH
     p0_host_runbook_path: Path = _DEFAULT_P0_HOST_RUNBOOK_PATH
     p0_host_run_session_path: Path = _DEFAULT_P0_HOST_RUN_SESSION_PATH
@@ -238,6 +244,12 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             path=config.v1_growth_cutover_report_path,
             expected=render_v1_growth_cutover_report_markdown(build_v1_growth_cutover_report()),
             exporter="scripts/export_v1_growth_cutover_report.py",
+        ),
+        _check_generated_doc(
+            name="v1_stabilization_plan",
+            path=config.v1_stabilization_plan_path,
+            expected=render_v1_stabilization_plan_markdown(build_v1_stabilization_plan()),
+            exporter="scripts/export_v1_stabilization_plan.py --output docs/V1_STABILIZATION_PLAN.md",
         ),
         _check_v1_rc_readiness_report(config.v1_rc_readiness_report_path),
         _check_generated_doc(
@@ -453,6 +465,7 @@ def main() -> None:
     parser.add_argument("--v1-decision-report", type=Path, default=_DEFAULT_V1_DECISION_REPORT_PATH)
     parser.add_argument("--v1-evidence-operator-packet", type=Path, default=_DEFAULT_V1_EVIDENCE_OPERATOR_PACKET_PATH)
     parser.add_argument("--v1-growth-cutover-report", type=Path, default=_DEFAULT_V1_GROWTH_CUTOVER_REPORT_PATH)
+    parser.add_argument("--v1-stabilization-plan", type=Path, default=_DEFAULT_V1_STABILIZATION_PLAN_PATH)
     parser.add_argument("--v1-rc-readiness-report", type=Path, default=_DEFAULT_V1_RC_READINESS_REPORT_PATH)
     parser.add_argument("--p0-host-runbook", type=Path, default=_DEFAULT_P0_HOST_RUNBOOK_PATH)
     parser.add_argument("--p0-host-run-session", type=Path, default=_DEFAULT_P0_HOST_RUN_SESSION_PATH)
@@ -500,6 +513,7 @@ def main() -> None:
             v1_decision_report_path=args.v1_decision_report,
             v1_evidence_operator_packet_path=args.v1_evidence_operator_packet,
             v1_growth_cutover_report_path=args.v1_growth_cutover_report,
+            v1_stabilization_plan_path=args.v1_stabilization_plan,
             v1_rc_readiness_report_path=args.v1_rc_readiness_report,
             p0_host_runbook_path=args.p0_host_runbook,
             p0_host_run_session_path=args.p0_host_run_session,
