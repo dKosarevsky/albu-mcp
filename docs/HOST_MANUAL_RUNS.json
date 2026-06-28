@@ -1,18 +1,22 @@
 {
   "first_10_minutes_replay": [
     {
-      "artifacts": [],
+      "artifacts": [
+        "/tmp/albu-host-setup-probe-live.json",
+        "/tmp/albu-host-Claude-Code.md"
+      ],
       "date": "2026-06-28",
-      "evidence": "Claude Code host run could not start in this environment because claude CLI was not found in PATH; first-10-minutes replay was not executed.",
+      "evidence": "Claude Code host run could not start in this environment because claude CLI was not found in PATH during live setup probe; first-10-minutes replay was not executed.",
       "host": "Claude Code",
       "status": "blocked"
     },
     {
       "artifacts": [
-        "/private/tmp/albu-mcp-codex-host-run.txt"
+        "/tmp/albu-host-setup-probe-live.json",
+        "/tmp/albu-host-Codex.md"
       ],
       "date": "2026-06-28",
-      "evidence": "Codex CLI host run reached AlbumentationsX MCP discovery and read albumentationsx://examples/client-smoke, but run_host_smoke_check returned user cancelled MCP tool call twice; preview_ready was not confirmed.",
+      "evidence": "Codex setup and preflight passed in this environment, but this Codex API session did not expose a reviewer-observed real MCP host UI flow; first-10-minutes replay was not executed.",
       "host": "Codex",
       "status": "blocked"
     }
@@ -20,13 +24,13 @@
   "manual_host_ui": [
     {
       "date": "2026-06-28",
-      "evidence": "Claude Code manual host UI run could not start in this environment because claude CLI was not found in PATH; MCP tools/resources were not observed in Claude Code.",
+      "evidence": "Claude Code manual host UI run could not start in this environment because claude CLI was not found in PATH during live setup probe; MCP tools/resources were not observed in Claude Code.",
       "host": "Claude Code",
       "status": "blocked"
     },
     {
       "date": "2026-06-28",
-      "evidence": "Codex CLI host listed AlbumentationsX MCP resources/tools and read client-smoke, but run_host_smoke_check was cancelled twice before preview_ready could be confirmed.",
+      "evidence": "Codex setup and P0 preflight passed, but no reviewer-observed real MCP host UI completed run_host_smoke_check or preview_ready confirmation in this session.",
       "host": "Codex",
       "status": "blocked"
     }

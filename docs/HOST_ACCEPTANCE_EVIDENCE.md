@@ -26,18 +26,18 @@
 | Host | Status | Date | Evidence |
 | --- | --- | --- | --- |
 | Claude Desktop | pending | none | manual UI run not recorded |
-| Claude Code | blocked | 2026-06-28 | Claude Code manual host UI run could not start in this environment because claude CLI was not found in PATH; MCP tools/resources were not observed in Claude Code. |
+| Claude Code | blocked | 2026-06-28 | Claude Code manual host UI run could not start in this environment because claude CLI was not found in PATH during live setup probe; MCP tools/resources were not observed in Claude Code. |
 | Cursor | pending | none | manual UI run not recorded |
-| Codex | blocked | 2026-06-28 | Codex CLI host listed AlbumentationsX MCP resources/tools and read client-smoke, but run_host_smoke_check was cancelled twice before preview_ready could be confirmed. |
+| Codex | blocked | 2026-06-28 | Codex setup and P0 preflight passed, but no reviewer-observed real MCP host UI completed run_host_smoke_check or preview_ready confirmation in this session. |
 
 ## First 10 Minutes Replay
 
 | Host | Status | Date | Evidence | Artifacts |
 | --- | --- | --- | --- | --- |
 | Claude Desktop | pending | none | first 10 minutes replay not recorded |  |
-| Claude Code | blocked | 2026-06-28 | Claude Code host run could not start in this environment because claude CLI was not found in PATH; first-10-minutes replay was not executed. |  |
+| Claude Code | blocked | 2026-06-28 | Claude Code host run could not start in this environment because claude CLI was not found in PATH during live setup probe; first-10-minutes replay was not executed. | /tmp/albu-host-setup-probe-live.json, /tmp/albu-host-Claude-Code.md |
 | Cursor | pending | none | first 10 minutes replay not recorded |  |
-| Codex | blocked | 2026-06-28 | Codex CLI host run reached AlbumentationsX MCP discovery and read albumentationsx://examples/client-smoke, but run_host_smoke_check returned user cancelled MCP tool call twice; preview_ready was not confirmed. | /private/tmp/albu-mcp-codex-host-run.txt |
+| Codex | blocked | 2026-06-28 | Codex setup and preflight passed in this environment, but this Codex API session did not expose a reviewer-observed real MCP host UI flow; first-10-minutes replay was not executed. | /tmp/albu-host-setup-probe-live.json, /tmp/albu-host-Codex.md |
 
 ## Minimum Release Acceptance
 
