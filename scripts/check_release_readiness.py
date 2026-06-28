@@ -27,6 +27,10 @@ from scripts.export_beta_campaign_execution import (
 from scripts.export_beta_campaign_pack import build_beta_campaign_pack, render_beta_campaign_pack_markdown
 from scripts.export_beta_feedback_intake import build_beta_feedback_intake, render_beta_feedback_intake_markdown
 from scripts.export_beta_feedback_status import build_beta_feedback_status, render_beta_feedback_status_markdown
+from scripts.export_beta_to_backlog_triage import (
+    build_beta_to_backlog_triage,
+    render_beta_to_backlog_triage_markdown,
+)
 from scripts.export_beta_validation_intake import (
     build_beta_validation_intake,
     render_beta_validation_intake_markdown,
@@ -156,6 +160,7 @@ _DEFAULT_BETA_CAMPAIGN_PACK_PATH = Path("docs/BETA_CAMPAIGN_PACK.md")
 _DEFAULT_BETA_CAMPAIGN_EXECUTION_PATH = Path("docs/BETA_CAMPAIGN_EXECUTION.md")
 _DEFAULT_BETA_FEEDBACK_INTAKE_PATH = Path("docs/BETA_FEEDBACK_INTAKE.md")
 _DEFAULT_BETA_FEEDBACK_STATUS_PATH = Path("docs/BETA_FEEDBACK_STATUS.md")
+_DEFAULT_BETA_TO_BACKLOG_TRIAGE_PATH = Path("docs/BETA_TO_BACKLOG_TRIAGE.md")
 _DEFAULT_BETA_VALIDATION_INTAKE_PATH = Path("docs/BETA_VALIDATION_INTAKE.md")
 _DEFAULT_BETA_VALIDATION_RECORDING_PACK_PATH = Path("docs/BETA_VALIDATION_RECORDING_PACK.md")
 _DEFAULT_BETA_VALIDATION_SPRINT_PATH = Path("docs/BETA_VALIDATION_SPRINT.md")
@@ -214,6 +219,7 @@ class ReleaseReadinessConfig:
     beta_campaign_execution_path: Path = _DEFAULT_BETA_CAMPAIGN_EXECUTION_PATH
     beta_feedback_intake_path: Path = _DEFAULT_BETA_FEEDBACK_INTAKE_PATH
     beta_feedback_status_path: Path = _DEFAULT_BETA_FEEDBACK_STATUS_PATH
+    beta_to_backlog_triage_path: Path = _DEFAULT_BETA_TO_BACKLOG_TRIAGE_PATH
     beta_validation_intake_path: Path = _DEFAULT_BETA_VALIDATION_INTAKE_PATH
     beta_validation_recording_pack_path: Path = _DEFAULT_BETA_VALIDATION_RECORDING_PACK_PATH
     beta_validation_sprint_path: Path = _DEFAULT_BETA_VALIDATION_SPRINT_PATH
@@ -406,6 +412,12 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             exporter="scripts/export_beta_feedback_status.py",
         ),
         _check_generated_doc(
+            name="beta_to_backlog_triage",
+            path=config.beta_to_backlog_triage_path,
+            expected=render_beta_to_backlog_triage_markdown(build_beta_to_backlog_triage()),
+            exporter="scripts/export_beta_to_backlog_triage.py --output docs/BETA_TO_BACKLOG_TRIAGE.md",
+        ),
+        _check_generated_doc(
             name="beta_validation_intake",
             path=config.beta_validation_intake_path,
             expected=render_beta_validation_intake_markdown(build_beta_validation_intake()),
@@ -582,6 +594,7 @@ def main() -> None:
             beta_campaign_execution_path=args.beta_campaign_execution,
             beta_feedback_intake_path=args.beta_feedback_intake,
             beta_feedback_status_path=args.beta_feedback_status,
+            beta_to_backlog_triage_path=args.beta_to_backlog_triage,
             beta_validation_intake_path=args.beta_validation_intake,
             beta_validation_recording_pack_path=args.beta_validation_recording_pack,
             beta_validation_sprint_path=args.beta_validation_sprint,
@@ -653,6 +666,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--beta-campaign-execution", type=Path, default=_DEFAULT_BETA_CAMPAIGN_EXECUTION_PATH)
     parser.add_argument("--beta-feedback-intake", type=Path, default=_DEFAULT_BETA_FEEDBACK_INTAKE_PATH)
     parser.add_argument("--beta-feedback-status", type=Path, default=_DEFAULT_BETA_FEEDBACK_STATUS_PATH)
+    parser.add_argument("--beta-to-backlog-triage", type=Path, default=_DEFAULT_BETA_TO_BACKLOG_TRIAGE_PATH)
     parser.add_argument("--beta-validation-intake", type=Path, default=_DEFAULT_BETA_VALIDATION_INTAKE_PATH)
     parser.add_argument(
         "--beta-validation-recording-pack",

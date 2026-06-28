@@ -40,6 +40,7 @@ def test_release_readiness_accepts_current_fast_guards(tmp_path: Path) -> None:
         "beta_campaign_execution",
         "beta_feedback_intake",
         "beta_feedback_status",
+        "beta_to_backlog_triage",
         "beta_validation_intake",
         "beta_validation_recording_pack",
         "beta_validation_sprint",
@@ -119,6 +120,7 @@ def test_release_readiness_cli_passes_fast_guards(tmp_path: Path) -> None:
     assert "beta_campaign_pack" in result.stdout
     assert "beta_campaign_execution" in result.stdout
     assert "beta_feedback_intake" in result.stdout
+    assert "beta_to_backlog_triage" in result.stdout
     assert "beta_validation_intake" in result.stdout
     assert "beta_validation_recording_pack" in result.stdout
     assert "beta_validation_status" in result.stdout
