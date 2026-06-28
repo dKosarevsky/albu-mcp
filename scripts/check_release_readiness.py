@@ -106,6 +106,10 @@ from scripts.export_rc_cutover_recovery_plan import (
     render_rc_cutover_recovery_plan_markdown,
 )
 from scripts.export_rc_dry_run import build_rc_dry_run, render_rc_dry_run_markdown
+from scripts.export_rc_evidence_reopen_flow import (
+    build_rc_evidence_reopen_flow,
+    render_rc_evidence_reopen_flow_markdown,
+)
 from scripts.export_rc_gate_reopen_packet import build_rc_gate_reopen_packet, render_rc_gate_reopen_packet_markdown
 from scripts.export_rc_host_evidence_ops import build_rc_host_evidence_ops, render_rc_host_evidence_ops_markdown
 from scripts.export_review_agent_v3_plan import build_review_agent_v3_plan, render_review_agent_v3_plan_markdown
@@ -178,6 +182,7 @@ _DEFAULT_V1_RC_REHEARSAL_PLAN_PATH = Path("docs/V1_RC_REHEARSAL_PLAN.md")
 _DEFAULT_V1_RC_CUTOVER_GATE_PATH = Path("docs/V1_RC_CUTOVER_GATE.md")
 _DEFAULT_RC_CUTOVER_RECOVERY_PLAN_PATH = Path("docs/RC_CUTOVER_RECOVERY_PLAN.md")
 _DEFAULT_RC_DRY_RUN_PATH = Path("docs/RC_DRY_RUN.md")
+_DEFAULT_RC_EVIDENCE_REOPEN_FLOW_PATH = Path("docs/RC_EVIDENCE_REOPEN_FLOW.md")
 _DEFAULT_RC_GATE_REOPEN_PACKET_PATH = Path("docs/RC_GATE_REOPEN_PACKET.md")
 _DEFAULT_RC_HOST_EVIDENCE_OPS_PATH = Path("docs/RC_HOST_EVIDENCE_OPS.md")
 _DEFAULT_PRODUCT_DEPTH_BACKLOG_PATH = Path("docs/PRODUCT_DEPTH_BACKLOG.md")
@@ -239,6 +244,7 @@ class ReleaseReadinessConfig:
     v1_rc_cutover_gate_path: Path = _DEFAULT_V1_RC_CUTOVER_GATE_PATH
     rc_cutover_recovery_plan_path: Path = _DEFAULT_RC_CUTOVER_RECOVERY_PLAN_PATH
     rc_dry_run_path: Path = _DEFAULT_RC_DRY_RUN_PATH
+    rc_evidence_reopen_flow_path: Path = _DEFAULT_RC_EVIDENCE_REOPEN_FLOW_PATH
     rc_gate_reopen_packet_path: Path = _DEFAULT_RC_GATE_REOPEN_PACKET_PATH
     rc_host_evidence_ops_path: Path = _DEFAULT_RC_HOST_EVIDENCE_OPS_PATH
     product_depth_backlog_path: Path = _DEFAULT_PRODUCT_DEPTH_BACKLOG_PATH
@@ -502,6 +508,12 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             path=config.rc_dry_run_path,
             expected=render_rc_dry_run_markdown(build_rc_dry_run()),
             exporter="scripts/export_rc_dry_run.py --output docs/RC_DRY_RUN.md",
+        ),
+        _check_generated_doc(
+            name="rc_evidence_reopen_flow",
+            path=config.rc_evidence_reopen_flow_path,
+            expected=render_rc_evidence_reopen_flow_markdown(build_rc_evidence_reopen_flow()),
+            exporter="scripts/export_rc_evidence_reopen_flow.py --output docs/RC_EVIDENCE_REOPEN_FLOW.md",
         ),
         _check_generated_doc(
             name="rc_gate_reopen_packet",
