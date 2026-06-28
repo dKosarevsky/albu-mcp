@@ -35,6 +35,7 @@ from scripts.export_beta_validation_intake import (
     build_beta_validation_intake,
     render_beta_validation_intake_markdown,
 )
+from scripts.export_beta_validation_loop import build_beta_validation_loop, render_beta_validation_loop_markdown
 from scripts.export_beta_validation_recording_pack import (
     build_beta_validation_recording_pack,
     render_beta_validation_recording_pack_markdown,
@@ -172,6 +173,7 @@ _DEFAULT_BETA_FEEDBACK_INTAKE_PATH = Path("docs/BETA_FEEDBACK_INTAKE.md")
 _DEFAULT_BETA_FEEDBACK_STATUS_PATH = Path("docs/BETA_FEEDBACK_STATUS.md")
 _DEFAULT_BETA_TO_BACKLOG_TRIAGE_PATH = Path("docs/BETA_TO_BACKLOG_TRIAGE.md")
 _DEFAULT_BETA_VALIDATION_INTAKE_PATH = Path("docs/BETA_VALIDATION_INTAKE.md")
+_DEFAULT_BETA_VALIDATION_LOOP_PATH = Path("docs/BETA_VALIDATION_LOOP.md")
 _DEFAULT_BETA_VALIDATION_RECORDING_PACK_PATH = Path("docs/BETA_VALIDATION_RECORDING_PACK.md")
 _DEFAULT_BETA_VALIDATION_SPRINT_PATH = Path("docs/BETA_VALIDATION_SPRINT.md")
 _DEFAULT_BETA_VALIDATION_STATUS_PATH = Path("docs/BETA_VALIDATION_STATUS.md")
@@ -234,6 +236,7 @@ class ReleaseReadinessConfig:
     beta_feedback_status_path: Path = _DEFAULT_BETA_FEEDBACK_STATUS_PATH
     beta_to_backlog_triage_path: Path = _DEFAULT_BETA_TO_BACKLOG_TRIAGE_PATH
     beta_validation_intake_path: Path = _DEFAULT_BETA_VALIDATION_INTAKE_PATH
+    beta_validation_loop_path: Path = _DEFAULT_BETA_VALIDATION_LOOP_PATH
     beta_validation_recording_pack_path: Path = _DEFAULT_BETA_VALIDATION_RECORDING_PACK_PATH
     beta_validation_sprint_path: Path = _DEFAULT_BETA_VALIDATION_SPRINT_PATH
     beta_validation_status_path: Path = _DEFAULT_BETA_VALIDATION_STATUS_PATH
@@ -446,6 +449,12 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             path=config.beta_validation_intake_path,
             expected=render_beta_validation_intake_markdown(build_beta_validation_intake()),
             exporter="scripts/export_beta_validation_intake.py --output docs/BETA_VALIDATION_INTAKE.md",
+        ),
+        _check_generated_doc(
+            name="beta_validation_loop",
+            path=config.beta_validation_loop_path,
+            expected=render_beta_validation_loop_markdown(build_beta_validation_loop()),
+            exporter="scripts/export_beta_validation_loop.py --output docs/BETA_VALIDATION_LOOP.md",
         ),
         _check_generated_doc(
             name="beta_validation_recording_pack",
