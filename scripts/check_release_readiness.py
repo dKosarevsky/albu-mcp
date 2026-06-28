@@ -31,6 +31,10 @@ from scripts.export_beta_validation_status import (
     build_beta_validation_status,
     render_beta_validation_status_markdown,
 )
+from scripts.export_claude_code_setup_path import (
+    build_claude_code_setup_path,
+    render_claude_code_setup_path_markdown,
+)
 from scripts.export_codex_cancellation_triage import (
     build_codex_cancellation_triage,
     render_codex_cancellation_triage_markdown,
@@ -131,6 +135,7 @@ _DEFAULT_P0_BLOCKER_TRIAGE_PATH = Path("docs/P0_BLOCKER_TRIAGE.md")
 _DEFAULT_P0_HOST_UNBLOCK_PACK_PATH = Path("docs/P0_HOST_UNBLOCK_PACK.md")
 _DEFAULT_HOST_EVIDENCE_RUNNER_PATH = Path("docs/HOST_EVIDENCE_RUNNER.md")
 _DEFAULT_CODEX_CANCELLATION_TRIAGE_PATH = Path("docs/CODEX_CANCELLATION_TRIAGE.md")
+_DEFAULT_CLAUDE_CODE_SETUP_PATH = Path("docs/CLAUDE_CODE_SETUP_PATH.md")
 _DEFAULT_BETA_CAMPAIGN_PACK_PATH = Path("docs/BETA_CAMPAIGN_PACK.md")
 _DEFAULT_BETA_CAMPAIGN_EXECUTION_PATH = Path("docs/BETA_CAMPAIGN_EXECUTION.md")
 _DEFAULT_BETA_FEEDBACK_INTAKE_PATH = Path("docs/BETA_FEEDBACK_INTAKE.md")
@@ -183,6 +188,7 @@ class ReleaseReadinessConfig:
     p0_host_unblock_pack_path: Path = _DEFAULT_P0_HOST_UNBLOCK_PACK_PATH
     host_evidence_runner_path: Path = _DEFAULT_HOST_EVIDENCE_RUNNER_PATH
     codex_cancellation_triage_path: Path = _DEFAULT_CODEX_CANCELLATION_TRIAGE_PATH
+    claude_code_setup_path: Path = _DEFAULT_CLAUDE_CODE_SETUP_PATH
     beta_campaign_pack_path: Path = _DEFAULT_BETA_CAMPAIGN_PACK_PATH
     beta_campaign_execution_path: Path = _DEFAULT_BETA_CAMPAIGN_EXECUTION_PATH
     beta_feedback_intake_path: Path = _DEFAULT_BETA_FEEDBACK_INTAKE_PATH
@@ -332,6 +338,12 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             path=config.codex_cancellation_triage_path,
             expected=render_codex_cancellation_triage_markdown(build_codex_cancellation_triage()),
             exporter="scripts/export_codex_cancellation_triage.py --output docs/CODEX_CANCELLATION_TRIAGE.md",
+        ),
+        _check_generated_doc(
+            name="claude_code_setup_path",
+            path=config.claude_code_setup_path,
+            expected=render_claude_code_setup_path_markdown(build_claude_code_setup_path()),
+            exporter="scripts/export_claude_code_setup_path.py --output docs/CLAUDE_CODE_SETUP_PATH.md",
         ),
         _check_generated_doc(
             name="beta_campaign_pack",
@@ -506,6 +518,7 @@ def main() -> None:
             p0_host_unblock_pack_path=args.p0_host_unblock_pack,
             host_evidence_runner_path=args.host_evidence_runner,
             codex_cancellation_triage_path=args.codex_cancellation_triage,
+            claude_code_setup_path=args.claude_code_setup_path,
             beta_campaign_pack_path=args.beta_campaign_pack,
             beta_campaign_execution_path=args.beta_campaign_execution,
             beta_feedback_intake_path=args.beta_feedback_intake,
@@ -571,6 +584,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--p0-host-unblock-pack", type=Path, default=_DEFAULT_P0_HOST_UNBLOCK_PACK_PATH)
     parser.add_argument("--host-evidence-runner", type=Path, default=_DEFAULT_HOST_EVIDENCE_RUNNER_PATH)
     parser.add_argument("--codex-cancellation-triage", type=Path, default=_DEFAULT_CODEX_CANCELLATION_TRIAGE_PATH)
+    parser.add_argument("--claude-code-setup-path", type=Path, default=_DEFAULT_CLAUDE_CODE_SETUP_PATH)
     parser.add_argument("--beta-campaign-pack", type=Path, default=_DEFAULT_BETA_CAMPAIGN_PACK_PATH)
     parser.add_argument("--beta-campaign-execution", type=Path, default=_DEFAULT_BETA_CAMPAIGN_EXECUTION_PATH)
     parser.add_argument("--beta-feedback-intake", type=Path, default=_DEFAULT_BETA_FEEDBACK_INTAKE_PATH)
