@@ -35,6 +35,7 @@ from scripts.export_beta_validation_intake import (
     build_beta_validation_intake,
     render_beta_validation_intake_markdown,
 )
+from scripts.export_beta_validation_loop import build_beta_validation_loop, render_beta_validation_loop_markdown
 from scripts.export_beta_validation_recording_pack import (
     build_beta_validation_recording_pack,
     render_beta_validation_recording_pack_markdown,
@@ -91,19 +92,32 @@ from scripts.export_p0_host_execution_sprint import (
 from scripts.export_p0_host_run_session import build_p0_host_run_session, render_p0_host_run_session_markdown
 from scripts.export_p0_host_runbook import build_p0_host_runbook, render_p0_host_runbook_markdown
 from scripts.export_p0_host_unblock_pack import build_p0_host_unblock_pack, render_p0_host_unblock_pack_markdown
+from scripts.export_policy_assistant_plan import build_policy_assistant_plan, render_policy_assistant_plan_markdown
 from scripts.export_product_depth_backlog import build_product_depth_backlog, render_product_depth_backlog_markdown
 from scripts.export_product_depth_gate import build_product_depth_gate, render_product_depth_gate_markdown
 from scripts.export_product_depth_selection import (
     build_product_depth_selection,
     render_product_depth_selection_markdown,
 )
+from scripts.export_product_iteration_governor import (
+    build_product_iteration_governor,
+    render_product_iteration_governor_markdown,
+)
 from scripts.export_rc_cutover_recovery_plan import (
     build_rc_cutover_recovery_plan,
     render_rc_cutover_recovery_plan_markdown,
 )
 from scripts.export_rc_dry_run import build_rc_dry_run, render_rc_dry_run_markdown
+from scripts.export_rc_evidence_reopen_flow import (
+    build_rc_evidence_reopen_flow,
+    render_rc_evidence_reopen_flow_markdown,
+)
 from scripts.export_rc_gate_reopen_packet import build_rc_gate_reopen_packet, render_rc_gate_reopen_packet_markdown
 from scripts.export_rc_host_evidence_ops import build_rc_host_evidence_ops, render_rc_host_evidence_ops_markdown
+from scripts.export_real_host_evidence_command_center import (
+    build_real_host_evidence_command_center,
+    render_real_host_evidence_command_center_markdown,
+)
 from scripts.export_review_agent_v3_plan import build_review_agent_v3_plan, render_review_agent_v3_plan_markdown
 from scripts.export_v1_decision_report import build_v1_decision_report, render_v1_decision_report_markdown
 from scripts.export_v1_evidence_operator_packet import (
@@ -157,12 +171,14 @@ _DEFAULT_HOST_EVIDENCE_RUNNER_PATH = Path("docs/HOST_EVIDENCE_RUNNER.md")
 _DEFAULT_CODEX_CANCELLATION_TRIAGE_PATH = Path("docs/CODEX_CANCELLATION_TRIAGE.md")
 _DEFAULT_CLAUDE_CODE_SETUP_PATH = Path("docs/CLAUDE_CODE_SETUP_PATH.md")
 _DEFAULT_HOST_SETUP_PROBE_PATH = Path("docs/HOST_SETUP_PROBE.md")
+_DEFAULT_REAL_HOST_EVIDENCE_COMMAND_CENTER_PATH = Path("docs/REAL_HOST_EVIDENCE_COMMAND_CENTER.md")
 _DEFAULT_BETA_CAMPAIGN_PACK_PATH = Path("docs/BETA_CAMPAIGN_PACK.md")
 _DEFAULT_BETA_CAMPAIGN_EXECUTION_PATH = Path("docs/BETA_CAMPAIGN_EXECUTION.md")
 _DEFAULT_BETA_FEEDBACK_INTAKE_PATH = Path("docs/BETA_FEEDBACK_INTAKE.md")
 _DEFAULT_BETA_FEEDBACK_STATUS_PATH = Path("docs/BETA_FEEDBACK_STATUS.md")
 _DEFAULT_BETA_TO_BACKLOG_TRIAGE_PATH = Path("docs/BETA_TO_BACKLOG_TRIAGE.md")
 _DEFAULT_BETA_VALIDATION_INTAKE_PATH = Path("docs/BETA_VALIDATION_INTAKE.md")
+_DEFAULT_BETA_VALIDATION_LOOP_PATH = Path("docs/BETA_VALIDATION_LOOP.md")
 _DEFAULT_BETA_VALIDATION_RECORDING_PACK_PATH = Path("docs/BETA_VALIDATION_RECORDING_PACK.md")
 _DEFAULT_BETA_VALIDATION_SPRINT_PATH = Path("docs/BETA_VALIDATION_SPRINT.md")
 _DEFAULT_BETA_VALIDATION_STATUS_PATH = Path("docs/BETA_VALIDATION_STATUS.md")
@@ -173,11 +189,14 @@ _DEFAULT_V1_RC_REHEARSAL_PLAN_PATH = Path("docs/V1_RC_REHEARSAL_PLAN.md")
 _DEFAULT_V1_RC_CUTOVER_GATE_PATH = Path("docs/V1_RC_CUTOVER_GATE.md")
 _DEFAULT_RC_CUTOVER_RECOVERY_PLAN_PATH = Path("docs/RC_CUTOVER_RECOVERY_PLAN.md")
 _DEFAULT_RC_DRY_RUN_PATH = Path("docs/RC_DRY_RUN.md")
+_DEFAULT_RC_EVIDENCE_REOPEN_FLOW_PATH = Path("docs/RC_EVIDENCE_REOPEN_FLOW.md")
 _DEFAULT_RC_GATE_REOPEN_PACKET_PATH = Path("docs/RC_GATE_REOPEN_PACKET.md")
 _DEFAULT_RC_HOST_EVIDENCE_OPS_PATH = Path("docs/RC_HOST_EVIDENCE_OPS.md")
 _DEFAULT_PRODUCT_DEPTH_BACKLOG_PATH = Path("docs/PRODUCT_DEPTH_BACKLOG.md")
 _DEFAULT_PRODUCT_DEPTH_GATE_PATH = Path("docs/PRODUCT_DEPTH_GATE.md")
 _DEFAULT_PRODUCT_DEPTH_SELECTION_PATH = Path("docs/PRODUCT_DEPTH_SELECTION.md")
+_DEFAULT_POLICY_ASSISTANT_PLAN_PATH = Path("docs/POLICY_ASSISTANT_PLAN.md")
+_DEFAULT_PRODUCT_ITERATION_GOVERNOR_PATH = Path("docs/PRODUCT_ITERATION_GOVERNOR.md")
 _DEFAULT_HOST_ONBOARDING_DEPTH_PLAN_PATH = Path("docs/HOST_ONBOARDING_DEPTH_PLAN.md")
 _DEFAULT_REVIEW_AGENT_V3_PLAN_PATH = Path("docs/REVIEW_AGENT_V3_PLAN.md")
 _DEFAULT_DATASET_QUALITY_DEPTH_PLAN_PATH = Path("docs/DATASET_QUALITY_DEPTH_PLAN.md")
@@ -217,12 +236,14 @@ class ReleaseReadinessConfig:
     codex_cancellation_triage_path: Path = _DEFAULT_CODEX_CANCELLATION_TRIAGE_PATH
     claude_code_setup_path: Path = _DEFAULT_CLAUDE_CODE_SETUP_PATH
     host_setup_probe_path: Path = _DEFAULT_HOST_SETUP_PROBE_PATH
+    real_host_evidence_command_center_path: Path = _DEFAULT_REAL_HOST_EVIDENCE_COMMAND_CENTER_PATH
     beta_campaign_pack_path: Path = _DEFAULT_BETA_CAMPAIGN_PACK_PATH
     beta_campaign_execution_path: Path = _DEFAULT_BETA_CAMPAIGN_EXECUTION_PATH
     beta_feedback_intake_path: Path = _DEFAULT_BETA_FEEDBACK_INTAKE_PATH
     beta_feedback_status_path: Path = _DEFAULT_BETA_FEEDBACK_STATUS_PATH
     beta_to_backlog_triage_path: Path = _DEFAULT_BETA_TO_BACKLOG_TRIAGE_PATH
     beta_validation_intake_path: Path = _DEFAULT_BETA_VALIDATION_INTAKE_PATH
+    beta_validation_loop_path: Path = _DEFAULT_BETA_VALIDATION_LOOP_PATH
     beta_validation_recording_pack_path: Path = _DEFAULT_BETA_VALIDATION_RECORDING_PACK_PATH
     beta_validation_sprint_path: Path = _DEFAULT_BETA_VALIDATION_SPRINT_PATH
     beta_validation_status_path: Path = _DEFAULT_BETA_VALIDATION_STATUS_PATH
@@ -233,11 +254,14 @@ class ReleaseReadinessConfig:
     v1_rc_cutover_gate_path: Path = _DEFAULT_V1_RC_CUTOVER_GATE_PATH
     rc_cutover_recovery_plan_path: Path = _DEFAULT_RC_CUTOVER_RECOVERY_PLAN_PATH
     rc_dry_run_path: Path = _DEFAULT_RC_DRY_RUN_PATH
+    rc_evidence_reopen_flow_path: Path = _DEFAULT_RC_EVIDENCE_REOPEN_FLOW_PATH
     rc_gate_reopen_packet_path: Path = _DEFAULT_RC_GATE_REOPEN_PACKET_PATH
     rc_host_evidence_ops_path: Path = _DEFAULT_RC_HOST_EVIDENCE_OPS_PATH
     product_depth_backlog_path: Path = _DEFAULT_PRODUCT_DEPTH_BACKLOG_PATH
     product_depth_gate_path: Path = _DEFAULT_PRODUCT_DEPTH_GATE_PATH
     product_depth_selection_path: Path = _DEFAULT_PRODUCT_DEPTH_SELECTION_PATH
+    policy_assistant_plan_path: Path = _DEFAULT_POLICY_ASSISTANT_PLAN_PATH
+    product_iteration_governor_path: Path = _DEFAULT_PRODUCT_ITERATION_GOVERNOR_PATH
     host_onboarding_depth_plan_path: Path = _DEFAULT_HOST_ONBOARDING_DEPTH_PLAN_PATH
     review_agent_v3_plan_path: Path = _DEFAULT_REVIEW_AGENT_V3_PLAN_PATH
     dataset_quality_depth_plan_path: Path = _DEFAULT_DATASET_QUALITY_DEPTH_PLAN_PATH
@@ -391,6 +415,14 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             exporter="scripts/check_host_setup_probe.py --output docs/HOST_SETUP_PROBE.md",
         ),
         _check_generated_doc(
+            name="real_host_evidence_command_center",
+            path=config.real_host_evidence_command_center_path,
+            expected=render_real_host_evidence_command_center_markdown(build_real_host_evidence_command_center()),
+            exporter=(
+                "scripts/export_real_host_evidence_command_center.py --output docs/REAL_HOST_EVIDENCE_COMMAND_CENTER.md"
+            ),
+        ),
+        _check_generated_doc(
             name="beta_campaign_pack",
             path=config.beta_campaign_pack_path,
             expected=render_beta_campaign_pack_markdown(build_beta_campaign_pack()),
@@ -425,6 +457,12 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             path=config.beta_validation_intake_path,
             expected=render_beta_validation_intake_markdown(build_beta_validation_intake()),
             exporter="scripts/export_beta_validation_intake.py --output docs/BETA_VALIDATION_INTAKE.md",
+        ),
+        _check_generated_doc(
+            name="beta_validation_loop",
+            path=config.beta_validation_loop_path,
+            expected=render_beta_validation_loop_markdown(build_beta_validation_loop()),
+            exporter="scripts/export_beta_validation_loop.py --output docs/BETA_VALIDATION_LOOP.md",
         ),
         _check_generated_doc(
             name="beta_validation_recording_pack",
@@ -489,6 +527,12 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             exporter="scripts/export_rc_dry_run.py --output docs/RC_DRY_RUN.md",
         ),
         _check_generated_doc(
+            name="rc_evidence_reopen_flow",
+            path=config.rc_evidence_reopen_flow_path,
+            expected=render_rc_evidence_reopen_flow_markdown(build_rc_evidence_reopen_flow()),
+            exporter="scripts/export_rc_evidence_reopen_flow.py --output docs/RC_EVIDENCE_REOPEN_FLOW.md",
+        ),
+        _check_generated_doc(
             name="rc_gate_reopen_packet",
             path=config.rc_gate_reopen_packet_path,
             expected=render_rc_gate_reopen_packet_markdown(build_rc_gate_reopen_packet()),
@@ -517,6 +561,18 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             path=config.product_depth_selection_path,
             expected=render_product_depth_selection_markdown(build_product_depth_selection()),
             exporter="scripts/export_product_depth_selection.py --output docs/PRODUCT_DEPTH_SELECTION.md",
+        ),
+        _check_generated_doc(
+            name="policy_assistant_plan",
+            path=config.policy_assistant_plan_path,
+            expected=render_policy_assistant_plan_markdown(build_policy_assistant_plan()),
+            exporter="scripts/export_policy_assistant_plan.py --output docs/POLICY_ASSISTANT_PLAN.md",
+        ),
+        _check_generated_doc(
+            name="product_iteration_governor",
+            path=config.product_iteration_governor_path,
+            expected=render_product_iteration_governor_markdown(build_product_iteration_governor()),
+            exporter="scripts/export_product_iteration_governor.py --output docs/PRODUCT_ITERATION_GOVERNOR.md",
         ),
         _check_generated_doc(
             name="host_onboarding_depth_plan",

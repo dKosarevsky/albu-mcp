@@ -36,12 +36,14 @@ def test_release_readiness_accepts_current_fast_guards(tmp_path: Path) -> None:
         "codex_cancellation_triage",
         "claude_code_setup_path",
         "host_setup_probe",
+        "real_host_evidence_command_center",
         "beta_campaign_pack",
         "beta_campaign_execution",
         "beta_feedback_intake",
         "beta_feedback_status",
         "beta_to_backlog_triage",
         "beta_validation_intake",
+        "beta_validation_loop",
         "beta_validation_recording_pack",
         "beta_validation_sprint",
         "beta_validation_status",
@@ -52,11 +54,14 @@ def test_release_readiness_accepts_current_fast_guards(tmp_path: Path) -> None:
         "v1_rc_cutover_gate",
         "rc_cutover_recovery_plan",
         "rc_dry_run",
+        "rc_evidence_reopen_flow",
         "rc_gate_reopen_packet",
         "rc_host_evidence_ops",
         "product_depth_backlog",
         "product_depth_gate",
         "product_depth_selection",
+        "policy_assistant_plan",
+        "product_iteration_governor",
         "host_onboarding_depth_plan",
         "review_agent_v3_plan",
         "dataset_quality_depth_plan",
@@ -118,11 +123,13 @@ def test_release_readiness_cli_passes_fast_guards(tmp_path: Path) -> None:
     assert "codex_cancellation_triage" in result.stdout
     assert "claude_code_setup_path" in result.stdout
     assert "host_setup_probe" in result.stdout
+    assert "real_host_evidence_command_center" in result.stdout
     assert "beta_campaign_pack" in result.stdout
     assert "beta_campaign_execution" in result.stdout
     assert "beta_feedback_intake" in result.stdout
     assert "beta_to_backlog_triage" in result.stdout
     assert "beta_validation_intake" in result.stdout
+    assert "beta_validation_loop" in result.stdout
     assert "beta_validation_recording_pack" in result.stdout
     assert "beta_validation_status" in result.stdout
     assert "v1_rc_release_packet" in result.stdout
@@ -132,11 +139,14 @@ def test_release_readiness_cli_passes_fast_guards(tmp_path: Path) -> None:
     assert "v1_rc_cutover_gate" in result.stdout
     assert "rc_cutover_recovery_plan" in result.stdout
     assert "rc_dry_run" in result.stdout
+    assert "rc_evidence_reopen_flow" in result.stdout
     assert "rc_gate_reopen_packet" in result.stdout
     assert "rc_host_evidence_ops" in result.stdout
     assert "product_depth_backlog" in result.stdout
     assert "product_depth_gate" in result.stdout
     assert "product_depth_selection" in result.stdout
+    assert "policy_assistant_plan" in result.stdout
+    assert "product_iteration_governor" in result.stdout
     assert "host_onboarding_depth_plan" in result.stdout
     assert "dataset_quality_depth_plan" in result.stdout
     assert "distribution_readiness_pack" in result.stdout
