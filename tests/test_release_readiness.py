@@ -20,6 +20,7 @@ def test_release_readiness_accepts_current_fast_guards(tmp_path: Path) -> None:
         "v1_evidence_operator_packet",
         "v1_growth_cutover_report",
         "v1_stabilization_plan",
+        "v1_trust_gates",
         "v1_rc_readiness_report",
         "p0_host_runbook",
         "p0_host_run_session",
@@ -113,6 +114,7 @@ def test_release_readiness_cli_passes_fast_guards(tmp_path: Path) -> None:
     assert "v1_evidence_operator_packet" in result.stdout
     assert "v1_growth_cutover_report" in result.stdout
     assert "v1_stabilization_plan" in result.stdout
+    assert "v1_trust_gates" in result.stdout
     assert "v1_rc_readiness_report" in result.stdout
     assert "p0_host_run_session" in result.stdout
     assert "p0_evidence_import_guide" in result.stdout

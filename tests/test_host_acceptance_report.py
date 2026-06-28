@@ -55,9 +55,9 @@ def test_host_acceptance_markdown_reports_pending_manual_status() -> None:
 
     assert "# Host Acceptance Evidence" in markdown
     assert "| Claude Desktop | pending | none | manual UI run not recorded |" in markdown
-    assert "| Codex | blocked | 2026-06-28 | Codex CLI host listed AlbumentationsX MCP resources/tools" in markdown
+    assert "| Codex | blocked | 2026-06-28 | Codex setup and P0 preflight passed" in markdown
     assert "## First 10 Minutes Replay" in markdown
-    assert "| Codex | blocked | 2026-06-28 | Codex CLI host run reached AlbumentationsX MCP discovery" in markdown
+    assert "| Codex | blocked | 2026-06-28 | Codex setup and preflight passed in this environment" in markdown
     assert "| MCP Registry metadata publish check | automated |" in markdown
     assert "| host acceptance evidence freshness | automated |" in markdown
     assert "Manual Host UI: blocked" in markdown
