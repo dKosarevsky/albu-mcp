@@ -20,6 +20,10 @@ from scripts.check_host_setup_probe import build_host_setup_probe, render_host_s
 from scripts.check_p0_host_run_preflight import check_p0_host_run_preflight
 from scripts.check_release_version import validate_release_versions
 from scripts.check_v1_rc_cutover_gate import build_v1_rc_cutover_gate, render_v1_rc_cutover_gate_markdown
+from scripts.export_beta_attempt_capture_kit import (
+    build_beta_attempt_capture_kit,
+    render_beta_attempt_capture_kit_markdown,
+)
 from scripts.export_beta_campaign_execution import (
     build_beta_campaign_execution,
     render_beta_campaign_execution_markdown,
@@ -69,6 +73,14 @@ from scripts.export_evidence_first_cycle_report import (
     build_evidence_first_cycle_report,
     render_evidence_first_cycle_report_markdown,
 )
+from scripts.export_governed_iteration_execution_report import (
+    build_governed_iteration_execution_report,
+    render_governed_iteration_execution_report_markdown,
+)
+from scripts.export_host_evidence_capture_kit import (
+    build_host_evidence_capture_kit,
+    render_host_evidence_capture_kit_markdown,
+)
 from scripts.export_host_evidence_runner import build_host_evidence_runner, render_host_evidence_runner_markdown
 from scripts.export_host_onboarding_depth_plan import (
     build_host_onboarding_depth_plan,
@@ -96,6 +108,10 @@ from scripts.export_p0_host_execution_sprint import (
 from scripts.export_p0_host_run_session import build_p0_host_run_session, render_p0_host_run_session_markdown
 from scripts.export_p0_host_runbook import build_p0_host_runbook, render_p0_host_runbook_markdown
 from scripts.export_p0_host_unblock_pack import build_p0_host_unblock_pack, render_p0_host_unblock_pack_markdown
+from scripts.export_policy_assistant_mvp_contract import (
+    build_policy_assistant_mvp_contract,
+    render_policy_assistant_mvp_contract_markdown,
+)
 from scripts.export_policy_assistant_plan import build_policy_assistant_plan, render_policy_assistant_plan_markdown
 from scripts.export_product_depth_backlog import build_product_depth_backlog, render_product_depth_backlog_markdown
 from scripts.export_product_depth_gate import build_product_depth_gate, render_product_depth_gate_markdown
@@ -118,6 +134,10 @@ from scripts.export_rc_evidence_reopen_flow import (
 )
 from scripts.export_rc_gate_reopen_packet import build_rc_gate_reopen_packet, render_rc_gate_reopen_packet_markdown
 from scripts.export_rc_host_evidence_ops import build_rc_host_evidence_ops, render_rc_host_evidence_ops_markdown
+from scripts.export_rc_release_decision_report import (
+    build_rc_release_decision_report,
+    render_rc_release_decision_report_markdown,
+)
 from scripts.export_real_host_evidence_command_center import (
     build_real_host_evidence_command_center,
     render_real_host_evidence_command_center_markdown,
@@ -178,6 +198,8 @@ _DEFAULT_CODEX_CANCELLATION_TRIAGE_PATH = Path("docs/CODEX_CANCELLATION_TRIAGE.m
 _DEFAULT_CLAUDE_CODE_SETUP_PATH = Path("docs/CLAUDE_CODE_SETUP_PATH.md")
 _DEFAULT_HOST_SETUP_PROBE_PATH = Path("docs/HOST_SETUP_PROBE.md")
 _DEFAULT_REAL_HOST_EVIDENCE_COMMAND_CENTER_PATH = Path("docs/REAL_HOST_EVIDENCE_COMMAND_CENTER.md")
+_DEFAULT_HOST_EVIDENCE_CAPTURE_KIT_PATH = Path("docs/HOST_EVIDENCE_CAPTURE_KIT.md")
+_DEFAULT_BETA_ATTEMPT_CAPTURE_KIT_PATH = Path("docs/BETA_ATTEMPT_CAPTURE_KIT.md")
 _DEFAULT_BETA_CAMPAIGN_PACK_PATH = Path("docs/BETA_CAMPAIGN_PACK.md")
 _DEFAULT_BETA_CAMPAIGN_EXECUTION_PATH = Path("docs/BETA_CAMPAIGN_EXECUTION.md")
 _DEFAULT_BETA_FEEDBACK_INTAKE_PATH = Path("docs/BETA_FEEDBACK_INTAKE.md")
@@ -202,6 +224,7 @@ _DEFAULT_PRODUCT_DEPTH_BACKLOG_PATH = Path("docs/PRODUCT_DEPTH_BACKLOG.md")
 _DEFAULT_PRODUCT_DEPTH_GATE_PATH = Path("docs/PRODUCT_DEPTH_GATE.md")
 _DEFAULT_PRODUCT_DEPTH_SELECTION_PATH = Path("docs/PRODUCT_DEPTH_SELECTION.md")
 _DEFAULT_POLICY_ASSISTANT_PLAN_PATH = Path("docs/POLICY_ASSISTANT_PLAN.md")
+_DEFAULT_POLICY_ASSISTANT_MVP_CONTRACT_PATH = Path("docs/POLICY_ASSISTANT_MVP_CONTRACT.md")
 _DEFAULT_PRODUCT_ITERATION_GOVERNOR_PATH = Path("docs/PRODUCT_ITERATION_GOVERNOR.md")
 _DEFAULT_HOST_ONBOARDING_DEPTH_PLAN_PATH = Path("docs/HOST_ONBOARDING_DEPTH_PLAN.md")
 _DEFAULT_REVIEW_AGENT_V3_PLAN_PATH = Path("docs/REVIEW_AGENT_V3_PLAN.md")
@@ -209,6 +232,8 @@ _DEFAULT_DATASET_QUALITY_DEPTH_PLAN_PATH = Path("docs/DATASET_QUALITY_DEPTH_PLAN
 _DEFAULT_DISTRIBUTION_READINESS_PACK_PATH = Path("docs/DISTRIBUTION_READINESS_PACK.md")
 _DEFAULT_DISTRIBUTION_ROLLOUT_PACKET_PATH = Path("docs/DISTRIBUTION_ROLLOUT_PACKET.md")
 _DEFAULT_EVIDENCE_FIRST_CYCLE_REPORT_PATH = Path("docs/EVIDENCE_FIRST_CYCLE_REPORT.md")
+_DEFAULT_RC_RELEASE_DECISION_REPORT_PATH = Path("docs/RC_RELEASE_DECISION_REPORT.md")
+_DEFAULT_GOVERNED_100_ITERATION_REPORT_PATH = Path("docs/GOVERNED_100_ITERATION_REPORT.md")
 _DEFAULT_MCP_SNAPSHOT_PATH = Path("tests/fixtures/snapshots/mcp_contract.json")
 _DEFAULT_OUTPUT_SNAPSHOT_PATH = Path("tests/fixtures/snapshots/output_contracts.json")
 _DEFAULT_PYPROJECT_PATH = Path("pyproject.toml")
@@ -245,6 +270,8 @@ class ReleaseReadinessConfig:
     claude_code_setup_path: Path = _DEFAULT_CLAUDE_CODE_SETUP_PATH
     host_setup_probe_path: Path = _DEFAULT_HOST_SETUP_PROBE_PATH
     real_host_evidence_command_center_path: Path = _DEFAULT_REAL_HOST_EVIDENCE_COMMAND_CENTER_PATH
+    host_evidence_capture_kit_path: Path = _DEFAULT_HOST_EVIDENCE_CAPTURE_KIT_PATH
+    beta_attempt_capture_kit_path: Path = _DEFAULT_BETA_ATTEMPT_CAPTURE_KIT_PATH
     beta_campaign_pack_path: Path = _DEFAULT_BETA_CAMPAIGN_PACK_PATH
     beta_campaign_execution_path: Path = _DEFAULT_BETA_CAMPAIGN_EXECUTION_PATH
     beta_feedback_intake_path: Path = _DEFAULT_BETA_FEEDBACK_INTAKE_PATH
@@ -269,6 +296,7 @@ class ReleaseReadinessConfig:
     product_depth_gate_path: Path = _DEFAULT_PRODUCT_DEPTH_GATE_PATH
     product_depth_selection_path: Path = _DEFAULT_PRODUCT_DEPTH_SELECTION_PATH
     policy_assistant_plan_path: Path = _DEFAULT_POLICY_ASSISTANT_PLAN_PATH
+    policy_assistant_mvp_contract_path: Path = _DEFAULT_POLICY_ASSISTANT_MVP_CONTRACT_PATH
     product_iteration_governor_path: Path = _DEFAULT_PRODUCT_ITERATION_GOVERNOR_PATH
     host_onboarding_depth_plan_path: Path = _DEFAULT_HOST_ONBOARDING_DEPTH_PLAN_PATH
     review_agent_v3_plan_path: Path = _DEFAULT_REVIEW_AGENT_V3_PLAN_PATH
@@ -276,6 +304,8 @@ class ReleaseReadinessConfig:
     distribution_readiness_pack_path: Path = _DEFAULT_DISTRIBUTION_READINESS_PACK_PATH
     distribution_rollout_packet_path: Path = _DEFAULT_DISTRIBUTION_ROLLOUT_PACKET_PATH
     evidence_first_cycle_report_path: Path = _DEFAULT_EVIDENCE_FIRST_CYCLE_REPORT_PATH
+    rc_release_decision_report_path: Path = _DEFAULT_RC_RELEASE_DECISION_REPORT_PATH
+    governed_100_iteration_report_path: Path = _DEFAULT_GOVERNED_100_ITERATION_REPORT_PATH
     mcp_snapshot_path: Path = _DEFAULT_MCP_SNAPSHOT_PATH
     output_snapshot_path: Path = _DEFAULT_OUTPUT_SNAPSHOT_PATH
     contract_output_work_dir: Path | None = None
@@ -438,6 +468,18 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             ),
         ),
         _check_generated_doc(
+            name="host_evidence_capture_kit",
+            path=config.host_evidence_capture_kit_path,
+            expected=render_host_evidence_capture_kit_markdown(build_host_evidence_capture_kit()),
+            exporter="scripts/export_host_evidence_capture_kit.py --output docs/HOST_EVIDENCE_CAPTURE_KIT.md",
+        ),
+        _check_generated_doc(
+            name="beta_attempt_capture_kit",
+            path=config.beta_attempt_capture_kit_path,
+            expected=render_beta_attempt_capture_kit_markdown(build_beta_attempt_capture_kit()),
+            exporter="scripts/export_beta_attempt_capture_kit.py --output docs/BETA_ATTEMPT_CAPTURE_KIT.md",
+        ),
+        _check_generated_doc(
             name="beta_campaign_pack",
             path=config.beta_campaign_pack_path,
             expected=render_beta_campaign_pack_markdown(build_beta_campaign_pack()),
@@ -584,6 +626,12 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             exporter="scripts/export_policy_assistant_plan.py --output docs/POLICY_ASSISTANT_PLAN.md",
         ),
         _check_generated_doc(
+            name="policy_assistant_mvp_contract",
+            path=config.policy_assistant_mvp_contract_path,
+            expected=render_policy_assistant_mvp_contract_markdown(build_policy_assistant_mvp_contract()),
+            exporter="scripts/export_policy_assistant_mvp_contract.py --output docs/POLICY_ASSISTANT_MVP_CONTRACT.md",
+        ),
+        _check_generated_doc(
             name="product_iteration_governor",
             path=config.product_iteration_governor_path,
             expected=render_product_iteration_governor_markdown(build_product_iteration_governor()),
@@ -624,6 +672,20 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             path=config.evidence_first_cycle_report_path,
             expected=render_evidence_first_cycle_report_markdown(build_evidence_first_cycle_report()),
             exporter="scripts/export_evidence_first_cycle_report.py --output docs/EVIDENCE_FIRST_CYCLE_REPORT.md",
+        ),
+        _check_generated_doc(
+            name="rc_release_decision_report",
+            path=config.rc_release_decision_report_path,
+            expected=render_rc_release_decision_report_markdown(build_rc_release_decision_report()),
+            exporter="scripts/export_rc_release_decision_report.py --output docs/RC_RELEASE_DECISION_REPORT.md",
+        ),
+        _check_generated_doc(
+            name="governed_100_iteration_report",
+            path=config.governed_100_iteration_report_path,
+            expected=render_governed_iteration_execution_report_markdown(build_governed_iteration_execution_report()),
+            exporter=(
+                "scripts/export_governed_iteration_execution_report.py --output docs/GOVERNED_100_ITERATION_REPORT.md"
+            ),
         ),
         *_check_contract_snapshot_freshness(
             mcp_snapshot_path=config.mcp_snapshot_path,
