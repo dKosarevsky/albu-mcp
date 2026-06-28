@@ -65,6 +65,10 @@ from scripts.export_distribution_rollout_packet import (
     build_distribution_rollout_packet,
     render_distribution_rollout_packet_markdown,
 )
+from scripts.export_evidence_first_cycle_report import (
+    build_evidence_first_cycle_report,
+    render_evidence_first_cycle_report_markdown,
+)
 from scripts.export_host_evidence_runner import build_host_evidence_runner, render_host_evidence_runner_markdown
 from scripts.export_host_onboarding_depth_plan import (
     build_host_onboarding_depth_plan,
@@ -202,6 +206,7 @@ _DEFAULT_REVIEW_AGENT_V3_PLAN_PATH = Path("docs/REVIEW_AGENT_V3_PLAN.md")
 _DEFAULT_DATASET_QUALITY_DEPTH_PLAN_PATH = Path("docs/DATASET_QUALITY_DEPTH_PLAN.md")
 _DEFAULT_DISTRIBUTION_READINESS_PACK_PATH = Path("docs/DISTRIBUTION_READINESS_PACK.md")
 _DEFAULT_DISTRIBUTION_ROLLOUT_PACKET_PATH = Path("docs/DISTRIBUTION_ROLLOUT_PACKET.md")
+_DEFAULT_EVIDENCE_FIRST_CYCLE_REPORT_PATH = Path("docs/EVIDENCE_FIRST_CYCLE_REPORT.md")
 _DEFAULT_MCP_SNAPSHOT_PATH = Path("tests/fixtures/snapshots/mcp_contract.json")
 _DEFAULT_OUTPUT_SNAPSHOT_PATH = Path("tests/fixtures/snapshots/output_contracts.json")
 _DEFAULT_PYPROJECT_PATH = Path("pyproject.toml")
@@ -267,6 +272,7 @@ class ReleaseReadinessConfig:
     dataset_quality_depth_plan_path: Path = _DEFAULT_DATASET_QUALITY_DEPTH_PLAN_PATH
     distribution_readiness_pack_path: Path = _DEFAULT_DISTRIBUTION_READINESS_PACK_PATH
     distribution_rollout_packet_path: Path = _DEFAULT_DISTRIBUTION_ROLLOUT_PACKET_PATH
+    evidence_first_cycle_report_path: Path = _DEFAULT_EVIDENCE_FIRST_CYCLE_REPORT_PATH
     mcp_snapshot_path: Path = _DEFAULT_MCP_SNAPSHOT_PATH
     output_snapshot_path: Path = _DEFAULT_OUTPUT_SNAPSHOT_PATH
     contract_output_work_dir: Path | None = None
@@ -603,6 +609,12 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             path=config.distribution_rollout_packet_path,
             expected=render_distribution_rollout_packet_markdown(build_distribution_rollout_packet()),
             exporter="scripts/export_distribution_rollout_packet.py --output docs/DISTRIBUTION_ROLLOUT_PACKET.md",
+        ),
+        _check_generated_doc(
+            name="evidence_first_cycle_report",
+            path=config.evidence_first_cycle_report_path,
+            expected=render_evidence_first_cycle_report_markdown(build_evidence_first_cycle_report()),
+            exporter="scripts/export_evidence_first_cycle_report.py --output docs/EVIDENCE_FIRST_CYCLE_REPORT.md",
         ),
         *_check_contract_snapshot_freshness(
             mcp_snapshot_path=config.mcp_snapshot_path,

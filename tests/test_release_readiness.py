@@ -67,6 +67,7 @@ def test_release_readiness_accepts_current_fast_guards(tmp_path: Path) -> None:
         "dataset_quality_depth_plan",
         "distribution_readiness_pack",
         "distribution_rollout_packet",
+        "evidence_first_cycle_report",
         "mcp_contract_snapshot",
         "output_contract_snapshot",
     ]
@@ -151,6 +152,7 @@ def test_release_readiness_cli_passes_fast_guards(tmp_path: Path) -> None:
     assert "dataset_quality_depth_plan" in result.stdout
     assert "distribution_readiness_pack" in result.stdout
     assert "distribution_rollout_packet" in result.stdout
+    assert "evidence_first_cycle_report" in result.stdout
     assert "output_contract_snapshot" in result.stdout
 
 
