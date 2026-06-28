@@ -13,8 +13,10 @@ As of 2026-06-23, `v1.15.0` is the latest published pre-v1 release:
 - machine-verifiable host proof status is tracked in `docs/HOST_PROOF_STATUS.md`;
 - the current launch blocker rollup is tracked in `docs/V1_LAUNCH_REPORT.md`;
 - v1 trust gates are separated in `docs/V1_TRUST_GATES.md`;
-- Manual Host UI evidence is still `pending` and must not be treated as passed until dated host screenshots or logs are
-  recorded through the host proof sprint runbook.
+- the stable-v1 freeze and exit criteria are tracked in `docs/V1_STABILIZATION_PLAN.md`;
+- RC cutover recovery steps are tracked in `docs/RC_CUTOVER_RECOVERY_PLAN.md`;
+- Manual Host UI and First 10 Minutes evidence is still `blocked` or `pending` and must not be treated as passed until
+  dated real-host evidence is recorded through the host proof sprint runbook.
 
 The current product handoff for first real-dataset previews is `build_review_packet`. It combines dataset onboarding,
 safe preview request validation, the review tool sequence, and `albumentationsx://examples/report-handoff`.
@@ -99,6 +101,7 @@ that policy is part of the public maintenance contract.
 - local tests, lint, formatting, type checks, golden evals, version guard, and build pass;
 - GitHub CI and Release workflows pass;
 - PyPI, PyPI Simple API, MCP Registry, GitHub Release, and `uvx` smoke confirm the published package;
-- Manual Host UI evidence for the target hosts is no longer `pending` and is recorded in the host proof artifacts;
+- Manual Host UI and First 10 Minutes evidence for the target hosts is no longer `blocked` or `pending` and is recorded
+  in the host proof artifacts;
 - no open product blocker remains around `build_review_packet`, preview validation, report handoff, or registry install
   instructions.
