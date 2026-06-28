@@ -4,7 +4,10 @@ import subprocess
 import sys
 from pathlib import Path
 
-from scripts.export_rc_evidence_reopen_flow import build_rc_evidence_reopen_flow, render_rc_evidence_reopen_flow_markdown
+from scripts.export_rc_evidence_reopen_flow import (
+    build_rc_evidence_reopen_flow,
+    render_rc_evidence_reopen_flow_markdown,
+)
 
 
 def test_rc_evidence_reopen_flow_keeps_publish_blocked_until_evidence_is_real() -> None:

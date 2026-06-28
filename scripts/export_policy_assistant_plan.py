@@ -93,10 +93,7 @@ def render_policy_assistant_plan_markdown(plan: dict[str, Any]) -> str:
         ]
     )
     lines.extend(
-        "| "
-        f"`{component['name']}` | "
-        f"{component['responsibility']} | "
-        f"{component['depends_on']} |"
+        f"| `{component['name']}` | {component['responsibility']} | {component['depends_on']} |"
         for component in plan["components"]
     )
     lines.extend(["", "## Acceptance Gates", ""])

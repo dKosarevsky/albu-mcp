@@ -75,9 +75,7 @@ def render_rc_evidence_reopen_flow_markdown(flow: dict[str, Any]) -> str:
         "| Gate | Status | Required Before |",
         "| --- | --- | --- |",
     ]
-    lines.extend(
-        f"| `{gate['name']}` | `{gate['status']}` | `{gate['required_before']}` |" for gate in flow["gates"]
-    )
+    lines.extend(f"| `{gate['name']}` | `{gate['status']}` | `{gate['required_before']}` |" for gate in flow["gates"])
     lines.extend(["", "## Safe Commands", ""])
     lines.extend(f"- `{command}`" for command in flow["safe_commands"])
     lines.extend(["", "## Blocked Publish Commands", ""])

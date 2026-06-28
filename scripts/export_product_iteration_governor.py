@@ -23,7 +23,9 @@ def build_product_iteration_governor() -> dict[str, Any]:
     return {
         "governor_status": "sequenced_not_auto_executed",
         "iteration_count": len(iterations),
-        "execution_policy": "Each iteration needs a named goal, tests, readiness checks, and evidence gates before merge.",
+        "execution_policy": (
+            "Each iteration needs a named goal, tests, readiness checks, and evidence gates before merge."
+        ),
         "safety_policy": "No blind 100-iteration implementation loop is allowed.",
         "required_checks": [
             "uv run pytest -q",

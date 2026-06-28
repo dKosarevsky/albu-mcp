@@ -25,9 +25,7 @@ def build_real_host_evidence_command_center() -> dict[str, Any]:
     blocked_hosts = [lane["host"] for lane in recovery["host_recovery_lanes"] if lane["status"] != "passed"]
     blocked_gate_count = recovery["summary"]["blocked_gate_count"]
     return {
-        "command_center_status": "blocked_until_real_host_runs"
-        if blocked_gate_count
-        else "ready_for_rc_gate_recheck",
+        "command_center_status": "blocked_until_real_host_runs" if blocked_gate_count else "ready_for_rc_gate_recheck",
         "non_fabrication_policy": "Only reviewer-observed real MCP host UI runs can satisfy P0 gates.",
         "summary": {
             "target_host_count": recovery["summary"]["target_host_count"],

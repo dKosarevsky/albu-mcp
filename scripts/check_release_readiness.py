@@ -70,10 +70,6 @@ from scripts.export_host_onboarding_depth_plan import (
     build_host_onboarding_depth_plan,
     render_host_onboarding_depth_plan_markdown,
 )
-from scripts.export_real_host_evidence_command_center import (
-    build_real_host_evidence_command_center,
-    render_real_host_evidence_command_center_markdown,
-)
 from scripts.export_p0_blocker_triage import build_p0_blocker_triage, render_p0_blocker_triage_markdown
 from scripts.export_p0_evidence_recorder import build_p0_evidence_recorder, render_p0_evidence_recorder_markdown
 from scripts.export_p0_evidence_regeneration_pack import (
@@ -96,6 +92,7 @@ from scripts.export_p0_host_execution_sprint import (
 from scripts.export_p0_host_run_session import build_p0_host_run_session, render_p0_host_run_session_markdown
 from scripts.export_p0_host_runbook import build_p0_host_runbook, render_p0_host_runbook_markdown
 from scripts.export_p0_host_unblock_pack import build_p0_host_unblock_pack, render_p0_host_unblock_pack_markdown
+from scripts.export_policy_assistant_plan import build_policy_assistant_plan, render_policy_assistant_plan_markdown
 from scripts.export_product_depth_backlog import build_product_depth_backlog, render_product_depth_backlog_markdown
 from scripts.export_product_depth_gate import build_product_depth_gate, render_product_depth_gate_markdown
 from scripts.export_product_depth_selection import (
@@ -106,7 +103,6 @@ from scripts.export_product_iteration_governor import (
     build_product_iteration_governor,
     render_product_iteration_governor_markdown,
 )
-from scripts.export_policy_assistant_plan import build_policy_assistant_plan, render_policy_assistant_plan_markdown
 from scripts.export_rc_cutover_recovery_plan import (
     build_rc_cutover_recovery_plan,
     render_rc_cutover_recovery_plan_markdown,
@@ -118,6 +114,10 @@ from scripts.export_rc_evidence_reopen_flow import (
 )
 from scripts.export_rc_gate_reopen_packet import build_rc_gate_reopen_packet, render_rc_gate_reopen_packet_markdown
 from scripts.export_rc_host_evidence_ops import build_rc_host_evidence_ops, render_rc_host_evidence_ops_markdown
+from scripts.export_real_host_evidence_command_center import (
+    build_real_host_evidence_command_center,
+    render_real_host_evidence_command_center_markdown,
+)
 from scripts.export_review_agent_v3_plan import build_review_agent_v3_plan, render_review_agent_v3_plan_markdown
 from scripts.export_v1_decision_report import build_v1_decision_report, render_v1_decision_report_markdown
 from scripts.export_v1_evidence_operator_packet import (
@@ -419,8 +419,7 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             path=config.real_host_evidence_command_center_path,
             expected=render_real_host_evidence_command_center_markdown(build_real_host_evidence_command_center()),
             exporter=(
-                "scripts/export_real_host_evidence_command_center.py "
-                "--output docs/REAL_HOST_EVIDENCE_COMMAND_CENTER.md"
+                "scripts/export_real_host_evidence_command_center.py --output docs/REAL_HOST_EVIDENCE_COMMAND_CENTER.md"
             ),
         ),
         _check_generated_doc(
