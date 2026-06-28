@@ -65,6 +65,11 @@ At least one real user attempt per beta workflow before product-depth reprioriti
   - Whether preview was blocked
   - Requested follow-up
 
+## Recording Commands
+
+- `uv run python scripts/record_beta_validation.py --workflow-id robustness_distortion_variants --status needs_followup --attempt-date YYYY-MM-DD --participant-role 'CV engineer preparing robustness data' --summary 'Redacted real beta workflow attempt summary.' --triage-bucket workflow_fit_gap --artifact-ref docs/assets/demo/demo_report.md`
+- `uv run python scripts/record_beta_validation.py --workflow-id noisy_preview_tuning --status needs_followup --attempt-date YYYY-MM-DD --participant-role 'ML practitioner reviewing candidate augmentations' --summary 'Redacted real beta workflow attempt summary.' --triage-bucket review_agent_v3_gap --artifact-ref docs/assets/demo/demo_report.md`
+- `uv run python scripts/record_beta_validation.py --workflow-id dataset_health_before_training --status needs_followup --attempt-date YYYY-MM-DD --participant-role 'Researcher checking annotations before training' --summary 'Redacted real beta workflow attempt summary.' --triage-bucket dataset_quality_gap --artifact-ref docs/assets/demo/demo_report.md`
 ## Triage Buckets
 
 - `host_setup_gap`

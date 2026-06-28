@@ -21,6 +21,7 @@ def test_beta_validation_sprint_schedules_all_beta_workflows() -> None:
         sprint["minimum_signal"]
         == "At least one real user attempt per beta workflow before product-depth reprioritization."
     )
+    assert "record_beta_validation.py --workflow-id robustness_distortion_variants" in sprint["recording_commands"][0]
     assert "review_agent_v3_gap" in sprint["triage_buckets"]
     assert "Convert repeated beta reports into tests before changing behavior." in sprint["weekly_cadence"]
 
@@ -33,6 +34,8 @@ def test_beta_validation_sprint_markdown_is_researcher_ready() -> None:
     assert "## Participant Slots" in markdown
     assert "### noisy_preview_tuning" in markdown
     assert "Whether the revised candidate became acceptable" in markdown
+    assert "## Recording Commands" in markdown
+    assert "scripts/record_beta_validation.py" in markdown
     assert "## Exit Criteria" in markdown
     assert "No private datasets, tokens, screenshots, or full host logs are collected." in markdown
 

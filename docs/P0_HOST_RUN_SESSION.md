@@ -37,6 +37,34 @@ Record commands:
 - `uv run python scripts/record_host_manual_run.py --kind first-10-minutes --host Codex --status passed --date YYYY-MM-DD --evidence '<redacted evidence>' --artifact docs/assets/demo/demo_report.md`
 - `uv run python scripts/record_host_manual_run.py --host Codex --status passed --date YYYY-MM-DD --evidence '<redacted evidence>'`
 
+Evidence candidate templates:
+
+`manual_host_ui`:
+
+```json
+{
+  "host": "Codex",
+  "status": "passed",
+  "date": "YYYY-MM-DD",
+  "evidence": "Redacted reviewer-observed Codex host UI evidence summary."
+}
+```
+
+`first_10_minutes_replay`:
+
+```json
+{
+  "host": "Codex",
+  "status": "passed",
+  "date": "YYYY-MM-DD",
+  "evidence": "Redacted reviewer-observed Codex first-10-minutes replay summary.",
+  "artifacts": [
+    "docs/assets/demo/demo_report.md"
+  ]
+}
+```
+
+
 Gate statuses:
 
 - `first_10_minutes_replay`: `missing`
@@ -62,6 +90,34 @@ Record commands:
 
 - `uv run python scripts/record_host_manual_run.py --kind first-10-minutes --host 'Claude Code' --status passed --date YYYY-MM-DD --evidence '<redacted evidence>' --artifact docs/assets/demo/demo_report.md`
 - `uv run python scripts/record_host_manual_run.py --host 'Claude Code' --status passed --date YYYY-MM-DD --evidence '<redacted evidence>'`
+
+Evidence candidate templates:
+
+`manual_host_ui`:
+
+```json
+{
+  "host": "Claude Code",
+  "status": "passed",
+  "date": "YYYY-MM-DD",
+  "evidence": "Redacted reviewer-observed Claude Code host UI evidence summary."
+}
+```
+
+`first_10_minutes_replay`:
+
+```json
+{
+  "host": "Claude Code",
+  "status": "passed",
+  "date": "YYYY-MM-DD",
+  "evidence": "Redacted reviewer-observed Claude Code first-10-minutes replay summary.",
+  "artifacts": [
+    "docs/assets/demo/demo_report.md"
+  ]
+}
+```
+
 
 Gate statuses:
 
