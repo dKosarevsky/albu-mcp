@@ -14,18 +14,18 @@ No blind implementation loop was executed.
 
 ## Completed Paths
 
-- Evidence Unblock path: capture kit prepared; real P0 evidence remains blocked.
-- Beta Validation Sprint path: capture kit prepared; real beta attempts remain missing.
-- Policy Assistant MVP path: contract prepared behind gates; runtime behavior not implemented.
+- Evidence Unblock path: package CLI can record evidence; real P0 evidence remains blocked.
+- Beta Validation Sprint path: package CLI can record attempts and triage backlog lanes.
+- Policy Assistant MVP path: preview-gated runtime tool is available; production acceptance remains gated.
 
 ## Completed Plan Points
 
-1. Merged PR #13.
-2. Prepared host evidence capture kit.
+1. Merged PR #14.
+2. Added package-level evidence capture CLI.
 3. Kept P0 outcomes blocked until real host UI evidence exists.
-4. Prepared beta attempt capture kit.
-5. Prepared policy assistant MVP contract behind gates.
-6. Produced RC no-go decision for v1.15.0-rc.1.
+4. Added package-level beta attempt and backlog triage CLI.
+5. Implemented preview-gated policy assistant MVP tool.
+6. Kept v1.15.0-rc.1 at RC no-go with completed enablers documented.
 7. Stopped 100-iteration execution at the first blocked governed gate.
 
 ## Source Docs
@@ -35,3 +35,4 @@ No blind implementation loop was executed.
 - `docs/HOST_EVIDENCE_CAPTURE_KIT.md`
 - `docs/BETA_ATTEMPT_CAPTURE_KIT.md`
 - `docs/POLICY_ASSISTANT_MVP_CONTRACT.md`
+- `docs/USAGE.md`

@@ -49,6 +49,12 @@ uvx --from albumentationsx-mcp albumentationsx-mcp \
 Copyable host snippets are in [examples](examples/). Full setup is in [docs/INSTALL.md](docs/INSTALL.md); the guided
 trial is [docs/FIRST_10_MINUTES.md](docs/FIRST_10_MINUTES.md).
 
+## Operator CLI
+
+Release-safe helpers: `albu-mcp evidence record-host-ui`, `albu-mcp evidence status`,
+`albu-mcp beta record-attempt`, and `albu-mcp beta triage --format json`. Inside MCP hosts, use
+`plan_augmentation_policy` for a preview-gated starter policy before rendering and reviewing contact sheets.
+
 ## Host Workflow
 
 After connecting an MCP host:
@@ -107,24 +113,9 @@ source: [docs/integrations/mcp.md](https://github.com/albumentations-team/Albume
 - [evals/golden_mcp_scenarios.yaml](evals/golden_mcp_scenarios.yaml): executable MCP scenarios. Operational scripts live in [scripts](scripts/).
 
 ## Verification
-```bash
-uv run pytest
-uv run ruff check .
-uv run ruff format --check .
-uv run ty check
-uv run python scripts/validate_host_manual_runs.py
-uv run python scripts/check_host_acceptance_report.py
-uv run python scripts/check_first_10_minutes.py
-uv run python scripts/check_host_proof_sprint.py
-uv run python scripts/verify_host_evidence_import.py --output docs/P0_EVIDENCE_IMPORT_GUIDE.md
-uv run python scripts/export_p0_evidence_regeneration_pack.py --output docs/P0_EVIDENCE_REGENERATION_PACK.md
-uv run python scripts/check_contract_snapshots.py
-uv run python scripts/check_demo_assets.py --output-dir docs/assets/demo --check
-uv run python scripts/check_v1_rc_cutover_gate.py --output docs/V1_RC_CUTOVER_GATE.md
-uv run python scripts/check_release_readiness.py
-uv run python scripts/run_golden_evals.py
-uv run python scripts/check_mcp_registry_status.py
-uv run python scripts/check_directory_presence.py
-uv run python scripts/export_launch_kit.py --output docs/LAUNCH_KIT.md
-uv build
-```
+
+Core local gate: `uv run pytest`, `uv run ruff check .`, `uv run ruff format --check .`, `uv run ty check`,
+`uv run python scripts/check_release_readiness.py`, and `uv build`. Release-specific gates are in
+[docs/RELEASE.md](docs/RELEASE.md).
+Tracked guards include `scripts/check_host_acceptance_report.py`, `scripts/check_contract_snapshots.py`, and
+`scripts/check_directory_presence.py`.

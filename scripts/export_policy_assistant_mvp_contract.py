@@ -14,14 +14,19 @@ from scripts.export_policy_assistant_plan import build_policy_assistant_plan
 
 
 def build_policy_assistant_mvp_contract() -> dict[str, Any]:
-    """Build an MVP contract without implementing runtime behavior behind blocked gates."""
+    """Build an MVP contract that allows only preview-gated starter policy planning."""
     plan = build_policy_assistant_plan()
     return {
         "contract_status": plan["plan_status"],
         "runtime_implementation_allowed": plan["implementation_allowed"],
+        "safe_runtime_mvp_available": True,
+        "production_policy_acceptance_allowed": False,
         "first_slice": plan["first_slice"],
         "blocked_reasons": plan["blocked_reasons"],
-        "contract_policy": "No runtime policy assistant behavior is implemented while gates are blocked.",
+        "contract_policy": (
+            "Safe runtime MVP behavior may produce starter candidates only. It does not open product-depth, "
+            "RC, beta, export, or production policy acceptance gates without real preview and host evidence."
+        ),
         "interfaces": [
             {
                 "name": "policy_context",
@@ -46,6 +51,7 @@ def build_policy_assistant_mvp_contract() -> dict[str, Any]:
         ],
         "source_docs": [
             "docs/POLICY_ASSISTANT_PLAN.md",
+            "docs/POLICY_ASSISTANT_MVP_CONTRACT.md",
             "docs/PRODUCT_DEPTH_SELECTION.md",
             "docs/BETA_TO_BACKLOG_TRIAGE.md",
         ],
@@ -59,6 +65,8 @@ def render_policy_assistant_mvp_contract_markdown(contract: dict[str, Any]) -> s
         "",
         f"Contract status: `{contract['contract_status']}`",
         f"Runtime implementation allowed: `{str(contract['runtime_implementation_allowed']).lower()}`",
+        f"Safe runtime MVP available: `{str(contract['safe_runtime_mvp_available']).lower()}`",
+        f"Production policy acceptance allowed: `{str(contract['production_policy_acceptance_allowed']).lower()}`",
         f"First slice: `{contract['first_slice']}`",
         "",
         "## Contract Policy",

@@ -14,6 +14,12 @@ Do not create tags, GitHub Releases, PyPI uploads, or public announcements.
 - `p0_host_evidence_missing_or_blocked`
 - `beta_validation_records_missing`
 
+## Completed Enablers
+
+- `package_evidence_cli`
+- `package_beta_triage_cli`
+- `preview_gated_policy_assistant_tool`
+
 ## Safe Commands
 
 - `uv run pytest -q`

@@ -27,6 +27,7 @@ from albumentationsx_mcp.models import (
 )
 from albumentationsx_mcp.onboarding import build_dataset_onboarding_report
 from albumentationsx_mcp.pipeline import PipelineService
+from albumentationsx_mcp.policy_assistant import plan_augmentation_policy
 from albumentationsx_mcp.presets import Intensity, adjust_pipeline, recommend_pipeline
 from albumentationsx_mcp.preview import ArtifactStore, PathPolicy, PreviewService
 from albumentationsx_mcp.preview_validation import PreviewRequestValidator
@@ -91,6 +92,7 @@ _PUBLIC_TOOLS = [
     "score_dataset_preview_candidates",
     "list_quality_profiles",
     "recommend_recipe",
+    "plan_augmentation_policy",
     "record_preview_feedback",
     "list_preview_feedback",
     "record_tuning_decision",
@@ -122,6 +124,7 @@ _PUBLIC_WORKFLOW_RESOURCES = [
     "albumentationsx://workflows/annotation-preview",
     "albumentationsx://workflows/task-profiles",
     "albumentationsx://recipes/catalog",
+    "albumentationsx://policy-assistant/contract",
     "albumentationsx://diagnostics/guide",
     "albumentationsx://examples/client-smoke",
     "albumentationsx://examples/first-preview",
@@ -220,6 +223,28 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
         """Return task-aware recipe recommendations as compact JSON."""
         data = [recipe.model_dump(mode="json") for recipe in list_recipe_catalog()]
         return json.dumps(data, sort_keys=True)
+
+    @mcp.resource("albumentationsx://policy-assistant/contract")
+    def policy_assistant_contract_resource() -> str:
+        """Return the preview-gated policy assistant safety contract."""
+        return json.dumps(
+            {
+                "acceptance_rule": (
+                    "Policy assistant output is a starter candidate; render previews and record feedback "
+                    "before accepting or exporting it for training."
+                ),
+                "follow_up_tools": [
+                    "render_preview_batch",
+                    "compare_preview_runs",
+                    "interpret_preview_feedback",
+                    "adjust_pipeline",
+                    "record_preview_feedback",
+                ],
+                "gate_status": "preview_required",
+                "primary_tool": "plan_augmentation_policy",
+            },
+            sort_keys=True,
+        )
 
     @mcp.resource("albumentationsx://capabilities")
     def capabilities_resource() -> str:
@@ -379,6 +404,24 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
             mode="json",
             exclude_none=True,
         )
+
+    @mcp.tool(name="plan_augmentation_policy")
+    def plan_augmentation_policy_tool(
+        task: str,
+        objective: str = "robustness",
+        intensity: Intensity = "medium",
+        targets: list[str] | None = None,
+        feedback_tags: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Plan a preview-gated augmentation policy for a task and objective."""
+        return plan_augmentation_policy(
+            task=task,
+            objective=objective,
+            intensity=intensity,
+            targets=targets,
+            feedback_tags=feedback_tags,
+            catalog=catalog,
+        ).model_dump(mode="json", exclude_none=True)
 
     @mcp.tool()
     def export_pipeline(pipeline: dict[str, Any], output_format: OutputFormat = "python") -> dict[str, Any]:

@@ -46,30 +46,46 @@ retention limit for long-running MCP hosts.
 ## Agent Workflow
 
 1. Call `recommend_recipe` for the target task, intensity, quality profile, feedback tags, explanations, and next tools.
-2. Call `diagnose_environment` if roots, artifacts, or host discovery are uncertain.
-3. Call `validate_pipeline` before rendering or exporting.
-4. Call `run_host_smoke_check`; when `preview_ready` is true, replace the placeholder path in
+2. Call `plan_augmentation_policy` when the user asks for a task/objective policy rather than a generic recipe.
+3. Call `diagnose_environment` if roots, artifacts, or host discovery are uncertain.
+4. Call `validate_pipeline` before rendering or exporting.
+5. Call `run_host_smoke_check`; when `preview_ready` is true, replace the placeholder path in
    `preview_request_template.request`.
-5. For a real folder, call `plan_dataset_onboarding` with `dataset_path`, task, targets, and a small `max_images`.
-6. Call `validate_preview_request` after filling or receiving local image paths and before rendering.
-7. Call `explain_pipeline` to identify likely preview risks and feedback tags.
-8. Call `render_preview_batch` on a small local image set.
-9. Review the generated `contact_sheet` artifact.
-10. Use `compare_preview_runs` when comparing a baseline preview to an adjusted candidate preview.
-11. Review `suggested_feedback_tags` as candidates, then ask the user which tags match the contact sheets.
-12. Call `adjust_pipeline` with tags from `list_feedback_tags`, for example `too_noisy`, `too_noisy:high`, or
+6. For a real folder, call `plan_dataset_onboarding` with `dataset_path`, task, targets, and a small `max_images`.
+7. Call `validate_preview_request` after filling or receiving local image paths and before rendering.
+8. Call `explain_pipeline` to identify likely preview risks and feedback tags.
+9. Call `render_preview_batch` on a small local image set.
+10. Review the generated `contact_sheet` artifact.
+11. Use `compare_preview_runs` when comparing a baseline preview to an adjusted candidate preview.
+12. Review `suggested_feedback_tags` as candidates, then ask the user which tags match the contact sheets.
+13. Call `adjust_pipeline` with tags from `list_feedback_tags`, for example `too_noisy`, `too_noisy:high`, or
    `too_distorted`.
-13. Re-render one or more candidates with the same input set.
-14. Call `rank_preview_candidates` when multiple candidates need comparison.
-15. Call `score_dataset_preview_candidates` to inspect cross-candidate metric ranges and finding counts.
-16. Call `record_preview_feedback` when the user points to a concrete image and variant, for example
+14. Re-render one or more candidates with the same input set.
+15. Call `rank_preview_candidates` when multiple candidates need comparison.
+16. Call `score_dataset_preview_candidates` to inspect cross-candidate metric ranges and finding counts.
+17. Call `record_preview_feedback` when the user points to a concrete image and variant, for example
     "example 8 is too noisy".
-17. Call `list_preview_feedback` and reuse `aggregated_feedback_tags` for the next `adjust_pipeline` call.
-18. Call `start_tuning_session` when the review will take multiple user feedback turns.
-19. Call `record_tuning_session_step` after each baseline-to-candidate comparison.
-20. Call `record_tuning_decision` for one-off accepted or rejected candidate decisions.
-21. Call `export_preview_report` for a visual Markdown or HTML handoff that includes matching concrete feedback.
-22. Call `export_tuning_session` or `export_tuning_report`, then `export_pipeline` once the preview set is acceptable.
+18. Call `list_preview_feedback` and reuse `aggregated_feedback_tags` for the next `adjust_pipeline` call.
+19. Call `start_tuning_session` when the review will take multiple user feedback turns.
+20. Call `record_tuning_session_step` after each baseline-to-candidate comparison.
+21. Call `record_tuning_decision` for one-off accepted or rejected candidate decisions.
+22. Call `export_preview_report` for a visual Markdown or HTML handoff that includes matching concrete feedback.
+23. Call `export_tuning_session` or `export_tuning_report`, then `export_pipeline` once the preview set is acceptable.
+
+## Operator CLI
+
+Use the package CLI for release evidence and beta records without importing repository-only scripts:
+
+```bash
+albu-mcp evidence record-host-ui --host Codex --status passed --date 2026-06-28 --evidence "..."
+albu-mcp evidence record-first-10-minutes --host Codex --status passed --date 2026-06-28 --evidence "..." --artifact docs/assets/demo/demo_report.md
+albu-mcp evidence status
+albu-mcp beta record-attempt --workflow-id noisy_preview_tuning --status needs_followup --attempt-date 2026-06-28 --participant-role "ML practitioner" --summary "..." --triage-bucket review_agent_v3_gap
+albu-mcp beta triage --format json
+```
+
+These commands write privacy-safe JSON records. They do not mark P0 evidence as passed unless a reviewer records real
+host UI evidence from an actual MCP host session.
 
 ## Diagnostics
 
