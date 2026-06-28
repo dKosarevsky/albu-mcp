@@ -38,6 +38,8 @@ def test_release_readiness_accepts_current_fast_guards(tmp_path: Path) -> None:
         "claude_code_setup_path",
         "host_setup_probe",
         "real_host_evidence_command_center",
+        "host_evidence_capture_kit",
+        "beta_attempt_capture_kit",
         "beta_campaign_pack",
         "beta_campaign_execution",
         "beta_feedback_intake",
@@ -62,6 +64,7 @@ def test_release_readiness_accepts_current_fast_guards(tmp_path: Path) -> None:
         "product_depth_gate",
         "product_depth_selection",
         "policy_assistant_plan",
+        "policy_assistant_mvp_contract",
         "product_iteration_governor",
         "host_onboarding_depth_plan",
         "review_agent_v3_plan",
@@ -69,6 +72,8 @@ def test_release_readiness_accepts_current_fast_guards(tmp_path: Path) -> None:
         "distribution_readiness_pack",
         "distribution_rollout_packet",
         "evidence_first_cycle_report",
+        "rc_release_decision_report",
+        "governed_100_iteration_report",
         "mcp_contract_snapshot",
         "output_contract_snapshot",
     ]
@@ -127,6 +132,8 @@ def test_release_readiness_cli_passes_fast_guards(tmp_path: Path) -> None:
     assert "claude_code_setup_path" in result.stdout
     assert "host_setup_probe" in result.stdout
     assert "real_host_evidence_command_center" in result.stdout
+    assert "host_evidence_capture_kit" in result.stdout
+    assert "beta_attempt_capture_kit" in result.stdout
     assert "beta_campaign_pack" in result.stdout
     assert "beta_campaign_execution" in result.stdout
     assert "beta_feedback_intake" in result.stdout
@@ -149,12 +156,15 @@ def test_release_readiness_cli_passes_fast_guards(tmp_path: Path) -> None:
     assert "product_depth_gate" in result.stdout
     assert "product_depth_selection" in result.stdout
     assert "policy_assistant_plan" in result.stdout
+    assert "policy_assistant_mvp_contract" in result.stdout
     assert "product_iteration_governor" in result.stdout
     assert "host_onboarding_depth_plan" in result.stdout
     assert "dataset_quality_depth_plan" in result.stdout
     assert "distribution_readiness_pack" in result.stdout
     assert "distribution_rollout_packet" in result.stdout
     assert "evidence_first_cycle_report" in result.stdout
+    assert "rc_release_decision_report" in result.stdout
+    assert "governed_100_iteration_report" in result.stdout
     assert "output_contract_snapshot" in result.stdout
 
 
