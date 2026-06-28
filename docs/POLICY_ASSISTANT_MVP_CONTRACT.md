@@ -2,11 +2,13 @@
 
 Contract status: `blocked_until_rc_and_beta_signal`
 Runtime implementation allowed: `false`
+Safe runtime MVP available: `true`
+Production policy acceptance allowed: `false`
 First slice: `feedback_aware_policy_recommendation`
 
 ## Contract Policy
 
-No runtime policy assistant behavior is implemented while gates are blocked.
+Safe runtime MVP behavior may produce starter candidates only. It does not open product-depth, RC, beta, export, or production policy acceptance gates without real preview and host evidence.
 
 ## Blocked Reasons
 
@@ -30,5 +32,6 @@ No runtime policy assistant behavior is implemented while gates are blocked.
 ## Source Docs
 
 - `docs/POLICY_ASSISTANT_PLAN.md`
+- `docs/POLICY_ASSISTANT_MVP_CONTRACT.md`
 - `docs/PRODUCT_DEPTH_SELECTION.md`
 - `docs/BETA_TO_BACKLOG_TRIAGE.md`

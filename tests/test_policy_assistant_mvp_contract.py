@@ -15,6 +15,8 @@ def test_policy_assistant_mvp_contract_is_blocked_behind_gates() -> None:
 
     assert contract["contract_status"] == "blocked_until_rc_and_beta_signal"
     assert contract["runtime_implementation_allowed"] is False
+    assert contract["safe_runtime_mvp_available"] is True
+    assert contract["production_policy_acceptance_allowed"] is False
     assert contract["first_slice"] == "feedback_aware_policy_recommendation"
     assert contract["blocked_reasons"] == [
         "p0_host_evidence_missing_or_blocked",
@@ -32,9 +34,11 @@ def test_policy_assistant_mvp_contract_markdown_defines_clean_interfaces() -> No
 
     assert markdown.startswith("# Policy Assistant MVP Contract\n")
     assert "Runtime implementation allowed: `false`" in markdown
+    assert "Safe runtime MVP available: `true`" in markdown
+    assert "Production policy acceptance allowed: `false`" in markdown
     assert "`policy_context`" in markdown
     assert "`recommendation_result`" in markdown
-    assert "No runtime policy assistant behavior is implemented while gates are blocked." in markdown
+    assert "starter candidates only" in markdown
 
 
 def test_committed_policy_assistant_mvp_contract_is_current() -> None:

@@ -270,6 +270,26 @@ class RecipeRecommendation(StrictModel):
     rationale: str
 
 
+class PolicyAssistantPlan(StrictModel):
+    """Preview-gated augmentation policy recommendation for a host-guided workflow."""
+
+    task: str
+    objective: str
+    intensity: Literal["low", "medium", "high"]
+    targets: list[str] = Field(default_factory=list)
+    pipeline: ComposeSpec
+    risk_level: RiskLevel
+    gate_status: Literal["preview_required", "feedback_required"]
+    gate_reason: str
+    recommended_next_tool: Literal["render_preview_batch", "adjust_pipeline"]
+    next_tools: list[str] = Field(default_factory=list)
+    next_actions: list[str] = Field(default_factory=list)
+    review_checklist: list[str] = Field(default_factory=list)
+    suggested_feedback_tags: list[str] = Field(default_factory=list)
+    applied_feedback_tags: list[str] = Field(default_factory=list)
+    rationale: str
+
+
 class AnnotationObservation(StrictModel):
     """Per-variant annotation retention observation recorded in preview manifests."""
 
