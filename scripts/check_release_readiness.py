@@ -16,6 +16,7 @@ from scripts.check_contract_snapshots import check_contract_snapshots
 from scripts.check_first_10_minutes import check_first_10_minutes
 from scripts.check_host_acceptance_report import check_host_acceptance_report
 from scripts.check_host_proof_sprint import check_host_proof_sprint
+from scripts.check_host_setup_probe import build_host_setup_probe, render_host_setup_probe_markdown
 from scripts.check_p0_host_run_preflight import check_p0_host_run_preflight
 from scripts.check_release_version import validate_release_versions
 from scripts.check_v1_rc_cutover_gate import build_v1_rc_cutover_gate, render_v1_rc_cutover_gate_markdown
@@ -150,6 +151,7 @@ _DEFAULT_P0_HOST_EVIDENCE_RECOVERY_PATH = Path("docs/P0_HOST_EVIDENCE_RECOVERY.m
 _DEFAULT_HOST_EVIDENCE_RUNNER_PATH = Path("docs/HOST_EVIDENCE_RUNNER.md")
 _DEFAULT_CODEX_CANCELLATION_TRIAGE_PATH = Path("docs/CODEX_CANCELLATION_TRIAGE.md")
 _DEFAULT_CLAUDE_CODE_SETUP_PATH = Path("docs/CLAUDE_CODE_SETUP_PATH.md")
+_DEFAULT_HOST_SETUP_PROBE_PATH = Path("docs/HOST_SETUP_PROBE.md")
 _DEFAULT_BETA_CAMPAIGN_PACK_PATH = Path("docs/BETA_CAMPAIGN_PACK.md")
 _DEFAULT_BETA_CAMPAIGN_EXECUTION_PATH = Path("docs/BETA_CAMPAIGN_EXECUTION.md")
 _DEFAULT_BETA_FEEDBACK_INTAKE_PATH = Path("docs/BETA_FEEDBACK_INTAKE.md")
@@ -207,6 +209,7 @@ class ReleaseReadinessConfig:
     host_evidence_runner_path: Path = _DEFAULT_HOST_EVIDENCE_RUNNER_PATH
     codex_cancellation_triage_path: Path = _DEFAULT_CODEX_CANCELLATION_TRIAGE_PATH
     claude_code_setup_path: Path = _DEFAULT_CLAUDE_CODE_SETUP_PATH
+    host_setup_probe_path: Path = _DEFAULT_HOST_SETUP_PROBE_PATH
     beta_campaign_pack_path: Path = _DEFAULT_BETA_CAMPAIGN_PACK_PATH
     beta_campaign_execution_path: Path = _DEFAULT_BETA_CAMPAIGN_EXECUTION_PATH
     beta_feedback_intake_path: Path = _DEFAULT_BETA_FEEDBACK_INTAKE_PATH
@@ -371,6 +374,12 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             path=config.claude_code_setup_path,
             expected=render_claude_code_setup_path_markdown(build_claude_code_setup_path()),
             exporter="scripts/export_claude_code_setup_path.py --output docs/CLAUDE_CODE_SETUP_PATH.md",
+        ),
+        _check_generated_doc(
+            name="host_setup_probe",
+            path=config.host_setup_probe_path,
+            expected=render_host_setup_probe_markdown(build_host_setup_probe()),
+            exporter="scripts/check_host_setup_probe.py --output docs/HOST_SETUP_PROBE.md",
         ),
         _check_generated_doc(
             name="beta_campaign_pack",
@@ -568,6 +577,7 @@ def main() -> None:
             host_evidence_runner_path=args.host_evidence_runner,
             codex_cancellation_triage_path=args.codex_cancellation_triage,
             claude_code_setup_path=args.claude_code_setup_path,
+            host_setup_probe_path=args.host_setup_probe,
             beta_campaign_pack_path=args.beta_campaign_pack,
             beta_campaign_execution_path=args.beta_campaign_execution,
             beta_feedback_intake_path=args.beta_feedback_intake,
@@ -638,6 +648,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--host-evidence-runner", type=Path, default=_DEFAULT_HOST_EVIDENCE_RUNNER_PATH)
     parser.add_argument("--codex-cancellation-triage", type=Path, default=_DEFAULT_CODEX_CANCELLATION_TRIAGE_PATH)
     parser.add_argument("--claude-code-setup-path", type=Path, default=_DEFAULT_CLAUDE_CODE_SETUP_PATH)
+    parser.add_argument("--host-setup-probe", type=Path, default=_DEFAULT_HOST_SETUP_PROBE_PATH)
     parser.add_argument("--beta-campaign-pack", type=Path, default=_DEFAULT_BETA_CAMPAIGN_PACK_PATH)
     parser.add_argument("--beta-campaign-execution", type=Path, default=_DEFAULT_BETA_CAMPAIGN_EXECUTION_PATH)
     parser.add_argument("--beta-feedback-intake", type=Path, default=_DEFAULT_BETA_FEEDBACK_INTAKE_PATH)
