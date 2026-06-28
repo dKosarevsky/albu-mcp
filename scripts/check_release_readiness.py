@@ -43,6 +43,10 @@ from scripts.export_distribution_rollout_packet import (
     build_distribution_rollout_packet,
     render_distribution_rollout_packet_markdown,
 )
+from scripts.export_host_onboarding_depth_plan import (
+    build_host_onboarding_depth_plan,
+    render_host_onboarding_depth_plan_markdown,
+)
 from scripts.export_p0_blocker_triage import build_p0_blocker_triage, render_p0_blocker_triage_markdown
 from scripts.export_p0_evidence_recorder import build_p0_evidence_recorder, render_p0_evidence_recorder_markdown
 from scripts.export_p0_evidence_regeneration_pack import (
@@ -126,6 +130,7 @@ _DEFAULT_RC_HOST_EVIDENCE_OPS_PATH = Path("docs/RC_HOST_EVIDENCE_OPS.md")
 _DEFAULT_PRODUCT_DEPTH_BACKLOG_PATH = Path("docs/PRODUCT_DEPTH_BACKLOG.md")
 _DEFAULT_PRODUCT_DEPTH_GATE_PATH = Path("docs/PRODUCT_DEPTH_GATE.md")
 _DEFAULT_PRODUCT_DEPTH_SELECTION_PATH = Path("docs/PRODUCT_DEPTH_SELECTION.md")
+_DEFAULT_HOST_ONBOARDING_DEPTH_PLAN_PATH = Path("docs/HOST_ONBOARDING_DEPTH_PLAN.md")
 _DEFAULT_REVIEW_AGENT_V3_PLAN_PATH = Path("docs/REVIEW_AGENT_V3_PLAN.md")
 _DEFAULT_DATASET_QUALITY_DEPTH_PLAN_PATH = Path("docs/DATASET_QUALITY_DEPTH_PLAN.md")
 _DEFAULT_DISTRIBUTION_READINESS_PACK_PATH = Path("docs/DISTRIBUTION_READINESS_PACK.md")
@@ -173,6 +178,7 @@ class ReleaseReadinessConfig:
     product_depth_backlog_path: Path = _DEFAULT_PRODUCT_DEPTH_BACKLOG_PATH
     product_depth_gate_path: Path = _DEFAULT_PRODUCT_DEPTH_GATE_PATH
     product_depth_selection_path: Path = _DEFAULT_PRODUCT_DEPTH_SELECTION_PATH
+    host_onboarding_depth_plan_path: Path = _DEFAULT_HOST_ONBOARDING_DEPTH_PLAN_PATH
     review_agent_v3_plan_path: Path = _DEFAULT_REVIEW_AGENT_V3_PLAN_PATH
     dataset_quality_depth_plan_path: Path = _DEFAULT_DATASET_QUALITY_DEPTH_PLAN_PATH
     distribution_readiness_pack_path: Path = _DEFAULT_DISTRIBUTION_READINESS_PACK_PATH
@@ -379,6 +385,12 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             exporter="scripts/export_product_depth_selection.py --output docs/PRODUCT_DEPTH_SELECTION.md",
         ),
         _check_generated_doc(
+            name="host_onboarding_depth_plan",
+            path=config.host_onboarding_depth_plan_path,
+            expected=render_host_onboarding_depth_plan_markdown(build_host_onboarding_depth_plan()),
+            exporter="scripts/export_host_onboarding_depth_plan.py --output docs/HOST_ONBOARDING_DEPTH_PLAN.md",
+        ),
+        _check_generated_doc(
             name="review_agent_v3_plan",
             path=config.review_agent_v3_plan_path,
             expected=render_review_agent_v3_plan_markdown(build_review_agent_v3_plan()),
@@ -452,6 +464,7 @@ def main() -> None:
     _add_v1_rc_doc_arguments(parser)
     parser.add_argument("--product-depth-backlog", type=Path, default=_DEFAULT_PRODUCT_DEPTH_BACKLOG_PATH)
     parser.add_argument("--product-depth-selection", type=Path, default=_DEFAULT_PRODUCT_DEPTH_SELECTION_PATH)
+    parser.add_argument("--host-onboarding-depth-plan", type=Path, default=_DEFAULT_HOST_ONBOARDING_DEPTH_PLAN_PATH)
     parser.add_argument("--review-agent-v3-plan", type=Path, default=_DEFAULT_REVIEW_AGENT_V3_PLAN_PATH)
     parser.add_argument("--dataset-quality-depth-plan", type=Path, default=_DEFAULT_DATASET_QUALITY_DEPTH_PLAN_PATH)
     parser.add_argument("--distribution-rollout-packet", type=Path, default=_DEFAULT_DISTRIBUTION_ROLLOUT_PACKET_PATH)
@@ -498,6 +511,7 @@ def main() -> None:
             v1_rc_cutover_gate_path=args.v1_rc_cutover_gate,
             product_depth_backlog_path=args.product_depth_backlog,
             product_depth_selection_path=args.product_depth_selection,
+            host_onboarding_depth_plan_path=args.host_onboarding_depth_plan,
             review_agent_v3_plan_path=args.review_agent_v3_plan,
             dataset_quality_depth_plan_path=args.dataset_quality_depth_plan,
             distribution_rollout_packet_path=args.distribution_rollout_packet,
