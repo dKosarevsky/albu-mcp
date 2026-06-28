@@ -19,6 +19,10 @@ from scripts.check_host_proof_sprint import check_host_proof_sprint
 from scripts.check_p0_host_run_preflight import check_p0_host_run_preflight
 from scripts.check_release_version import validate_release_versions
 from scripts.check_v1_rc_cutover_gate import build_v1_rc_cutover_gate, render_v1_rc_cutover_gate_markdown
+from scripts.export_beta_campaign_execution import (
+    build_beta_campaign_execution,
+    render_beta_campaign_execution_markdown,
+)
 from scripts.export_beta_campaign_pack import build_beta_campaign_pack, render_beta_campaign_pack_markdown
 from scripts.export_beta_feedback_intake import build_beta_feedback_intake, render_beta_feedback_intake_markdown
 from scripts.export_beta_feedback_status import build_beta_feedback_status, render_beta_feedback_status_markdown
@@ -108,6 +112,7 @@ _DEFAULT_P0_EVIDENCE_STATUS_PATH = Path("docs/P0_EVIDENCE_STATUS.md")
 _DEFAULT_P0_BLOCKER_TRIAGE_PATH = Path("docs/P0_BLOCKER_TRIAGE.md")
 _DEFAULT_P0_HOST_UNBLOCK_PACK_PATH = Path("docs/P0_HOST_UNBLOCK_PACK.md")
 _DEFAULT_BETA_CAMPAIGN_PACK_PATH = Path("docs/BETA_CAMPAIGN_PACK.md")
+_DEFAULT_BETA_CAMPAIGN_EXECUTION_PATH = Path("docs/BETA_CAMPAIGN_EXECUTION.md")
 _DEFAULT_BETA_FEEDBACK_INTAKE_PATH = Path("docs/BETA_FEEDBACK_INTAKE.md")
 _DEFAULT_BETA_FEEDBACK_STATUS_PATH = Path("docs/BETA_FEEDBACK_STATUS.md")
 _DEFAULT_BETA_VALIDATION_SPRINT_PATH = Path("docs/BETA_VALIDATION_SPRINT.md")
@@ -154,6 +159,7 @@ class ReleaseReadinessConfig:
     p0_blocker_triage_path: Path = _DEFAULT_P0_BLOCKER_TRIAGE_PATH
     p0_host_unblock_pack_path: Path = _DEFAULT_P0_HOST_UNBLOCK_PACK_PATH
     beta_campaign_pack_path: Path = _DEFAULT_BETA_CAMPAIGN_PACK_PATH
+    beta_campaign_execution_path: Path = _DEFAULT_BETA_CAMPAIGN_EXECUTION_PATH
     beta_feedback_intake_path: Path = _DEFAULT_BETA_FEEDBACK_INTAKE_PATH
     beta_feedback_status_path: Path = _DEFAULT_BETA_FEEDBACK_STATUS_PATH
     beta_validation_sprint_path: Path = _DEFAULT_BETA_VALIDATION_SPRINT_PATH
@@ -287,6 +293,12 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             path=config.beta_campaign_pack_path,
             expected=render_beta_campaign_pack_markdown(build_beta_campaign_pack()),
             exporter="scripts/export_beta_campaign_pack.py",
+        ),
+        _check_generated_doc(
+            name="beta_campaign_execution",
+            path=config.beta_campaign_execution_path,
+            expected=render_beta_campaign_execution_markdown(build_beta_campaign_execution()),
+            exporter="scripts/export_beta_campaign_execution.py --output docs/BETA_CAMPAIGN_EXECUTION.md",
         ),
         _check_generated_doc(
             name="beta_feedback_intake",
@@ -433,6 +445,7 @@ def main() -> None:
     parser.add_argument("--p0-blocker-triage", type=Path, default=_DEFAULT_P0_BLOCKER_TRIAGE_PATH)
     parser.add_argument("--p0-host-unblock-pack", type=Path, default=_DEFAULT_P0_HOST_UNBLOCK_PACK_PATH)
     parser.add_argument("--beta-campaign-pack", type=Path, default=_DEFAULT_BETA_CAMPAIGN_PACK_PATH)
+    parser.add_argument("--beta-campaign-execution", type=Path, default=_DEFAULT_BETA_CAMPAIGN_EXECUTION_PATH)
     parser.add_argument("--beta-feedback-intake", type=Path, default=_DEFAULT_BETA_FEEDBACK_INTAKE_PATH)
     parser.add_argument("--beta-feedback-status", type=Path, default=_DEFAULT_BETA_FEEDBACK_STATUS_PATH)
     parser.add_argument("--beta-validation-sprint", type=Path, default=_DEFAULT_BETA_VALIDATION_SPRINT_PATH)
@@ -474,6 +487,7 @@ def main() -> None:
             p0_blocker_triage_path=args.p0_blocker_triage,
             p0_host_unblock_pack_path=args.p0_host_unblock_pack,
             beta_campaign_pack_path=args.beta_campaign_pack,
+            beta_campaign_execution_path=args.beta_campaign_execution,
             beta_feedback_intake_path=args.beta_feedback_intake,
             beta_feedback_status_path=args.beta_feedback_status,
             beta_validation_sprint_path=args.beta_validation_sprint,
