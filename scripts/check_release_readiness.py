@@ -102,6 +102,7 @@ from scripts.export_rc_cutover_recovery_plan import (
     render_rc_cutover_recovery_plan_markdown,
 )
 from scripts.export_rc_dry_run import build_rc_dry_run, render_rc_dry_run_markdown
+from scripts.export_rc_gate_reopen_packet import build_rc_gate_reopen_packet, render_rc_gate_reopen_packet_markdown
 from scripts.export_rc_host_evidence_ops import build_rc_host_evidence_ops, render_rc_host_evidence_ops_markdown
 from scripts.export_review_agent_v3_plan import build_review_agent_v3_plan, render_review_agent_v3_plan_markdown
 from scripts.export_v1_decision_report import build_v1_decision_report, render_v1_decision_report_markdown
@@ -172,6 +173,7 @@ _DEFAULT_V1_RC_REHEARSAL_PLAN_PATH = Path("docs/V1_RC_REHEARSAL_PLAN.md")
 _DEFAULT_V1_RC_CUTOVER_GATE_PATH = Path("docs/V1_RC_CUTOVER_GATE.md")
 _DEFAULT_RC_CUTOVER_RECOVERY_PLAN_PATH = Path("docs/RC_CUTOVER_RECOVERY_PLAN.md")
 _DEFAULT_RC_DRY_RUN_PATH = Path("docs/RC_DRY_RUN.md")
+_DEFAULT_RC_GATE_REOPEN_PACKET_PATH = Path("docs/RC_GATE_REOPEN_PACKET.md")
 _DEFAULT_RC_HOST_EVIDENCE_OPS_PATH = Path("docs/RC_HOST_EVIDENCE_OPS.md")
 _DEFAULT_PRODUCT_DEPTH_BACKLOG_PATH = Path("docs/PRODUCT_DEPTH_BACKLOG.md")
 _DEFAULT_PRODUCT_DEPTH_GATE_PATH = Path("docs/PRODUCT_DEPTH_GATE.md")
@@ -231,6 +233,7 @@ class ReleaseReadinessConfig:
     v1_rc_cutover_gate_path: Path = _DEFAULT_V1_RC_CUTOVER_GATE_PATH
     rc_cutover_recovery_plan_path: Path = _DEFAULT_RC_CUTOVER_RECOVERY_PLAN_PATH
     rc_dry_run_path: Path = _DEFAULT_RC_DRY_RUN_PATH
+    rc_gate_reopen_packet_path: Path = _DEFAULT_RC_GATE_REOPEN_PACKET_PATH
     rc_host_evidence_ops_path: Path = _DEFAULT_RC_HOST_EVIDENCE_OPS_PATH
     product_depth_backlog_path: Path = _DEFAULT_PRODUCT_DEPTH_BACKLOG_PATH
     product_depth_gate_path: Path = _DEFAULT_PRODUCT_DEPTH_GATE_PATH
@@ -487,6 +490,12 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             exporter="scripts/export_rc_dry_run.py --output docs/RC_DRY_RUN.md",
         ),
         _check_generated_doc(
+            name="rc_gate_reopen_packet",
+            path=config.rc_gate_reopen_packet_path,
+            expected=render_rc_gate_reopen_packet_markdown(build_rc_gate_reopen_packet()),
+            exporter="scripts/export_rc_gate_reopen_packet.py --output docs/RC_GATE_REOPEN_PACKET.md",
+        ),
+        _check_generated_doc(
             name="rc_host_evidence_ops",
             path=config.rc_host_evidence_ops_path,
             expected=render_rc_host_evidence_ops_markdown(build_rc_host_evidence_ops()),
@@ -605,6 +614,7 @@ def main() -> None:
             v1_rc_cutover_gate_path=args.v1_rc_cutover_gate,
             rc_cutover_recovery_plan_path=args.rc_cutover_recovery_plan,
             rc_dry_run_path=args.rc_dry_run,
+            rc_gate_reopen_packet_path=args.rc_gate_reopen_packet,
             product_depth_backlog_path=args.product_depth_backlog,
             product_depth_selection_path=args.product_depth_selection,
             host_onboarding_depth_plan_path=args.host_onboarding_depth_plan,
@@ -698,6 +708,7 @@ def _add_v1_rc_doc_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--v1-rc-cutover-gate", type=Path, default=_DEFAULT_V1_RC_CUTOVER_GATE_PATH)
     parser.add_argument("--rc-cutover-recovery-plan", type=Path, default=_DEFAULT_RC_CUTOVER_RECOVERY_PLAN_PATH)
     parser.add_argument("--rc-dry-run", type=Path, default=_DEFAULT_RC_DRY_RUN_PATH)
+    parser.add_argument("--rc-gate-reopen-packet", type=Path, default=_DEFAULT_RC_GATE_REOPEN_PACKET_PATH)
 
 
 def _check_manual_host_records(path: Path) -> ReleaseReadinessCheck:

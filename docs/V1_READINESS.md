@@ -16,9 +16,12 @@ As of 2026-06-23, `v1.15.0` is the latest published pre-v1 release:
 - the stable-v1 freeze and exit criteria are tracked in `docs/V1_STABILIZATION_PLAN.md`;
 - RC cutover recovery steps are tracked in `docs/RC_CUTOVER_RECOVERY_PLAN.md`;
 - preflight-only RC rehearsal is tracked in `docs/RC_DRY_RUN.md`;
+- final RC gate reopen criteria are tracked in `docs/RC_GATE_REOPEN_PACKET.md`;
 - Codex and Claude Code P0 recovery paths are tracked in `docs/HOST_EVIDENCE_RUNNER.md`,
-  `docs/CODEX_CANCELLATION_TRIAGE.md`, and `docs/CLAUDE_CODE_SETUP_PATH.md`;
-- beta workflow intake is tracked in `docs/BETA_VALIDATION_INTAKE.md`;
+  `docs/P0_HOST_EVIDENCE_RECOVERY.md`, `docs/CODEX_CANCELLATION_TRIAGE.md`,
+  `docs/CLAUDE_CODE_SETUP_PATH.md`, and `docs/HOST_SETUP_PROBE.md`;
+- beta workflow intake and backlog triage are tracked in `docs/BETA_VALIDATION_INTAKE.md`,
+  `docs/BETA_VALIDATION_RECORDING_PACK.md`, and `docs/BETA_TO_BACKLOG_TRIAGE.md`;
 - Manual Host UI and First 10 Minutes evidence is still `blocked` or `pending` and must not be treated as passed until
   dated real-host evidence is recorded through the host proof sprint runbook.
 
