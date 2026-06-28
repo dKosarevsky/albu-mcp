@@ -31,6 +31,7 @@ def test_release_readiness_accepts_current_fast_guards(tmp_path: Path) -> None:
         "p0_evidence_status",
         "p0_blocker_triage",
         "p0_host_unblock_pack",
+        "p0_host_evidence_recovery",
         "host_evidence_runner",
         "codex_cancellation_triage",
         "claude_code_setup_path",
@@ -108,6 +109,7 @@ def test_release_readiness_cli_passes_fast_guards(tmp_path: Path) -> None:
     assert "p0_evidence_regeneration_pack" in result.stdout
     assert "p0_evidence_status" in result.stdout
     assert "p0_host_unblock_pack" in result.stdout
+    assert "p0_host_evidence_recovery" in result.stdout
     assert "host_evidence_runner" in result.stdout
     assert "codex_cancellation_triage" in result.stdout
     assert "claude_code_setup_path" in result.stdout

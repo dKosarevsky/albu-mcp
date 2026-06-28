@@ -71,6 +71,10 @@ from scripts.export_p0_host_evidence_ledger import (
     build_p0_host_evidence_ledger,
     render_p0_host_evidence_ledger_markdown,
 )
+from scripts.export_p0_host_evidence_recovery import (
+    build_p0_host_evidence_recovery,
+    render_p0_host_evidence_recovery_markdown,
+)
 from scripts.export_p0_host_execution_sprint import (
     build_p0_host_execution_sprint,
     render_p0_host_execution_sprint_markdown,
@@ -138,6 +142,7 @@ _DEFAULT_P0_HOST_EVIDENCE_LEDGER_PATH = Path("docs/P0_HOST_EVIDENCE_LEDGER.md")
 _DEFAULT_P0_EVIDENCE_STATUS_PATH = Path("docs/P0_EVIDENCE_STATUS.md")
 _DEFAULT_P0_BLOCKER_TRIAGE_PATH = Path("docs/P0_BLOCKER_TRIAGE.md")
 _DEFAULT_P0_HOST_UNBLOCK_PACK_PATH = Path("docs/P0_HOST_UNBLOCK_PACK.md")
+_DEFAULT_P0_HOST_EVIDENCE_RECOVERY_PATH = Path("docs/P0_HOST_EVIDENCE_RECOVERY.md")
 _DEFAULT_HOST_EVIDENCE_RUNNER_PATH = Path("docs/HOST_EVIDENCE_RUNNER.md")
 _DEFAULT_CODEX_CANCELLATION_TRIAGE_PATH = Path("docs/CODEX_CANCELLATION_TRIAGE.md")
 _DEFAULT_CLAUDE_CODE_SETUP_PATH = Path("docs/CLAUDE_CODE_SETUP_PATH.md")
@@ -193,6 +198,7 @@ class ReleaseReadinessConfig:
     p0_evidence_status_path: Path = _DEFAULT_P0_EVIDENCE_STATUS_PATH
     p0_blocker_triage_path: Path = _DEFAULT_P0_BLOCKER_TRIAGE_PATH
     p0_host_unblock_pack_path: Path = _DEFAULT_P0_HOST_UNBLOCK_PACK_PATH
+    p0_host_evidence_recovery_path: Path = _DEFAULT_P0_HOST_EVIDENCE_RECOVERY_PATH
     host_evidence_runner_path: Path = _DEFAULT_HOST_EVIDENCE_RUNNER_PATH
     codex_cancellation_triage_path: Path = _DEFAULT_CODEX_CANCELLATION_TRIAGE_PATH
     claude_code_setup_path: Path = _DEFAULT_CLAUDE_CODE_SETUP_PATH
@@ -335,6 +341,12 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             path=config.p0_host_unblock_pack_path,
             expected=render_p0_host_unblock_pack_markdown(build_p0_host_unblock_pack()),
             exporter="scripts/export_p0_host_unblock_pack.py --output docs/P0_HOST_UNBLOCK_PACK.md",
+        ),
+        _check_generated_doc(
+            name="p0_host_evidence_recovery",
+            path=config.p0_host_evidence_recovery_path,
+            expected=render_p0_host_evidence_recovery_markdown(build_p0_host_evidence_recovery()),
+            exporter="scripts/export_p0_host_evidence_recovery.py --output docs/P0_HOST_EVIDENCE_RECOVERY.md",
         ),
         _check_generated_doc(
             name="host_evidence_runner",
@@ -537,6 +549,7 @@ def main() -> None:
             p0_evidence_status_path=args.p0_evidence_status,
             p0_blocker_triage_path=args.p0_blocker_triage,
             p0_host_unblock_pack_path=args.p0_host_unblock_pack,
+            p0_host_evidence_recovery_path=args.p0_host_evidence_recovery,
             host_evidence_runner_path=args.host_evidence_runner,
             codex_cancellation_triage_path=args.codex_cancellation_triage,
             claude_code_setup_path=args.claude_code_setup_path,
@@ -605,6 +618,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--p0-evidence-status", type=Path, default=_DEFAULT_P0_EVIDENCE_STATUS_PATH)
     parser.add_argument("--p0-blocker-triage", type=Path, default=_DEFAULT_P0_BLOCKER_TRIAGE_PATH)
     parser.add_argument("--p0-host-unblock-pack", type=Path, default=_DEFAULT_P0_HOST_UNBLOCK_PACK_PATH)
+    parser.add_argument("--p0-host-evidence-recovery", type=Path, default=_DEFAULT_P0_HOST_EVIDENCE_RECOVERY_PATH)
     parser.add_argument("--host-evidence-runner", type=Path, default=_DEFAULT_HOST_EVIDENCE_RUNNER_PATH)
     parser.add_argument("--codex-cancellation-triage", type=Path, default=_DEFAULT_CODEX_CANCELLATION_TRIAGE_PATH)
     parser.add_argument("--claude-code-setup-path", type=Path, default=_DEFAULT_CLAUDE_CODE_SETUP_PATH)
