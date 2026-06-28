@@ -35,6 +35,10 @@ from scripts.export_distribution_readiness_pack import (
     build_distribution_readiness_pack,
     render_distribution_readiness_pack_markdown,
 )
+from scripts.export_distribution_rollout_packet import (
+    build_distribution_rollout_packet,
+    render_distribution_rollout_packet_markdown,
+)
 from scripts.export_p0_blocker_triage import build_p0_blocker_triage, render_p0_blocker_triage_markdown
 from scripts.export_p0_evidence_recorder import build_p0_evidence_recorder, render_p0_evidence_recorder_markdown
 from scripts.export_p0_evidence_regeneration_pack import (
@@ -54,6 +58,10 @@ from scripts.export_p0_host_run_session import build_p0_host_run_session, render
 from scripts.export_p0_host_runbook import build_p0_host_runbook, render_p0_host_runbook_markdown
 from scripts.export_product_depth_backlog import build_product_depth_backlog, render_product_depth_backlog_markdown
 from scripts.export_product_depth_gate import build_product_depth_gate, render_product_depth_gate_markdown
+from scripts.export_product_depth_selection import (
+    build_product_depth_selection,
+    render_product_depth_selection_markdown,
+)
 from scripts.export_rc_host_evidence_ops import build_rc_host_evidence_ops, render_rc_host_evidence_ops_markdown
 from scripts.export_review_agent_v3_plan import build_review_agent_v3_plan, render_review_agent_v3_plan_markdown
 from scripts.export_v1_decision_report import build_v1_decision_report, render_v1_decision_report_markdown
@@ -74,6 +82,7 @@ from scripts.export_v1_rc_readiness_report import (
     build_v1_rc_readiness_report,
     render_v1_rc_readiness_report_markdown,
 )
+from scripts.export_v1_rc_rehearsal_plan import build_v1_rc_rehearsal_plan, render_v1_rc_rehearsal_plan_markdown
 from scripts.export_v1_rc_release_packet import build_v1_rc_release_packet, render_v1_rc_release_packet_markdown
 from scripts.validate_host_manual_runs import validate_host_manual_runs
 from scripts.verify_host_evidence_import import (
@@ -104,13 +113,16 @@ _DEFAULT_BETA_VALIDATION_STATUS_PATH = Path("docs/BETA_VALIDATION_STATUS.md")
 _DEFAULT_V1_RC_RELEASE_PACKET_PATH = Path("docs/V1_RC_RELEASE_PACKET.md")
 _DEFAULT_V1_RC_CUTOVER_CHECKLIST_PATH = Path("docs/V1_RC_CUTOVER_CHECKLIST.md")
 _DEFAULT_V1_RC_AUTOMATION_PACK_PATH = Path("docs/V1_RC_AUTOMATION_PACK.md")
+_DEFAULT_V1_RC_REHEARSAL_PLAN_PATH = Path("docs/V1_RC_REHEARSAL_PLAN.md")
 _DEFAULT_V1_RC_CUTOVER_GATE_PATH = Path("docs/V1_RC_CUTOVER_GATE.md")
 _DEFAULT_RC_HOST_EVIDENCE_OPS_PATH = Path("docs/RC_HOST_EVIDENCE_OPS.md")
 _DEFAULT_PRODUCT_DEPTH_BACKLOG_PATH = Path("docs/PRODUCT_DEPTH_BACKLOG.md")
 _DEFAULT_PRODUCT_DEPTH_GATE_PATH = Path("docs/PRODUCT_DEPTH_GATE.md")
+_DEFAULT_PRODUCT_DEPTH_SELECTION_PATH = Path("docs/PRODUCT_DEPTH_SELECTION.md")
 _DEFAULT_REVIEW_AGENT_V3_PLAN_PATH = Path("docs/REVIEW_AGENT_V3_PLAN.md")
 _DEFAULT_DATASET_QUALITY_DEPTH_PLAN_PATH = Path("docs/DATASET_QUALITY_DEPTH_PLAN.md")
 _DEFAULT_DISTRIBUTION_READINESS_PACK_PATH = Path("docs/DISTRIBUTION_READINESS_PACK.md")
+_DEFAULT_DISTRIBUTION_ROLLOUT_PACKET_PATH = Path("docs/DISTRIBUTION_ROLLOUT_PACKET.md")
 _DEFAULT_MCP_SNAPSHOT_PATH = Path("tests/fixtures/snapshots/mcp_contract.json")
 _DEFAULT_OUTPUT_SNAPSHOT_PATH = Path("tests/fixtures/snapshots/output_contracts.json")
 _DEFAULT_PYPROJECT_PATH = Path("pyproject.toml")
@@ -146,13 +158,16 @@ class ReleaseReadinessConfig:
     v1_rc_release_packet_path: Path = _DEFAULT_V1_RC_RELEASE_PACKET_PATH
     v1_rc_cutover_checklist_path: Path = _DEFAULT_V1_RC_CUTOVER_CHECKLIST_PATH
     v1_rc_automation_pack_path: Path = _DEFAULT_V1_RC_AUTOMATION_PACK_PATH
+    v1_rc_rehearsal_plan_path: Path = _DEFAULT_V1_RC_REHEARSAL_PLAN_PATH
     v1_rc_cutover_gate_path: Path = _DEFAULT_V1_RC_CUTOVER_GATE_PATH
     rc_host_evidence_ops_path: Path = _DEFAULT_RC_HOST_EVIDENCE_OPS_PATH
     product_depth_backlog_path: Path = _DEFAULT_PRODUCT_DEPTH_BACKLOG_PATH
     product_depth_gate_path: Path = _DEFAULT_PRODUCT_DEPTH_GATE_PATH
+    product_depth_selection_path: Path = _DEFAULT_PRODUCT_DEPTH_SELECTION_PATH
     review_agent_v3_plan_path: Path = _DEFAULT_REVIEW_AGENT_V3_PLAN_PATH
     dataset_quality_depth_plan_path: Path = _DEFAULT_DATASET_QUALITY_DEPTH_PLAN_PATH
     distribution_readiness_pack_path: Path = _DEFAULT_DISTRIBUTION_READINESS_PACK_PATH
+    distribution_rollout_packet_path: Path = _DEFAULT_DISTRIBUTION_ROLLOUT_PACKET_PATH
     mcp_snapshot_path: Path = _DEFAULT_MCP_SNAPSHOT_PATH
     output_snapshot_path: Path = _DEFAULT_OUTPUT_SNAPSHOT_PATH
     contract_output_work_dir: Path | None = None
@@ -307,6 +322,12 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             exporter="scripts/export_v1_rc_automation_pack.py",
         ),
         _check_generated_doc(
+            name="v1_rc_rehearsal_plan",
+            path=config.v1_rc_rehearsal_plan_path,
+            expected=render_v1_rc_rehearsal_plan_markdown(build_v1_rc_rehearsal_plan()),
+            exporter="scripts/export_v1_rc_rehearsal_plan.py --output docs/V1_RC_REHEARSAL_PLAN.md",
+        ),
+        _check_generated_doc(
             name="v1_rc_cutover_gate",
             path=config.v1_rc_cutover_gate_path,
             expected=render_v1_rc_cutover_gate_markdown(build_v1_rc_cutover_gate()),
@@ -331,6 +352,12 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             exporter="scripts/export_product_depth_gate.py --output docs/PRODUCT_DEPTH_GATE.md",
         ),
         _check_generated_doc(
+            name="product_depth_selection",
+            path=config.product_depth_selection_path,
+            expected=render_product_depth_selection_markdown(build_product_depth_selection()),
+            exporter="scripts/export_product_depth_selection.py --output docs/PRODUCT_DEPTH_SELECTION.md",
+        ),
+        _check_generated_doc(
             name="review_agent_v3_plan",
             path=config.review_agent_v3_plan_path,
             expected=render_review_agent_v3_plan_markdown(build_review_agent_v3_plan()),
@@ -347,6 +374,12 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             path=config.distribution_readiness_pack_path,
             expected=render_distribution_readiness_pack_markdown(build_distribution_readiness_pack()),
             exporter="scripts/export_distribution_readiness_pack.py --output docs/DISTRIBUTION_READINESS_PACK.md",
+        ),
+        _check_generated_doc(
+            name="distribution_rollout_packet",
+            path=config.distribution_rollout_packet_path,
+            expected=render_distribution_rollout_packet_markdown(build_distribution_rollout_packet()),
+            exporter="scripts/export_distribution_rollout_packet.py --output docs/DISTRIBUTION_ROLLOUT_PACKET.md",
         ),
         *_check_contract_snapshot_freshness(
             mcp_snapshot_path=config.mcp_snapshot_path,
@@ -393,13 +426,12 @@ def main() -> None:
     parser.add_argument("--beta-feedback-intake", type=Path, default=_DEFAULT_BETA_FEEDBACK_INTAKE_PATH)
     parser.add_argument("--beta-feedback-status", type=Path, default=_DEFAULT_BETA_FEEDBACK_STATUS_PATH)
     parser.add_argument("--beta-validation-sprint", type=Path, default=_DEFAULT_BETA_VALIDATION_SPRINT_PATH)
-    parser.add_argument("--v1-rc-release-packet", type=Path, default=_DEFAULT_V1_RC_RELEASE_PACKET_PATH)
-    parser.add_argument("--v1-rc-cutover-checklist", type=Path, default=_DEFAULT_V1_RC_CUTOVER_CHECKLIST_PATH)
-    parser.add_argument("--v1-rc-automation-pack", type=Path, default=_DEFAULT_V1_RC_AUTOMATION_PACK_PATH)
-    parser.add_argument("--v1-rc-cutover-gate", type=Path, default=_DEFAULT_V1_RC_CUTOVER_GATE_PATH)
+    _add_v1_rc_doc_arguments(parser)
     parser.add_argument("--product-depth-backlog", type=Path, default=_DEFAULT_PRODUCT_DEPTH_BACKLOG_PATH)
+    parser.add_argument("--product-depth-selection", type=Path, default=_DEFAULT_PRODUCT_DEPTH_SELECTION_PATH)
     parser.add_argument("--review-agent-v3-plan", type=Path, default=_DEFAULT_REVIEW_AGENT_V3_PLAN_PATH)
     parser.add_argument("--dataset-quality-depth-plan", type=Path, default=_DEFAULT_DATASET_QUALITY_DEPTH_PLAN_PATH)
+    parser.add_argument("--distribution-rollout-packet", type=Path, default=_DEFAULT_DISTRIBUTION_ROLLOUT_PACKET_PATH)
     parser.add_argument("--mcp-snapshot", type=Path, default=_DEFAULT_MCP_SNAPSHOT_PATH)
     parser.add_argument("--output-snapshot", type=Path, default=_DEFAULT_OUTPUT_SNAPSHOT_PATH)
     parser.add_argument("--contract-output-work-dir", type=Path, default=None)
@@ -437,10 +469,13 @@ def main() -> None:
             v1_rc_release_packet_path=args.v1_rc_release_packet,
             v1_rc_cutover_checklist_path=args.v1_rc_cutover_checklist,
             v1_rc_automation_pack_path=args.v1_rc_automation_pack,
+            v1_rc_rehearsal_plan_path=args.v1_rc_rehearsal_plan,
             v1_rc_cutover_gate_path=args.v1_rc_cutover_gate,
             product_depth_backlog_path=args.product_depth_backlog,
+            product_depth_selection_path=args.product_depth_selection,
             review_agent_v3_plan_path=args.review_agent_v3_plan,
             dataset_quality_depth_plan_path=args.dataset_quality_depth_plan,
+            distribution_rollout_packet_path=args.distribution_rollout_packet,
             mcp_snapshot_path=args.mcp_snapshot,
             output_snapshot_path=args.output_snapshot,
             contract_output_work_dir=args.contract_output_work_dir,
@@ -460,6 +495,14 @@ def main() -> None:
     if args.format == "text":
         checked = ", ".join(check.name for check in report.checks)
         sys.stdout.write(f"release readiness checks passed: {checked}\n")
+
+
+def _add_v1_rc_doc_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--v1-rc-release-packet", type=Path, default=_DEFAULT_V1_RC_RELEASE_PACKET_PATH)
+    parser.add_argument("--v1-rc-cutover-checklist", type=Path, default=_DEFAULT_V1_RC_CUTOVER_CHECKLIST_PATH)
+    parser.add_argument("--v1-rc-automation-pack", type=Path, default=_DEFAULT_V1_RC_AUTOMATION_PACK_PATH)
+    parser.add_argument("--v1-rc-rehearsal-plan", type=Path, default=_DEFAULT_V1_RC_REHEARSAL_PLAN_PATH)
+    parser.add_argument("--v1-rc-cutover-gate", type=Path, default=_DEFAULT_V1_RC_CUTOVER_GATE_PATH)
 
 
 def _check_manual_host_records(path: Path) -> ReleaseReadinessCheck:

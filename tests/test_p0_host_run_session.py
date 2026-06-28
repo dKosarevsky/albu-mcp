@@ -22,6 +22,23 @@ def test_p0_host_run_session_tracks_real_host_sessions_without_evidence_claims()
         for item in session["host_sessions"]
         for command in item["record_commands"]
     )
+    assert all(
+        set(item["evidence_candidate_templates"]) == {"first_10_minutes_replay", "manual_host_ui"}
+        for item in session["host_sessions"]
+    )
+    assert session["host_sessions"][0]["evidence_candidate_templates"]["manual_host_ui"] == {
+        "host": "Codex",
+        "status": "passed",
+        "date": "YYYY-MM-DD",
+        "evidence": "Redacted reviewer-observed Codex host UI evidence summary.",
+    }
+    assert session["host_sessions"][0]["evidence_candidate_templates"]["first_10_minutes_replay"] == {
+        "host": "Codex",
+        "status": "passed",
+        "date": "YYYY-MM-DD",
+        "evidence": "Redacted reviewer-observed Codex first-10-minutes replay summary.",
+        "artifacts": ["docs/assets/demo/demo_report.md"],
+    }
 
 
 def test_p0_host_run_session_markdown_is_copyable() -> None:
@@ -34,6 +51,9 @@ def test_p0_host_run_session_markdown_is_copyable() -> None:
     assert "## Claude Code Session" in markdown
     assert "run_host_smoke_check" in markdown
     assert "scripts/record_host_manual_run.py" in markdown
+    assert "Evidence candidate templates:" in markdown
+    assert '"host": "Codex"' in markdown
+    assert '"artifacts": [' in markdown
 
 
 def test_committed_p0_host_run_session_is_current() -> None:

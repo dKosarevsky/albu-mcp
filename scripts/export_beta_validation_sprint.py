@@ -34,6 +34,14 @@ def build_beta_validation_sprint() -> dict[str, Any]:
             }
             for workflow in workflow_pack["workflows"]
         ],
+        "recording_commands": [
+            _recording_command(
+                workflow_id=workflow["id"],
+                participant_role=workflow["target_user"],
+                triage_bucket=intake_by_workflow[workflow["id"]]["triage_hint"],
+            )
+            for workflow in workflow_pack["workflows"]
+        ],
         "triage_buckets": intake["triage_buckets"],
         "weekly_cadence": [
             "Review new GitHub issues, beta notes, and redacted artifact references.",
@@ -82,6 +90,8 @@ def render_beta_validation_sprint_markdown(sprint: dict[str, Any]) -> str:
         lines.append("- Expected feedback:")
         lines.extend(f"  - {item}" for item in slot["expected_feedback"])
         lines.append("")
+    lines.extend(["## Recording Commands", ""])
+    lines.extend(f"- `{command}`" for command in sprint["recording_commands"])
     lines.extend(["## Triage Buckets", ""])
     lines.extend(f"- `{bucket}`" for bucket in sprint["triage_buckets"])
     lines.extend(["", "## Weekly Cadence", ""])
@@ -103,6 +113,19 @@ def main() -> None:
         return
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(content, encoding="utf-8")
+
+
+def _recording_command(*, workflow_id: str, participant_role: str, triage_bucket: str) -> str:
+    return (
+        "uv run python scripts/record_beta_validation.py "
+        f"--workflow-id {workflow_id} "
+        "--status needs_followup "
+        "--attempt-date YYYY-MM-DD "
+        f"--participant-role {participant_role!r} "
+        "--summary 'Redacted real beta workflow attempt summary.' "
+        f"--triage-bucket {triage_bucket} "
+        "--artifact-ref docs/assets/demo/demo_report.md"
+    )
 
 
 if __name__ == "__main__":

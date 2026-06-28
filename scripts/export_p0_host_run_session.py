@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 from typing import Any
@@ -67,6 +68,18 @@ def render_p0_host_run_session_markdown(session: dict[str, Any]) -> str:
         lines.extend(f"- {item}" for item in host_session["run_checklist"])
         lines.extend(["", "Record commands:", ""])
         lines.extend(f"- `{command}`" for command in host_session["record_commands"])
+        lines.extend(["", "Evidence candidate templates:", ""])
+        for gate, template in host_session["evidence_candidate_templates"].items():
+            lines.extend(
+                [
+                    f"`{gate}`:",
+                    "",
+                    "```json",
+                    json.dumps(template, indent=2),
+                    "```",
+                    "",
+                ]
+            )
         lines.extend(["", "Gate statuses:", ""])
         lines.extend(f"- `{gate['gate']}`: `{gate['record_status']}`" for gate in host_session["gates"])
         lines.append("")
@@ -112,7 +125,30 @@ def _host_session(lane: dict[str, Any]) -> dict[str, Any]:
             "Record only redacted, reviewer-observed evidence after the run.",
         ],
         "record_commands": lane["record_commands"],
+        "evidence_candidate_templates": {
+            "manual_host_ui": _manual_host_ui_template(lane["host"]),
+            "first_10_minutes_replay": _first_10_minutes_template(lane["host"]),
+        },
         "gates": lane["gates"],
+    }
+
+
+def _manual_host_ui_template(host: str) -> dict[str, str]:
+    return {
+        "host": host,
+        "status": "passed",
+        "date": "YYYY-MM-DD",
+        "evidence": f"Redacted reviewer-observed {host} host UI evidence summary.",
+    }
+
+
+def _first_10_minutes_template(host: str) -> dict[str, str | list[str]]:
+    return {
+        "host": host,
+        "status": "passed",
+        "date": "YYYY-MM-DD",
+        "evidence": f"Redacted reviewer-observed {host} first-10-minutes replay summary.",
+        "artifacts": ["docs/assets/demo/demo_report.md"],
     }
 
 
