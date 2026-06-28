@@ -21,6 +21,11 @@ def test_rc_release_decision_report_blocks_rc_tagging() -> None:
         "p0_host_evidence_missing_or_blocked",
         "beta_validation_records_missing",
     ]
+    assert report["completed_enablers"] == [
+        "package_evidence_cli",
+        "package_beta_triage_cli",
+        "preview_gated_policy_assistant_tool",
+    ]
 
 
 def test_rc_release_decision_report_markdown_lists_blocked_commands() -> None:
@@ -29,6 +34,7 @@ def test_rc_release_decision_report_markdown_lists_blocked_commands() -> None:
     assert markdown.startswith("# RC Release Decision Report\n")
     assert "Decision: `no_go`" in markdown
     assert "`git tag v1.15.0-rc.1`" in markdown
+    assert "`preview_gated_policy_assistant_tool`" in markdown
     assert "Do not create tags, GitHub Releases, PyPI uploads, or public announcements." in markdown
 
 

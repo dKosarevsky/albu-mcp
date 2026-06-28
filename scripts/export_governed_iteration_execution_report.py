@@ -29,17 +29,17 @@ def build_governed_iteration_execution_report() -> dict[str, Any]:
         "execution_policy": governor["execution_policy"],
         "safety_policy": "No blind implementation loop was executed.",
         "completed_paths": [
-            "Evidence Unblock path: capture kit prepared; real P0 evidence remains blocked.",
-            "Beta Validation Sprint path: capture kit prepared; real beta attempts remain missing.",
-            "Policy Assistant MVP path: contract prepared behind gates; runtime behavior not implemented.",
+            "Evidence Unblock path: package CLI can record evidence; real P0 evidence remains blocked.",
+            "Beta Validation Sprint path: package CLI can record attempts and triage backlog lanes.",
+            "Policy Assistant MVP path: preview-gated runtime tool is available; production acceptance remains gated.",
         ],
         "completed_plan_points": [
-            "Merged PR #13.",
-            "Prepared host evidence capture kit.",
+            "Merged PR #14.",
+            "Added package-level evidence capture CLI.",
             "Kept P0 outcomes blocked until real host UI evidence exists.",
-            "Prepared beta attempt capture kit.",
-            "Prepared policy assistant MVP contract behind gates.",
-            "Produced RC no-go decision for v1.15.0-rc.1.",
+            "Added package-level beta attempt and backlog triage CLI.",
+            "Implemented preview-gated policy assistant MVP tool.",
+            "Kept v1.15.0-rc.1 at RC no-go with completed enablers documented.",
             "Stopped 100-iteration execution at the first blocked governed gate.",
         ],
         "source_docs": [
@@ -48,6 +48,7 @@ def build_governed_iteration_execution_report() -> dict[str, Any]:
             "docs/HOST_EVIDENCE_CAPTURE_KIT.md",
             "docs/BETA_ATTEMPT_CAPTURE_KIT.md",
             "docs/POLICY_ASSISTANT_MVP_CONTRACT.md",
+            "docs/USAGE.md",
         ],
     }
 

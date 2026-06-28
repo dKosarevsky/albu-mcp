@@ -27,6 +27,11 @@ def build_rc_release_decision_report() -> dict[str, Any]:
         "cutover_allowed": gate["cutover_allowed"],
         "publish_allowed": bool(gate["publish_commands"]),
         "blocked_reasons": blocked_reasons,
+        "completed_enablers": [
+            "package_evidence_cli",
+            "package_beta_triage_cli",
+            "preview_gated_policy_assistant_tool",
+        ],
         "safe_commands": gate["preflight_commands"],
         "blocked_publish_commands": gate["blocked_publish_commands"],
         "release_policy": "Do not create tags, GitHub Releases, PyPI uploads, or public announcements.",
@@ -59,6 +64,8 @@ def render_rc_release_decision_report_markdown(report: dict[str, Any]) -> str:
         lines.extend(f"- `{reason}`" for reason in report["blocked_reasons"])
     else:
         lines.append("- none")
+    lines.extend(["", "## Completed Enablers", ""])
+    lines.extend(f"- `{enabler}`" for enabler in report["completed_enablers"])
     lines.extend(["", "## Safe Commands", ""])
     lines.extend(f"- `{command}`" for command in report["safe_commands"])
     lines.extend(["", "## Blocked Publish Commands", ""])
