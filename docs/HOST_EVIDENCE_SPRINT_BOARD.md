@@ -12,14 +12,14 @@ Never mark a host passed until a reviewer runs the real host UI. Do not paste sy
 - Hosts: `4`
 - Passed manual Host UI: `0`
 - Passed First 10 Minutes replay: `0`
-- Blocked hosts: `0`
+- Blocked hosts: `2`
 
 ## Sprint Board
 
 | Host | Priority | Manual UI | First 10 Minutes | Next Gate |
 | --- | --- | --- | --- | --- |
-| Codex | `p0` | `missing` | `missing` | `first_10_minutes_replay` |
-| Claude Code | `p0` | `missing` | `missing` | `first_10_minutes_replay` |
+| Codex | `p0` | `blocked` | `blocked` | `blocked` |
+| Claude Code | `p0` | `blocked` | `blocked` | `blocked` |
 | Cursor | `p1` | `missing` | `missing` | `first_10_minutes_replay` |
 | Claude Desktop | `p1` | `missing` | `missing` | `first_10_minutes_replay` |
 
@@ -27,8 +27,8 @@ Never mark a host passed until a reviewer runs the real host UI. Do not paste sy
 
 | Order | Host | Priority | Next Action |
 | --- | --- | --- | --- |
-| 1 | Codex | `p0` | `run_first_10_minutes_replay` |
-| 2 | Claude Code | `p0` | `run_first_10_minutes_replay` |
+| 1 | Codex | `p0` | `triage_blocker` |
+| 2 | Claude Code | `p0` | `triage_blocker` |
 | 3 | Cursor | `p1` | `run_first_10_minutes_replay` |
 | 4 | Claude Desktop | `p1` | `run_first_10_minutes_replay` |
 

@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 
-def test_host_acceptance_report_keeps_manual_hosts_pending_by_default() -> None:
+def test_host_acceptance_report_tracks_blocked_p0_hosts() -> None:
     module = importlib.import_module("scripts.export_host_acceptance_report")
 
     report = module.build_host_acceptance_report(Path())
@@ -29,16 +29,22 @@ def test_host_acceptance_report_keeps_manual_hosts_pending_by_default() -> None:
         "Cursor",
         "Codex",
     }
-    assert {item["status"] for item in report["manual_host_ui"]} == {"pending"}
-    assert all("manual UI run not recorded" in item["evidence"] for item in report["manual_host_ui"])
-    assert all(item["date"] == "none" for item in report["manual_host_ui"])
+    assert {item["status"] for item in report["manual_host_ui"]} == {"blocked", "pending"}
+    assert {item["host"] for item in report["manual_host_ui"] if item["status"] == "blocked"} == {
+        "Claude Code",
+        "Codex",
+    }
+    assert {item["host"] for item in report["manual_host_ui"] if item["status"] == "pending"} == {
+        "Claude Desktop",
+        "Cursor",
+    }
     assert {item["host"] for item in report["first_10_minutes_replay"]} == {
         "Claude Desktop",
         "Claude Code",
         "Cursor",
         "Codex",
     }
-    assert {item["status"] for item in report["first_10_minutes_replay"]} == {"pending"}
+    assert {item["status"] for item in report["first_10_minutes_replay"]} == {"blocked", "pending"}
 
 
 def test_host_acceptance_markdown_reports_pending_manual_status() -> None:
@@ -49,11 +55,12 @@ def test_host_acceptance_markdown_reports_pending_manual_status() -> None:
 
     assert "# Host Acceptance Evidence" in markdown
     assert "| Claude Desktop | pending | none | manual UI run not recorded |" in markdown
+    assert "| Codex | blocked | 2026-06-28 | Codex CLI host listed AlbumentationsX MCP resources/tools" in markdown
     assert "## First 10 Minutes Replay" in markdown
-    assert "| Codex | pending | none | first 10 minutes replay not recorded |  |" in markdown
+    assert "| Codex | blocked | 2026-06-28 | Codex CLI host run reached AlbumentationsX MCP discovery" in markdown
     assert "| MCP Registry metadata publish check | automated |" in markdown
     assert "| host acceptance evidence freshness | automated |" in markdown
-    assert "Manual Host UI: pending" in markdown
+    assert "Manual Host UI: blocked" in markdown
     assert "Manual Host UI: passed" not in markdown
 
 
@@ -121,7 +128,7 @@ def test_host_acceptance_report_cli_runs_as_script(tmp_path: Path) -> None:
         text=True,
     )
 
-    assert "Manual Host UI: pending" in output_path.read_text(encoding="utf-8")
+    assert "Manual Host UI: blocked" in output_path.read_text(encoding="utf-8")
 
 
 def test_host_acceptance_report_freshness_check_rejects_stale_markdown(tmp_path: Path) -> None:

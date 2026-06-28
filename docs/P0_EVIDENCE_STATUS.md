@@ -9,17 +9,17 @@ RC ready: `false`
 - host_count: `2`
 - passed_gate_count: `0`
 - required_gate_count: `4`
-- blocked_gate_count: `0`
-- missing_gate_count: `4`
+- blocked_gate_count: `4`
+- missing_gate_count: `0`
 
 ## Gate Status
 
 | Host | Gate | Status | Next Action |
 | --- | --- | --- | --- |
-| Codex | `first_10_minutes_replay` | `missing` | `run_first_10_minutes_replay` |
-| Codex | `manual_host_ui` | `missing` | `run_manual_host_ui` |
-| Claude Code | `first_10_minutes_replay` | `missing` | `run_first_10_minutes_replay` |
-| Claude Code | `manual_host_ui` | `missing` | `run_manual_host_ui` |
+| Codex | `first_10_minutes_replay` | `blocked` | `triage_blocker` |
+| Codex | `manual_host_ui` | `blocked` | `triage_blocker` |
+| Claude Code | `first_10_minutes_replay` | `blocked` | `triage_blocker` |
+| Claude Code | `manual_host_ui` | `blocked` | `triage_blocker` |
 
 ## Next Action
 

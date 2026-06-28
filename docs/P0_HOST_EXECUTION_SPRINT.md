@@ -18,10 +18,10 @@ Never mark a host passed without reviewer-observed real UI evidence.
 
 | Host | Gate | Evidence Status | Next Action | Operator Packet |
 | --- | --- | --- | --- | --- |
-| Codex | `first_10_minutes_replay` | `missing` | `run_first_10_minutes_replay` | `uv run python scripts/export_manual_host_acceptance_packet.py --host Codex --output /tmp/albu-host-codex.md` |
-| Codex | `manual_host_ui` | `missing` | `run_manual_host_ui` | `uv run python scripts/export_manual_host_acceptance_packet.py --host Codex --output /tmp/albu-host-codex.md` |
-| Claude Code | `first_10_minutes_replay` | `missing` | `run_first_10_minutes_replay` | `uv run python scripts/export_manual_host_acceptance_packet.py --host 'Claude Code' --output /tmp/albu-host-claude-code.md` |
-| Claude Code | `manual_host_ui` | `missing` | `run_manual_host_ui` | `uv run python scripts/export_manual_host_acceptance_packet.py --host 'Claude Code' --output /tmp/albu-host-claude-code.md` |
+| Codex | `first_10_minutes_replay` | `blocked` | `triage_blocker` | `uv run python scripts/export_manual_host_acceptance_packet.py --host Codex --output /tmp/albu-host-codex.md` |
+| Codex | `manual_host_ui` | `blocked` | `triage_blocker` | `uv run python scripts/export_manual_host_acceptance_packet.py --host Codex --output /tmp/albu-host-codex.md` |
+| Claude Code | `first_10_minutes_replay` | `blocked` | `triage_blocker` | `uv run python scripts/export_manual_host_acceptance_packet.py --host 'Claude Code' --output /tmp/albu-host-claude-code.md` |
+| Claude Code | `manual_host_ui` | `blocked` | `triage_blocker` | `uv run python scripts/export_manual_host_acceptance_packet.py --host 'Claude Code' --output /tmp/albu-host-claude-code.md` |
 
 ## Stop Conditions
 

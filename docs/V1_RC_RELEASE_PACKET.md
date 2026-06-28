@@ -10,8 +10,8 @@ Release candidate allowed: `false`
 - host_count: `2`
 - passed_gate_count: `0`
 - required_gate_count: `4`
-- blocked_gate_count: `0`
-- missing_gate_count: `4`
+- blocked_gate_count: `4`
+- missing_gate_count: `0`
 
 ## Blocked Release Steps
 

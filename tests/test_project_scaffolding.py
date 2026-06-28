@@ -235,9 +235,10 @@ def test_host_acceptance_checklist_covers_registry_and_hosts() -> None:
         assert host in matrix
     for term in ["close_tuning_session", "archive_tuning_session", "cleanup_tuning_sessions"]:
         assert term in matrix
-    assert "Manual Host UI: pending" in evidence
+    assert "Manual Host UI: blocked" in evidence
     assert "Manual Host UI: passed" not in evidence
-    assert '"manual_host_ui": []' in manual_runs
+    assert '"status": "blocked"' in manual_runs
+    assert '"host": "Codex"' in manual_runs
     assert "Claude Desktop" in manual_runs_schema["properties"]["manual_host_ui"]["items"]["properties"]["host"]["enum"]
     assert "blocked" in manual_runs_schema["properties"]["manual_host_ui"]["items"]["properties"]["status"]["enum"]
     assert "HOST_MANUAL_RUNS.json" in checklist

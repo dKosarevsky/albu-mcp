@@ -12,8 +12,8 @@ Do not create an RC tag until all P0 host gates are passed in real host UI.
 
 - required_gate_count: `4`
 - recorded_gate_count: `0`
-- missing_gate_count: `4`
-- blocked_gate_count: `0`
+- missing_gate_count: `0`
+- blocked_gate_count: `4`
 
 ## Operator Lanes
 
@@ -30,8 +30,8 @@ Record commands:
 
 Gate statuses:
 
-- `first_10_minutes_replay`: `missing`
-- `manual_host_ui`: `missing`
+- `first_10_minutes_replay`: `blocked`
+- `manual_host_ui`: `blocked`
 
 ## Claude Code
 
@@ -46,8 +46,8 @@ Record commands:
 
 Gate statuses:
 
-- `first_10_minutes_replay`: `missing`
-- `manual_host_ui`: `missing`
+- `first_10_minutes_replay`: `blocked`
+- `manual_host_ui`: `blocked`
 
 ## Post-Recording Commands
 

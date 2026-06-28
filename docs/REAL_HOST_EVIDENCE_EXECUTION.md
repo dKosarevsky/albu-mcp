@@ -13,8 +13,8 @@ Keep hosts pending or blocked until the reviewer has a dated real UI observation
 
 | Order | Host | Priority | Next Action | Packet |
 | --- | --- | --- | --- | --- |
-| 1 | Codex | `p0` | `run_first_10_minutes_replay` | `uv run python scripts/export_manual_host_acceptance_packet.py --host Codex --output /tmp/albu-host-codex.md` |
-| 2 | Claude Code | `p0` | `run_first_10_minutes_replay` | `uv run python scripts/export_manual_host_acceptance_packet.py --host 'Claude Code' --output /tmp/albu-host-claude-code.md` |
+| 1 | Codex | `p0` | `triage_blocker` | `uv run python scripts/export_manual_host_acceptance_packet.py --host Codex --output /tmp/albu-host-codex.md` |
+| 2 | Claude Code | `p0` | `triage_blocker` | `uv run python scripts/export_manual_host_acceptance_packet.py --host 'Claude Code' --output /tmp/albu-host-claude-code.md` |
 | 3 | Cursor | `p1` | `run_first_10_minutes_replay` | `uv run python scripts/export_manual_host_acceptance_packet.py --host Cursor --output /tmp/albu-host-cursor.md` |
 | 4 | Claude Desktop | `p1` | `run_first_10_minutes_replay` | `uv run python scripts/export_manual_host_acceptance_packet.py --host 'Claude Desktop' --output /tmp/albu-host-claude-desktop.md` |
 
@@ -23,7 +23,7 @@ Keep hosts pending or blocked until the reviewer has a dated real UI observation
 ### Codex
 
 - Packet: `uv run python scripts/export_manual_host_acceptance_packet.py --host Codex --output /tmp/albu-host-codex.md`
-- Next action: `run_first_10_minutes_replay`
+- Next action: `triage_blocker`
 - Required observations:
   - Host shows AlbumentationsX MCP tools and resources.
   - Host completes run_host_smoke_check.
@@ -36,7 +36,7 @@ Keep hosts pending or blocked until the reviewer has a dated real UI observation
 ### Claude Code
 
 - Packet: `uv run python scripts/export_manual_host_acceptance_packet.py --host 'Claude Code' --output /tmp/albu-host-claude-code.md`
-- Next action: `run_first_10_minutes_replay`
+- Next action: `triage_blocker`
 - Required observations:
   - Host shows AlbumentationsX MCP tools and resources.
   - Host completes run_host_smoke_check.

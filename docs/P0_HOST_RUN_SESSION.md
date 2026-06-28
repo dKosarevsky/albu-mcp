@@ -11,14 +11,14 @@ Record only reviewer-observed real host UI evidence.
 
 - required_gate_count: `4`
 - recorded_gate_count: `0`
-- missing_gate_count: `4`
-- blocked_gate_count: `0`
+- missing_gate_count: `0`
+- blocked_gate_count: `4`
 
 ## Host Sessions
 
 ## Codex Session
 
-Session status: `not_started`
+Session status: `blocked`
 
 Host prompt:
 
@@ -67,12 +67,12 @@ Evidence candidate templates:
 
 Gate statuses:
 
-- `first_10_minutes_replay`: `missing`
-- `manual_host_ui`: `missing`
+- `first_10_minutes_replay`: `blocked`
+- `manual_host_ui`: `blocked`
 
 ## Claude Code Session
 
-Session status: `not_started`
+Session status: `blocked`
 
 Host prompt:
 
@@ -121,8 +121,8 @@ Evidence candidate templates:
 
 Gate statuses:
 
-- `first_10_minutes_replay`: `missing`
-- `manual_host_ui`: `missing`
+- `first_10_minutes_replay`: `blocked`
+- `manual_host_ui`: `blocked`
 
 ## Post-Session Commands
 

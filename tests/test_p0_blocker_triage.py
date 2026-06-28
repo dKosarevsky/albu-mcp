@@ -17,8 +17,8 @@ def test_p0_blocker_triage_maps_p0_gates_to_actions() -> None:
     ]
     assert [item["host"] for item in triage["triage_matrix"][:2]] == ["Codex", "Codex"]
     assert triage["triage_matrix"][0]["gate"] == "first_10_minutes_replay"
-    assert triage["triage_matrix"][0]["evidence_status"] == "missing"
-    assert triage["triage_matrix"][0]["triage_action"] == "run_p0_host_runbook"
+    assert triage["triage_matrix"][0]["evidence_status"] == "blocked"
+    assert triage["triage_matrix"][0]["triage_action"] == "triage_blocker"
     assert triage["triage_matrix"][0]["entrypoints"] == [
         "docs/P0_HOST_RUNBOOK.md",
         "docs/P0_EVIDENCE_RECORDER.md",
@@ -33,7 +33,7 @@ def test_p0_blocker_triage_markdown_is_actionable() -> None:
 
     assert markdown.startswith("# P0 Blocker Triage Matrix\n")
     assert "## Triage Matrix" in markdown
-    assert "| Codex | `first_10_minutes_replay` | `missing` | `run_p0_host_runbook` |" in markdown
+    assert "| Codex | `first_10_minutes_replay` | `blocked` | `triage_blocker` |" in markdown
     assert "## Failure Classes" in markdown
     assert "`tools_not_visible`" in markdown
     assert "`uvx_startup_failed`" in markdown

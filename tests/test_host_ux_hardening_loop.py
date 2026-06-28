@@ -37,7 +37,7 @@ def test_host_ux_hardening_loop_markdown_is_actionable() -> None:
 
     assert markdown.startswith("# Host UX Hardening Loop\n")
     assert "## Hardening Queue" in markdown
-    assert "| Codex | `p0` | `first_10_minutes_replay` | `missing` |" in markdown
+    assert "| Codex | `p0` | `first_10_minutes_replay` | `blocked` |" in markdown
     assert "## Loop Steps" in markdown
     assert "Classify the failure with the host failure cookbook." in markdown
     assert "## Regression Targets" in markdown
