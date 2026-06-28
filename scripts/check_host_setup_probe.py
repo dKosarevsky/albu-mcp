@@ -103,11 +103,7 @@ def render_host_setup_probe_markdown(probe: dict[str, Any]) -> str:
         ]
     )
     lines.extend(
-        "| "
-        f"`{check['name']}` | "
-        f"`{check['status']}` | "
-        f"{check['detail']} | "
-        f"{check['remediation']} |"
+        f"| `{check['name']}` | `{check['status']}` | {check['detail']} | {check['remediation']} |"
         for check in probe["checks"]
     )
     lines.extend(
@@ -120,10 +116,7 @@ def render_host_setup_probe_markdown(probe: dict[str, Any]) -> str:
         ]
     )
     lines.extend(
-        "| "
-        f"{lane['host']} | "
-        f"`{lane['setup_doc']}` | "
-        f"{', '.join(f'`{check}`' for check in lane['required_checks'])} |"
+        f"| {lane['host']} | `{lane['setup_doc']}` | {', '.join(f'`{check}`' for check in lane['required_checks'])} |"
         for lane in probe["host_lanes"]
     )
     lines.extend(["", "## Post-Probe Commands", ""])

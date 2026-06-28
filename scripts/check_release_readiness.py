@@ -431,8 +431,7 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             path=config.beta_validation_recording_pack_path,
             expected=render_beta_validation_recording_pack_markdown(build_beta_validation_recording_pack()),
             exporter=(
-                "scripts/export_beta_validation_recording_pack.py "
-                "--output docs/BETA_VALIDATION_RECORDING_PACK.md"
+                "scripts/export_beta_validation_recording_pack.py --output docs/BETA_VALIDATION_RECORDING_PACK.md"
             ),
         ),
         _check_generated_doc(
