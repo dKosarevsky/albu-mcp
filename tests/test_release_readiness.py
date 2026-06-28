@@ -60,6 +60,8 @@ def test_release_readiness_accepts_current_fast_guards(tmp_path: Path) -> None:
         "product_depth_backlog",
         "product_depth_gate",
         "product_depth_selection",
+        "policy_assistant_plan",
+        "product_iteration_governor",
         "host_onboarding_depth_plan",
         "review_agent_v3_plan",
         "dataset_quality_depth_plan",
@@ -143,6 +145,8 @@ def test_release_readiness_cli_passes_fast_guards(tmp_path: Path) -> None:
     assert "product_depth_backlog" in result.stdout
     assert "product_depth_gate" in result.stdout
     assert "product_depth_selection" in result.stdout
+    assert "policy_assistant_plan" in result.stdout
+    assert "product_iteration_governor" in result.stdout
     assert "host_onboarding_depth_plan" in result.stdout
     assert "dataset_quality_depth_plan" in result.stdout
     assert "distribution_readiness_pack" in result.stdout

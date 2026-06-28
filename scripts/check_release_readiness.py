@@ -102,6 +102,11 @@ from scripts.export_product_depth_selection import (
     build_product_depth_selection,
     render_product_depth_selection_markdown,
 )
+from scripts.export_product_iteration_governor import (
+    build_product_iteration_governor,
+    render_product_iteration_governor_markdown,
+)
+from scripts.export_policy_assistant_plan import build_policy_assistant_plan, render_policy_assistant_plan_markdown
 from scripts.export_rc_cutover_recovery_plan import (
     build_rc_cutover_recovery_plan,
     render_rc_cutover_recovery_plan_markdown,
@@ -190,6 +195,8 @@ _DEFAULT_RC_HOST_EVIDENCE_OPS_PATH = Path("docs/RC_HOST_EVIDENCE_OPS.md")
 _DEFAULT_PRODUCT_DEPTH_BACKLOG_PATH = Path("docs/PRODUCT_DEPTH_BACKLOG.md")
 _DEFAULT_PRODUCT_DEPTH_GATE_PATH = Path("docs/PRODUCT_DEPTH_GATE.md")
 _DEFAULT_PRODUCT_DEPTH_SELECTION_PATH = Path("docs/PRODUCT_DEPTH_SELECTION.md")
+_DEFAULT_POLICY_ASSISTANT_PLAN_PATH = Path("docs/POLICY_ASSISTANT_PLAN.md")
+_DEFAULT_PRODUCT_ITERATION_GOVERNOR_PATH = Path("docs/PRODUCT_ITERATION_GOVERNOR.md")
 _DEFAULT_HOST_ONBOARDING_DEPTH_PLAN_PATH = Path("docs/HOST_ONBOARDING_DEPTH_PLAN.md")
 _DEFAULT_REVIEW_AGENT_V3_PLAN_PATH = Path("docs/REVIEW_AGENT_V3_PLAN.md")
 _DEFAULT_DATASET_QUALITY_DEPTH_PLAN_PATH = Path("docs/DATASET_QUALITY_DEPTH_PLAN.md")
@@ -253,6 +260,8 @@ class ReleaseReadinessConfig:
     product_depth_backlog_path: Path = _DEFAULT_PRODUCT_DEPTH_BACKLOG_PATH
     product_depth_gate_path: Path = _DEFAULT_PRODUCT_DEPTH_GATE_PATH
     product_depth_selection_path: Path = _DEFAULT_PRODUCT_DEPTH_SELECTION_PATH
+    policy_assistant_plan_path: Path = _DEFAULT_POLICY_ASSISTANT_PLAN_PATH
+    product_iteration_governor_path: Path = _DEFAULT_PRODUCT_ITERATION_GOVERNOR_PATH
     host_onboarding_depth_plan_path: Path = _DEFAULT_HOST_ONBOARDING_DEPTH_PLAN_PATH
     review_agent_v3_plan_path: Path = _DEFAULT_REVIEW_AGENT_V3_PLAN_PATH
     dataset_quality_depth_plan_path: Path = _DEFAULT_DATASET_QUALITY_DEPTH_PLAN_PATH
@@ -553,6 +562,18 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             path=config.product_depth_selection_path,
             expected=render_product_depth_selection_markdown(build_product_depth_selection()),
             exporter="scripts/export_product_depth_selection.py --output docs/PRODUCT_DEPTH_SELECTION.md",
+        ),
+        _check_generated_doc(
+            name="policy_assistant_plan",
+            path=config.policy_assistant_plan_path,
+            expected=render_policy_assistant_plan_markdown(build_policy_assistant_plan()),
+            exporter="scripts/export_policy_assistant_plan.py --output docs/POLICY_ASSISTANT_PLAN.md",
+        ),
+        _check_generated_doc(
+            name="product_iteration_governor",
+            path=config.product_iteration_governor_path,
+            expected=render_product_iteration_governor_markdown(build_product_iteration_governor()),
+            exporter="scripts/export_product_iteration_governor.py --output docs/PRODUCT_ITERATION_GOVERNOR.md",
         ),
         _check_generated_doc(
             name="host_onboarding_depth_plan",
