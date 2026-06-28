@@ -16,6 +16,7 @@ from scripts.check_contract_snapshots import check_contract_snapshots
 from scripts.check_first_10_minutes import check_first_10_minutes
 from scripts.check_host_acceptance_report import check_host_acceptance_report
 from scripts.check_host_proof_sprint import check_host_proof_sprint
+from scripts.check_host_setup_probe import build_host_setup_probe, render_host_setup_probe_markdown
 from scripts.check_p0_host_run_preflight import check_p0_host_run_preflight
 from scripts.check_release_version import validate_release_versions
 from scripts.check_v1_rc_cutover_gate import build_v1_rc_cutover_gate, render_v1_rc_cutover_gate_markdown
@@ -26,9 +27,17 @@ from scripts.export_beta_campaign_execution import (
 from scripts.export_beta_campaign_pack import build_beta_campaign_pack, render_beta_campaign_pack_markdown
 from scripts.export_beta_feedback_intake import build_beta_feedback_intake, render_beta_feedback_intake_markdown
 from scripts.export_beta_feedback_status import build_beta_feedback_status, render_beta_feedback_status_markdown
+from scripts.export_beta_to_backlog_triage import (
+    build_beta_to_backlog_triage,
+    render_beta_to_backlog_triage_markdown,
+)
 from scripts.export_beta_validation_intake import (
     build_beta_validation_intake,
     render_beta_validation_intake_markdown,
+)
+from scripts.export_beta_validation_recording_pack import (
+    build_beta_validation_recording_pack,
+    render_beta_validation_recording_pack_markdown,
 )
 from scripts.export_beta_validation_sprint import build_beta_validation_sprint, render_beta_validation_sprint_markdown
 from scripts.export_beta_validation_status import (
@@ -71,6 +80,10 @@ from scripts.export_p0_host_evidence_ledger import (
     build_p0_host_evidence_ledger,
     render_p0_host_evidence_ledger_markdown,
 )
+from scripts.export_p0_host_evidence_recovery import (
+    build_p0_host_evidence_recovery,
+    render_p0_host_evidence_recovery_markdown,
+)
 from scripts.export_p0_host_execution_sprint import (
     build_p0_host_execution_sprint,
     render_p0_host_execution_sprint_markdown,
@@ -89,6 +102,7 @@ from scripts.export_rc_cutover_recovery_plan import (
     render_rc_cutover_recovery_plan_markdown,
 )
 from scripts.export_rc_dry_run import build_rc_dry_run, render_rc_dry_run_markdown
+from scripts.export_rc_gate_reopen_packet import build_rc_gate_reopen_packet, render_rc_gate_reopen_packet_markdown
 from scripts.export_rc_host_evidence_ops import build_rc_host_evidence_ops, render_rc_host_evidence_ops_markdown
 from scripts.export_review_agent_v3_plan import build_review_agent_v3_plan, render_review_agent_v3_plan_markdown
 from scripts.export_v1_decision_report import build_v1_decision_report, render_v1_decision_report_markdown
@@ -138,14 +152,18 @@ _DEFAULT_P0_HOST_EVIDENCE_LEDGER_PATH = Path("docs/P0_HOST_EVIDENCE_LEDGER.md")
 _DEFAULT_P0_EVIDENCE_STATUS_PATH = Path("docs/P0_EVIDENCE_STATUS.md")
 _DEFAULT_P0_BLOCKER_TRIAGE_PATH = Path("docs/P0_BLOCKER_TRIAGE.md")
 _DEFAULT_P0_HOST_UNBLOCK_PACK_PATH = Path("docs/P0_HOST_UNBLOCK_PACK.md")
+_DEFAULT_P0_HOST_EVIDENCE_RECOVERY_PATH = Path("docs/P0_HOST_EVIDENCE_RECOVERY.md")
 _DEFAULT_HOST_EVIDENCE_RUNNER_PATH = Path("docs/HOST_EVIDENCE_RUNNER.md")
 _DEFAULT_CODEX_CANCELLATION_TRIAGE_PATH = Path("docs/CODEX_CANCELLATION_TRIAGE.md")
 _DEFAULT_CLAUDE_CODE_SETUP_PATH = Path("docs/CLAUDE_CODE_SETUP_PATH.md")
+_DEFAULT_HOST_SETUP_PROBE_PATH = Path("docs/HOST_SETUP_PROBE.md")
 _DEFAULT_BETA_CAMPAIGN_PACK_PATH = Path("docs/BETA_CAMPAIGN_PACK.md")
 _DEFAULT_BETA_CAMPAIGN_EXECUTION_PATH = Path("docs/BETA_CAMPAIGN_EXECUTION.md")
 _DEFAULT_BETA_FEEDBACK_INTAKE_PATH = Path("docs/BETA_FEEDBACK_INTAKE.md")
 _DEFAULT_BETA_FEEDBACK_STATUS_PATH = Path("docs/BETA_FEEDBACK_STATUS.md")
+_DEFAULT_BETA_TO_BACKLOG_TRIAGE_PATH = Path("docs/BETA_TO_BACKLOG_TRIAGE.md")
 _DEFAULT_BETA_VALIDATION_INTAKE_PATH = Path("docs/BETA_VALIDATION_INTAKE.md")
+_DEFAULT_BETA_VALIDATION_RECORDING_PACK_PATH = Path("docs/BETA_VALIDATION_RECORDING_PACK.md")
 _DEFAULT_BETA_VALIDATION_SPRINT_PATH = Path("docs/BETA_VALIDATION_SPRINT.md")
 _DEFAULT_BETA_VALIDATION_STATUS_PATH = Path("docs/BETA_VALIDATION_STATUS.md")
 _DEFAULT_V1_RC_RELEASE_PACKET_PATH = Path("docs/V1_RC_RELEASE_PACKET.md")
@@ -155,6 +173,7 @@ _DEFAULT_V1_RC_REHEARSAL_PLAN_PATH = Path("docs/V1_RC_REHEARSAL_PLAN.md")
 _DEFAULT_V1_RC_CUTOVER_GATE_PATH = Path("docs/V1_RC_CUTOVER_GATE.md")
 _DEFAULT_RC_CUTOVER_RECOVERY_PLAN_PATH = Path("docs/RC_CUTOVER_RECOVERY_PLAN.md")
 _DEFAULT_RC_DRY_RUN_PATH = Path("docs/RC_DRY_RUN.md")
+_DEFAULT_RC_GATE_REOPEN_PACKET_PATH = Path("docs/RC_GATE_REOPEN_PACKET.md")
 _DEFAULT_RC_HOST_EVIDENCE_OPS_PATH = Path("docs/RC_HOST_EVIDENCE_OPS.md")
 _DEFAULT_PRODUCT_DEPTH_BACKLOG_PATH = Path("docs/PRODUCT_DEPTH_BACKLOG.md")
 _DEFAULT_PRODUCT_DEPTH_GATE_PATH = Path("docs/PRODUCT_DEPTH_GATE.md")
@@ -193,14 +212,18 @@ class ReleaseReadinessConfig:
     p0_evidence_status_path: Path = _DEFAULT_P0_EVIDENCE_STATUS_PATH
     p0_blocker_triage_path: Path = _DEFAULT_P0_BLOCKER_TRIAGE_PATH
     p0_host_unblock_pack_path: Path = _DEFAULT_P0_HOST_UNBLOCK_PACK_PATH
+    p0_host_evidence_recovery_path: Path = _DEFAULT_P0_HOST_EVIDENCE_RECOVERY_PATH
     host_evidence_runner_path: Path = _DEFAULT_HOST_EVIDENCE_RUNNER_PATH
     codex_cancellation_triage_path: Path = _DEFAULT_CODEX_CANCELLATION_TRIAGE_PATH
     claude_code_setup_path: Path = _DEFAULT_CLAUDE_CODE_SETUP_PATH
+    host_setup_probe_path: Path = _DEFAULT_HOST_SETUP_PROBE_PATH
     beta_campaign_pack_path: Path = _DEFAULT_BETA_CAMPAIGN_PACK_PATH
     beta_campaign_execution_path: Path = _DEFAULT_BETA_CAMPAIGN_EXECUTION_PATH
     beta_feedback_intake_path: Path = _DEFAULT_BETA_FEEDBACK_INTAKE_PATH
     beta_feedback_status_path: Path = _DEFAULT_BETA_FEEDBACK_STATUS_PATH
+    beta_to_backlog_triage_path: Path = _DEFAULT_BETA_TO_BACKLOG_TRIAGE_PATH
     beta_validation_intake_path: Path = _DEFAULT_BETA_VALIDATION_INTAKE_PATH
+    beta_validation_recording_pack_path: Path = _DEFAULT_BETA_VALIDATION_RECORDING_PACK_PATH
     beta_validation_sprint_path: Path = _DEFAULT_BETA_VALIDATION_SPRINT_PATH
     beta_validation_status_path: Path = _DEFAULT_BETA_VALIDATION_STATUS_PATH
     v1_rc_release_packet_path: Path = _DEFAULT_V1_RC_RELEASE_PACKET_PATH
@@ -210,6 +233,7 @@ class ReleaseReadinessConfig:
     v1_rc_cutover_gate_path: Path = _DEFAULT_V1_RC_CUTOVER_GATE_PATH
     rc_cutover_recovery_plan_path: Path = _DEFAULT_RC_CUTOVER_RECOVERY_PLAN_PATH
     rc_dry_run_path: Path = _DEFAULT_RC_DRY_RUN_PATH
+    rc_gate_reopen_packet_path: Path = _DEFAULT_RC_GATE_REOPEN_PACKET_PATH
     rc_host_evidence_ops_path: Path = _DEFAULT_RC_HOST_EVIDENCE_OPS_PATH
     product_depth_backlog_path: Path = _DEFAULT_PRODUCT_DEPTH_BACKLOG_PATH
     product_depth_gate_path: Path = _DEFAULT_PRODUCT_DEPTH_GATE_PATH
@@ -337,6 +361,12 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             exporter="scripts/export_p0_host_unblock_pack.py --output docs/P0_HOST_UNBLOCK_PACK.md",
         ),
         _check_generated_doc(
+            name="p0_host_evidence_recovery",
+            path=config.p0_host_evidence_recovery_path,
+            expected=render_p0_host_evidence_recovery_markdown(build_p0_host_evidence_recovery()),
+            exporter="scripts/export_p0_host_evidence_recovery.py --output docs/P0_HOST_EVIDENCE_RECOVERY.md",
+        ),
+        _check_generated_doc(
             name="host_evidence_runner",
             path=config.host_evidence_runner_path,
             expected=render_host_evidence_runner_markdown(build_host_evidence_runner()),
@@ -353,6 +383,12 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             path=config.claude_code_setup_path,
             expected=render_claude_code_setup_path_markdown(build_claude_code_setup_path()),
             exporter="scripts/export_claude_code_setup_path.py --output docs/CLAUDE_CODE_SETUP_PATH.md",
+        ),
+        _check_generated_doc(
+            name="host_setup_probe",
+            path=config.host_setup_probe_path,
+            expected=render_host_setup_probe_markdown(build_host_setup_probe()),
+            exporter="scripts/check_host_setup_probe.py --output docs/HOST_SETUP_PROBE.md",
         ),
         _check_generated_doc(
             name="beta_campaign_pack",
@@ -379,10 +415,24 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             exporter="scripts/export_beta_feedback_status.py",
         ),
         _check_generated_doc(
+            name="beta_to_backlog_triage",
+            path=config.beta_to_backlog_triage_path,
+            expected=render_beta_to_backlog_triage_markdown(build_beta_to_backlog_triage()),
+            exporter="scripts/export_beta_to_backlog_triage.py --output docs/BETA_TO_BACKLOG_TRIAGE.md",
+        ),
+        _check_generated_doc(
             name="beta_validation_intake",
             path=config.beta_validation_intake_path,
             expected=render_beta_validation_intake_markdown(build_beta_validation_intake()),
             exporter="scripts/export_beta_validation_intake.py --output docs/BETA_VALIDATION_INTAKE.md",
+        ),
+        _check_generated_doc(
+            name="beta_validation_recording_pack",
+            path=config.beta_validation_recording_pack_path,
+            expected=render_beta_validation_recording_pack_markdown(build_beta_validation_recording_pack()),
+            exporter=(
+                "scripts/export_beta_validation_recording_pack.py --output docs/BETA_VALIDATION_RECORDING_PACK.md"
+            ),
         ),
         _check_generated_doc(
             name="beta_validation_sprint",
@@ -437,6 +487,12 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             path=config.rc_dry_run_path,
             expected=render_rc_dry_run_markdown(build_rc_dry_run()),
             exporter="scripts/export_rc_dry_run.py --output docs/RC_DRY_RUN.md",
+        ),
+        _check_generated_doc(
+            name="rc_gate_reopen_packet",
+            path=config.rc_gate_reopen_packet_path,
+            expected=render_rc_gate_reopen_packet_markdown(build_rc_gate_reopen_packet()),
+            exporter="scripts/export_rc_gate_reopen_packet.py --output docs/RC_GATE_REOPEN_PACKET.md",
         ),
         _check_generated_doc(
             name="rc_host_evidence_ops",
@@ -537,14 +593,18 @@ def main() -> None:
             p0_evidence_status_path=args.p0_evidence_status,
             p0_blocker_triage_path=args.p0_blocker_triage,
             p0_host_unblock_pack_path=args.p0_host_unblock_pack,
+            p0_host_evidence_recovery_path=args.p0_host_evidence_recovery,
             host_evidence_runner_path=args.host_evidence_runner,
             codex_cancellation_triage_path=args.codex_cancellation_triage,
             claude_code_setup_path=args.claude_code_setup_path,
+            host_setup_probe_path=args.host_setup_probe,
             beta_campaign_pack_path=args.beta_campaign_pack,
             beta_campaign_execution_path=args.beta_campaign_execution,
             beta_feedback_intake_path=args.beta_feedback_intake,
             beta_feedback_status_path=args.beta_feedback_status,
+            beta_to_backlog_triage_path=args.beta_to_backlog_triage,
             beta_validation_intake_path=args.beta_validation_intake,
+            beta_validation_recording_pack_path=args.beta_validation_recording_pack,
             beta_validation_sprint_path=args.beta_validation_sprint,
             v1_rc_release_packet_path=args.v1_rc_release_packet,
             v1_rc_cutover_checklist_path=args.v1_rc_cutover_checklist,
@@ -553,6 +613,7 @@ def main() -> None:
             v1_rc_cutover_gate_path=args.v1_rc_cutover_gate,
             rc_cutover_recovery_plan_path=args.rc_cutover_recovery_plan,
             rc_dry_run_path=args.rc_dry_run,
+            rc_gate_reopen_packet_path=args.rc_gate_reopen_packet,
             product_depth_backlog_path=args.product_depth_backlog,
             product_depth_selection_path=args.product_depth_selection,
             host_onboarding_depth_plan_path=args.host_onboarding_depth_plan,
@@ -605,14 +666,22 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--p0-evidence-status", type=Path, default=_DEFAULT_P0_EVIDENCE_STATUS_PATH)
     parser.add_argument("--p0-blocker-triage", type=Path, default=_DEFAULT_P0_BLOCKER_TRIAGE_PATH)
     parser.add_argument("--p0-host-unblock-pack", type=Path, default=_DEFAULT_P0_HOST_UNBLOCK_PACK_PATH)
+    parser.add_argument("--p0-host-evidence-recovery", type=Path, default=_DEFAULT_P0_HOST_EVIDENCE_RECOVERY_PATH)
     parser.add_argument("--host-evidence-runner", type=Path, default=_DEFAULT_HOST_EVIDENCE_RUNNER_PATH)
     parser.add_argument("--codex-cancellation-triage", type=Path, default=_DEFAULT_CODEX_CANCELLATION_TRIAGE_PATH)
     parser.add_argument("--claude-code-setup-path", type=Path, default=_DEFAULT_CLAUDE_CODE_SETUP_PATH)
+    parser.add_argument("--host-setup-probe", type=Path, default=_DEFAULT_HOST_SETUP_PROBE_PATH)
     parser.add_argument("--beta-campaign-pack", type=Path, default=_DEFAULT_BETA_CAMPAIGN_PACK_PATH)
     parser.add_argument("--beta-campaign-execution", type=Path, default=_DEFAULT_BETA_CAMPAIGN_EXECUTION_PATH)
     parser.add_argument("--beta-feedback-intake", type=Path, default=_DEFAULT_BETA_FEEDBACK_INTAKE_PATH)
     parser.add_argument("--beta-feedback-status", type=Path, default=_DEFAULT_BETA_FEEDBACK_STATUS_PATH)
+    parser.add_argument("--beta-to-backlog-triage", type=Path, default=_DEFAULT_BETA_TO_BACKLOG_TRIAGE_PATH)
     parser.add_argument("--beta-validation-intake", type=Path, default=_DEFAULT_BETA_VALIDATION_INTAKE_PATH)
+    parser.add_argument(
+        "--beta-validation-recording-pack",
+        type=Path,
+        default=_DEFAULT_BETA_VALIDATION_RECORDING_PACK_PATH,
+    )
     parser.add_argument("--beta-validation-sprint", type=Path, default=_DEFAULT_BETA_VALIDATION_SPRINT_PATH)
     _add_v1_rc_doc_arguments(parser)
     parser.add_argument("--product-depth-backlog", type=Path, default=_DEFAULT_PRODUCT_DEPTH_BACKLOG_PATH)
@@ -638,6 +707,7 @@ def _add_v1_rc_doc_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--v1-rc-cutover-gate", type=Path, default=_DEFAULT_V1_RC_CUTOVER_GATE_PATH)
     parser.add_argument("--rc-cutover-recovery-plan", type=Path, default=_DEFAULT_RC_CUTOVER_RECOVERY_PLAN_PATH)
     parser.add_argument("--rc-dry-run", type=Path, default=_DEFAULT_RC_DRY_RUN_PATH)
+    parser.add_argument("--rc-gate-reopen-packet", type=Path, default=_DEFAULT_RC_GATE_REOPEN_PACKET_PATH)
 
 
 def _check_manual_host_records(path: Path) -> ReleaseReadinessCheck:
