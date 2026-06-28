@@ -47,6 +47,7 @@ def test_release_readiness_accepts_current_fast_guards(tmp_path: Path) -> None:
         "v1_rc_rehearsal_plan",
         "v1_rc_cutover_gate",
         "rc_cutover_recovery_plan",
+        "rc_dry_run",
         "rc_host_evidence_ops",
         "product_depth_backlog",
         "product_depth_gate",
@@ -121,6 +122,7 @@ def test_release_readiness_cli_passes_fast_guards(tmp_path: Path) -> None:
     assert "v1_rc_rehearsal_plan" in result.stdout
     assert "v1_rc_cutover_gate" in result.stdout
     assert "rc_cutover_recovery_plan" in result.stdout
+    assert "rc_dry_run" in result.stdout
     assert "rc_host_evidence_ops" in result.stdout
     assert "product_depth_backlog" in result.stdout
     assert "product_depth_gate" in result.stdout
