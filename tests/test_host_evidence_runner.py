@@ -44,6 +44,9 @@ def test_committed_host_evidence_runner_is_current() -> None:
     assert runner_path.read_text(encoding="utf-8") == render_host_evidence_runner_markdown(
         build_host_evidence_runner()
     )
+    assert "[docs/HOST_EVIDENCE_RUNNER.md](docs/HOST_EVIDENCE_RUNNER.md)" in Path("README.md").read_text(
+        encoding="utf-8"
+    )
 
 
 def test_host_evidence_runner_cli_writes_markdown(tmp_path: Path) -> None:

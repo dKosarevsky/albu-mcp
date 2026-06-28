@@ -49,6 +49,9 @@ def test_committed_beta_validation_intake_is_current() -> None:
     assert intake_path.read_text(encoding="utf-8") == render_beta_validation_intake_markdown(
         build_beta_validation_intake()
     )
+    assert "[docs/BETA_VALIDATION_INTAKE.md](docs/BETA_VALIDATION_INTAKE.md)" in Path("README.md").read_text(
+        encoding="utf-8"
+    )
 
 
 def test_beta_validation_intake_cli_writes_markdown(tmp_path: Path) -> None:

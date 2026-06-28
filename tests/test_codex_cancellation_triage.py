@@ -47,6 +47,9 @@ def test_committed_codex_cancellation_triage_is_current() -> None:
     assert triage_path.read_text(encoding="utf-8") == render_codex_cancellation_triage_markdown(
         build_codex_cancellation_triage()
     )
+    assert "[docs/CODEX_CANCELLATION_TRIAGE.md](docs/CODEX_CANCELLATION_TRIAGE.md)" in Path(
+        "README.md"
+    ).read_text(encoding="utf-8")
 
 
 def test_codex_cancellation_triage_cli_writes_markdown(tmp_path: Path) -> None:

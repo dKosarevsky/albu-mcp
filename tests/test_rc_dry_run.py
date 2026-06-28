@@ -39,6 +39,7 @@ def test_committed_rc_dry_run_is_current() -> None:
     dry_run_path = Path("docs/RC_DRY_RUN.md")
 
     assert dry_run_path.read_text(encoding="utf-8") == render_rc_dry_run_markdown(build_rc_dry_run())
+    assert "[docs/RC_DRY_RUN.md](docs/RC_DRY_RUN.md)" in Path("README.md").read_text(encoding="utf-8")
 
 
 def test_rc_dry_run_cli_writes_markdown(tmp_path: Path) -> None:

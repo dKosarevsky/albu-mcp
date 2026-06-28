@@ -50,6 +50,9 @@ def test_committed_claude_code_setup_path_is_current() -> None:
     assert setup_path.read_text(encoding="utf-8") == render_claude_code_setup_path_markdown(
         build_claude_code_setup_path()
     )
+    assert "[docs/CLAUDE_CODE_SETUP_PATH.md](docs/CLAUDE_CODE_SETUP_PATH.md)" in Path("README.md").read_text(
+        encoding="utf-8"
+    )
 
 
 def test_claude_code_setup_path_cli_writes_markdown(tmp_path: Path) -> None:
