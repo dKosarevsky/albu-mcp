@@ -29,17 +29,17 @@ def build_governed_iteration_execution_report() -> dict[str, Any]:
         "execution_policy": governor["execution_policy"],
         "safety_policy": "No blind implementation loop was executed.",
         "completed_paths": [
-            "Evidence Unblock path: evidence unblock-plan prioritizes blocked real-host gaps.",
-            "Beta Campaign path: beta campaign-plan packages privacy-safe external validation.",
-            "Policy Iteration path: plan_policy_iteration carries candidate feedback into the next preview loop.",
-            "Distribution path: distribution readiness blocks public release artifacts until trust gates pass.",
-            "Trust Audit path: trust audit reports the next safest command across evidence, beta, and release gates.",
+            "Evidence Execution path: evidence execution-packet packages host-specific real MCP run instructions.",
+            "Evidence Artifact path: evidence artifact-doctor checks replay artifacts and synthetic-only notes.",
+            "Beta Trial path: beta trial-pack packages privacy-safe external user handoffs.",
+            "Trust Next path: trust next reports one machine-readable next action across blocked gates.",
+            "RC Rehearsal path: RC reopen rehearsal v2 previews release behavior without publishing.",
         ],
         "completed_plan_points": [
-            "Added evidence unblock-plan for prioritized real-host gaps.",
-            "Added beta campaign-plan for privacy-safe external validation.",
-            "Added plan_policy_iteration for feedback-aware policy loops.",
-            "Added report-only distribution readiness and trust audit commands.",
+            "Added evidence execution-packet for host-specific real MCP runs.",
+            "Added evidence artifact-doctor for artifact completeness and synthetic-only checks.",
+            "Added beta trial-pack for privacy-safe external user handoffs.",
+            "Added trust next and RC reopen rehearsal v2 report-only commands.",
             "Stopped 100 follow-up iterations at the blocked real-host and beta validation gates.",
         ],
         "source_docs": [
@@ -51,9 +51,8 @@ def build_governed_iteration_execution_report() -> dict[str, Any]:
             "docs/USAGE.md",
             "src/albumentationsx_mcp/evidence.py",
             "src/albumentationsx_mcp/beta_validation.py",
-            "src/albumentationsx_mcp/policy_assistant.py",
-            "src/albumentationsx_mcp/distribution.py",
             "src/albumentationsx_mcp/trust.py",
+            "src/albumentationsx_mcp/rc_reopen.py",
         ],
     }
 
