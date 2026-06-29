@@ -481,50 +481,47 @@ def _run_rc_cli(argv: list[str]) -> None:
 
     args = parser.parse_args(argv)
     try:
-        if args.command == "reopen":
-            report = build_rc_reopen_report(
-                host_records_path=args.host_records,
-                beta_records_path=args.beta_records,
-                release_tag=args.release_tag,
-            )
-            if args.format == "json":
-                sys.stdout.write(json.dumps(report, indent=2, sort_keys=True) + "\n")
-                return
-            sys.stdout.write(
-                f"rc reopen {report['rc_decision']} (publish_allowed={str(report['publish_allowed']).lower()})\n"
-            )
-            return
-        if args.command == "rehearse":
-            report = build_rc_rehearsal_report(
-                host_records_path=args.host_records,
-                beta_records_path=args.beta_records,
-                release_tag=args.release_tag,
-            )
-            if args.format == "json":
-                sys.stdout.write(json.dumps(report, indent=2, sort_keys=True) + "\n")
-                return
-            sys.stdout.write(f"rc rehearse {report['rehearsal_status']} for {args.release_tag}\n")
-            return
-        if args.command == "candidate-packet":
-            packet = build_rc_candidate_packet(
-                host_records_path=args.host_records,
-                beta_records_path=args.beta_records,
-                release_tag=args.release_tag,
-            )
-            if args.format == "json":
-                sys.stdout.write(json.dumps(packet, indent=2, sort_keys=True) + "\n")
-                return
-            if args.format == "markdown":
-                sys.stdout.write(render_rc_candidate_packet_markdown(packet))
-                return
-            sys.stdout.write(
-                f"rc candidate-packet {packet['candidate_status']} "
-                f"(publish_allowed={str(packet['publish_allowed']).lower()})\n"
-            )
-            return
+        sys.stdout.write(_handle_rc_command(args))
     except (ValidationError, ValueError) as exc:
         sys.stderr.write(f"{exc}\n")
         raise SystemExit(1) from exc
+
+
+def _handle_rc_command(args: argparse.Namespace) -> str:
+    if args.command == "reopen":
+        report = build_rc_reopen_report(
+            host_records_path=args.host_records,
+            beta_records_path=args.beta_records,
+            release_tag=args.release_tag,
+        )
+        return (
+            json.dumps(report, indent=2, sort_keys=True) + "\n"
+            if args.format == "json"
+            else f"rc reopen {report['rc_decision']} (publish_allowed={str(report['publish_allowed']).lower()})\n"
+        )
+    if args.command == "rehearse":
+        report = build_rc_rehearsal_report(
+            host_records_path=args.host_records,
+            beta_records_path=args.beta_records,
+            release_tag=args.release_tag,
+        )
+        return (
+            json.dumps(report, indent=2, sort_keys=True) + "\n"
+            if args.format == "json"
+            else f"rc rehearse {report['rehearsal_status']} for {args.release_tag}\n"
+        )
+    packet = build_rc_candidate_packet(
+        host_records_path=args.host_records,
+        beta_records_path=args.beta_records,
+        release_tag=args.release_tag,
+    )
+    if args.format == "json":
+        return json.dumps(packet, indent=2, sort_keys=True) + "\n"
+    if args.format == "markdown":
+        return render_rc_candidate_packet_markdown(packet)
+    return (
+        f"rc candidate-packet {packet['candidate_status']} (publish_allowed={str(packet['publish_allowed']).lower()})\n"
+    )
 
 
 def _run_distribution_cli(argv: list[str]) -> None:
@@ -580,51 +577,51 @@ def _run_trust_cli(argv: list[str]) -> None:
 
     args = parser.parse_args(argv)
     try:
-        if args.command == "audit":
-            report = build_trust_audit_report(
-                host_records_path=args.host_records,
-                beta_records_path=args.beta_records,
-                release_tag=args.release_tag,
-            )
-            if args.format == "json":
-                sys.stdout.write(json.dumps(report, indent=2, sort_keys=True) + "\n")
-                return
-            sys.stdout.write(
-                f"trust audit {report['audit_status']} "
-                f"(trust_score={report['trust_score']}, next='{report['recommended_next_command']}')\n"
-            )
-            return
-        if args.command == "next":
-            report = build_trust_next_action(
-                host_records_path=args.host_records,
-                beta_records_path=args.beta_records,
-                release_tag=args.release_tag,
-            )
-            if args.format == "json":
-                sys.stdout.write(json.dumps(report, indent=2, sort_keys=True) + "\n")
-                return
-            sys.stdout.write(f"trust next {report['next_status']} {report['recommended_command']}\n")
-            return
-        if args.command == "dashboard":
-            report = build_trust_dashboard_report(
-                host_records_path=args.host_records,
-                beta_records_path=args.beta_records,
-                release_tag=args.release_tag,
-            )
-            if args.format == "json":
-                sys.stdout.write(json.dumps(report, indent=2, sort_keys=True) + "\n")
-                return
-            if args.format == "markdown":
-                sys.stdout.write(render_trust_dashboard_markdown(report))
-                return
-            sys.stdout.write(
-                f"trust dashboard {report['dashboard_status']} "
-                f"(trust_score={report['trust_score']}, next='{report['recommended_command']}')\n"
-            )
-            return
+        sys.stdout.write(_handle_trust_command(args))
     except (ValidationError, ValueError) as exc:
         sys.stderr.write(f"{exc}\n")
         raise SystemExit(1) from exc
+
+
+def _handle_trust_command(args: argparse.Namespace) -> str:
+    if args.command == "audit":
+        report = build_trust_audit_report(
+            host_records_path=args.host_records,
+            beta_records_path=args.beta_records,
+            release_tag=args.release_tag,
+        )
+        return (
+            json.dumps(report, indent=2, sort_keys=True) + "\n"
+            if args.format == "json"
+            else (
+                f"trust audit {report['audit_status']} "
+                f"(trust_score={report['trust_score']}, next='{report['recommended_next_command']}')\n"
+            )
+        )
+    if args.command == "next":
+        report = build_trust_next_action(
+            host_records_path=args.host_records,
+            beta_records_path=args.beta_records,
+            release_tag=args.release_tag,
+        )
+        return (
+            json.dumps(report, indent=2, sort_keys=True) + "\n"
+            if args.format == "json"
+            else f"trust next {report['next_status']} {report['recommended_command']}\n"
+        )
+    report = build_trust_dashboard_report(
+        host_records_path=args.host_records,
+        beta_records_path=args.beta_records,
+        release_tag=args.release_tag,
+    )
+    if args.format == "json":
+        return json.dumps(report, indent=2, sort_keys=True) + "\n"
+    if args.format == "markdown":
+        return render_trust_dashboard_markdown(report)
+    return (
+        f"trust dashboard {report['dashboard_status']} "
+        f"(trust_score={report['trust_score']}, next='{report['recommended_command']}')\n"
+    )
 
 
 def _add_host_record_arguments(parser: argparse.ArgumentParser) -> None:

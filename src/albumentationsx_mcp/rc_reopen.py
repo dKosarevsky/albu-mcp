@@ -183,7 +183,11 @@ def _candidate_operator_commands(*, publish_allowed: bool) -> list[str]:
     return [
         "albu-mcp trust dashboard --format markdown",
         "albu-mcp evidence operator-packet --host Codex --output-dir docs/operator-packets",
-        "albu-mcp evidence validate-import --host Codex --status passed --date YYYY-MM-DD --evidence 'reviewer observed real host UI' --artifact docs/assets/demo/demo_report.md --confirm-real-host-observed --format json",
+        (
+            "albu-mcp evidence validate-import --host Codex --status passed --date YYYY-MM-DD "
+            "--evidence 'reviewer observed real host UI' --artifact docs/assets/demo/demo_report.md "
+            "--confirm-real-host-observed --format json"
+        ),
         "albu-mcp beta intake-wizard --workflow-id noisy_preview_tuning --format json",
     ]
 

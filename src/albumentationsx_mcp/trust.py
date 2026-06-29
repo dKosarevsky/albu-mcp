@@ -133,9 +133,7 @@ def build_trust_dashboard_report(
 
 def render_trust_dashboard_markdown(report: dict[str, Any]) -> str:
     """Render a trust dashboard report as concise markdown."""
-    rows = "\n".join(
-        f"| `{card['gate']}` | `{card['status']}` | {card['detail']} |" for card in report["gate_cards"]
-    )
+    rows = "\n".join(f"| `{card['gate']}` | `{card['status']}` | {card['detail']} |" for card in report["gate_cards"])
     blocked = "\n".join(f"- `{reason}`" for reason in report["blocked_reasons"]) or "- none"
     return (
         "# AlbumentationsX MCP Trust Dashboard\n\n"
@@ -181,17 +179,12 @@ def _dashboard_gate_cards(audit: dict[str, Any]) -> list[dict[str, str]]:
         {
             "gate": "p0_host_evidence",
             "status": "ready" if evidence["plan_status"] == "ready_for_rc_reopen" else "blocked",
-            "detail": (
-                f"{evidence['blocked_host_count']} blocked host(s); "
-                f"first blocker `{evidence_summary['host']}`"
-            ),
+            "detail": (f"{evidence['blocked_host_count']} blocked host(s); first blocker `{evidence_summary['host']}`"),
         },
         {
             "gate": "beta_validation",
             "status": "ready" if beta["product_depth_allowed"] else "blocked",
-            "detail": (
-                f"{covered_workflow_count}/{workflow_count} workflows covered"
-            ),
+            "detail": (f"{covered_workflow_count}/{workflow_count} workflows covered"),
         },
         {
             "gate": "distribution",

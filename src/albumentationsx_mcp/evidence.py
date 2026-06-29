@@ -206,7 +206,7 @@ def import_evidence_artifacts(request: EvidenceArtifactImport) -> HostManualRuns
 def validate_evidence_artifact_import(request: EvidenceArtifactImport) -> dict[str, Any]:
     """Validate a reviewer-observed host evidence import without writing records."""
     if request.status == "passed" and not request.confirm_real_host_observed:
-        msg = "--confirm-real-host-observed is required when validating passed evidence"
+        msg = "--confirm-real-host-observed is required when recording passed evidence"
         raise ValueError(msg)
     if request.status == "passed" and not request.artifacts:
         msg = "at least one --artifact is required when validating passed first-10-minutes evidence"
@@ -485,15 +485,11 @@ def _expected_mcp_tools() -> list[str]:
 
 def _render_evidence_operator_packet_markdown(packet: dict[str, Any]) -> str:
     host = packet["host"]
-    setup_steps = "\n".join(
-        f"- `{step['code']}`: {step['message']}" for step in packet["host_setup_steps"]
-    )
+    setup_steps = "\n".join(f"- `{step['code']}`: {step['message']}" for step in packet["host_setup_steps"])
     expected_tools = "\n".join(f"- `{tool}`" for tool in packet["expected_tools"])
     artifact_checklist = "\n".join(f"- `{item}`" for item in packet["artifact_checklist"])
     next_actions = "\n".join(f"- {item}" for item in packet["next_actions"])
-    missing_gates = "\n".join(
-        f"- `{gate}`" for gate in packet["current_host_status"]["missing_gates"]
-    ) or "- none"
+    missing_gates = "\n".join(f"- `{gate}`" for gate in packet["current_host_status"]["missing_gates"]) or "- none"
     return (
         f"# {host} Evidence Operator Packet\n\n"
         f"Packet status: `{packet['packet_status']}`\n\n"

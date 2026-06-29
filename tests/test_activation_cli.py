@@ -111,7 +111,7 @@ def test_evidence_validate_import_rejects_unconfirmed_passed_evidence_and_does_n
 
 
 def test_beta_intake_wizard_returns_privacy_safe_response_template() -> None:
-    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled arguments.
+    result = subprocess.run(
         [
             sys.executable,
             "-m",
@@ -209,7 +209,7 @@ def test_rc_candidate_packet_reports_blocked_release_without_publish_commands(tm
     assert payload["publish_commands"] == []
     assert "p0_host_evidence_missing_or_blocked" in payload["blocked_reasons"]
     assert "albu-mcp trust dashboard --format markdown" in payload["operator_commands"]
-    assert "albu-mcp beta intake-wizard --workflow-id noisy_preview_tuning --format json" in payload[
-        "operator_commands"
-    ]
+    assert (
+        "albu-mcp beta intake-wizard --workflow-id noisy_preview_tuning --format json" in payload["operator_commands"]
+    )
     assert payload["execution_policy"].startswith("Report only")
