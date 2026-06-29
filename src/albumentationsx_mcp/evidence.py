@@ -183,9 +183,7 @@ def build_evidence_session_plan(
 
 def import_evidence_artifacts(request: EvidenceArtifactImport) -> HostManualRuns:
     """Import one reviewer-observed host evidence session into both required P0 gates."""
-    if request.status == "passed" and not request.confirm_real_host_observed:
-        msg = "--confirm-real-host-observed is required when recording passed evidence"
-        raise ValueError(msg)
+    validate_evidence_artifact_import(request)
     record_host_manual_run(
         path=request.path,
         host=request.host,
@@ -203,6 +201,34 @@ def import_evidence_artifacts(request: EvidenceArtifactImport) -> HostManualRuns
             artifacts=request.artifacts,
         ),
     )
+
+
+def validate_evidence_artifact_import(request: EvidenceArtifactImport) -> dict[str, Any]:
+    """Validate a reviewer-observed host evidence import without writing records."""
+    if request.status == "passed" and not request.confirm_real_host_observed:
+        msg = "--confirm-real-host-observed is required when validating passed evidence"
+        raise ValueError(msg)
+    if request.status == "passed" and not request.artifacts:
+        msg = "at least one --artifact is required when validating passed first-10-minutes evidence"
+        raise ValueError(msg)
+    if request.status == "passed" and _looks_synthetic_only(request.evidence):
+        msg = "passed evidence must not be synthetic-only"
+        raise ValueError(msg)
+    return {
+        "validation_status": "ready_to_import" if request.status == "passed" else "ready_to_record_blocker",
+        "writes_records": False,
+        "records_path": str(request.path),
+        "host": request.host,
+        "status": request.status,
+        "run_date": request.run_date,
+        "artifact_count": len(request.artifacts),
+        "required_gate_writes": list(P0_REQUIRED_GATES),
+        "non_fabrication_policy": _NON_FABRICATION_POLICY,
+        "next_actions": [
+            "Run albu-mcp evidence import-artifacts with the same fields after reviewing this validation payload.",
+            "Rerun albu-mcp evidence artifact-doctor --format json after import.",
+        ],
+    }
 
 
 def build_evidence_doctor_report(path: Path = Path("docs/HOST_MANUAL_RUNS.json")) -> dict[str, Any]:

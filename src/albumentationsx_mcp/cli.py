@@ -39,6 +39,7 @@ from albumentationsx_mcp.evidence import (
     record_first_10_minutes_replay,
     record_host_manual_run,
     summarize_host_manual_runs,
+    validate_evidence_artifact_import,
     validate_host_manual_runs,
 )
 from albumentationsx_mcp.rc_reopen import build_rc_rehearsal_report, build_rc_reopen_report
@@ -137,6 +138,15 @@ def _run_evidence_cli(argv: list[str]) -> None:
     import_artifacts.add_argument("--artifact", action="append", default=[])
     import_artifacts.add_argument("--confirm-real-host-observed", action="store_true")
 
+    validate_import = subparsers.add_parser(
+        "validate-import",
+        help="Validate a real-host evidence import without writing records.",
+    )
+    _add_host_record_arguments(validate_import)
+    validate_import.add_argument("--artifact", action="append", default=[])
+    validate_import.add_argument("--confirm-real-host-observed", action="store_true")
+    validate_import.add_argument("--format", choices=["text", "json"], default="text")
+
     doctor = subparsers.add_parser("doctor", help="Inspect P0 evidence gates and print remediation actions.")
     doctor.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
     doctor.add_argument("--format", choices=["text", "json"], default="text")
@@ -168,6 +178,7 @@ def _handle_evidence_command(args: argparse.Namespace) -> str:
         "execution-packet": _handle_evidence_execution_packet,
         "operator-packet": _handle_evidence_operator_packet,
         "import-artifacts": _handle_evidence_import_artifacts,
+        "validate-import": _handle_evidence_validate_import,
         "doctor": _handle_evidence_doctor,
         "artifact-doctor": _handle_evidence_artifact_doctor,
         "unblock-plan": _handle_evidence_unblock_plan,
@@ -244,6 +255,26 @@ def _handle_evidence_import_artifacts(args: argparse.Namespace) -> str:
     )
     return (
         f"imported {args.host} {args.status} evidence for manual_host_ui and first_10_minutes_replay in {args.path}\n"
+    )
+
+
+def _handle_evidence_validate_import(args: argparse.Namespace) -> str:
+    report = validate_evidence_artifact_import(
+        EvidenceArtifactImport(
+            path=args.path,
+            host=args.host,
+            status=args.status,
+            run_date=args.date,
+            evidence=args.evidence,
+            artifacts=args.artifact,
+            confirm_real_host_observed=args.confirm_real_host_observed,
+        )
+    )
+    if args.format == "json":
+        return json.dumps(report, indent=2, sort_keys=True) + "\n"
+    return (
+        f"evidence validate-import {report['validation_status']} "
+        f"(host={args.host}, artifacts={report['artifact_count']})\n"
     )
 
 
