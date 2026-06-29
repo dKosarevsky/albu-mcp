@@ -45,7 +45,12 @@ from albumentationsx_mcp.evidence import (
 )
 from albumentationsx_mcp.rc_reopen import build_rc_rehearsal_report, build_rc_reopen_report
 from albumentationsx_mcp.server import ServerSettings, create_mcp_server, settings_from_environment
-from albumentationsx_mcp.trust import build_trust_audit_report, build_trust_next_action
+from albumentationsx_mcp.trust import (
+    build_trust_audit_report,
+    build_trust_dashboard_report,
+    build_trust_next_action,
+    render_trust_dashboard_markdown,
+)
 
 _SUBCOMMANDS = {"beta", "distribution", "evidence", "rc", "trust"}
 
@@ -539,6 +544,12 @@ def _run_trust_cli(argv: list[str]) -> None:
     next_action.add_argument("--release-tag", default="v1.15.0-rc.1")
     next_action.add_argument("--format", choices=["text", "json"], default="text")
 
+    dashboard = subparsers.add_parser("dashboard", help="Build a unified trust gate dashboard.")
+    dashboard.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    dashboard.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    dashboard.add_argument("--release-tag", default="v1.15.0-rc.1")
+    dashboard.add_argument("--format", choices=["text", "json", "markdown"], default="text")
+
     args = parser.parse_args(argv)
     try:
         if args.command == "audit":
@@ -565,6 +576,23 @@ def _run_trust_cli(argv: list[str]) -> None:
                 sys.stdout.write(json.dumps(report, indent=2, sort_keys=True) + "\n")
                 return
             sys.stdout.write(f"trust next {report['next_status']} {report['recommended_command']}\n")
+            return
+        if args.command == "dashboard":
+            report = build_trust_dashboard_report(
+                host_records_path=args.host_records,
+                beta_records_path=args.beta_records,
+                release_tag=args.release_tag,
+            )
+            if args.format == "json":
+                sys.stdout.write(json.dumps(report, indent=2, sort_keys=True) + "\n")
+                return
+            if args.format == "markdown":
+                sys.stdout.write(render_trust_dashboard_markdown(report))
+                return
+            sys.stdout.write(
+                f"trust dashboard {report['dashboard_status']} "
+                f"(trust_score={report['trust_score']}, next='{report['recommended_command']}')\n"
+            )
             return
     except (ValidationError, ValueError) as exc:
         sys.stderr.write(f"{exc}\n")
