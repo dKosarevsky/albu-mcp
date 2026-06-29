@@ -197,6 +197,8 @@ def test_readme_and_usage_document_operator_cli() -> None:
     assert "albu-mcp evidence record-host-ui" in readme
     assert "albu-mcp evidence run-session" in readme
     assert "albu-mcp evidence execution-packet" in readme
+    assert "albu-mcp evidence operator-packet" in readme
+    assert "albu-mcp evidence validate-import" in readme
     assert "albu-mcp evidence artifact-doctor" in readme
     assert "albu-mcp evidence unblock-plan" in readme
     assert "albu-mcp evidence doctor" in readme
@@ -204,16 +206,21 @@ def test_readme_and_usage_document_operator_cli() -> None:
     assert "albu-mcp beta report" in readme
     assert "albu-mcp beta campaign-plan" in readme
     assert "albu-mcp beta trial-pack" in readme
+    assert "albu-mcp beta intake-wizard" in readme
     assert "albu-mcp rc reopen" in readme
     assert "albu-mcp rc rehearse" in readme
+    assert "albu-mcp rc candidate-packet" in readme
     assert "albu-mcp distribution readiness" in readme
     assert "albu-mcp trust audit" in readme
     assert "albu-mcp trust next" in readme
+    assert "albu-mcp trust dashboard" in readme
     assert "`plan_augmentation_policy`" in readme
     assert "`plan_policy_iteration`" in readme
     assert "albu-mcp evidence status" in usage
     assert "albu-mcp evidence run-session" in usage
     assert "albu-mcp evidence execution-packet" in usage
+    assert "albu-mcp evidence operator-packet" in usage
+    assert "albu-mcp evidence validate-import" in usage
     assert "albu-mcp evidence artifact-doctor" in usage
     assert "albu-mcp evidence unblock-plan" in usage
     assert "albu-mcp evidence doctor" in usage
@@ -221,10 +228,13 @@ def test_readme_and_usage_document_operator_cli() -> None:
     assert "albu-mcp beta report" in usage
     assert "albu-mcp beta campaign-plan" in usage
     assert "albu-mcp beta trial-pack" in usage
+    assert "albu-mcp beta intake-wizard" in usage
     assert "albu-mcp rc reopen" in usage
     assert "albu-mcp rc rehearse" in usage
+    assert "albu-mcp rc candidate-packet" in usage
     assert "albu-mcp distribution readiness" in usage
     assert "albu-mcp trust audit" in usage
     assert "albu-mcp trust next" in usage
+    assert "albu-mcp trust dashboard" in usage
     assert "`plan_augmentation_policy`" in usage
     assert "`plan_policy_iteration`" in usage

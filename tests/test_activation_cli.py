@@ -173,3 +173,43 @@ def test_trust_dashboard_markdown_shows_blocked_gates_and_next_command(tmp_path:
     assert "`p0_host_evidence_missing_or_blocked`" in result.stdout
     assert "albu-mcp evidence execution-packet" in result.stdout
     assert "Report only" in result.stdout
+
+
+def test_rc_candidate_packet_reports_blocked_release_without_publish_commands(tmp_path: Path) -> None:
+    host_records = tmp_path / "HOST_MANUAL_RUNS.json"
+    beta_records = tmp_path / "BETA_VALIDATION_RECORDS.json"
+    host_records.write_text('{"manual_host_ui": [], "first_10_minutes_replay": []}\n', encoding="utf-8")
+    beta_records.write_text('{"records": []}\n', encoding="utf-8")
+
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "rc",
+            "candidate-packet",
+            "--host-records",
+            str(host_records),
+            "--beta-records",
+            str(beta_records),
+            "--release-tag",
+            "v1.15.0-rc.1",
+            "--format",
+            "json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(result.stdout)
+
+    assert payload["candidate_status"] == "blocked"
+    assert payload["release_tag"] == "v1.15.0-rc.1"
+    assert payload["publish_allowed"] is False
+    assert payload["publish_commands"] == []
+    assert "p0_host_evidence_missing_or_blocked" in payload["blocked_reasons"]
+    assert "albu-mcp trust dashboard --format markdown" in payload["operator_commands"]
+    assert "albu-mcp beta intake-wizard --workflow-id noisy_preview_tuning --format json" in payload[
+        "operator_commands"
+    ]
+    assert payload["execution_policy"].startswith("Report only")
