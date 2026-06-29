@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 
 HostName = Literal["Claude Desktop", "Claude Code", "Cursor", "Codex"]
 HostStatus = Literal["passed", "blocked", "pending"]
+OperatorPacketFormat = Literal["json", "markdown"]
 HOST_NAMES: tuple[HostName, ...] = ("Claude Desktop", "Claude Code", "Cursor", "Codex")
 P0_REQUIRED_HOSTS: tuple[HostName, ...] = ("Codex", "Claude Code")
 P0_REQUIRED_GATES: tuple[str, ...] = ("manual_host_ui", "first_10_minutes_replay")
@@ -182,9 +183,7 @@ def build_evidence_session_plan(
 
 def import_evidence_artifacts(request: EvidenceArtifactImport) -> HostManualRuns:
     """Import one reviewer-observed host evidence session into both required P0 gates."""
-    if request.status == "passed" and not request.confirm_real_host_observed:
-        msg = "--confirm-real-host-observed is required when recording passed evidence"
-        raise ValueError(msg)
+    validate_evidence_artifact_import(request)
     record_host_manual_run(
         path=request.path,
         host=request.host,
@@ -202,6 +201,34 @@ def import_evidence_artifacts(request: EvidenceArtifactImport) -> HostManualRuns
             artifacts=request.artifacts,
         ),
     )
+
+
+def validate_evidence_artifact_import(request: EvidenceArtifactImport) -> dict[str, Any]:
+    """Validate a reviewer-observed host evidence import without writing records."""
+    if request.status == "passed" and not request.confirm_real_host_observed:
+        msg = "--confirm-real-host-observed is required when recording passed evidence"
+        raise ValueError(msg)
+    if request.status == "passed" and not request.artifacts:
+        msg = "at least one --artifact is required when validating passed first-10-minutes evidence"
+        raise ValueError(msg)
+    if request.status == "passed" and _looks_synthetic_only(request.evidence):
+        msg = "passed evidence must not be synthetic-only"
+        raise ValueError(msg)
+    return {
+        "validation_status": "ready_to_import" if request.status == "passed" else "ready_to_record_blocker",
+        "writes_records": False,
+        "records_path": str(request.path),
+        "host": request.host,
+        "status": request.status,
+        "run_date": request.run_date,
+        "artifact_count": len(request.artifacts),
+        "required_gate_writes": list(P0_REQUIRED_GATES),
+        "non_fabrication_policy": _NON_FABRICATION_POLICY,
+        "next_actions": [
+            "Run albu-mcp evidence import-artifacts with the same fields after reviewing this validation payload.",
+            "Rerun albu-mcp evidence artifact-doctor --format json after import.",
+        ],
+    }
 
 
 def build_evidence_doctor_report(path: Path = Path("docs/HOST_MANUAL_RUNS.json")) -> dict[str, Any]:
@@ -284,6 +311,27 @@ def build_evidence_execution_packet(
             "Run the smoke call and save redacted artifact references.",
             "Import passed evidence only after reviewer observation.",
         ],
+    }
+
+
+def build_evidence_operator_packet_artifact(
+    *,
+    host: HostName,
+    path: Path = Path("docs/HOST_MANUAL_RUNS.json"),
+    output_format: OperatorPacketFormat = "markdown",
+) -> dict[str, str]:
+    """Render a host-specific operator packet artifact without recording evidence."""
+    packet = build_evidence_execution_packet(host=host, path=path)
+    content = (
+        json.dumps(packet, indent=2, sort_keys=True) + "\n"
+        if output_format == "json"
+        else _render_evidence_operator_packet_markdown(packet)
+    )
+    return {
+        "host": host,
+        "format": output_format,
+        "filename": f"{_host_slug(host)}-evidence-operator-packet.{_operator_packet_extension(output_format)}",
+        "content": content,
     }
 
 
@@ -433,6 +481,56 @@ def _expected_mcp_tools() -> list[str]:
         "compare_preview_runs",
         "plan_preview_review",
     ]
+
+
+def _render_evidence_operator_packet_markdown(packet: dict[str, Any]) -> str:
+    host = packet["host"]
+    setup_steps = "\n".join(f"- `{step['code']}`: {step['message']}" for step in packet["host_setup_steps"])
+    expected_tools = "\n".join(f"- `{tool}`" for tool in packet["expected_tools"])
+    artifact_checklist = "\n".join(f"- `{item}`" for item in packet["artifact_checklist"])
+    next_actions = "\n".join(f"- {item}" for item in packet["next_actions"])
+    missing_gates = "\n".join(f"- `{gate}`" for gate in packet["current_host_status"]["missing_gates"]) or "- none"
+    return (
+        f"# {host} Evidence Operator Packet\n\n"
+        f"Packet status: `{packet['packet_status']}`\n\n"
+        f"Records path: `{packet['records_path']}`\n\n"
+        "## Non-Fabrication Policy\n\n"
+        f"{packet['non_fabrication_policy']}\n\n"
+        "## Current Host Status\n\n"
+        f"- Overall: `{packet['current_host_status']['overall_status']}`\n"
+        f"- Manual host UI: `{packet['current_host_status']['manual_host_ui']}`\n"
+        f"- First 10 minutes replay: `{packet['current_host_status']['first_10_minutes_replay']}`\n"
+        f"- Missing gates:\n{missing_gates}\n\n"
+        "## Host Setup\n\n"
+        f"{setup_steps}\n\n"
+        "## Smoke Call\n\n"
+        f"- Tool: `{packet['smoke_call']['tool']}`\n"
+        f"- Required result: `{packet['smoke_call']['required_result']}`\n"
+        f"- Failure next tool: `{packet['smoke_call']['failure_next_tool']}`\n\n"
+        "## Expected MCP Tools\n\n"
+        f"{expected_tools}\n\n"
+        "## Artifact Checklist\n\n"
+        f"{artifact_checklist}\n\n"
+        "## Recording Commands\n\n"
+        "Passed evidence:\n\n"
+        "```bash\n"
+        f"{packet['recording_commands']['passed']}\n"
+        "```\n\n"
+        "Blocked evidence:\n\n"
+        "```bash\n"
+        f"{packet['recording_commands']['blocked']}\n"
+        "```\n\n"
+        "## Next Actions\n\n"
+        f"{next_actions}\n"
+    )
+
+
+def _host_slug(host: HostName) -> str:
+    return host.lower().replace(" ", "-")
+
+
+def _operator_packet_extension(output_format: OperatorPacketFormat) -> str:
+    return "md" if output_format == "markdown" else "json"
 
 
 def _artifact_doctor_issues(records: HostManualRuns) -> list[dict[str, str]]:

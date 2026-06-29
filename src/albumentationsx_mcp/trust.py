@@ -101,6 +101,62 @@ def build_trust_next_action(
     }
 
 
+def build_trust_dashboard_report(
+    *,
+    host_records_path: Path = Path("docs/HOST_MANUAL_RUNS.json"),
+    beta_records_path: Path = Path("docs/BETA_VALIDATION_RECORDS.json"),
+    release_tag: str = "v1.15.0-rc.1",
+) -> dict[str, Any]:
+    """Build one operator-facing trust dashboard without mutating gates."""
+    audit = build_trust_audit_report(
+        host_records_path=host_records_path,
+        beta_records_path=beta_records_path,
+        release_tag=release_tag,
+    )
+    next_action = build_trust_next_action(
+        host_records_path=host_records_path,
+        beta_records_path=beta_records_path,
+        release_tag=release_tag,
+    )
+    blocked_reasons = [] if next_action["reason_code"] == "all_trust_gates_ready" else [next_action["reason_code"]]
+    return {
+        "dashboard_status": audit["audit_status"],
+        "release_tag": release_tag,
+        "trust_score": audit["trust_score"],
+        "execution_policy": "Report only; this dashboard does not tag, publish, or write evidence records.",
+        "gate_cards": _dashboard_gate_cards(audit),
+        "blocked_reasons": blocked_reasons,
+        "recommended_command": next_action["recommended_command"],
+        "follow_up_command": next_action["follow_up_command"],
+    }
+
+
+def render_trust_dashboard_markdown(report: dict[str, Any]) -> str:
+    """Render a trust dashboard report as concise markdown."""
+    rows = "\n".join(f"| `{card['gate']}` | `{card['status']}` | {card['detail']} |" for card in report["gate_cards"])
+    blocked = "\n".join(f"- `{reason}`" for reason in report["blocked_reasons"]) or "- none"
+    return (
+        "# AlbumentationsX MCP Trust Dashboard\n\n"
+        f"Release tag: `{report['release_tag']}`\n\n"
+        f"Dashboard status: `{report['dashboard_status']}`\n\n"
+        f"Trust score: `{report['trust_score']}`\n\n"
+        f"Execution policy: {report['execution_policy']}\n\n"
+        "| Gate | Status | Detail |\n"
+        "| --- | --- | --- |\n"
+        f"{rows}\n\n"
+        "## Blocked Reasons\n\n"
+        f"{blocked}\n\n"
+        "## Next Command\n\n"
+        "```bash\n"
+        f"{report['recommended_command']}\n"
+        "```\n\n"
+        "## Follow-Up Command\n\n"
+        "```bash\n"
+        f"{report['follow_up_command']}\n"
+        "```\n"
+    )
+
+
 def _recommended_next_command(*, evidence_ready: bool, beta_ready: bool, distribution_ready: bool) -> str:
     if not evidence_ready:
         return "albu-mcp evidence unblock-plan --format json"
@@ -109,6 +165,33 @@ def _recommended_next_command(*, evidence_ready: bool, beta_ready: bool, distrib
     if not distribution_ready:
         return "albu-mcp rc reopen --format json"
     return "albu-mcp distribution readiness --format json"
+
+
+def _dashboard_gate_cards(audit: dict[str, Any]) -> list[dict[str, str]]:
+    evidence = audit["evidence"]
+    beta = audit["beta"]
+    beta_summary = beta.get("summary", {})
+    covered_workflow_count = beta_summary.get("covered_workflow_count", 0)
+    workflow_count = beta_summary.get("workflow_count", beta["workflow_trial_count"])
+    distribution = audit["distribution"]
+    evidence_summary = evidence["first_blocker"] or {"host": "none"}
+    return [
+        {
+            "gate": "p0_host_evidence",
+            "status": "ready" if evidence["plan_status"] == "ready_for_rc_reopen" else "blocked",
+            "detail": (f"{evidence['blocked_host_count']} blocked host(s); first blocker `{evidence_summary['host']}`"),
+        },
+        {
+            "gate": "beta_validation",
+            "status": "ready" if beta["product_depth_allowed"] else "blocked",
+            "detail": (f"{covered_workflow_count}/{workflow_count} workflows covered"),
+        },
+        {
+            "gate": "distribution",
+            "status": "ready" if distribution["publish_allowed"] else "blocked",
+            "detail": f"publish_allowed=`{str(distribution['publish_allowed']).lower()}`",
+        },
+    ]
 
 
 def _next_action_payload(

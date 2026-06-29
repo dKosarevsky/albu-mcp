@@ -231,6 +231,46 @@ def build_beta_trial_pack(
     }
 
 
+def build_beta_intake_wizard(
+    *,
+    workflow_id: WorkflowId,
+    participant_role: str = "ML practitioner",
+) -> dict[str, Any]:
+    """Build a privacy-safe beta intake wizard for collecting one external attempt."""
+    trial_pack = build_beta_trial_pack(workflow_id=workflow_id, participant_role=participant_role)
+    return {
+        "wizard_status": "ready_to_send",
+        "workflow_id": workflow_id,
+        "participant_role": participant_role,
+        "privacy_policy": "redacted_only",
+        "participant_prompt": trial_pack["participant_prompt"],
+        "expected_workflow": trial_pack["expected_workflow"],
+        "redaction_checklist": trial_pack["redaction_checklist"],
+        "intake_questions": [
+            "What did the MCP host help you decide?",
+            "Which generated preview or report was useful enough to keep?",
+            "Which candidate was too noisy, unclear, unsafe, or off-goal?",
+            "What would you ask the host to change next?",
+        ],
+        "acceptance_rubric": [
+            "The participant can complete the workflow without reading full docs.",
+            "The generated preview keeps the target object recognizable.",
+            "The participant can name one keep, soften, or reject decision.",
+            "The recorded summary contains no private paths, dataset names, or source images.",
+        ],
+        "response_template": {
+            "workflow_id": workflow_id,
+            "status": "needs_followup",
+            "participant_role": participant_role,
+            "summary": "redacted one-paragraph workflow outcome",
+            "triage_bucket": _default_triage_bucket(workflow_id),
+            "artifact_refs": ["docs/assets/demo/demo_report.md"],
+            "private_data_included": False,
+        },
+        "recording_command": trial_pack["recording_command"],
+    }
+
+
 def _record_key(record: BetaValidationRecord) -> tuple[str, object, str]:
     return (record.workflow_id, record.attempt_date, record.summary)
 
@@ -278,11 +318,6 @@ def _workflow_trial(*, workflow_id: WorkflowId) -> dict[str, str]:
         "noisy_preview_tuning": "Ask the user to reject or soften too-noisy preview variants.",
         "robustness_distortion_variants": "Generate and compare robustness variants for a small local image sample.",
     }
-    default_buckets = {
-        "dataset_health_before_training": "dataset_quality_gap",
-        "noisy_preview_tuning": "review_agent_v3_gap",
-        "robustness_distortion_variants": "workflow_fit_gap",
-    }
     return {
         "workflow_id": workflow_id,
         "trial_goal": descriptions[workflow_id],
@@ -290,9 +325,18 @@ def _workflow_trial(*, workflow_id: WorkflowId) -> dict[str, str]:
             "albu-mcp beta record-attempt "
             f"--workflow-id {workflow_id} --status needs_followup --attempt-date YYYY-MM-DD "
             "--participant-role 'ML practitioner' --summary 'redacted summary' "
-            f"--triage-bucket {default_buckets[workflow_id]} --artifact-ref docs/assets/demo/demo_report.md"
+            f"--triage-bucket {_default_triage_bucket(workflow_id)} --artifact-ref docs/assets/demo/demo_report.md"
         ),
     }
+
+
+def _default_triage_bucket(workflow_id: WorkflowId) -> TriageBucket:
+    default_buckets: dict[WorkflowId, TriageBucket] = {
+        "dataset_health_before_training": "dataset_quality_gap",
+        "noisy_preview_tuning": "review_agent_v3_gap",
+        "robustness_distortion_variants": "workflow_fit_gap",
+    }
+    return default_buckets[workflow_id]
 
 
 def _participant_prompt(*, workflow_id: WorkflowId) -> str:
