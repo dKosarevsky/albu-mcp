@@ -20,10 +20,10 @@ def test_governed_iteration_execution_report_stops_after_first_blocked_iteration
     assert report["completed_path_count"] == 5
     assert report["completed_plan_point_count"] == 5
     assert report["completed_plan_points"] == [
-        "Added evidence unblock-plan for prioritized real-host gaps.",
-        "Added beta campaign-plan for privacy-safe external validation.",
-        "Added plan_policy_iteration for feedback-aware policy loops.",
-        "Added report-only distribution readiness and trust audit commands.",
+        "Added evidence execution-packet for host-specific real MCP runs.",
+        "Added evidence artifact-doctor for artifact completeness and synthetic-only checks.",
+        "Added beta trial-pack for privacy-safe external user handoffs.",
+        "Added trust next and RC reopen rehearsal v2 report-only commands.",
         "Stopped 100 follow-up iterations at the blocked real-host and beta validation gates.",
     ]
 
@@ -35,9 +35,10 @@ def test_governed_iteration_execution_report_markdown_explains_stop() -> None:
     assert "Requested iterations: `100`" in markdown
     assert "Executed iterations: `1`" in markdown
     assert "`current_priority_gate_blocked`" in markdown
-    assert "evidence unblock-plan" in markdown
-    assert "plan_policy_iteration" in markdown
-    assert "distribution readiness and trust audit" in markdown
+    assert "evidence execution-packet" in markdown
+    assert "artifact-doctor" in markdown
+    assert "beta trial-pack" in markdown
+    assert "RC reopen rehearsal v2" in markdown
     assert "No blind implementation loop was executed." in markdown
 
 

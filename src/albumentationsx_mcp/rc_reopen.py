@@ -43,6 +43,42 @@ def build_rc_reopen_report(
     }
 
 
+def build_rc_rehearsal_report(
+    *,
+    host_records_path: Path = Path("docs/HOST_MANUAL_RUNS.json"),
+    beta_records_path: Path = Path("docs/BETA_VALIDATION_RECORDS.json"),
+    release_tag: str = "v1.15.0-rc.1",
+) -> dict[str, Any]:
+    """Build an RC reopen rehearsal plan without mutating tags, releases, or uploads."""
+    reopen = build_rc_reopen_report(
+        host_records_path=host_records_path,
+        beta_records_path=beta_records_path,
+        release_tag=release_tag,
+    )
+    ready = bool(reopen["publish_allowed"])
+    return {
+        "rehearsal_status": "ready" if ready else "hold",
+        "release_tag": release_tag,
+        "execution_policy": "report_only",
+        "blocked_reasons": reopen["blocked_reasons"],
+        "preflight_commands": reopen["preflight_commands"],
+        "allowed_publish_commands": reopen["publish_commands"] if ready else [],
+        "release_note_artifacts": [
+            "docs/RC_RELEASE_DECISION_REPORT.md",
+            "docs/GOVERNED_100_ITERATION_REPORT.md",
+            "docs/POLICY_ASSISTANT_MVP_CONTRACT.md",
+        ],
+        "release_note_sections": [
+            "Trust gate status",
+            "Real-host evidence summary",
+            "Beta validation summary",
+            "Policy assistant changes",
+            "Distribution readiness",
+        ],
+        "next_actions": _rehearsal_next_actions(ready=ready),
+    }
+
+
 def _blocked_reasons(*, evidence: dict[str, Any], beta: dict[str, Any]) -> list[str]:
     reasons: list[str] = []
     if not evidence["rc_reopen_allowed"]:
@@ -64,3 +100,15 @@ def _next_action(*, publish_allowed: bool) -> str:
     if publish_allowed:
         return "Review preflight output, then run publish commands manually if release ownership approves."
     return "Do not tag or publish the RC; complete blocked evidence and beta gates first."
+
+
+def _rehearsal_next_actions(*, ready: bool) -> list[str]:
+    if ready:
+        return [
+            "Review allowed_publish_commands with release ownership before running them manually.",
+            "Use release_note_artifacts to draft the RC release notes.",
+        ]
+    return [
+        "Do not tag or publish during rehearsal while gates are blocked.",
+        "Run albu-mcp trust next --format json and complete the recommended gate first.",
+    ]

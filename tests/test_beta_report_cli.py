@@ -124,3 +124,45 @@ def test_beta_campaign_plan_lists_privacy_safe_trials_and_recording_commands(tmp
     ]
     assert payload["workflow_trials"][0]["recording_command"].startswith("albu-mcp beta record-attempt")
     assert payload["next_actions"][0] == "Recruit external CV users for every listed workflow trial."
+
+
+def test_beta_trial_pack_provides_external_user_prompt_and_redaction_checklist(tmp_path: Path) -> None:
+    records_path = tmp_path / "BETA_VALIDATION_RECORDS.json"
+    records_path.write_text('{"records": []}\n', encoding="utf-8")
+
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "beta",
+            "trial-pack",
+            "--path",
+            str(records_path),
+            "--workflow-id",
+            "noisy_preview_tuning",
+            "--participant-role",
+            "CV engineer",
+            "--format",
+            "json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads(result.stdout)
+
+    assert payload["pack_status"] == "ready_to_send"
+    assert payload["workflow_id"] == "noisy_preview_tuning"
+    assert payload["participant_role"] == "CV engineer"
+    assert "example 8 is too noisy" in payload["participant_prompt"]
+    assert payload["redaction_checklist"] == [
+        "Remove private image paths and dataset names.",
+        "Summarize visual findings without uploading private images.",
+        "Link only safe generated artifacts or docs assets.",
+        "Record private_data_included=false.",
+    ]
+    assert payload["expected_workflow"][0] == "Connect an MCP host with bounded --allowed-root and --artifact-root."
+    assert payload["recording_command"].startswith("albu-mcp beta record-attempt")
+    assert "--workflow-id noisy_preview_tuning" in payload["recording_command"]

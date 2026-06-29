@@ -193,3 +193,102 @@ def test_evidence_unblock_plan_prioritizes_real_host_gaps_without_writing_record
     assert payload["host_unblock_queue"][0]["recommended_command"].startswith("albu-mcp evidence run-session")
     assert "--confirm-real-host-observed" in payload["host_unblock_queue"][0]["acceptance_command"]
     assert payload["next_actions"][0] == "Run the first recommended_command in a real MCP host session."
+
+
+def test_evidence_execution_packet_defines_host_specific_operator_checklist(tmp_path: Path) -> None:
+    records_path = tmp_path / "HOST_MANUAL_RUNS.json"
+
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "evidence",
+            "execution-packet",
+            "--host",
+            "Claude Code",
+            "--path",
+            str(records_path),
+            "--format",
+            "json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads(result.stdout)
+
+    assert payload["packet_status"] == "operator_action_required"
+    assert payload["host"] == "Claude Code"
+    assert payload["writes_records"] is False
+    assert payload["expected_tools"][0] == "run_host_smoke_check"
+    assert payload["smoke_call"]["tool"] == "run_host_smoke_check"
+    assert payload["artifact_checklist"] == [
+        "host_ui_screenshot_or_terminal_capture",
+        "run_host_smoke_check_json",
+        "first_10_minutes_replay_notes",
+        "preview_or_contact_sheet_artifact_ref",
+    ]
+    assert payload["host_setup_steps"][0]["code"] == "install_or_expose_claude_cli"
+    assert "--confirm-real-host-observed" in payload["recording_commands"]["passed"]
+    assert records_path.exists() is False
+
+
+def test_evidence_artifact_doctor_flags_missing_artifacts_and_synthetic_smoke(tmp_path: Path) -> None:
+    records_path = tmp_path / "HOST_MANUAL_RUNS.json"
+    records_path.write_text(
+        json.dumps(
+            {
+                "manual_host_ui": [
+                    {
+                        "host": "Codex",
+                        "status": "passed",
+                        "date": "2026-06-29",
+                        "evidence": "Generated smoke output only; no reviewer-observed real host UI.",
+                    }
+                ],
+                "first_10_minutes_replay": [
+                    {
+                        "host": "Codex",
+                        "status": "passed",
+                        "date": "2026-06-29",
+                        "evidence": "Smoke output only.",
+                        "artifacts": [],
+                    }
+                ],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "evidence",
+            "artifact-doctor",
+            "--path",
+            str(records_path),
+            "--format",
+            "json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads(result.stdout)
+
+    assert payload["artifact_status"] == "blocked"
+    assert payload["passed_gate_count"] == 2
+    assert payload["required_gate_count"] == 4
+    assert payload["issue_count"] == 5
+    assert {issue["code"] for issue in payload["issues"]} == {
+        "synthetic_only_evidence",
+        "missing_replay_artifact",
+        "missing_required_host_gate",
+    }
+    assert payload["next_actions"][0] == "Replace synthetic-only notes with reviewer-observed real host UI evidence."

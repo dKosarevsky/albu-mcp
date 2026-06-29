@@ -51,12 +51,13 @@ trial is [docs/FIRST_10_MINUTES.md](docs/FIRST_10_MINUTES.md).
 
 ## Operator CLI
 
-Release-safe helpers: `albu-mcp evidence run-session`, `albu-mcp evidence unblock-plan`,
-`albu-mcp evidence doctor`, `albu-mcp evidence record-host-ui`, `albu-mcp evidence status`,
-`albu-mcp beta campaign-plan`, `albu-mcp beta record-attempt`, `albu-mcp beta triage --format json`,
-`albu-mcp beta report`, `albu-mcp rc reopen`, `albu-mcp distribution readiness`, and `albu-mcp trust audit`. Inside
-MCP hosts, use `plan_augmentation_policy`, `plan_augmentation_policy_candidates`, or `plan_policy_iteration` before
-rendering and reviewing contact sheets.
+Release-safe helpers: `albu-mcp evidence run-session`, `albu-mcp evidence execution-packet`,
+`albu-mcp evidence artifact-doctor`, `albu-mcp evidence unblock-plan`, `albu-mcp evidence doctor`,
+`albu-mcp evidence record-host-ui`, `albu-mcp evidence status`, `albu-mcp beta campaign-plan`,
+`albu-mcp beta trial-pack`, `albu-mcp beta record-attempt`, `albu-mcp beta triage --format json`,
+`albu-mcp beta report`, `albu-mcp rc reopen`, `albu-mcp rc rehearse`, `albu-mcp distribution readiness`,
+`albu-mcp trust audit`, and `albu-mcp trust next`. Inside MCP hosts, use `plan_augmentation_policy`,
+`plan_augmentation_policy_candidates`, or `plan_policy_iteration` before rendering and reviewing contact sheets.
 
 ## Host Workflow
 
