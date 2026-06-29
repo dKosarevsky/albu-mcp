@@ -30,6 +30,7 @@ def build_policy_assistant_mvp_contract() -> dict[str, Any]:
         "runtime_tools": [
             "plan_augmentation_policy",
             "plan_augmentation_policy_candidates",
+            "plan_policy_iteration",
         ],
         "interfaces": [
             {

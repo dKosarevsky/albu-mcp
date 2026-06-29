@@ -27,7 +27,11 @@ from albumentationsx_mcp.models import (
 )
 from albumentationsx_mcp.onboarding import build_dataset_onboarding_report
 from albumentationsx_mcp.pipeline import PipelineService
-from albumentationsx_mcp.policy_assistant import plan_augmentation_policy, plan_augmentation_policy_candidates
+from albumentationsx_mcp.policy_assistant import (
+    plan_augmentation_policy,
+    plan_augmentation_policy_candidates,
+    plan_policy_iteration,
+)
 from albumentationsx_mcp.presets import Intensity, adjust_pipeline, recommend_pipeline
 from albumentationsx_mcp.preview import ArtifactStore, PathPolicy, PreviewService
 from albumentationsx_mcp.preview_validation import PreviewRequestValidator
@@ -94,6 +98,7 @@ _PUBLIC_TOOLS = [
     "recommend_recipe",
     "plan_augmentation_policy",
     "plan_augmentation_policy_candidates",
+    "plan_policy_iteration",
     "record_preview_feedback",
     "list_preview_feedback",
     "record_tuning_decision",
@@ -439,6 +444,30 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
             objective=objective,
             targets=targets,
             feedback_tags=feedback_tags,
+            candidate_count=candidate_count,
+            catalog=catalog,
+        ).model_dump(mode="json", exclude_none=True)
+
+    @mcp.tool(name="plan_policy_iteration")
+    def plan_policy_iteration_tool(  # noqa: PLR0913 - mirrors the MCP tool input contract.
+        task: str,
+        objective: str = "robustness",
+        targets: list[str] | None = None,
+        feedback_tags: list[str] | None = None,
+        rejected_candidate_ids: list[str] | None = None,
+        accepted_candidate_id: str | None = None,
+        iteration: int = 1,
+        candidate_count: int = 3,
+    ) -> dict[str, Any]:
+        """Plan the next preview-gated policy iteration from concrete review feedback."""
+        return plan_policy_iteration(
+            task=task,
+            objective=objective,
+            targets=targets,
+            feedback_tags=feedback_tags,
+            rejected_candidate_ids=rejected_candidate_ids,
+            accepted_candidate_id=accepted_candidate_id,
+            iteration=iteration,
             candidate_count=candidate_count,
             catalog=catalog,
         ).model_dump(mode="json", exclude_none=True)

@@ -315,6 +315,22 @@ class PolicyAssistantCandidateSet(StrictModel):
     comparison_checklist: list[str] = Field(default_factory=list)
 
 
+class PolicyIterationPlan(StrictModel):
+    """One feedback-aware policy assistant iteration."""
+
+    task: str
+    objective: str
+    targets: list[str] = Field(default_factory=list)
+    iteration: int = Field(ge=1)
+    iteration_status: Literal["needs_preview", "accepted_for_export_review"]
+    acceptance_status: Literal["not_accepted", "candidate_selected"]
+    rejected_candidate_ids: list[str] = Field(default_factory=list)
+    accepted_candidate_id: str | None = None
+    feedback_tags: list[str] = Field(default_factory=list)
+    candidate_set: PolicyAssistantCandidateSet
+    next_actions: list[str] = Field(default_factory=list)
+
+
 class AnnotationObservation(StrictModel):
     """Per-variant annotation retention observation recorded in preview manifests."""
 

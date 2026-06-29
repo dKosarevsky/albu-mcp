@@ -86,3 +86,41 @@ def test_beta_report_text_output_is_concise(tmp_path: Path) -> None:
     )
 
     assert result.stdout == "beta report blocked_until_beta_signal (records=0, candidate_backlog_items=0)\n"
+
+
+def test_beta_campaign_plan_lists_privacy_safe_trials_and_recording_commands(tmp_path: Path) -> None:
+    records_path = tmp_path / "BETA_VALIDATION_RECORDS.json"
+    records_path.write_text('{"records": []}\n', encoding="utf-8")
+
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "beta",
+            "campaign-plan",
+            "--path",
+            str(records_path),
+            "--target-participants",
+            "5",
+            "--format",
+            "json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    payload = json.loads(result.stdout)
+
+    assert payload["campaign_status"] == "blocked_until_beta_signal"
+    assert payload["target_participant_count"] == 5
+    assert payload["privacy_policy"] == "redacted_only"
+    assert payload["workflow_trial_count"] == 3
+    assert [trial["workflow_id"] for trial in payload["workflow_trials"]] == [
+        "dataset_health_before_training",
+        "noisy_preview_tuning",
+        "robustness_distortion_variants",
+    ]
+    assert payload["workflow_trials"][0]["recording_command"].startswith("albu-mcp beta record-attempt")
+    assert payload["next_actions"][0] == "Recruit external CV users for every listed workflow trial."

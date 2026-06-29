@@ -10,6 +10,7 @@ from albumentationsx_mcp.models import (
     PolicyAssistantCandidate,
     PolicyAssistantCandidateSet,
     PolicyAssistantPlan,
+    PolicyIterationPlan,
     TargetSpec,
 )
 from albumentationsx_mcp.presets import Intensity, adjust_pipeline, recommend_pipeline
@@ -113,6 +114,46 @@ def plan_augmentation_policy_candidates(  # noqa: PLR0913 - mirrors the MCP tool
     )
 
 
+def plan_policy_iteration(  # noqa: PLR0913 - mirrors the MCP tool input contract.
+    *,
+    task: str,
+    objective: str = "robustness",
+    targets: list[str] | None = None,
+    feedback_tags: list[str] | None = None,
+    rejected_candidate_ids: list[str] | None = None,
+    accepted_candidate_id: str | None = None,
+    iteration: int = 1,
+    candidate_count: int = 3,
+    catalog: MetadataCatalog | None = None,
+) -> PolicyIterationPlan:
+    """Plan the next feedback-aware policy iteration while keeping export review gated."""
+    selected_targets = targets or ["image"]
+    applied_feedback_tags = _canonical_feedback_tags(feedback_tags or [])
+    rejected_ids = rejected_candidate_ids or []
+    candidate_set = plan_augmentation_policy_candidates(
+        task=task,
+        objective=objective,
+        targets=selected_targets,
+        feedback_tags=applied_feedback_tags,
+        candidate_count=candidate_count,
+        catalog=catalog,
+    )
+    accepted = accepted_candidate_id is not None
+    return PolicyIterationPlan(
+        task=task,
+        objective=objective,
+        targets=selected_targets,
+        iteration=max(1, iteration),
+        iteration_status="accepted_for_export_review" if accepted else "needs_preview",
+        acceptance_status="candidate_selected" if accepted else "not_accepted",
+        rejected_candidate_ids=rejected_ids,
+        accepted_candidate_id=accepted_candidate_id,
+        feedback_tags=applied_feedback_tags,
+        candidate_set=candidate_set,
+        next_actions=_iteration_next_actions(accepted=accepted),
+    )
+
+
 def _canonical_feedback_tags(feedback_tags: list[str]) -> list[str]:
     normalized = normalize_feedback_tags(feedback_tags)
     canonical: list[str] = []
@@ -200,3 +241,15 @@ def _rationale(*, task: str, objective: str, intensity: Intensity, risk_level: s
         f"Selected a {intensity} starter policy for {task} / {objective}; "
         f"current static risk is {risk_level}, so preview evidence is required before acceptance."
     )
+
+
+def _iteration_next_actions(*, accepted: bool) -> list[str]:
+    if accepted:
+        return [
+            "Export only after confirming the accepted candidate preview artifacts.",
+            "Record the accepted candidate id, feedback tags, and report artifact references.",
+        ]
+    return [
+        "Render the next candidate set before accepting a training policy.",
+        "Reject candidates with concrete feedback tags, then rerun plan_policy_iteration.",
+    ]
