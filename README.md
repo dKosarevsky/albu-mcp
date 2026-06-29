@@ -51,9 +51,10 @@ trial is [docs/FIRST_10_MINUTES.md](docs/FIRST_10_MINUTES.md).
 
 ## Operator CLI
 
-Release-safe helpers: `albu-mcp evidence record-host-ui`, `albu-mcp evidence status`,
-`albu-mcp beta record-attempt`, and `albu-mcp beta triage --format json`. Inside MCP hosts, use
-`plan_augmentation_policy` for a preview-gated starter policy before rendering and reviewing contact sheets.
+Release-safe helpers: `albu-mcp evidence run-session`, `albu-mcp evidence doctor`,
+`albu-mcp evidence record-host-ui`, `albu-mcp evidence status`, `albu-mcp beta record-attempt`,
+`albu-mcp beta triage --format json`, `albu-mcp beta report`, and `albu-mcp rc reopen`. Inside MCP hosts, use
+`plan_augmentation_policy` or `plan_augmentation_policy_candidates` before rendering and reviewing contact sheets.
 
 ## Host Workflow
 

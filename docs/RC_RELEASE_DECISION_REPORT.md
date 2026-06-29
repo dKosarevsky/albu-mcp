@@ -17,8 +17,12 @@ Do not create tags, GitHub Releases, PyPI uploads, or public announcements.
 ## Completed Enablers
 
 - `package_evidence_cli`
+- `evidence_session_runner_cli`
 - `package_beta_triage_cli`
+- `beta_report_cli`
 - `preview_gated_policy_assistant_tool`
+- `policy_assistant_candidates_tool`
+- `report_only_rc_reopen_cli`
 
 ## Safe Commands
 

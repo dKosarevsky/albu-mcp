@@ -155,6 +155,36 @@ def build_beta_attempt_triage(records: BetaValidationRecords) -> dict[str, Any]:
     }
 
 
+def build_beta_validation_report(records: BetaValidationRecords) -> dict[str, Any]:
+    """Build a concise beta decision report from privacy-safe attempt records."""
+    triage = build_beta_attempt_triage(records)
+    candidate_lanes = [
+        lane for lane in triage["triage_lanes"] if lane["recommendation_status"] == "candidate_backlog_item"
+    ]
+    ready_lanes = [lane for lane in triage["triage_lanes"] if lane["recommendation_status"] == "ready_for_depth_plan"]
+    decisions = [
+        {
+            "triage_bucket": lane["triage_bucket"],
+            "product_area": lane["product_area"],
+            "signal_count": lane["signal_count"],
+            "decision": lane["recommendation_status"],
+        }
+        for lane in [*ready_lanes, *candidate_lanes]
+    ]
+    return {
+        "report_status": triage["triage_status"],
+        "privacy_status": "redacted",
+        "product_depth_allowed": triage["product_depth_allowed"],
+        "summary": {
+            **triage["summary"],
+            "candidate_backlog_item_count": len(candidate_lanes),
+            "ready_for_depth_plan_count": len(ready_lanes),
+        },
+        "decisions": decisions,
+        "next_actions": _report_next_actions(triage=triage, candidate_count=len(candidate_lanes)),
+    }
+
+
 def _record_key(record: BetaValidationRecord) -> tuple[str, object, str]:
     return (record.workflow_id, record.attempt_date, record.summary)
 
@@ -176,4 +206,21 @@ def _triage_next_actions(*, product_depth_allowed: bool) -> list[str]:
     return [
         "Record at least one privacy-safe attempt for every beta workflow.",
         "Review candidate backlog lanes without starting product-depth implementation yet.",
+    ]
+
+
+def _report_next_actions(*, triage: dict[str, Any], candidate_count: int) -> list[str]:
+    if triage["product_depth_allowed"]:
+        return [
+            "Promote ready beta-backed lanes into product-depth implementation plans.",
+            "Keep the report redacted and link only safe artifact references.",
+        ]
+    if candidate_count:
+        return [
+            "Run remaining beta workflows before opening product-depth implementation.",
+            "Keep candidate backlog items visible but blocked until workflow coverage is complete.",
+        ]
+    return [
+        "Run beta workflows and record redacted attempts before triage.",
+        "Do not promote product-depth work from missing beta signal.",
     ]

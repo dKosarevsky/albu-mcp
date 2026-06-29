@@ -7,13 +7,19 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 HostName = Literal["Claude Desktop", "Claude Code", "Cursor", "Codex"]
 HostStatus = Literal["passed", "blocked", "pending"]
 HOST_NAMES: tuple[HostName, ...] = ("Claude Desktop", "Claude Code", "Cursor", "Codex")
+P0_REQUIRED_HOSTS: tuple[HostName, ...] = ("Codex", "Claude Code")
+P0_REQUIRED_GATES: tuple[str, ...] = ("manual_host_ui", "first_10_minutes_replay")
+_NON_FABRICATION_POLICY = (
+    "Record passed only after a reviewer observes the real MCP host UI flow; generated smoke output alone is not "
+    "accepted as P0 evidence."
+)
 
 
 class HostManualRun(BaseModel):
@@ -58,6 +64,19 @@ class FirstTenMinutesReplayEvidence:
     run_date: str
     evidence: str
     artifacts: list[str]
+
+
+@dataclass(frozen=True)
+class EvidenceArtifactImport:
+    """Inputs for importing one reviewer-observed evidence session into required P0 gates."""
+
+    path: Path
+    host: HostName
+    status: HostStatus
+    run_date: str
+    evidence: str
+    artifacts: list[str]
+    confirm_real_host_observed: bool = False
 
 
 def validate_host_manual_runs(path: Path = Path("docs/HOST_MANUAL_RUNS.json")) -> HostManualRuns:
@@ -130,6 +149,85 @@ def summarize_host_manual_runs(records: HostManualRuns) -> str:
     )
 
 
+def build_evidence_session_plan(
+    *,
+    host: HostName,
+    path: Path = Path("docs/HOST_MANUAL_RUNS.json"),
+) -> dict[str, Any]:
+    """Build a guided real-host evidence session plan without writing evidence records."""
+    records = validate_host_manual_runs(path) if path.exists() else HostManualRuns()
+    host_status = _host_gate_status(host=host, records=records)
+    return {
+        "host": host,
+        "records_path": str(path),
+        "session_status": "ready_to_record" if host_status["overall_status"] == "passed" else "operator_run_required",
+        "writes_records": False,
+        "non_fabrication_policy": _NON_FABRICATION_POLICY,
+        "current_host_status": host_status,
+        "operator_steps": _operator_steps(host),
+        "recording_commands": {
+            "passed": (
+                "albu-mcp evidence import-artifacts "
+                f"--host {host!r} --status passed --date YYYY-MM-DD --evidence '...' "
+                "--artifact docs/assets/demo/demo_report.md --confirm-real-host-observed"
+            ),
+            "blocked": (
+                "albu-mcp evidence import-artifacts "
+                f"--host {host!r} --status blocked --date YYYY-MM-DD --evidence '...'"
+            ),
+        },
+    }
+
+
+def import_evidence_artifacts(request: EvidenceArtifactImport) -> HostManualRuns:
+    """Import one reviewer-observed host evidence session into both required P0 gates."""
+    if request.status == "passed" and not request.confirm_real_host_observed:
+        msg = "--confirm-real-host-observed is required when recording passed evidence"
+        raise ValueError(msg)
+    record_host_manual_run(
+        path=request.path,
+        host=request.host,
+        status=request.status,
+        run_date=request.run_date,
+        evidence=request.evidence,
+    )
+    return record_first_10_minutes_replay(
+        path=request.path,
+        replay=FirstTenMinutesReplayEvidence(
+            host=request.host,
+            status=request.status,
+            run_date=request.run_date,
+            evidence=request.evidence,
+            artifacts=request.artifacts,
+        ),
+    )
+
+
+def build_evidence_doctor_report(path: Path = Path("docs/HOST_MANUAL_RUNS.json")) -> dict[str, Any]:
+    """Inspect P0 host evidence records and return actionable remediation for missing gates."""
+    records = validate_host_manual_runs(path) if path.exists() else HostManualRuns()
+    host_statuses = {host: _host_gate_status(host=host, records=records) for host in P0_REQUIRED_HOSTS}
+    flat_gates = [
+        gate
+        for status in host_statuses.values()
+        for gate in [status["manual_host_ui"], status["first_10_minutes_replay"]]
+    ]
+    summary = {
+        "required_gate_count": len(P0_REQUIRED_HOSTS) * len(P0_REQUIRED_GATES),
+        "passed_gate_count": sum(gate == "passed" for gate in flat_gates),
+        "blocked_gate_count": sum(gate == "blocked" for gate in flat_gates),
+        "missing_gate_count": sum(gate == "missing" for gate in flat_gates),
+    }
+    return {
+        "records_path": str(path),
+        "rc_reopen_allowed": summary["passed_gate_count"] == summary["required_gate_count"],
+        "non_fabrication_policy": _NON_FABRICATION_POLICY,
+        "summary": summary,
+        "host_statuses": host_statuses,
+        "next_actions": _doctor_next_actions(summary),
+    }
+
+
 def _require_unique_hosts(records: Sequence[HostManualRun], *, label: str) -> None:
     seen: set[str] = set()
     for record in records:
@@ -137,3 +235,93 @@ def _require_unique_hosts(records: Sequence[HostManualRun], *, label: str) -> No
             msg = f"Duplicate {label} record for {record.host!r}"
             raise ValueError(msg)
         seen.add(record.host)
+
+
+def _host_gate_status(*, host: HostName, records: HostManualRuns) -> dict[str, Any]:
+    manual = next((record for record in records.manual_host_ui if record.host == host), None)
+    replay = next((record for record in records.first_10_minutes_replay if record.host == host), None)
+    manual_status = manual.status if manual else "missing"
+    replay_status = replay.status if replay else "missing"
+    overall_status = _overall_host_status(manual_status=manual_status, replay_status=replay_status)
+    return {
+        "overall_status": overall_status,
+        "manual_host_ui": manual_status,
+        "first_10_minutes_replay": replay_status,
+        "missing_gates": [
+            gate
+            for gate, status in [("manual_host_ui", manual_status), ("first_10_minutes_replay", replay_status)]
+            if status != "passed"
+        ],
+        "remediation_actions": _remediation_actions(host=host, overall_status=overall_status),
+    }
+
+
+def _overall_host_status(*, manual_status: str, replay_status: str) -> str:
+    if manual_status == "passed" and replay_status == "passed":
+        return "passed"
+    if manual_status == "blocked" or replay_status == "blocked":
+        return "blocked"
+    return "missing"
+
+
+def _operator_steps(host: HostName) -> list[dict[str, str]]:
+    return [
+        {
+            "step": "connect_host",
+            "action": f"Open {host} with the AlbumentationsX MCP server configured and visible.",
+        },
+        {
+            "step": "smoke_check",
+            "action": "Call run_host_smoke_check and continue only when preview_ready is true.",
+        },
+        {
+            "step": "first_preview",
+            "action": "Replay the first-10-minutes workflow and keep redacted artifact references.",
+        },
+        {
+            "step": "record",
+            "action": "Run import-artifacts only after the reviewer observed the real host UI session.",
+        },
+    ]
+
+
+def _remediation_actions(*, host: HostName, overall_status: str) -> list[dict[str, str]]:
+    if overall_status == "passed":
+        return []
+    actions = {
+        "Codex": [
+            {
+                "code": "run_codex_visible_tool_approval",
+                "message": "Run Codex with visible MCP tool approval and complete run_host_smoke_check.",
+            }
+        ],
+        "Claude Code": [
+            {
+                "code": "install_or_expose_claude_cli",
+                "message": "Install or expose the Claude Code CLI, then import the AlbumentationsX MCP config.",
+            }
+        ],
+        "Cursor": [
+            {
+                "code": "refresh_cursor_mcp_tools",
+                "message": "Refresh Cursor MCP server discovery before running the preview smoke path.",
+            }
+        ],
+        "Claude Desktop": [
+            {
+                "code": "refresh_claude_desktop_config",
+                "message": "Reload Claude Desktop MCP config and confirm AlbumentationsX tools are listed.",
+            }
+        ],
+    }
+    return actions[host]
+
+
+def _doctor_next_actions(summary: dict[str, int]) -> list[str]:
+    if summary["passed_gate_count"] == summary["required_gate_count"]:
+        return ["Run albu-mcp rc reopen --format json and review the publish decision."]
+    return [
+        "Run albu-mcp evidence run-session for each missing or blocked host.",
+        "Record passed evidence only with --confirm-real-host-observed after a reviewer observes the real host UI.",
+        "Rerun albu-mcp evidence doctor before attempting RC reopen.",
+    ]

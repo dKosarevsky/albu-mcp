@@ -195,8 +195,16 @@ def test_readme_and_usage_document_operator_cli() -> None:
     usage = Path("docs/USAGE.md").read_text(encoding="utf-8")
 
     assert "albu-mcp evidence record-host-ui" in readme
+    assert "albu-mcp evidence run-session" in readme
+    assert "albu-mcp evidence doctor" in readme
     assert "albu-mcp beta triage --format json" in readme
+    assert "albu-mcp beta report" in readme
+    assert "albu-mcp rc reopen" in readme
     assert "`plan_augmentation_policy`" in readme
     assert "albu-mcp evidence status" in usage
+    assert "albu-mcp evidence run-session" in usage
+    assert "albu-mcp evidence doctor" in usage
     assert "albu-mcp beta record-attempt" in usage
+    assert "albu-mcp beta report" in usage
+    assert "albu-mcp rc reopen" in usage
     assert "`plan_augmentation_policy`" in usage
