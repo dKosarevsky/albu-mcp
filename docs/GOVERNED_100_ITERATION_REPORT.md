@@ -14,19 +14,19 @@ No blind implementation loop was executed.
 
 ## Completed Paths
 
-- Evidence Session Runner path: guided CLI can plan, import, and doctor P0 evidence.
-- Policy Assistant v2 path: multi-candidate planning is available for preview review.
-- Beta Loop v2 path: beta report summarizes records, privacy posture, and backlog candidates.
-- Host UX hardening path: evidence doctor emits host-specific remediation actions.
-- RC Reopen path: report-only automation shows hold/ready decisions without publishing.
+- Evidence Unblock path: evidence unblock-plan prioritizes blocked real-host gaps.
+- Beta Campaign path: beta campaign-plan packages privacy-safe external validation.
+- Policy Iteration path: plan_policy_iteration carries candidate feedback into the next preview loop.
+- Distribution path: distribution readiness blocks public release artifacts until trust gates pass.
+- Trust Audit path: trust audit reports the next safest command across evidence, beta, and release gates.
 
 ## Completed Plan Points
 
-1. Added evidence run-session, import-artifacts, and doctor commands.
-2. Added Policy Assistant v2 multi-candidate planning.
-3. Added beta report decision output.
-4. Hardened host UX with remediation-oriented evidence doctor output.
-5. Added report-only RC reopen automation and stopped 100 iterations at the blocked evidence gate.
+1. Added evidence unblock-plan for prioritized real-host gaps.
+2. Added beta campaign-plan for privacy-safe external validation.
+3. Added plan_policy_iteration for feedback-aware policy loops.
+4. Added report-only distribution readiness and trust audit commands.
+5. Stopped 100 follow-up iterations at the blocked real-host and beta validation gates.
 
 ## Source Docs
 
@@ -37,5 +37,7 @@ No blind implementation loop was executed.
 - `docs/POLICY_ASSISTANT_MVP_CONTRACT.md`
 - `docs/USAGE.md`
 - `src/albumentationsx_mcp/evidence.py`
+- `src/albumentationsx_mcp/beta_validation.py`
 - `src/albumentationsx_mcp/policy_assistant.py`
-- `src/albumentationsx_mcp/rc_reopen.py`
+- `src/albumentationsx_mcp/distribution.py`
+- `src/albumentationsx_mcp/trust.py`
