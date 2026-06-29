@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 
 HostName = Literal["Claude Desktop", "Claude Code", "Cursor", "Codex"]
 HostStatus = Literal["passed", "blocked", "pending"]
+OperatorPacketFormat = Literal["json", "markdown"]
 HOST_NAMES: tuple[HostName, ...] = ("Claude Desktop", "Claude Code", "Cursor", "Codex")
 P0_REQUIRED_HOSTS: tuple[HostName, ...] = ("Codex", "Claude Code")
 P0_REQUIRED_GATES: tuple[str, ...] = ("manual_host_ui", "first_10_minutes_replay")
@@ -287,6 +288,27 @@ def build_evidence_execution_packet(
     }
 
 
+def build_evidence_operator_packet_artifact(
+    *,
+    host: HostName,
+    path: Path = Path("docs/HOST_MANUAL_RUNS.json"),
+    output_format: OperatorPacketFormat = "markdown",
+) -> dict[str, str]:
+    """Render a host-specific operator packet artifact without recording evidence."""
+    packet = build_evidence_execution_packet(host=host, path=path)
+    content = (
+        json.dumps(packet, indent=2, sort_keys=True) + "\n"
+        if output_format == "json"
+        else _render_evidence_operator_packet_markdown(packet)
+    )
+    return {
+        "host": host,
+        "format": output_format,
+        "filename": f"{_host_slug(host)}-evidence-operator-packet.{_operator_packet_extension(output_format)}",
+        "content": content,
+    }
+
+
 def build_evidence_artifact_doctor_report(path: Path = Path("docs/HOST_MANUAL_RUNS.json")) -> dict[str, Any]:
     """Inspect evidence artifacts and flag synthetic-only or incomplete P0 records."""
     records = validate_host_manual_runs(path) if path.exists() else HostManualRuns()
@@ -433,6 +455,60 @@ def _expected_mcp_tools() -> list[str]:
         "compare_preview_runs",
         "plan_preview_review",
     ]
+
+
+def _render_evidence_operator_packet_markdown(packet: dict[str, Any]) -> str:
+    host = packet["host"]
+    setup_steps = "\n".join(
+        f"- `{step['code']}`: {step['message']}" for step in packet["host_setup_steps"]
+    )
+    expected_tools = "\n".join(f"- `{tool}`" for tool in packet["expected_tools"])
+    artifact_checklist = "\n".join(f"- `{item}`" for item in packet["artifact_checklist"])
+    next_actions = "\n".join(f"- {item}" for item in packet["next_actions"])
+    missing_gates = "\n".join(
+        f"- `{gate}`" for gate in packet["current_host_status"]["missing_gates"]
+    ) or "- none"
+    return (
+        f"# {host} Evidence Operator Packet\n\n"
+        f"Packet status: `{packet['packet_status']}`\n\n"
+        f"Records path: `{packet['records_path']}`\n\n"
+        "## Non-Fabrication Policy\n\n"
+        f"{packet['non_fabrication_policy']}\n\n"
+        "## Current Host Status\n\n"
+        f"- Overall: `{packet['current_host_status']['overall_status']}`\n"
+        f"- Manual host UI: `{packet['current_host_status']['manual_host_ui']}`\n"
+        f"- First 10 minutes replay: `{packet['current_host_status']['first_10_minutes_replay']}`\n"
+        f"- Missing gates:\n{missing_gates}\n\n"
+        "## Host Setup\n\n"
+        f"{setup_steps}\n\n"
+        "## Smoke Call\n\n"
+        f"- Tool: `{packet['smoke_call']['tool']}`\n"
+        f"- Required result: `{packet['smoke_call']['required_result']}`\n"
+        f"- Failure next tool: `{packet['smoke_call']['failure_next_tool']}`\n\n"
+        "## Expected MCP Tools\n\n"
+        f"{expected_tools}\n\n"
+        "## Artifact Checklist\n\n"
+        f"{artifact_checklist}\n\n"
+        "## Recording Commands\n\n"
+        "Passed evidence:\n\n"
+        "```bash\n"
+        f"{packet['recording_commands']['passed']}\n"
+        "```\n\n"
+        "Blocked evidence:\n\n"
+        "```bash\n"
+        f"{packet['recording_commands']['blocked']}\n"
+        "```\n\n"
+        "## Next Actions\n\n"
+        f"{next_actions}\n"
+    )
+
+
+def _host_slug(host: HostName) -> str:
+    return host.lower().replace(" ", "-")
+
+
+def _operator_packet_extension(output_format: OperatorPacketFormat) -> str:
+    return "md" if output_format == "markdown" else "json"
 
 
 def _artifact_doctor_issues(records: HostManualRuns) -> list[dict[str, str]]:
