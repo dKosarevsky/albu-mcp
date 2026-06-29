@@ -27,7 +27,7 @@ from albumentationsx_mcp.models import (
 )
 from albumentationsx_mcp.onboarding import build_dataset_onboarding_report
 from albumentationsx_mcp.pipeline import PipelineService
-from albumentationsx_mcp.policy_assistant import plan_augmentation_policy
+from albumentationsx_mcp.policy_assistant import plan_augmentation_policy, plan_augmentation_policy_candidates
 from albumentationsx_mcp.presets import Intensity, adjust_pipeline, recommend_pipeline
 from albumentationsx_mcp.preview import ArtifactStore, PathPolicy, PreviewService
 from albumentationsx_mcp.preview_validation import PreviewRequestValidator
@@ -93,6 +93,7 @@ _PUBLIC_TOOLS = [
     "list_quality_profiles",
     "recommend_recipe",
     "plan_augmentation_policy",
+    "plan_augmentation_policy_candidates",
     "record_preview_feedback",
     "list_preview_feedback",
     "record_tuning_decision",
@@ -242,6 +243,7 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
                 ],
                 "gate_status": "preview_required",
                 "primary_tool": "plan_augmentation_policy",
+                "v2_tool": "plan_augmentation_policy_candidates",
             },
             sort_keys=True,
         )
@@ -420,6 +422,24 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
             intensity=intensity,
             targets=targets,
             feedback_tags=feedback_tags,
+            catalog=catalog,
+        ).model_dump(mode="json", exclude_none=True)
+
+    @mcp.tool(name="plan_augmentation_policy_candidates")
+    def plan_augmentation_policy_candidates_tool(
+        task: str,
+        objective: str = "robustness",
+        targets: list[str] | None = None,
+        feedback_tags: list[str] | None = None,
+        candidate_count: int = 3,
+    ) -> dict[str, Any]:
+        """Plan 3-5 preview-gated augmentation policy candidates for side-by-side review."""
+        return plan_augmentation_policy_candidates(
+            task=task,
+            objective=objective,
+            targets=targets,
+            feedback_tags=feedback_tags,
+            candidate_count=candidate_count,
             catalog=catalog,
         ).model_dump(mode="json", exclude_none=True)
 

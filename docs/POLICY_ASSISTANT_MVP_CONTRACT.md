@@ -15,6 +15,11 @@ Safe runtime MVP behavior may produce starter candidates only. It does not open 
 - `p0_host_evidence_missing_or_blocked`
 - `beta_validation_records_missing`
 
+## Runtime Tools
+
+- `plan_augmentation_policy`
+- `plan_augmentation_policy_candidates`
+
 ## Interfaces
 
 | Interface | Fields | Purpose |
@@ -22,6 +27,7 @@ Safe runtime MVP behavior may produce starter candidates only. It does not open 
 | `policy_context` | `task`, `sample_count`, `annotation_type`, `preview_constraints` | Carry dataset and review context into recommendation planning. |
 | `feedback_signal` | `tag`, `severity`, `freeform_note`, `rejected_candidate_id` | Normalize user feedback such as too_noisy or object_lost. |
 | `recommendation_result` | `candidate_pipeline`, `risk_notes`, `next_preview_request`, `export_hint` | Describe the next safe policy candidate without mutating files. |
+| `candidate_set` | `candidates`, `candidate_count`, `selection_policy`, `preview_gate` | Return three to five ranked preview-gated policy candidates for human review. |
 
 ## Golden Scenarios
 

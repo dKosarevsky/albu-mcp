@@ -290,6 +290,31 @@ class PolicyAssistantPlan(StrictModel):
     rationale: str
 
 
+class PolicyAssistantCandidate(StrictModel):
+    """One ranked preview-gated policy candidate."""
+
+    rank: int = Field(ge=1)
+    candidate_id: str
+    tradeoff: str
+    preview_request_hint: dict[str, Any] = Field(default_factory=dict)
+    plan: PolicyAssistantPlan
+
+
+class PolicyAssistantCandidateSet(StrictModel):
+    """Ranked set of preview-gated augmentation policy candidates."""
+
+    task: str
+    objective: str
+    targets: list[str] = Field(default_factory=list)
+    candidate_count: int = Field(ge=3, le=5)
+    gate_status: Literal["preview_required"]
+    gate_reason: str
+    recommended_next_tool: Literal["render_preview_batch"]
+    applied_feedback_tags: list[str] = Field(default_factory=list)
+    candidates: list[PolicyAssistantCandidate] = Field(min_length=3, max_length=5)
+    comparison_checklist: list[str] = Field(default_factory=list)
+
+
 class AnnotationObservation(StrictModel):
     """Per-variant annotation retention observation recorded in preview manifests."""
 

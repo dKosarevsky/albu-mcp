@@ -2,9 +2,16 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 from albumentationsx_mcp.advisor import MetadataCatalog, explain_pipeline
 from albumentationsx_mcp.feedback import normalize_feedback_tags
-from albumentationsx_mcp.models import PolicyAssistantPlan, TargetSpec
+from albumentationsx_mcp.models import (
+    PolicyAssistantCandidate,
+    PolicyAssistantCandidateSet,
+    PolicyAssistantPlan,
+    TargetSpec,
+)
 from albumentationsx_mcp.presets import Intensity, adjust_pipeline, recommend_pipeline
 
 _GATE_REASON = (
@@ -53,6 +60,59 @@ def plan_augmentation_policy(  # noqa: PLR0913 - mirrors the MCP tool input cont
     )
 
 
+def plan_augmentation_policy_candidates(  # noqa: PLR0913 - mirrors the MCP tool input contract.
+    *,
+    task: str,
+    objective: str = "robustness",
+    targets: list[str] | None = None,
+    feedback_tags: list[str] | None = None,
+    candidate_count: int = 3,
+    catalog: MetadataCatalog | None = None,
+) -> PolicyAssistantCandidateSet:
+    """Build 3-5 ranked preview-gated policy candidates for side-by-side review."""
+    bounded_count = max(3, min(5, candidate_count))
+    selected_targets = targets or ["image"]
+    applied_feedback_tags = _canonical_feedback_tags(feedback_tags or [])
+    candidate_profiles = _candidate_profiles(bounded_count=bounded_count, feedback_tags=applied_feedback_tags)
+    candidates = [
+        PolicyAssistantCandidate(
+            rank=index,
+            candidate_id=profile["candidate_id"],
+            tradeoff=profile["tradeoff"],
+            preview_request_hint={
+                "variants_per_image": 4,
+                "recommended_tool": "render_preview_batch",
+                "review_focus": profile["review_focus"],
+            },
+            plan=plan_augmentation_policy(
+                task=task,
+                objective=objective,
+                intensity=cast("Intensity", profile["intensity"]),
+                targets=selected_targets,
+                feedback_tags=applied_feedback_tags,
+                catalog=catalog,
+            ),
+        )
+        for index, profile in enumerate(candidate_profiles, start=1)
+    ]
+    return PolicyAssistantCandidateSet(
+        task=task,
+        objective=objective,
+        targets=selected_targets,
+        candidate_count=len(candidates),
+        gate_status="preview_required",
+        gate_reason=_GATE_REASON,
+        recommended_next_tool="render_preview_batch",
+        applied_feedback_tags=applied_feedback_tags,
+        candidates=candidates,
+        comparison_checklist=[
+            "Render all candidates on the same image sample and seed.",
+            "Compare contact sheets before accepting any candidate.",
+            "Record concrete feedback tags for rejected candidates.",
+        ],
+    )
+
+
 def _canonical_feedback_tags(feedback_tags: list[str]) -> list[str]:
     normalized = normalize_feedback_tags(feedback_tags)
     canonical: list[str] = []
@@ -62,6 +122,43 @@ def _canonical_feedback_tags(feedback_tags: list[str]) -> list[str]:
         else:
             canonical.append(f"{tag_name}:{severity}")
     return canonical
+
+
+def _candidate_profiles(*, bounded_count: int, feedback_tags: list[str]) -> list[dict[str, str]]:
+    suffix = " with feedback-aware softening" if feedback_tags else ""
+    profiles = [
+        {
+            "candidate_id": "conservative",
+            "intensity": "low",
+            "tradeoff": f"Lowest destructive risk; best first preview candidate{suffix}.",
+            "review_focus": "Check that weak augmentation still covers expected deployment variation.",
+        },
+        {
+            "candidate_id": "balanced",
+            "intensity": "medium",
+            "tradeoff": f"Balanced robustness and recognizability for normal review loops{suffix}.",
+            "review_focus": "Compare object recognizability against baseline examples.",
+        },
+        {
+            "candidate_id": "aggressive",
+            "intensity": "high",
+            "tradeoff": f"Highest robustness pressure; most likely to need rejection tags{suffix}.",
+            "review_focus": "Look for object loss, mask drift, over-noise, and excessive blur.",
+        },
+        {
+            "candidate_id": "review_safe",
+            "intensity": "medium",
+            "tradeoff": f"Same intensity as balanced, but ranked for reviewer-focused safety checks{suffix}.",
+            "review_focus": "Use when the reviewer needs a second medium candidate before export.",
+        },
+        {
+            "candidate_id": "minimal_change",
+            "intensity": "low",
+            "tradeoff": f"Minimal-change fallback for sensitive datasets or uncertain labels{suffix}.",
+            "review_focus": "Confirm annotations stay aligned and labels remain obvious.",
+        },
+    ]
+    return profiles[:bounded_count]
 
 
 def _next_tools(recommended_next_tool: str) -> list[str]:
