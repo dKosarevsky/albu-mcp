@@ -19,6 +19,7 @@ Safe runtime MVP behavior may produce starter candidates only. It does not open 
 
 - `plan_augmentation_policy`
 - `plan_augmentation_policy_candidates`
+- `plan_policy_iteration`
 
 ## Interfaces
 

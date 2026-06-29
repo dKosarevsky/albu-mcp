@@ -1068,6 +1068,95 @@
       }
     },
     {
+      "description": "Plan the next preview-gated policy iteration from concrete review feedback.",
+      "name": "plan_policy_iteration",
+      "parameters": {
+        "properties": {
+          "accepted_candidate_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Accepted Candidate Id"
+          },
+          "candidate_count": {
+            "default": 3,
+            "title": "Candidate Count",
+            "type": "integer"
+          },
+          "feedback_tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Feedback Tags"
+          },
+          "iteration": {
+            "default": 1,
+            "title": "Iteration",
+            "type": "integer"
+          },
+          "objective": {
+            "default": "robustness",
+            "title": "Objective",
+            "type": "string"
+          },
+          "rejected_candidate_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Rejected Candidate Ids"
+          },
+          "targets": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Targets"
+          },
+          "task": {
+            "title": "Task",
+            "type": "string"
+          }
+        },
+        "required": [
+          "task"
+        ],
+        "title": "plan_policy_iteration_toolArguments",
+        "type": "object"
+      }
+    },
+    {
       "description": "Plan the next review action for one baseline-to-candidate preview comparison.",
       "name": "plan_preview_review",
       "parameters": {

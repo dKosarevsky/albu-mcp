@@ -31,6 +31,7 @@ def test_policy_assistant_mvp_contract_is_blocked_behind_gates() -> None:
     assert contract["runtime_tools"] == [
         "plan_augmentation_policy",
         "plan_augmentation_policy_candidates",
+        "plan_policy_iteration",
     ]
 
 
@@ -45,6 +46,7 @@ def test_policy_assistant_mvp_contract_markdown_defines_clean_interfaces() -> No
     assert "`recommendation_result`" in markdown
     assert "`candidate_set`" in markdown
     assert "`plan_augmentation_policy_candidates`" in markdown
+    assert "`plan_policy_iteration`" in markdown
     assert "starter candidates only" in markdown
 
 

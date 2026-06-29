@@ -228,6 +228,26 @@ def build_evidence_doctor_report(path: Path = Path("docs/HOST_MANUAL_RUNS.json")
     }
 
 
+def build_evidence_unblock_plan(path: Path = Path("docs/HOST_MANUAL_RUNS.json")) -> dict[str, Any]:
+    """Build a prioritized P0 real-host evidence unblock plan without writing records."""
+    doctor = build_evidence_doctor_report(path)
+    host_unblock_queue = [
+        _host_unblock_item(host=host, status=status)
+        for host, status in doctor["host_statuses"].items()
+        if status["overall_status"] != "passed"
+    ]
+    return {
+        "plan_status": "ready_for_rc_reopen" if not host_unblock_queue else "blocked",
+        "records_path": str(path),
+        "writes_records": False,
+        "non_fabrication_policy": _NON_FABRICATION_POLICY,
+        "blocked_host_count": len(host_unblock_queue),
+        "first_blocker": host_unblock_queue[0] if host_unblock_queue else None,
+        "host_unblock_queue": host_unblock_queue,
+        "next_actions": _unblock_next_actions(host_unblock_queue),
+    }
+
+
 def _require_unique_hosts(records: Sequence[HostManualRun], *, label: str) -> None:
     seen: set[str] = set()
     for record in records:
@@ -324,4 +344,29 @@ def _doctor_next_actions(summary: dict[str, int]) -> list[str]:
         "Run albu-mcp evidence run-session for each missing or blocked host.",
         "Record passed evidence only with --confirm-real-host-observed after a reviewer observes the real host UI.",
         "Rerun albu-mcp evidence doctor before attempting RC reopen.",
+    ]
+
+
+def _host_unblock_item(*, host: HostName, status: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "host": host,
+        "overall_status": status["overall_status"],
+        "missing_gates": status["missing_gates"],
+        "remediation_actions": status["remediation_actions"],
+        "recommended_command": f"albu-mcp evidence run-session --host {host!r} --format json",
+        "acceptance_command": (
+            "albu-mcp evidence import-artifacts "
+            f"--host {host!r} --status passed --date YYYY-MM-DD --evidence 'reviewer observed real host UI' "
+            "--artifact docs/assets/demo/demo_report.md --confirm-real-host-observed"
+        ),
+    }
+
+
+def _unblock_next_actions(host_unblock_queue: list[dict[str, Any]]) -> list[str]:
+    if not host_unblock_queue:
+        return ["Run albu-mcp rc reopen --format json and review report-only publish readiness."]
+    return [
+        "Run the first recommended_command in a real MCP host session.",
+        "Capture redacted artifact references from the reviewer-observed host UI.",
+        "Import passed evidence only with --confirm-real-host-observed, then rerun evidence doctor.",
     ]

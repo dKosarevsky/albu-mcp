@@ -185,6 +185,25 @@ def build_beta_validation_report(records: BetaValidationRecords) -> dict[str, An
     }
 
 
+def build_beta_campaign_plan(
+    records: BetaValidationRecords,
+    *,
+    target_participants: int = 3,
+) -> dict[str, Any]:
+    """Build a privacy-safe beta validation campaign plan without contacting participants."""
+    triage = build_beta_attempt_triage(records)
+    workflow_trials = [_workflow_trial(workflow_id=workflow_id) for workflow_id in _WORKFLOW_IDS]
+    return {
+        "campaign_status": triage["triage_status"],
+        "target_participant_count": max(1, target_participants),
+        "privacy_policy": "redacted_only",
+        "product_depth_allowed": triage["product_depth_allowed"],
+        "workflow_trial_count": len(workflow_trials),
+        "workflow_trials": workflow_trials,
+        "next_actions": _campaign_next_actions(product_depth_allowed=triage["product_depth_allowed"]),
+    }
+
+
 def _record_key(record: BetaValidationRecord) -> tuple[str, object, str]:
     return (record.workflow_id, record.attempt_date, record.summary)
 
@@ -223,4 +242,40 @@ def _report_next_actions(*, triage: dict[str, Any], candidate_count: int) -> lis
     return [
         "Run beta workflows and record redacted attempts before triage.",
         "Do not promote product-depth work from missing beta signal.",
+    ]
+
+
+def _workflow_trial(*, workflow_id: WorkflowId) -> dict[str, str]:
+    descriptions = {
+        "dataset_health_before_training": "Run dataset quality inspection before preview or training decisions.",
+        "noisy_preview_tuning": "Ask the user to reject or soften too-noisy preview variants.",
+        "robustness_distortion_variants": "Generate and compare robustness variants for a small local image sample.",
+    }
+    default_buckets = {
+        "dataset_health_before_training": "dataset_quality_gap",
+        "noisy_preview_tuning": "review_agent_v3_gap",
+        "robustness_distortion_variants": "workflow_fit_gap",
+    }
+    return {
+        "workflow_id": workflow_id,
+        "trial_goal": descriptions[workflow_id],
+        "recording_command": (
+            "albu-mcp beta record-attempt "
+            f"--workflow-id {workflow_id} --status needs_followup --attempt-date YYYY-MM-DD "
+            "--participant-role 'ML practitioner' --summary 'redacted summary' "
+            f"--triage-bucket {default_buckets[workflow_id]} --artifact-ref docs/assets/demo/demo_report.md"
+        ),
+    }
+
+
+def _campaign_next_actions(*, product_depth_allowed: bool) -> list[str]:
+    if product_depth_allowed:
+        return [
+            "Promote repeated beta findings into product-depth implementation plans.",
+            "Keep recruiting until feedback stops changing the backlog ordering.",
+        ]
+    return [
+        "Recruit external CV users for every listed workflow trial.",
+        "Record only redacted summaries and safe artifact references.",
+        "Rerun albu-mcp beta report before opening product-depth implementation.",
     ]
