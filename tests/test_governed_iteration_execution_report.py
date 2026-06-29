@@ -17,16 +17,14 @@ def test_governed_iteration_execution_report_stops_after_first_blocked_iteration
     assert report["executed_iteration_count"] == 1
     assert report["stopped_at_iteration"] == 1
     assert report["stop_reason"] == "current_priority_gate_blocked"
-    assert report["completed_path_count"] == 3
-    assert report["completed_plan_point_count"] == 7
+    assert report["completed_path_count"] == 5
+    assert report["completed_plan_point_count"] == 5
     assert report["completed_plan_points"] == [
-        "Merged PR #14.",
-        "Added package-level evidence capture CLI.",
-        "Kept P0 outcomes blocked until real host UI evidence exists.",
-        "Added package-level beta attempt and backlog triage CLI.",
-        "Implemented preview-gated policy assistant MVP tool.",
-        "Kept v1.15.0-rc.1 at RC no-go with completed enablers documented.",
-        "Stopped 100-iteration execution at the first blocked governed gate.",
+        "Added evidence run-session, import-artifacts, and doctor commands.",
+        "Added Policy Assistant v2 multi-candidate planning.",
+        "Added beta report decision output.",
+        "Hardened host UX with remediation-oriented evidence doctor output.",
+        "Added report-only RC reopen automation and stopped 100 iterations at the blocked evidence gate.",
     ]
 
 
@@ -37,8 +35,8 @@ def test_governed_iteration_execution_report_markdown_explains_stop() -> None:
     assert "Requested iterations: `100`" in markdown
     assert "Executed iterations: `1`" in markdown
     assert "`current_priority_gate_blocked`" in markdown
-    assert "package-level beta attempt and backlog triage CLI" in markdown
-    assert "preview-gated policy assistant MVP tool" in markdown
+    assert "Policy Assistant v2 multi-candidate planning" in markdown
+    assert "report-only RC reopen automation" in markdown
     assert "No blind implementation loop was executed." in markdown
 
 
