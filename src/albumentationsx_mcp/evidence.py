@@ -20,6 +20,7 @@ _NON_FABRICATION_POLICY = (
     "Record passed only after a reviewer observes the real MCP host UI flow; generated smoke output alone is not "
     "accepted as P0 evidence."
 )
+_SYNTHETIC_ONLY_MARKERS = ("generated smoke", "smoke output only", "synthetic", "no reviewer-observed")
 
 
 class HostManualRun(BaseModel):
@@ -248,6 +249,62 @@ def build_evidence_unblock_plan(path: Path = Path("docs/HOST_MANUAL_RUNS.json"))
     }
 
 
+def build_evidence_execution_packet(
+    *,
+    host: HostName,
+    path: Path = Path("docs/HOST_MANUAL_RUNS.json"),
+) -> dict[str, Any]:
+    """Build a host-specific real MCP evidence execution packet without writing records."""
+    session_plan = build_evidence_session_plan(host=host, path=path)
+    return {
+        "packet_status": "ready"
+        if session_plan["current_host_status"]["overall_status"] == "passed"
+        else "operator_action_required",
+        "host": host,
+        "records_path": str(path),
+        "writes_records": False,
+        "non_fabrication_policy": _NON_FABRICATION_POLICY,
+        "host_setup_steps": _host_setup_steps(host),
+        "expected_tools": _expected_mcp_tools(),
+        "smoke_call": {
+            "tool": "run_host_smoke_check",
+            "required_result": "preview_ready=true",
+            "failure_next_tool": "diagnose_environment",
+        },
+        "artifact_checklist": [
+            "host_ui_screenshot_or_terminal_capture",
+            "run_host_smoke_check_json",
+            "first_10_minutes_replay_notes",
+            "preview_or_contact_sheet_artifact_ref",
+        ],
+        "recording_commands": session_plan["recording_commands"],
+        "current_host_status": session_plan["current_host_status"],
+        "next_actions": [
+            "Complete setup steps in the real MCP host UI.",
+            "Run the smoke call and save redacted artifact references.",
+            "Import passed evidence only after reviewer observation.",
+        ],
+    }
+
+
+def build_evidence_artifact_doctor_report(path: Path = Path("docs/HOST_MANUAL_RUNS.json")) -> dict[str, Any]:
+    """Inspect evidence artifacts and flag synthetic-only or incomplete P0 records."""
+    records = validate_host_manual_runs(path) if path.exists() else HostManualRuns()
+    issues = _artifact_doctor_issues(records)
+    passed_gate_count = _passed_gate_count(records)
+    required_gate_count = len(P0_REQUIRED_HOSTS) * len(P0_REQUIRED_GATES)
+    return {
+        "artifact_status": "ready" if not issues and passed_gate_count == required_gate_count else "blocked",
+        "records_path": str(path),
+        "non_fabrication_policy": _NON_FABRICATION_POLICY,
+        "passed_gate_count": passed_gate_count,
+        "required_gate_count": required_gate_count,
+        "issue_count": len(issues),
+        "issues": issues,
+        "next_actions": _artifact_doctor_next_actions(issues),
+    }
+
+
 def _require_unique_hosts(records: Sequence[HostManualRun], *, label: str) -> None:
     seen: set[str] = set()
     for record in records:
@@ -335,6 +392,114 @@ def _remediation_actions(*, host: HostName, overall_status: str) -> list[dict[st
         ],
     }
     return actions[host]
+
+
+def _host_setup_steps(host: HostName) -> list[dict[str, str]]:
+    host_steps = {
+        "Codex": [
+            {
+                "code": "run_codex_visible_tool_approval",
+                "message": "Open Codex with visible MCP tool approval and the AlbumentationsX server configured.",
+            }
+        ],
+        "Claude Code": [
+            {
+                "code": "install_or_expose_claude_cli",
+                "message": "Install or expose the Claude Code CLI, then import the AlbumentationsX MCP config.",
+            }
+        ],
+        "Cursor": [
+            {
+                "code": "refresh_cursor_mcp_tools",
+                "message": "Refresh Cursor MCP tools and confirm the AlbumentationsX server is enabled.",
+            }
+        ],
+        "Claude Desktop": [
+            {
+                "code": "refresh_claude_desktop_config",
+                "message": "Reload Claude Desktop MCP config and confirm AlbumentationsX tools are listed.",
+            }
+        ],
+    }
+    return host_steps[host]
+
+
+def _expected_mcp_tools() -> list[str]:
+    return [
+        "run_host_smoke_check",
+        "plan_dataset_onboarding",
+        "validate_preview_request",
+        "render_preview_batch",
+        "compare_preview_runs",
+        "plan_preview_review",
+    ]
+
+
+def _artifact_doctor_issues(records: HostManualRuns) -> list[dict[str, str]]:
+    issues: list[dict[str, str]] = []
+    manual_by_host = {record.host: record for record in records.manual_host_ui}
+    replay_by_host = {record.host: record for record in records.first_10_minutes_replay}
+    for host in P0_REQUIRED_HOSTS:
+        manual = manual_by_host.get(host)
+        replay = replay_by_host.get(host)
+        if manual is None or manual.status != "passed":
+            issues.append(_artifact_issue(host=host, gate="manual_host_ui", code="missing_required_host_gate"))
+        elif _looks_synthetic_only(manual.evidence):
+            issues.append(_artifact_issue(host=host, gate="manual_host_ui", code="synthetic_only_evidence"))
+        if replay is None or replay.status != "passed":
+            issues.append(_artifact_issue(host=host, gate="first_10_minutes_replay", code="missing_required_host_gate"))
+        else:
+            if _looks_synthetic_only(replay.evidence):
+                issues.append(
+                    _artifact_issue(host=host, gate="first_10_minutes_replay", code="synthetic_only_evidence")
+                )
+            if not replay.artifacts:
+                issues.append(
+                    _artifact_issue(host=host, gate="first_10_minutes_replay", code="missing_replay_artifact")
+                )
+    return issues
+
+
+def _artifact_issue(*, host: HostName, gate: str, code: str) -> dict[str, str]:
+    messages = {
+        "missing_required_host_gate": "Required P0 host gate is not passed.",
+        "synthetic_only_evidence": "Evidence text looks synthetic-only or explicitly lacks reviewer observation.",
+        "missing_replay_artifact": "First-10-minutes replay needs at least one redacted artifact reference.",
+    }
+    return {"host": host, "gate": gate, "code": code, "message": messages[code]}
+
+
+def _looks_synthetic_only(evidence: str) -> bool:
+    lowered = evidence.lower()
+    return any(marker in lowered for marker in _SYNTHETIC_ONLY_MARKERS)
+
+
+def _passed_gate_count(records: HostManualRuns) -> int:
+    manual_hosts = {
+        record.host
+        for record in records.manual_host_ui
+        if record.host in P0_REQUIRED_HOSTS and record.status == "passed"
+    }
+    replay_hosts = {
+        record.host
+        for record in records.first_10_minutes_replay
+        if record.host in P0_REQUIRED_HOSTS and record.status == "passed"
+    }
+    return len(manual_hosts) + len(replay_hosts)
+
+
+def _artifact_doctor_next_actions(issues: list[dict[str, str]]) -> list[str]:
+    codes = {issue["code"] for issue in issues}
+    if not issues:
+        return ["Run albu-mcp trust next --format json before attempting RC reopen."]
+    actions: list[str] = []
+    if "synthetic_only_evidence" in codes:
+        actions.append("Replace synthetic-only notes with reviewer-observed real host UI evidence.")
+    if "missing_replay_artifact" in codes:
+        actions.append("Attach at least one redacted first-10-minutes replay artifact reference.")
+    if "missing_required_host_gate" in codes:
+        actions.append("Run albu-mcp evidence execution-packet for each missing host gate.")
+    return actions
 
 
 def _doctor_next_actions(summary: dict[str, int]) -> list[str]:

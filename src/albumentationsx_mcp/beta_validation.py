@@ -204,6 +204,33 @@ def build_beta_campaign_plan(
     }
 
 
+def build_beta_trial_pack(
+    *,
+    workflow_id: WorkflowId,
+    participant_role: str = "ML practitioner",
+) -> dict[str, Any]:
+    """Build a privacy-safe external beta trial handoff for one workflow."""
+    trial = _workflow_trial(workflow_id=workflow_id)
+    return {
+        "pack_status": "ready_to_send",
+        "workflow_id": workflow_id,
+        "participant_role": participant_role,
+        "privacy_policy": "redacted_only",
+        "participant_prompt": _participant_prompt(workflow_id=workflow_id),
+        "expected_workflow": _expected_trial_workflow(workflow_id=workflow_id),
+        "redaction_checklist": [
+            "Remove private image paths and dataset names.",
+            "Summarize visual findings without uploading private images.",
+            "Link only safe generated artifacts or docs assets.",
+            "Record private_data_included=false.",
+        ],
+        "recording_command": trial["recording_command"].replace(
+            "--participant-role 'ML practitioner'",
+            f"--participant-role '{participant_role}'",
+        ),
+    }
+
+
 def _record_key(record: BetaValidationRecord) -> tuple[str, object, str]:
     return (record.workflow_id, record.attempt_date, record.summary)
 
@@ -266,6 +293,46 @@ def _workflow_trial(*, workflow_id: WorkflowId) -> dict[str, str]:
             f"--triage-bucket {default_buckets[workflow_id]} --artifact-ref docs/assets/demo/demo_report.md"
         ),
     }
+
+
+def _participant_prompt(*, workflow_id: WorkflowId) -> str:
+    prompts = {
+        "dataset_health_before_training": (
+            "Use AlbumentationsX MCP to inspect a small local dataset before training. "
+            "Report whether the host surfaced dataset quality blockers without sharing private paths."
+        ),
+        "noisy_preview_tuning": (
+            "Ask the MCP host to create distorted image variants, review the contact sheet, and give feedback like "
+            "'example 8 is too noisy' when an object becomes hard to recognize."
+        ),
+        "robustness_distortion_variants": (
+            "Use AlbumentationsX MCP to generate robustness-oriented distortion variants for a small local sample, "
+            "then choose which candidate should be softened or kept."
+        ),
+    }
+    return prompts[workflow_id]
+
+
+def _expected_trial_workflow(*, workflow_id: WorkflowId) -> list[str]:
+    common = [
+        "Connect an MCP host with bounded --allowed-root and --artifact-root.",
+        "Run run_host_smoke_check and continue only when preview_ready=true.",
+    ]
+    workflow_steps = {
+        "dataset_health_before_training": [
+            "Run plan_dataset_onboarding or inspect_dataset_quality on a small local folder.",
+            "Record whether the host found actionable dataset quality issues.",
+        ],
+        "noisy_preview_tuning": [
+            "Render a small preview batch and inspect the contact sheet.",
+            "Reject or soften variants with concrete feedback tags.",
+        ],
+        "robustness_distortion_variants": [
+            "Render baseline and robustness candidate previews on the same image set.",
+            "Compare candidates and record whether the workflow fits the user's robustness goal.",
+        ],
+    }
+    return [*common, *workflow_steps[workflow_id]]
 
 
 def _campaign_next_actions(*, product_depth_allowed: bool) -> list[str]:

@@ -17,6 +17,7 @@ from albumentationsx_mcp.beta_validation import (
     WorkflowId,
     build_beta_attempt_triage,
     build_beta_campaign_plan,
+    build_beta_trial_pack,
     build_beta_validation_report,
     record_beta_validation,
     summarize_beta_validation_records,
@@ -28,7 +29,9 @@ from albumentationsx_mcp.evidence import (
     FirstTenMinutesReplayEvidence,
     HostName,
     HostStatus,
+    build_evidence_artifact_doctor_report,
     build_evidence_doctor_report,
+    build_evidence_execution_packet,
     build_evidence_session_plan,
     build_evidence_unblock_plan,
     import_evidence_artifacts,
@@ -37,9 +40,9 @@ from albumentationsx_mcp.evidence import (
     summarize_host_manual_runs,
     validate_host_manual_runs,
 )
-from albumentationsx_mcp.rc_reopen import build_rc_reopen_report
+from albumentationsx_mcp.rc_reopen import build_rc_rehearsal_report, build_rc_reopen_report
 from albumentationsx_mcp.server import ServerSettings, create_mcp_server, settings_from_environment
-from albumentationsx_mcp.trust import build_trust_audit_report
+from albumentationsx_mcp.trust import build_trust_audit_report, build_trust_next_action
 
 _SUBCOMMANDS = {"beta", "distribution", "evidence", "rc", "trust"}
 
@@ -108,6 +111,14 @@ def _run_evidence_cli(argv: list[str]) -> None:
     run_session.add_argument("--host", choices=get_args(HostName), required=True)
     run_session.add_argument("--format", choices=["text", "json"], default="text")
 
+    execution_packet = subparsers.add_parser(
+        "execution-packet",
+        help="Print a host-specific real MCP evidence execution packet.",
+    )
+    execution_packet.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    execution_packet.add_argument("--host", choices=get_args(HostName), required=True)
+    execution_packet.add_argument("--format", choices=["text", "json"], default="text")
+
     import_artifacts = subparsers.add_parser(
         "import-artifacts",
         help="Import one reviewer-observed evidence session into both required P0 gates.",
@@ -119,6 +130,10 @@ def _run_evidence_cli(argv: list[str]) -> None:
     doctor = subparsers.add_parser("doctor", help="Inspect P0 evidence gates and print remediation actions.")
     doctor.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
     doctor.add_argument("--format", choices=["text", "json"], default="text")
+
+    artifact_doctor = subparsers.add_parser("artifact-doctor", help="Inspect evidence artifact completeness.")
+    artifact_doctor.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    artifact_doctor.add_argument("--format", choices=["text", "json"], default="text")
 
     unblock_plan = subparsers.add_parser("unblock-plan", help="Build a prioritized real-host unblock plan.")
     unblock_plan.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
@@ -140,8 +155,10 @@ def _handle_evidence_command(args: argparse.Namespace) -> str:
         "record-host-ui": _handle_evidence_record_host_ui,
         "record-first-10-minutes": _handle_evidence_record_first_10_minutes,
         "run-session": _handle_evidence_run_session,
+        "execution-packet": _handle_evidence_execution_packet,
         "import-artifacts": _handle_evidence_import_artifacts,
         "doctor": _handle_evidence_doctor,
+        "artifact-doctor": _handle_evidence_artifact_doctor,
         "unblock-plan": _handle_evidence_unblock_plan,
         "status": _handle_evidence_status,
     }
@@ -183,6 +200,13 @@ def _handle_evidence_run_session(args: argparse.Namespace) -> str:
     )
 
 
+def _handle_evidence_execution_packet(args: argparse.Namespace) -> str:
+    packet = build_evidence_execution_packet(host=args.host, path=args.path)
+    if args.format == "json":
+        return json.dumps(packet, indent=2, sort_keys=True) + "\n"
+    return f"evidence execution-packet {packet['packet_status']} for {args.host}\n"
+
+
 def _handle_evidence_import_artifacts(args: argparse.Namespace) -> str:
     import_evidence_artifacts(
         EvidenceArtifactImport(
@@ -208,6 +232,13 @@ def _handle_evidence_doctor(args: argparse.Namespace) -> str:
         f"evidence doctor rc_reopen_allowed={str(report['rc_reopen_allowed']).lower()} "
         f"(passed={report['summary']['passed_gate_count']}/{report['summary']['required_gate_count']})\n"
     )
+
+
+def _handle_evidence_artifact_doctor(args: argparse.Namespace) -> str:
+    report = build_evidence_artifact_doctor_report(args.path)
+    if args.format == "json":
+        return json.dumps(report, indent=2, sort_keys=True) + "\n"
+    return f"evidence artifact-doctor {report['artifact_status']} (issues={report['issue_count']})\n"
 
 
 def _handle_evidence_unblock_plan(args: argparse.Namespace) -> str:
@@ -251,6 +282,12 @@ def _run_beta_cli(argv: list[str]) -> None:
     campaign_plan.add_argument("--target-participants", type=int, default=3)
     campaign_plan.add_argument("--format", choices=["text", "json"], default="text")
 
+    trial_pack = subparsers.add_parser("trial-pack", help="Build a privacy-safe beta trial handoff.")
+    trial_pack.add_argument("--path", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    trial_pack.add_argument("--workflow-id", choices=get_args(WorkflowId), required=True)
+    trial_pack.add_argument("--participant-role", default="ML practitioner")
+    trial_pack.add_argument("--format", choices=["text", "json"], default="text")
+
     args = parser.parse_args(argv)
     try:
         sys.stdout.write(_handle_beta_command(args))
@@ -266,6 +303,7 @@ def _handle_beta_command(args: argparse.Namespace) -> str:
         "triage": _handle_beta_triage,
         "report": _handle_beta_report,
         "campaign-plan": _handle_beta_campaign_plan,
+        "trial-pack": _handle_beta_trial_pack,
     }
     return handlers[args.command](args)
 
@@ -327,6 +365,17 @@ def _handle_beta_campaign_plan(args: argparse.Namespace) -> str:
     )
 
 
+def _handle_beta_trial_pack(args: argparse.Namespace) -> str:
+    validate_beta_validation_records(args.path)
+    trial_pack = build_beta_trial_pack(
+        workflow_id=args.workflow_id,
+        participant_role=args.participant_role,
+    )
+    if args.format == "json":
+        return json.dumps(trial_pack, indent=2, sort_keys=True) + "\n"
+    return f"beta trial-pack {trial_pack['pack_status']} for {args.workflow_id}\n"
+
+
 def _run_rc_cli(argv: list[str]) -> None:
     parser = argparse.ArgumentParser(description="Report RC reopen readiness without mutating release state.")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -336,6 +385,12 @@ def _run_rc_cli(argv: list[str]) -> None:
     reopen.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
     reopen.add_argument("--release-tag", default="v1.15.0-rc.1")
     reopen.add_argument("--format", choices=["text", "json"], default="text")
+
+    rehearse = subparsers.add_parser("rehearse", help="Build an RC reopen rehearsal report.")
+    rehearse.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    rehearse.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    rehearse.add_argument("--release-tag", default="v1.15.0-rc.1")
+    rehearse.add_argument("--format", choices=["text", "json"], default="text")
 
     args = parser.parse_args(argv)
     try:
@@ -351,6 +406,17 @@ def _run_rc_cli(argv: list[str]) -> None:
             sys.stdout.write(
                 f"rc reopen {report['rc_decision']} (publish_allowed={str(report['publish_allowed']).lower()})\n"
             )
+            return
+        if args.command == "rehearse":
+            report = build_rc_rehearsal_report(
+                host_records_path=args.host_records,
+                beta_records_path=args.beta_records,
+                release_tag=args.release_tag,
+            )
+            if args.format == "json":
+                sys.stdout.write(json.dumps(report, indent=2, sort_keys=True) + "\n")
+                return
+            sys.stdout.write(f"rc rehearse {report['rehearsal_status']} for {args.release_tag}\n")
             return
     except (ValidationError, ValueError) as exc:
         sys.stderr.write(f"{exc}\n")
@@ -396,20 +462,39 @@ def _run_trust_cli(argv: list[str]) -> None:
     audit.add_argument("--release-tag", default="v1.15.0-rc.1")
     audit.add_argument("--format", choices=["text", "json"], default="text")
 
+    next_action = subparsers.add_parser("next", help="Print the next safest trust-gate action.")
+    next_action.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    next_action.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    next_action.add_argument("--release-tag", default="v1.15.0-rc.1")
+    next_action.add_argument("--format", choices=["text", "json"], default="text")
+
     args = parser.parse_args(argv)
     try:
-        report = build_trust_audit_report(
-            host_records_path=args.host_records,
-            beta_records_path=args.beta_records,
-            release_tag=args.release_tag,
-        )
-        if args.format == "json":
-            sys.stdout.write(json.dumps(report, indent=2, sort_keys=True) + "\n")
+        if args.command == "audit":
+            report = build_trust_audit_report(
+                host_records_path=args.host_records,
+                beta_records_path=args.beta_records,
+                release_tag=args.release_tag,
+            )
+            if args.format == "json":
+                sys.stdout.write(json.dumps(report, indent=2, sort_keys=True) + "\n")
+                return
+            sys.stdout.write(
+                f"trust audit {report['audit_status']} "
+                f"(trust_score={report['trust_score']}, next='{report['recommended_next_command']}')\n"
+            )
             return
-        sys.stdout.write(
-            f"trust audit {report['audit_status']} "
-            f"(trust_score={report['trust_score']}, next='{report['recommended_next_command']}')\n"
-        )
+        if args.command == "next":
+            report = build_trust_next_action(
+                host_records_path=args.host_records,
+                beta_records_path=args.beta_records,
+                release_tag=args.release_tag,
+            )
+            if args.format == "json":
+                sys.stdout.write(json.dumps(report, indent=2, sort_keys=True) + "\n")
+                return
+            sys.stdout.write(f"trust next {report['next_status']} {report['recommended_command']}\n")
+            return
     except (ValidationError, ValueError) as exc:
         sys.stderr.write(f"{exc}\n")
         raise SystemExit(1) from exc
