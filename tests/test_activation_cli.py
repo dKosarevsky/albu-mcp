@@ -108,3 +108,34 @@ def test_evidence_validate_import_rejects_unconfirmed_passed_evidence_and_does_n
     assert payload["writes_records"] is False
     assert payload["artifact_count"] == 1
     assert payload["required_gate_writes"] == ["manual_host_ui", "first_10_minutes_replay"]
+
+
+def test_beta_intake_wizard_returns_privacy_safe_response_template() -> None:
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled arguments.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "beta",
+            "intake-wizard",
+            "--workflow-id",
+            "noisy_preview_tuning",
+            "--participant-role",
+            "CV reviewer",
+            "--format",
+            "json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(result.stdout)
+
+    assert payload["wizard_status"] == "ready_to_send"
+    assert payload["workflow_id"] == "noisy_preview_tuning"
+    assert payload["participant_role"] == "CV reviewer"
+    assert payload["privacy_policy"] == "redacted_only"
+    assert payload["response_template"]["private_data_included"] is False
+    assert "example 8 is too noisy" in payload["participant_prompt"]
+    assert "object recognizable" in " ".join(payload["acceptance_rubric"])
+    assert "albu-mcp beta record-attempt" in payload["recording_command"]

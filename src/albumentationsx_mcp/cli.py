@@ -17,6 +17,7 @@ from albumentationsx_mcp.beta_validation import (
     WorkflowId,
     build_beta_attempt_triage,
     build_beta_campaign_plan,
+    build_beta_intake_wizard,
     build_beta_trial_pack,
     build_beta_validation_report,
     record_beta_validation,
@@ -342,6 +343,11 @@ def _run_beta_cli(argv: list[str]) -> None:
     trial_pack.add_argument("--participant-role", default="ML practitioner")
     trial_pack.add_argument("--format", choices=["text", "json"], default="text")
 
+    intake_wizard = subparsers.add_parser("intake-wizard", help="Build a privacy-safe beta intake wizard.")
+    intake_wizard.add_argument("--workflow-id", choices=get_args(WorkflowId), required=True)
+    intake_wizard.add_argument("--participant-role", default="ML practitioner")
+    intake_wizard.add_argument("--format", choices=["text", "json"], default="text")
+
     args = parser.parse_args(argv)
     try:
         sys.stdout.write(_handle_beta_command(args))
@@ -358,6 +364,7 @@ def _handle_beta_command(args: argparse.Namespace) -> str:
         "report": _handle_beta_report,
         "campaign-plan": _handle_beta_campaign_plan,
         "trial-pack": _handle_beta_trial_pack,
+        "intake-wizard": _handle_beta_intake_wizard,
     }
     return handlers[args.command](args)
 
@@ -428,6 +435,16 @@ def _handle_beta_trial_pack(args: argparse.Namespace) -> str:
     if args.format == "json":
         return json.dumps(trial_pack, indent=2, sort_keys=True) + "\n"
     return f"beta trial-pack {trial_pack['pack_status']} for {args.workflow_id}\n"
+
+
+def _handle_beta_intake_wizard(args: argparse.Namespace) -> str:
+    wizard = build_beta_intake_wizard(
+        workflow_id=args.workflow_id,
+        participant_role=args.participant_role,
+    )
+    if args.format == "json":
+        return json.dumps(wizard, indent=2, sort_keys=True) + "\n"
+    return f"beta intake-wizard {wizard['wizard_status']} for {args.workflow_id}\n"
 
 
 def _run_rc_cli(argv: list[str]) -> None:
