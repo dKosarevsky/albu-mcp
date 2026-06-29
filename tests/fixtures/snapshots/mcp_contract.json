@@ -959,6 +959,63 @@
       }
     },
     {
+      "description": "Plan 3-5 preview-gated augmentation policy candidates for side-by-side review.",
+      "name": "plan_augmentation_policy_candidates",
+      "parameters": {
+        "properties": {
+          "candidate_count": {
+            "default": 3,
+            "title": "Candidate Count",
+            "type": "integer"
+          },
+          "feedback_tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Feedback Tags"
+          },
+          "objective": {
+            "default": "robustness",
+            "title": "Objective",
+            "type": "string"
+          },
+          "targets": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Targets"
+          },
+          "task": {
+            "title": "Task",
+            "type": "string"
+          }
+        },
+        "required": [
+          "task"
+        ],
+        "title": "plan_augmentation_policy_candidates_toolArguments",
+        "type": "object"
+      }
+    },
+    {
       "description": "Plan the first safe preview for a local image dataset folder.",
       "name": "plan_dataset_onboarding",
       "parameters": {

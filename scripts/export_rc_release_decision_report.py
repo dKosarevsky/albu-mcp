@@ -29,8 +29,12 @@ def build_rc_release_decision_report() -> dict[str, Any]:
         "blocked_reasons": blocked_reasons,
         "completed_enablers": [
             "package_evidence_cli",
+            "evidence_session_runner_cli",
             "package_beta_triage_cli",
+            "beta_report_cli",
             "preview_gated_policy_assistant_tool",
+            "policy_assistant_candidates_tool",
+            "report_only_rc_reopen_cli",
         ],
         "safe_commands": gate["preflight_commands"],
         "blocked_publish_commands": gate["blocked_publish_commands"],

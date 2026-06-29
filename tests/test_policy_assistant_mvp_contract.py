@@ -26,6 +26,11 @@ def test_policy_assistant_mvp_contract_is_blocked_behind_gates() -> None:
         "policy_context",
         "feedback_signal",
         "recommendation_result",
+        "candidate_set",
+    ]
+    assert contract["runtime_tools"] == [
+        "plan_augmentation_policy",
+        "plan_augmentation_policy_candidates",
     ]
 
 
@@ -38,6 +43,8 @@ def test_policy_assistant_mvp_contract_markdown_defines_clean_interfaces() -> No
     assert "Production policy acceptance allowed: `false`" in markdown
     assert "`policy_context`" in markdown
     assert "`recommendation_result`" in markdown
+    assert "`candidate_set`" in markdown
+    assert "`plan_augmentation_policy_candidates`" in markdown
     assert "starter candidates only" in markdown
 
 

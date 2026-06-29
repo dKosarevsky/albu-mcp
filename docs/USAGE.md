@@ -77,15 +77,21 @@ retention limit for long-running MCP hosts.
 Use the package CLI for release evidence and beta records without importing repository-only scripts:
 
 ```bash
+albu-mcp evidence run-session --host Codex --format json
+albu-mcp evidence doctor --format json
 albu-mcp evidence record-host-ui --host Codex --status passed --date 2026-06-28 --evidence "..."
 albu-mcp evidence record-first-10-minutes --host Codex --status passed --date 2026-06-28 --evidence "..." --artifact docs/assets/demo/demo_report.md
 albu-mcp evidence status
 albu-mcp beta record-attempt --workflow-id noisy_preview_tuning --status needs_followup --attempt-date 2026-06-28 --participant-role "ML practitioner" --summary "..." --triage-bucket review_agent_v3_gap
 albu-mcp beta triage --format json
+albu-mcp beta report --format json
+albu-mcp rc reopen --format json
 ```
 
-These commands write privacy-safe JSON records. They do not mark P0 evidence as passed unless a reviewer records real
-host UI evidence from an actual MCP host session.
+These commands write privacy-safe JSON records. `run-session` and `doctor` are read-only helpers. `import-artifacts`
+requires `--confirm-real-host-observed` before recording `passed`, so P0 evidence still depends on an actual MCP host UI
+session observed by a reviewer. `rc reopen` is also report-only: it prints publish commands only when gates are open and
+never creates tags, releases, or uploads.
 
 ## Diagnostics
 

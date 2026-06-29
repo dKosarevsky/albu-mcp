@@ -16,22 +16,28 @@ from albumentationsx_mcp.beta_validation import (
     ValidationStatus,
     WorkflowId,
     build_beta_attempt_triage,
+    build_beta_validation_report,
     record_beta_validation,
     summarize_beta_validation_records,
     validate_beta_validation_records,
 )
 from albumentationsx_mcp.evidence import (
+    EvidenceArtifactImport,
     FirstTenMinutesReplayEvidence,
     HostName,
     HostStatus,
+    build_evidence_doctor_report,
+    build_evidence_session_plan,
+    import_evidence_artifacts,
     record_first_10_minutes_replay,
     record_host_manual_run,
     summarize_host_manual_runs,
     validate_host_manual_runs,
 )
+from albumentationsx_mcp.rc_reopen import build_rc_reopen_report
 from albumentationsx_mcp.server import ServerSettings, create_mcp_server, settings_from_environment
 
-_SUBCOMMANDS = {"beta", "evidence"}
+_SUBCOMMANDS = {"beta", "evidence", "rc"}
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -42,6 +48,9 @@ def main(argv: list[str] | None = None) -> None:
         return
     if resolved_argv and resolved_argv[0] == "beta":
         _run_beta_cli(resolved_argv[1:])
+        return
+    if resolved_argv and resolved_argv[0] == "rc":
+        _run_rc_cli(resolved_argv[1:])
         return
     _run_server(resolved_argv)
 
@@ -84,6 +93,23 @@ def _run_evidence_cli(argv: list[str]) -> None:
         help="Artifact path or URL proving the replay. Can be repeated.",
     )
 
+    run_session = subparsers.add_parser("run-session", help="Print a guided real-host evidence session plan.")
+    run_session.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    run_session.add_argument("--host", choices=get_args(HostName), required=True)
+    run_session.add_argument("--format", choices=["text", "json"], default="text")
+
+    import_artifacts = subparsers.add_parser(
+        "import-artifacts",
+        help="Import one reviewer-observed evidence session into both required P0 gates.",
+    )
+    _add_host_record_arguments(import_artifacts)
+    import_artifacts.add_argument("--artifact", action="append", default=[])
+    import_artifacts.add_argument("--confirm-real-host-observed", action="store_true")
+
+    doctor = subparsers.add_parser("doctor", help="Inspect P0 evidence gates and print remediation actions.")
+    doctor.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    doctor.add_argument("--format", choices=["text", "json"], default="text")
+
     status = subparsers.add_parser("status", help="Validate host evidence records and print a compact count.")
     status.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
 
@@ -97,9 +123,8 @@ def _run_evidence_cli(argv: list[str]) -> None:
                 run_date=args.date,
                 evidence=args.evidence,
             )
-            sys.stdout.write(f"recorded {args.host} {args.status} on {args.date} in {args.path}\n")
-            return
-        if args.command == "record-first-10-minutes":
+            output = f"recorded {args.host} {args.status} on {args.date} in {args.path}\n"
+        elif args.command == "record-first-10-minutes":
             record_first_10_minutes_replay(
                 path=args.path,
                 replay=FirstTenMinutesReplayEvidence(
@@ -110,11 +135,45 @@ def _run_evidence_cli(argv: list[str]) -> None:
                     artifacts=args.artifact,
                 ),
             )
-            sys.stdout.write(f"recorded first-10-minutes {args.host} {args.status} on {args.date} in {args.path}\n")
-            return
-        if args.command == "status":
-            sys.stdout.write(f"{summarize_host_manual_runs(validate_host_manual_runs(args.path))}\n")
-            return
+            output = f"recorded first-10-minutes {args.host} {args.status} on {args.date} in {args.path}\n"
+        elif args.command == "run-session":
+            plan = build_evidence_session_plan(host=args.host, path=args.path)
+            if args.format == "json":
+                output = json.dumps(plan, indent=2, sort_keys=True) + "\n"
+            else:
+                output = (
+                    f"evidence session {plan['session_status']} for {args.host}; "
+                    "follow operator_steps and import artifacts after reviewer observation\n"
+                )
+        elif args.command == "import-artifacts":
+            import_evidence_artifacts(
+                EvidenceArtifactImport(
+                    path=args.path,
+                    host=args.host,
+                    status=args.status,
+                    run_date=args.date,
+                    evidence=args.evidence,
+                    artifacts=args.artifact,
+                    confirm_real_host_observed=args.confirm_real_host_observed,
+                )
+            )
+            output = (
+                f"imported {args.host} {args.status} evidence for manual_host_ui and "
+                f"first_10_minutes_replay in {args.path}\n"
+            )
+        elif args.command == "doctor":
+            report = build_evidence_doctor_report(args.path)
+            if args.format == "json":
+                output = json.dumps(report, indent=2, sort_keys=True) + "\n"
+            else:
+                output = (
+                    f"evidence doctor rc_reopen_allowed={str(report['rc_reopen_allowed']).lower()} "
+                    f"(passed={report['summary']['passed_gate_count']}/"
+                    f"{report['summary']['required_gate_count']})\n"
+                )
+        else:
+            output = f"{summarize_host_manual_runs(validate_host_manual_runs(args.path))}\n"
+        sys.stdout.write(output)
     except (ValidationError, ValueError) as exc:
         sys.stderr.write(f"{exc}\n")
         raise SystemExit(1) from exc
@@ -140,6 +199,10 @@ def _run_beta_cli(argv: list[str]) -> None:
     triage = subparsers.add_parser("triage", help="Map beta attempts to backlog-oriented triage lanes.")
     triage.add_argument("--path", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
     triage.add_argument("--format", choices=["text", "json"], default="text")
+
+    report = subparsers.add_parser("report", help="Build a redacted beta decision report.")
+    report.add_argument("--path", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    report.add_argument("--format", choices=["text", "json"], default="text")
 
     args = parser.parse_args(argv)
     try:
@@ -171,6 +234,47 @@ def _run_beta_cli(argv: list[str]) -> None:
                 f"beta triage {triage_payload['triage_status']} "
                 f"(records={triage_payload['summary']['record_count']}, "
                 f"product_depth_allowed={str(triage_payload['product_depth_allowed']).lower()})\n"
+            )
+            return
+        if args.command == "report":
+            report_payload = build_beta_validation_report(validate_beta_validation_records(args.path))
+            if args.format == "json":
+                sys.stdout.write(json.dumps(report_payload, indent=2, sort_keys=True) + "\n")
+                return
+            sys.stdout.write(
+                f"beta report {report_payload['report_status']} "
+                f"(records={report_payload['summary']['record_count']}, "
+                f"candidate_backlog_items={report_payload['summary']['candidate_backlog_item_count']})\n"
+            )
+            return
+    except (ValidationError, ValueError) as exc:
+        sys.stderr.write(f"{exc}\n")
+        raise SystemExit(1) from exc
+
+
+def _run_rc_cli(argv: list[str]) -> None:
+    parser = argparse.ArgumentParser(description="Report RC reopen readiness without mutating release state.")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    reopen = subparsers.add_parser("reopen", help="Build an RC reopen go/no-go report.")
+    reopen.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    reopen.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    reopen.add_argument("--release-tag", default="v1.15.0-rc.1")
+    reopen.add_argument("--format", choices=["text", "json"], default="text")
+
+    args = parser.parse_args(argv)
+    try:
+        if args.command == "reopen":
+            report = build_rc_reopen_report(
+                host_records_path=args.host_records,
+                beta_records_path=args.beta_records,
+                release_tag=args.release_tag,
+            )
+            if args.format == "json":
+                sys.stdout.write(json.dumps(report, indent=2, sort_keys=True) + "\n")
+                return
+            sys.stdout.write(
+                f"rc reopen {report['rc_decision']} (publish_allowed={str(report['publish_allowed']).lower()})\n"
             )
             return
     except (ValidationError, ValueError) as exc:

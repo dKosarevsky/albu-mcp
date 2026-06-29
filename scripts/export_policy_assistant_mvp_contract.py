@@ -27,6 +27,10 @@ def build_policy_assistant_mvp_contract() -> dict[str, Any]:
             "Safe runtime MVP behavior may produce starter candidates only. It does not open product-depth, "
             "RC, beta, export, or production policy acceptance gates without real preview and host evidence."
         ),
+        "runtime_tools": [
+            "plan_augmentation_policy",
+            "plan_augmentation_policy_candidates",
+        ],
         "interfaces": [
             {
                 "name": "policy_context",
@@ -42,6 +46,11 @@ def build_policy_assistant_mvp_contract() -> dict[str, Any]:
                 "name": "recommendation_result",
                 "fields": ["candidate_pipeline", "risk_notes", "next_preview_request", "export_hint"],
                 "purpose": "Describe the next safe policy candidate without mutating files.",
+            },
+            {
+                "name": "candidate_set",
+                "fields": ["candidates", "candidate_count", "selection_policy", "preview_gate"],
+                "purpose": "Return three to five ranked preview-gated policy candidates for human review.",
             },
         ],
         "golden_scenarios": [
@@ -80,6 +89,8 @@ def render_policy_assistant_mvp_contract_markdown(contract: dict[str, Any]) -> s
         lines.extend(f"- `{reason}`" for reason in contract["blocked_reasons"])
     else:
         lines.append("- none")
+    lines.extend(["", "## Runtime Tools", ""])
+    lines.extend(f"- `{tool}`" for tool in contract["runtime_tools"])
     lines.extend(
         [
             "",
