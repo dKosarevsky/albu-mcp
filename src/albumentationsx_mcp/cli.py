@@ -10,6 +10,10 @@ from typing import get_args
 
 from pydantic import ValidationError
 
+from albumentationsx_mcp.activation import (
+    build_activation_command_center,
+    render_activation_command_center_markdown,
+)
 from albumentationsx_mcp.beta_validation import (
     BetaValidationRecord,
     TriageBucket,
@@ -57,12 +61,15 @@ from albumentationsx_mcp.trust import (
     render_trust_dashboard_markdown,
 )
 
-_SUBCOMMANDS = {"beta", "distribution", "evidence", "rc", "trust"}
+_SUBCOMMANDS = {"activation", "beta", "distribution", "evidence", "rc", "trust"}
 
 
 def main(argv: list[str] | None = None) -> None:
     """Run the requested command."""
     resolved_argv = sys.argv[1:] if argv is None else argv
+    if resolved_argv and resolved_argv[0] == "activation":
+        _run_activation_cli(resolved_argv[1:])
+        return
     if resolved_argv and resolved_argv[0] == "evidence":
         _run_evidence_cli(resolved_argv[1:])
         return
@@ -98,6 +105,37 @@ def _run_server(argv: list[str]) -> None:
 
     server = create_mcp_server(settings)
     server.run(transport=args.transport)
+
+
+def _run_activation_cli(argv: list[str]) -> None:
+    parser = argparse.ArgumentParser(description="Build report-only activation command center packets.")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    command_center = subparsers.add_parser("command-center", help="Build the release activation command center.")
+    command_center.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    command_center.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    command_center.add_argument("--release-tag", default="v1.15.0-rc.1")
+    command_center.add_argument("--format", choices=["text", "json", "markdown"], default="text")
+
+    args = parser.parse_args(argv)
+    try:
+        sys.stdout.write(_handle_activation_command(args))
+    except (ValidationError, ValueError) as exc:
+        sys.stderr.write(f"{exc}\n")
+        raise SystemExit(1) from exc
+
+
+def _handle_activation_command(args: argparse.Namespace) -> str:
+    report = build_activation_command_center(
+        host_records_path=args.host_records,
+        beta_records_path=args.beta_records,
+        release_tag=args.release_tag,
+    )
+    if args.format == "json":
+        return json.dumps(report, indent=2, sort_keys=True) + "\n"
+    if args.format == "markdown":
+        return render_activation_command_center_markdown(report)
+    return f"activation command-center {report['center_status']} (release_tag={report['release_tag']})\n"
 
 
 def _run_evidence_cli(argv: list[str]) -> None:
