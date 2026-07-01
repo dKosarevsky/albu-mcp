@@ -65,10 +65,12 @@ from albumentationsx_mcp.evidence import (
 from albumentationsx_mcp.intake import build_intake_bundle_artifacts
 from albumentationsx_mcp.rc_reopen import (
     build_rc_candidate_packet,
+    build_rc_go_check_report,
     build_rc_rehearsal_report,
     build_rc_reopen_report,
     build_release_owner_packet,
     render_rc_candidate_packet_markdown,
+    render_rc_go_check_markdown,
     render_release_owner_packet_markdown,
 )
 from albumentationsx_mcp.release_review import build_release_owner_review_pack_artifacts
@@ -775,6 +777,12 @@ def _run_rc_cli(argv: list[str]) -> None:
     candidate_packet.add_argument("--release-tag", default="v1.15.0-rc.1")
     candidate_packet.add_argument("--format", choices=["text", "json", "markdown"], default="text")
 
+    go_check = subparsers.add_parser("go-check", help="Build a final report-only RC go/no-go check.")
+    go_check.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    go_check.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    go_check.add_argument("--release-tag", default="v1.15.0-rc.1")
+    go_check.add_argument("--format", choices=["text", "json", "markdown"], default="text")
+
     release_owner_packet = subparsers.add_parser(
         "release-owner-packet",
         help="Build a release-owner handoff packet without publish actions.",
@@ -806,6 +814,7 @@ def _handle_rc_command(args: argparse.Namespace) -> str:
         "reopen": _handle_rc_reopen,
         "rehearse": _handle_rc_rehearse,
         "candidate-packet": _handle_rc_candidate_packet,
+        "go-check": _handle_rc_go_check,
         "release-owner-packet": _handle_rc_release_owner_packet,
         "review-pack": _handle_rc_review_pack,
     }
@@ -851,6 +860,22 @@ def _handle_rc_release_owner_packet(args: argparse.Namespace) -> str:
     return (
         f"rc release-owner-packet {packet['packet_status']} "
         f"(publish_allowed={str(packet['publish_allowed']).lower()})\n"
+    )
+
+
+def _handle_rc_go_check(args: argparse.Namespace) -> str:
+    report = build_rc_go_check_report(
+        host_records_path=args.host_records,
+        beta_records_path=args.beta_records,
+        release_tag=args.release_tag,
+    )
+    if args.format == "json":
+        return json.dumps(report, indent=2, sort_keys=True) + "\n"
+    if args.format == "markdown":
+        return render_rc_go_check_markdown(report)
+    return (
+        f"rc go-check {report['go_decision']} "
+        f"(can_create_release_artifacts={str(report['can_create_release_artifacts']).lower()})\n"
     )
 
 

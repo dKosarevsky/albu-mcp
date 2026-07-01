@@ -147,6 +147,39 @@ def build_release_owner_packet(
     }
 
 
+def build_rc_go_check_report(
+    *,
+    host_records_path: Path = Path("docs/HOST_MANUAL_RUNS.json"),
+    beta_records_path: Path = Path("docs/BETA_VALIDATION_RECORDS.json"),
+    release_tag: str = "v1.15.0-rc.1",
+) -> dict[str, Any]:
+    """Build a final report-only RC go/no-go check."""
+    reopen = build_rc_reopen_report(
+        host_records_path=host_records_path,
+        beta_records_path=beta_records_path,
+        release_tag=release_tag,
+    )
+    owner = build_release_owner_packet(
+        host_records_path=host_records_path,
+        beta_records_path=beta_records_path,
+        release_tag=release_tag,
+    )
+    publish_allowed = bool(reopen["publish_allowed"])
+    return {
+        "go_decision": "manual_go_required" if publish_allowed else "no_go",
+        "release_tag": release_tag,
+        "publish_allowed": publish_allowed,
+        "can_create_release_artifacts": publish_allowed,
+        "blocked_reasons": reopen["blocked_reasons"],
+        "required_preflight_commands": reopen["preflight_commands"],
+        "allowed_publish_commands": owner["allowed_publish_commands"] if publish_allowed else [],
+        "do_not_run_commands": owner["do_not_run_commands"],
+        "release_owner_packet_status": owner["packet_status"],
+        "execution_policy": "Report only; this command does not create tags, releases, uploads, or evidence records.",
+        "next_actions": _go_check_next_actions(publish_allowed=publish_allowed),
+    }
+
+
 def render_rc_candidate_packet_markdown(packet: dict[str, Any]) -> str:
     """Render an RC candidate packet as markdown."""
     blocked_reasons = "\n".join(f"- `{reason}`" for reason in packet["blocked_reasons"]) or "- none"
@@ -168,6 +201,32 @@ def render_rc_candidate_packet_markdown(packet: dict[str, Any]) -> str:
         f"{preflight}\n\n"
         "## Publish Commands\n\n"
         f"{publish}\n\n"
+        "## Next Actions\n\n"
+        f"{next_actions}\n"
+    )
+
+
+def render_rc_go_check_markdown(report: dict[str, Any]) -> str:
+    """Render an RC go-check report as markdown."""
+    blocked_reasons = "\n".join(f"- `{reason}`" for reason in report["blocked_reasons"]) or "- none"
+    preflight = "\n".join(f"- `{command}`" for command in report["required_preflight_commands"])
+    allowed_publish = "\n".join(f"- `{command}`" for command in report["allowed_publish_commands"]) or "- none"
+    do_not_run = "\n".join(f"- `{command}`" for command in report["do_not_run_commands"]) or "- none"
+    next_actions = "\n".join(f"- {action}" for action in report["next_actions"])
+    return (
+        "# RC Go Check\n\n"
+        f"Release tag: `{report['release_tag']}`\n\n"
+        f"Go decision: `{report['go_decision']}`\n\n"
+        f"Can create release artifacts: `{str(report['can_create_release_artifacts']).lower()}`\n\n"
+        f"Execution policy: {report['execution_policy']}\n\n"
+        "## Blocked Reasons\n\n"
+        f"{blocked_reasons}\n\n"
+        "## Required Preflight Commands\n\n"
+        f"{preflight}\n\n"
+        "## Allowed Publish Commands\n\n"
+        f"{allowed_publish}\n\n"
+        "## Do Not Run Commands\n\n"
+        f"{do_not_run}\n\n"
         "## Next Actions\n\n"
         f"{next_actions}\n"
     )
@@ -325,4 +384,16 @@ def _release_owner_next_actions(*, publish_allowed: bool) -> list[str]:
     return [
         "Complete blocked evidence or beta gates before asking for release owner go.",
         "Regenerate this packet after trust dashboard reports ready.",
+    ]
+
+
+def _go_check_next_actions(*, publish_allowed: bool) -> list[str]:
+    if publish_allowed:
+        return [
+            "Release owner manually reviews allowed_publish_commands before running anything.",
+            "Keep all release artifacts tied to the same evidence and beta records used by this report.",
+        ]
+    return [
+        "Do not tag, release, or upload while go_decision is no_go.",
+        "Complete real-host evidence and beta validation gates, then rerun rc go-check.",
     ]

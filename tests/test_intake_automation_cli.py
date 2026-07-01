@@ -224,3 +224,36 @@ def test_rc_review_pack_writes_release_owner_artifacts(tmp_path: Path) -> None:
     assert expected_files <= {path.name for path in output_dir.iterdir()}
     assert "release-owner-packet.md" in index_content
     assert "Report only" in index_content
+
+
+def test_rc_go_check_reports_no_go_without_publish_commands(tmp_path: Path) -> None:
+    host_records, beta_records = _write_empty_records(tmp_path)
+
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "rc",
+            "go-check",
+            "--host-records",
+            str(host_records),
+            "--beta-records",
+            str(beta_records),
+            "--release-tag",
+            "v1.15.0-rc.1",
+            "--format",
+            "json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(result.stdout)
+
+    assert payload["go_decision"] == "no_go"
+    assert payload["can_create_release_artifacts"] is False
+    assert payload["publish_allowed"] is False
+    assert payload["allowed_publish_commands"] == []
+    assert "p0_host_evidence_missing_or_blocked" in payload["blocked_reasons"]
+    assert payload["execution_policy"].startswith("Report only")

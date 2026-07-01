@@ -21,11 +21,11 @@ def build_governed_iteration_execution_report() -> dict[str, Any]:
     stop_reason = "completed" if rc_decision["decision"] == "go" else "current_priority_gate_blocked"
     return {
         "requested_iteration_count": governor["iteration_count"],
-        "executed_iteration_count": 4,
-        "stopped_at_iteration": 4,
+        "executed_iteration_count": 5,
+        "stopped_at_iteration": 5,
         "stop_reason": stop_reason,
-        "completed_path_count": 22,
-        "completed_plan_point_count": 22,
+        "completed_path_count": 28,
+        "completed_plan_point_count": 28,
         "execution_policy": governor["execution_policy"],
         "safety_policy": "No blind implementation loop was executed.",
         "completed_paths": [
@@ -54,6 +54,12 @@ def build_governed_iteration_execution_report() -> dict[str, Any]:
             "Trust Gate Transition path: trust gate-transition compares before/after gate cards.",
             "Release Owner Packet path: rc release-owner-packet separates manual go/no-go from publish commands.",
             "Governed Loop path: the fourth requested follow-up loop stops at external evidence and beta gates.",
+            "Intake Bundle path: intake bundle writes a complete manual evidence and beta intake directory.",
+            "Evidence Manifest path: evidence session-manifest and validate-manifest validate reviewer sessions.",
+            "Beta Batch Import path: beta response-import-dir imports filled redacted response templates.",
+            "Release Review Pack path: rc review-pack writes release owner review artifacts.",
+            "RC Go Check path: rc go-check reports no-go or manual-go-required without publishing.",
+            "Governed Loop path: the fifth requested follow-up loop stops at external evidence and beta gates.",
         ],
         "completed_plan_points": [
             "Added evidence execution-packet for host-specific real MCP runs.",
@@ -78,6 +84,12 @@ def build_governed_iteration_execution_report() -> dict[str, Any]:
             "Added trust gate-transition for before/after trust gate comparisons.",
             "Added rc release-owner-packet for release owner handoff and blocked publish commands.",
             "Stopped the fourth 100-iteration follow-up loop at the same external evidence and beta gates.",
+            "Added intake bundle for one-command manual evidence and beta intake artifacts.",
+            "Added evidence session-manifest and validate-manifest for reviewer session validation.",
+            "Added beta response-import-dir for batch importing redacted response JSON files.",
+            "Added rc review-pack for release owner review artifact directories.",
+            "Added rc go-check for post-gate no-go or manual-go-required decisions.",
+            "Stopped the fifth 100-iteration follow-up loop at the same external evidence and beta gates.",
         ],
         "current_external_gates": [
             "p0_host_evidence_missing_or_blocked: requires reviewer-observed real MCP host UI evidence.",
@@ -96,11 +108,14 @@ def build_governed_iteration_execution_report() -> dict[str, Any]:
             "src/albumentationsx_mcp/activation.py",
             "src/albumentationsx_mcp/evidence.py",
             "src/albumentationsx_mcp/beta_validation.py",
+            "src/albumentationsx_mcp/intake.py",
+            "src/albumentationsx_mcp/release_review.py",
             "src/albumentationsx_mcp/trust.py",
             "src/albumentationsx_mcp/rc_reopen.py",
             "tests/test_activation_cli.py",
             "tests/test_evidence_closure_cli.py",
             "tests/test_real_evidence_intake_cli.py",
+            "tests/test_intake_automation_cli.py",
         ],
     }
 
