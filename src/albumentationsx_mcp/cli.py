@@ -40,6 +40,7 @@ from albumentationsx_mcp.evidence import (
     build_evidence_import_checklist,
     build_evidence_operator_packet_artifact,
     build_evidence_packet_bundle_artifacts,
+    build_evidence_privacy_doctor_report,
     build_evidence_session_plan,
     build_evidence_unblock_plan,
     import_evidence_artifacts,
@@ -223,6 +224,10 @@ def _run_evidence_cli(argv: list[str]) -> None:
     artifact_doctor.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
     artifact_doctor.add_argument("--format", choices=["text", "json"], default="text")
 
+    privacy_doctor = subparsers.add_parser("privacy-doctor", help="Inspect evidence privacy and artifact refs.")
+    privacy_doctor.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    privacy_doctor.add_argument("--format", choices=["text", "json"], default="text")
+
     unblock_plan = subparsers.add_parser("unblock-plan", help="Build a prioritized real-host unblock plan.")
     unblock_plan.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
     unblock_plan.add_argument("--format", choices=["text", "json"], default="text")
@@ -251,6 +256,7 @@ def _handle_evidence_command(args: argparse.Namespace) -> str:
         "import-checklist": _handle_evidence_import_checklist,
         "doctor": _handle_evidence_doctor,
         "artifact-doctor": _handle_evidence_artifact_doctor,
+        "privacy-doctor": _handle_evidence_privacy_doctor,
         "unblock-plan": _handle_evidence_unblock_plan,
         "status": _handle_evidence_status,
     }
@@ -382,6 +388,13 @@ def _handle_evidence_artifact_doctor(args: argparse.Namespace) -> str:
     if args.format == "json":
         return json.dumps(report, indent=2, sort_keys=True) + "\n"
     return f"evidence artifact-doctor {report['artifact_status']} (issues={report['issue_count']})\n"
+
+
+def _handle_evidence_privacy_doctor(args: argparse.Namespace) -> str:
+    report = build_evidence_privacy_doctor_report(args.path)
+    if args.format == "json":
+        return json.dumps(report, indent=2, sort_keys=True) + "\n"
+    return f"evidence privacy-doctor {report['privacy_status']} (issues={report['issue_count']})\n"
 
 
 def _handle_evidence_unblock_plan(args: argparse.Namespace) -> str:

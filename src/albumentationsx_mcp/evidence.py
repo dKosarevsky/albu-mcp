@@ -466,6 +466,20 @@ def build_evidence_artifact_doctor_report(path: Path = Path("docs/HOST_MANUAL_RU
     }
 
 
+def build_evidence_privacy_doctor_report(path: Path = Path("docs/HOST_MANUAL_RUNS.json")) -> dict[str, Any]:
+    """Inspect evidence records for private artifact references and unsafe evidence notes."""
+    records = validate_host_manual_runs(path) if path.exists() else HostManualRuns()
+    issues = _privacy_doctor_issues(records)
+    return {
+        "privacy_status": "ready" if not issues else "blocked",
+        "records_path": str(path),
+        "non_fabrication_policy": _NON_FABRICATION_POLICY,
+        "issue_count": len(issues),
+        "issues": issues,
+        "next_actions": _privacy_doctor_next_actions(issues),
+    }
+
+
 def _require_unique_hosts(records: Sequence[HostManualRun], *, label: str) -> None:
     seen: set[str] = set()
     for record in records:
@@ -693,6 +707,37 @@ def _artifact_doctor_issues(records: HostManualRuns) -> list[dict[str, str]]:
     return issues
 
 
+def _privacy_doctor_issues(records: HostManualRuns) -> list[dict[str, str]]:
+    issues: list[dict[str, str]] = []
+    manual_by_host = {record.host: record for record in records.manual_host_ui}
+    replay_by_host = {record.host: record for record in records.first_10_minutes_replay}
+    for host in P0_REQUIRED_HOSTS:
+        manual = manual_by_host.get(host)
+        replay = replay_by_host.get(host)
+        if manual is None or manual.status != "passed":
+            issues.append(_privacy_issue(host=host, gate="manual_host_ui", code="missing_required_host_gate"))
+        elif _looks_synthetic_only(manual.evidence):
+            issues.append(_privacy_issue(host=host, gate="manual_host_ui", code="synthetic_only_evidence"))
+        if replay is None or replay.status != "passed":
+            issues.append(_privacy_issue(host=host, gate="first_10_minutes_replay", code="missing_required_host_gate"))
+            continue
+        if _looks_synthetic_only(replay.evidence):
+            issues.append(_privacy_issue(host=host, gate="first_10_minutes_replay", code="synthetic_only_evidence"))
+        if not replay.artifacts:
+            issues.append(_privacy_issue(host=host, gate="first_10_minutes_replay", code="missing_replay_artifact"))
+        for artifact_ref in replay.artifacts:
+            if _looks_private_artifact_ref(artifact_ref):
+                issues.append(
+                    _privacy_issue(
+                        host=host,
+                        gate="first_10_minutes_replay",
+                        code="private_local_artifact_ref",
+                        artifact_ref=artifact_ref,
+                    )
+                )
+    return issues
+
+
 def _artifact_issue(*, host: HostName, gate: str, code: str) -> dict[str, str]:
     messages = {
         "missing_required_host_gate": "Required P0 host gate is not passed.",
@@ -702,9 +747,33 @@ def _artifact_issue(*, host: HostName, gate: str, code: str) -> dict[str, str]:
     return {"host": host, "gate": gate, "code": code, "message": messages[code]}
 
 
+def _privacy_issue(*, host: HostName, gate: str, code: str, artifact_ref: str | None = None) -> dict[str, str]:
+    messages = {
+        "missing_required_host_gate": "Required P0 host gate is not passed.",
+        "synthetic_only_evidence": "Evidence text looks synthetic-only or explicitly lacks reviewer observation.",
+        "missing_replay_artifact": "First-10-minutes replay needs at least one redacted artifact reference.",
+        "private_local_artifact_ref": "Artifact reference looks like a private local path or file URL.",
+    }
+    issue = {"host": host, "gate": gate, "code": code, "message": messages[code]}
+    if artifact_ref is not None:
+        issue["artifact_ref"] = artifact_ref
+    return issue
+
+
 def _looks_synthetic_only(evidence: str) -> bool:
     lowered = evidence.lower()
     return any(marker in lowered for marker in _SYNTHETIC_ONLY_MARKERS)
+
+
+def _looks_private_artifact_ref(artifact_ref: str) -> bool:
+    lowered = artifact_ref.lower()
+    private_prefixes = (
+        "/users/",
+        "/home/",
+        "/private/",
+        "file://",
+    )
+    return lowered.startswith(private_prefixes) or lowered[1:3] == ":\\"
 
 
 def _passed_gate_count(records: HostManualRuns) -> int:
@@ -732,6 +801,20 @@ def _artifact_doctor_next_actions(issues: list[dict[str, str]]) -> list[str]:
         actions.append("Attach at least one redacted first-10-minutes replay artifact reference.")
     if "missing_required_host_gate" in codes:
         actions.append("Run albu-mcp evidence execution-packet for each missing host gate.")
+    return actions
+
+
+def _privacy_doctor_next_actions(issues: list[dict[str, str]]) -> list[str]:
+    if not issues:
+        return ["Run albu-mcp rc candidate-packet --format markdown before release-owner review."]
+    codes = {issue["code"] for issue in issues}
+    actions = ["Run albu-mcp evidence import-checklist for each blocked P0 host."]
+    if "private_local_artifact_ref" in codes:
+        actions.append("Replace private local artifact refs with redacted docs, artifact://, or public-safe references.")
+    if "synthetic_only_evidence" in codes:
+        actions.append("Replace synthetic-only notes with reviewer-observed real host UI evidence.")
+    if "missing_replay_artifact" in codes:
+        actions.append("Attach at least one privacy-safe first-10-minutes replay artifact reference.")
     return actions
 
 

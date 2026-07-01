@@ -110,3 +110,57 @@ def test_evidence_import_checklist_returns_validate_and_import_commands(tmp_path
     assert payload["reviewer_confirmation_policy"].startswith("Record passed only after")
     assert payload["validate_command"].startswith("albu-mcp evidence validate-import --host 'Codex'")
     assert payload["import_command"].startswith("albu-mcp evidence import-artifacts --host 'Codex'")
+
+
+def test_evidence_privacy_doctor_flags_private_artifact_refs(tmp_path: Path) -> None:
+    evidence_path = tmp_path / "HOST_MANUAL_RUNS.json"
+    evidence_path.write_text(
+        json.dumps(
+            {
+                "manual_host_ui": [
+                    {
+                        "host": "Codex",
+                        "status": "passed",
+                        "date": "2026-07-01",
+                        "evidence": "Reviewer observed real Codex host UI.",
+                    }
+                ],
+                "first_10_minutes_replay": [
+                    {
+                        "host": "Codex",
+                        "status": "passed",
+                        "date": "2026-07-01",
+                        "evidence": "Reviewer observed real Codex replay.",
+                        "artifacts": ["/Users/private/dataset/contact_sheet.png"],
+                    }
+                ],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "evidence",
+            "privacy-doctor",
+            "--path",
+            str(evidence_path),
+            "--format",
+            "json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(result.stdout)
+    issue_codes = {issue["code"] for issue in payload["issues"]}
+
+    assert payload["privacy_status"] == "blocked"
+    assert payload["issue_count"] == 3
+    assert "private_local_artifact_ref" in issue_codes
+    assert "missing_required_host_gate" in issue_codes
+    assert "albu-mcp evidence import-checklist" in payload["next_actions"][0]
