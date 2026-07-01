@@ -48,14 +48,17 @@ from albumentationsx_mcp.evidence import (
     build_evidence_packet_bundle_artifacts,
     build_evidence_privacy_doctor_report,
     build_evidence_replay_fixture_pack_artifact,
+    build_evidence_session_manifest_artifact,
     build_evidence_session_plan,
     build_evidence_unblock_plan,
     import_evidence_artifacts,
+    load_evidence_session_manifest,
     record_first_10_minutes_replay,
     record_host_manual_run,
     render_evidence_import_checklist_markdown,
     summarize_host_manual_runs,
     validate_evidence_artifact_import,
+    validate_evidence_session_manifest,
     validate_host_manual_runs,
 )
 from albumentationsx_mcp.intake import build_intake_bundle_artifacts
@@ -261,6 +264,24 @@ def _add_evidence_recording_parsers(subparsers: Any) -> None:
     validate_import.add_argument("--confirm-real-host-observed", action="store_true")
     validate_import.add_argument("--format", choices=["text", "json"], default="text")
 
+    session_manifest = subparsers.add_parser(
+        "session-manifest",
+        help="Write a reviewer-facing evidence session manifest template.",
+    )
+    session_manifest.add_argument("--host", choices=get_args(HostName), required=True)
+    session_manifest.add_argument("--date", required=True, help="ISO date, for example 2026-07-01.")
+    session_manifest.add_argument("--reviewer", required=True)
+    session_manifest.add_argument("--output-dir", type=Path, required=True)
+    session_manifest.add_argument("--format", choices=["json"], default="json")
+
+    validate_manifest = subparsers.add_parser(
+        "validate-manifest",
+        help="Validate a filled evidence session manifest without writing records.",
+    )
+    validate_manifest.add_argument("--input", type=Path, required=True)
+    validate_manifest.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    validate_manifest.add_argument("--format", choices=["text", "json"], default="text")
+
 
 def _add_evidence_packet_parsers(subparsers: Any) -> None:
     run_session = subparsers.add_parser("run-session", help="Print a guided real-host evidence session plan.")
@@ -341,6 +362,8 @@ def _handle_evidence_command(args: argparse.Namespace) -> str:
         "replay-fixture-pack": _handle_evidence_replay_fixture_pack,
         "import-artifacts": _handle_evidence_import_artifacts,
         "validate-import": _handle_evidence_validate_import,
+        "session-manifest": _handle_evidence_session_manifest,
+        "validate-manifest": _handle_evidence_validate_manifest,
         "import-checklist": _handle_evidence_import_checklist,
         "doctor": _handle_evidence_doctor,
         "artifact-doctor": _handle_evidence_artifact_doctor,
@@ -458,6 +481,28 @@ def _handle_evidence_validate_import(args: argparse.Namespace) -> str:
         f"evidence validate-import {report['validation_status']} "
         f"(host={args.host}, artifacts={report['artifact_count']})\n"
     )
+
+
+def _handle_evidence_session_manifest(args: argparse.Namespace) -> str:
+    artifact = build_evidence_session_manifest_artifact(
+        host=args.host,
+        run_date=args.date,
+        reviewer=args.reviewer,
+    )
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    manifest_path = args.output_dir / artifact["filename"]
+    manifest_path.write_text(artifact["content"], encoding="utf-8")
+    return f"wrote evidence session-manifest for {args.host} to {manifest_path}\n"
+
+
+def _handle_evidence_validate_manifest(args: argparse.Namespace) -> str:
+    report = validate_evidence_session_manifest(
+        manifest=load_evidence_session_manifest(args.input),
+        records_path=args.path,
+    )
+    if args.format == "json":
+        return json.dumps(report, indent=2, sort_keys=True) + "\n"
+    return f"evidence validate-manifest {report['validation_status']} for {report['host']}\n"
 
 
 def _handle_evidence_import_checklist(args: argparse.Namespace) -> str:

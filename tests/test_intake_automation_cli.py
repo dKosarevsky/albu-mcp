@@ -62,3 +62,71 @@ def test_intake_bundle_writes_operator_artifacts(tmp_path: Path) -> None:
     assert "release-owner-packet.md" in index_content
     template_payload = json.loads((output_dir / "noisy-preview-tuning-beta-response.json").read_text(encoding="utf-8"))
     assert template_payload["private_data_included"] is False
+
+
+def test_evidence_session_manifest_template_validates_without_writing_records(tmp_path: Path) -> None:
+    host_records, _ = _write_empty_records(tmp_path)
+    output_dir = tmp_path / "session"
+
+    template_result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "evidence",
+            "session-manifest",
+            "--host",
+            "Codex",
+            "--date",
+            "2026-07-01",
+            "--reviewer",
+            "Release operator",
+            "--output-dir",
+            str(output_dir),
+            "--format",
+            "json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    manifest_path = output_dir / "codex-evidence-session-manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest.update(
+        {
+            "status": "passed",
+            "evidence": "Reviewer observed real Codex MCP host UI and first-10-minutes replay.",
+            "artifacts": ["docs/assets/demo/demo_report.md"],
+            "confirm_real_host_observed": True,
+        }
+    )
+    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    validate_result = subprocess.run(  # noqa: S603
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "evidence",
+            "validate-manifest",
+            "--input",
+            str(manifest_path),
+            "--path",
+            str(host_records),
+            "--format",
+            "json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(validate_result.stdout)
+
+    assert template_result.stdout == f"wrote evidence session-manifest for Codex to {manifest_path}\n"
+    assert manifest["manifest_status"] == "template"
+    assert "run_host_smoke_check" in manifest["commands_used"]
+    assert any("albu-mcp evidence validate-manifest" in command for command in manifest["commands_used"])
+    assert payload["validation_status"] == "ready_to_import"
+    assert payload["writes_records"] is False
+    assert payload["artifact_count"] == 1
+    assert host_records.read_text(encoding="utf-8") == '{"manual_host_ui": [], "first_10_minutes_replay": []}\n'
