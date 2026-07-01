@@ -78,10 +78,14 @@ retention limit for long-running MCP hosts.
 Use the package CLI for release evidence and beta records without importing repository-only scripts:
 
 ```bash
+albu-mcp activation command-center --format markdown
 albu-mcp evidence run-session --host Codex --format json
 albu-mcp evidence execution-packet --host Codex --format json
 albu-mcp evidence operator-packet --host Codex --output-dir docs/operator-packets --format markdown
+albu-mcp evidence packet-bundle --output-dir docs/operator-packets --format markdown
+albu-mcp evidence import-checklist --host Codex --format markdown
 albu-mcp evidence validate-import --host Codex --status passed --date 2026-06-30 --evidence "reviewer observed real host UI" --artifact docs/assets/demo/demo_report.md --confirm-real-host-observed --format json
+albu-mcp evidence privacy-doctor --format json
 albu-mcp evidence artifact-doctor --format json
 albu-mcp evidence unblock-plan --format json
 albu-mcp evidence doctor --format json
@@ -91,6 +95,8 @@ albu-mcp evidence status
 albu-mcp beta campaign-plan --format json
 albu-mcp beta trial-pack --workflow-id noisy_preview_tuning --participant-role "ML practitioner" --format json
 albu-mcp beta intake-wizard --workflow-id noisy_preview_tuning --participant-role "ML practitioner" --format json
+albu-mcp beta response-validate --input beta-response.json --format json
+albu-mcp beta response-import --input beta-response.json
 albu-mcp beta record-attempt --workflow-id noisy_preview_tuning --status needs_followup --attempt-date 2026-06-28 --participant-role "ML practitioner" --summary "..." --triage-bucket review_agent_v3_gap
 albu-mcp beta triage --format json
 albu-mcp beta report --format json
@@ -103,13 +109,15 @@ albu-mcp trust next --format json
 albu-mcp trust dashboard --format markdown
 ```
 
-These commands write privacy-safe JSON records only for explicit `record-*` or `import-artifacts` actions. `run-session`,
-`execution-packet`, `operator-packet`, `validate-import`, `artifact-doctor`, `unblock-plan`, `doctor`, `campaign-plan`,
-`trial-pack`, `intake-wizard`, `rc reopen`, `rc rehearse`, `rc candidate-packet`, `distribution readiness`,
-`trust audit`, `trust next`, and `trust dashboard` are read-only helpers. `validate-import` checks the same fields before
-recording, and `import-artifacts` requires `--confirm-real-host-observed` before recording `passed`, so P0 evidence still
-depends on an actual MCP host UI session observed by a reviewer. Release and distribution commands are report-only: they
-print publish commands only when gates are open and never create tags, releases, or uploads.
+These commands write privacy-safe JSON records only for explicit `record-*`, `response-import`, or `import-artifacts`
+actions. `activation command-center`, `run-session`, `execution-packet`, `operator-packet`, `packet-bundle`,
+`import-checklist`, `validate-import`, `privacy-doctor`, `artifact-doctor`, `unblock-plan`, `doctor`, `campaign-plan`,
+`trial-pack`, `intake-wizard`, `response-validate`, `rc reopen`, `rc rehearse`, `rc candidate-packet`,
+`distribution readiness`, `trust audit`, `trust next`, and `trust dashboard` are read-only helpers. `validate-import`
+checks the same fields before recording, and `import-artifacts` requires `--confirm-real-host-observed` before recording
+`passed`, so P0 evidence still depends on an actual MCP host UI session observed by a reviewer. Release and distribution
+commands are report-only: they print publish commands only when gates are open and never create tags, releases, or
+uploads.
 
 ## Diagnostics
 

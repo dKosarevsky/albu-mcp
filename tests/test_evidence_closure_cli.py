@@ -164,3 +164,67 @@ def test_evidence_privacy_doctor_flags_private_artifact_refs(tmp_path: Path) -> 
     assert "private_local_artifact_ref" in issue_codes
     assert "missing_required_host_gate" in issue_codes
     assert "albu-mcp evidence import-checklist" in payload["next_actions"][0]
+
+
+def test_beta_response_validate_and_import_records_privacy_safe_attempt(tmp_path: Path) -> None:
+    response_path = tmp_path / "beta-response.json"
+    records_path = tmp_path / "BETA_VALIDATION_RECORDS.json"
+    response_path.write_text(
+        json.dumps(
+            {
+                "workflow_id": "noisy_preview_tuning",
+                "status": "needs_followup",
+                "attempt_date": "2026-07-01",
+                "participant_role": "CV reviewer",
+                "summary": "Preview variants were useful, but one candidate made the object hard to recognize.",
+                "triage_bucket": "review_agent_v3_gap",
+                "artifact_refs": ["docs/assets/demo/demo_report.md"],
+                "private_data_included": False,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    records_path.write_text('{"records": []}\n', encoding="utf-8")
+
+    validate_result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "beta",
+            "response-validate",
+            "--input",
+            str(response_path),
+            "--format",
+            "json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    import_result = subprocess.run(  # noqa: S603
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "beta",
+            "response-import",
+            "--input",
+            str(response_path),
+            "--path",
+            str(records_path),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    validation = json.loads(validate_result.stdout)
+    records = json.loads(records_path.read_text(encoding="utf-8"))
+
+    assert validation["validation_status"] == "ready_to_import"
+    assert validation["writes_records"] is False
+    assert validation["record"]["workflow_id"] == "noisy_preview_tuning"
+    assert import_result.stdout == f"imported beta response noisy_preview_tuning into {records_path}\n"
+    assert records["records"][0]["participant_role"] == "CV reviewer"
+    assert records["records"][0]["private_data_included"] is False
