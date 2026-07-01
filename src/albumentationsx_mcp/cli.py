@@ -68,8 +68,10 @@ from albumentationsx_mcp.server import ServerSettings, create_mcp_server, settin
 from albumentationsx_mcp.trust import (
     build_trust_audit_report,
     build_trust_dashboard_report,
+    build_trust_gate_transition_report,
     build_trust_next_action,
     render_trust_dashboard_markdown,
+    render_trust_gate_transition_markdown,
 )
 
 _SUBCOMMANDS = {"activation", "beta", "distribution", "evidence", "rc", "trust"}
@@ -766,6 +768,17 @@ def _run_trust_cli(argv: list[str]) -> None:
     dashboard.add_argument("--release-tag", default="v1.15.0-rc.1")
     dashboard.add_argument("--format", choices=["text", "json", "markdown"], default="text")
 
+    gate_transition = subparsers.add_parser(
+        "gate-transition",
+        help="Compare trust gates before and after importing real records.",
+    )
+    gate_transition.add_argument("--before-host-records", type=Path, required=True)
+    gate_transition.add_argument("--before-beta-records", type=Path, required=True)
+    gate_transition.add_argument("--after-host-records", type=Path, required=True)
+    gate_transition.add_argument("--after-beta-records", type=Path, required=True)
+    gate_transition.add_argument("--release-tag", default="v1.15.0-rc.1")
+    gate_transition.add_argument("--format", choices=["text", "json", "markdown"], default="text")
+
     args = parser.parse_args(argv)
     try:
         sys.stdout.write(_handle_trust_command(args))
@@ -799,6 +812,22 @@ def _handle_trust_command(args: argparse.Namespace) -> str:
             json.dumps(report, indent=2, sort_keys=True) + "\n"
             if args.format == "json"
             else f"trust next {report['next_status']} {report['recommended_command']}\n"
+        )
+    if args.command == "gate-transition":
+        report = build_trust_gate_transition_report(
+            before_host_records_path=args.before_host_records,
+            before_beta_records_path=args.before_beta_records,
+            after_host_records_path=args.after_host_records,
+            after_beta_records_path=args.after_beta_records,
+            release_tag=args.release_tag,
+        )
+        if args.format == "json":
+            return json.dumps(report, indent=2, sort_keys=True) + "\n"
+        if args.format == "markdown":
+            return render_trust_gate_transition_markdown(report)
+        return (
+            f"trust gate-transition {report['transition_status']} "
+            f"(before={report['before_trust_score']}, after={report['after_trust_score']})\n"
         )
     report = build_trust_dashboard_report(
         host_records_path=args.host_records,

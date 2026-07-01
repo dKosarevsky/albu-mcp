@@ -131,6 +131,82 @@ def build_trust_dashboard_report(
     }
 
 
+def build_trust_gate_transition_report(
+    *,
+    before_host_records_path: Path = Path("docs/HOST_MANUAL_RUNS.json"),
+    before_beta_records_path: Path = Path("docs/BETA_VALIDATION_RECORDS.json"),
+    after_host_records_path: Path = Path("docs/HOST_MANUAL_RUNS.json"),
+    after_beta_records_path: Path = Path("docs/BETA_VALIDATION_RECORDS.json"),
+    release_tag: str = "v1.15.0-rc.1",
+) -> dict[str, Any]:
+    """Compare trust gates before and after importing real records."""
+    before = build_trust_dashboard_report(
+        host_records_path=before_host_records_path,
+        beta_records_path=before_beta_records_path,
+        release_tag=release_tag,
+    )
+    after = build_trust_dashboard_report(
+        host_records_path=after_host_records_path,
+        beta_records_path=after_beta_records_path,
+        release_tag=release_tag,
+    )
+    gate_transitions = _gate_transitions(before=before, after=after)
+    closed_gate_count = sum(transition["closed_gate"] for transition in gate_transitions)
+    newly_blocked_gate_count = sum(transition["newly_blocked"] for transition in gate_transitions)
+    return {
+        "transition_status": _transition_status(
+            after_ready=after["dashboard_status"] == "ready",
+            closed_gate_count=closed_gate_count,
+            newly_blocked_gate_count=newly_blocked_gate_count,
+        ),
+        "release_tag": release_tag,
+        "execution_policy": "Report only; this comparison does not write records, tag, publish, or upload.",
+        "before_records": {
+            "host_records_path": str(before_host_records_path),
+            "beta_records_path": str(before_beta_records_path),
+        },
+        "after_records": {
+            "host_records_path": str(after_host_records_path),
+            "beta_records_path": str(after_beta_records_path),
+        },
+        "before_trust_score": before["trust_score"],
+        "after_trust_score": after["trust_score"],
+        "before": before,
+        "after": after,
+        "gate_transitions": gate_transitions,
+        "closed_gate_count": closed_gate_count,
+        "newly_blocked_gate_count": newly_blocked_gate_count,
+        "rc_progress_status": _rc_progress_status(before=before, after=after),
+        "next_actions": _transition_next_actions(after_ready=after["dashboard_status"] == "ready"),
+    }
+
+
+def render_trust_gate_transition_markdown(report: dict[str, Any]) -> str:
+    """Render a trust gate transition report as Markdown."""
+    rows = "\n".join(
+        (
+            f"| `{transition['gate']}` | `{transition['before_status']}` | "
+            f"`{transition['after_status']}` | `{str(transition['closed_gate']).lower()}` |"
+        )
+        for transition in report["gate_transitions"]
+    )
+    next_actions = "\n".join(f"- {action}" for action in report["next_actions"])
+    return (
+        "# Trust Gate Transition Report\n\n"
+        f"Release tag: `{report['release_tag']}`\n\n"
+        f"Transition status: `{report['transition_status']}`\n\n"
+        f"RC progress status: `{report['rc_progress_status']}`\n\n"
+        f"Before trust score: `{report['before_trust_score']}`\n\n"
+        f"After trust score: `{report['after_trust_score']}`\n\n"
+        f"Execution policy: {report['execution_policy']}\n\n"
+        "| Gate | Before | After | Closed |\n"
+        "| --- | --- | --- | --- |\n"
+        f"{rows}\n\n"
+        "## Next Actions\n\n"
+        f"{next_actions}\n"
+    )
+
+
 def render_trust_dashboard_markdown(report: dict[str, Any]) -> str:
     """Render a trust dashboard report as concise markdown."""
     rows = "\n".join(f"| `{card['gate']}` | `{card['status']}` | {card['detail']} |" for card in report["gate_cards"])
@@ -191,6 +267,60 @@ def _dashboard_gate_cards(audit: dict[str, Any]) -> list[dict[str, str]]:
             "status": "ready" if distribution["publish_allowed"] else "blocked",
             "detail": f"publish_allowed=`{str(distribution['publish_allowed']).lower()}`",
         },
+    ]
+
+
+def _gate_transitions(*, before: dict[str, Any], after: dict[str, Any]) -> list[dict[str, Any]]:
+    before_cards = {card["gate"]: card for card in before["gate_cards"]}
+    after_cards = {card["gate"]: card for card in after["gate_cards"]}
+    return [
+        _gate_transition(before_card=before_cards[gate], after_card=after_cards[gate])
+        for gate in before_cards
+        if gate in after_cards
+    ]
+
+
+def _gate_transition(*, before_card: dict[str, str], after_card: dict[str, str]) -> dict[str, Any]:
+    before_status = before_card["status"]
+    after_status = after_card["status"]
+    return {
+        "gate": before_card["gate"],
+        "before_status": before_status,
+        "after_status": after_status,
+        "before_detail": before_card["detail"],
+        "after_detail": after_card["detail"],
+        "closed_gate": before_status != "ready" and after_status == "ready",
+        "newly_blocked": before_status == "ready" and after_status != "ready",
+    }
+
+
+def _transition_status(*, after_ready: bool, closed_gate_count: int, newly_blocked_gate_count: int) -> str:
+    if after_ready:
+        return "ready_for_rc_reopen"
+    if newly_blocked_gate_count:
+        return "regressed"
+    if closed_gate_count:
+        return "partially_unblocked"
+    return "blocked"
+
+
+def _rc_progress_status(*, before: dict[str, Any], after: dict[str, Any]) -> str:
+    if after["dashboard_status"] == "ready":
+        return "ready_for_release_owner_review"
+    if after["trust_score"] > before["trust_score"]:
+        return "evidence_progress_recorded"
+    return "blocked"
+
+
+def _transition_next_actions(*, after_ready: bool) -> list[str]:
+    if after_ready:
+        return [
+            "Regenerate albu-mcp rc candidate-packet --format markdown for release owner review.",
+            "Do not publish until the release owner manually approves the packet.",
+        ]
+    return [
+        "Run albu-mcp trust next --format json against the after records.",
+        "Collect the remaining real host or beta records before reopening the RC.",
     ]
 
 

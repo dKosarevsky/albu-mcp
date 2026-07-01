@@ -14,6 +14,94 @@ def _write_empty_records(tmp_path: Path) -> tuple[Path, Path]:
     return host_records, beta_records
 
 
+def _write_ready_records(tmp_path: Path) -> tuple[Path, Path]:
+    host_records = tmp_path / "READY_HOST_MANUAL_RUNS.json"
+    beta_records = tmp_path / "READY_BETA_VALIDATION_RECORDS.json"
+    host_records.write_text(
+        json.dumps(
+            {
+                "manual_host_ui": [
+                    {
+                        "host": "Codex",
+                        "status": "passed",
+                        "date": "2026-07-01",
+                        "evidence": "Reviewer observed real Codex MCP host UI.",
+                    },
+                    {
+                        "host": "Claude Code",
+                        "status": "passed",
+                        "date": "2026-07-01",
+                        "evidence": "Reviewer observed real Claude Code MCP host UI.",
+                    },
+                ],
+                "first_10_minutes_replay": [
+                    {
+                        "host": "Codex",
+                        "status": "passed",
+                        "date": "2026-07-01",
+                        "evidence": "Reviewer observed real Codex first-10-minutes replay.",
+                        "artifacts": ["docs/assets/demo/demo_report.md"],
+                    },
+                    {
+                        "host": "Claude Code",
+                        "status": "passed",
+                        "date": "2026-07-01",
+                        "evidence": "Reviewer observed real Claude Code first-10-minutes replay.",
+                        "artifacts": ["docs/assets/demo/demo_report.md"],
+                    },
+                ],
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    beta_records.write_text(
+        json.dumps(
+            {
+                "records": [
+                    {
+                        "workflow_id": "dataset_health_before_training",
+                        "status": "needs_followup",
+                        "attempt_date": "2026-07-01",
+                        "participant_role": "ML practitioner",
+                        "summary": "redacted dataset health workflow completed without private paths",
+                        "triage_bucket": "dataset_quality_gap",
+                        "artifact_refs": ["docs/assets/demo/demo_report.md"],
+                        "private_data_included": False,
+                    },
+                    {
+                        "workflow_id": "noisy_preview_tuning",
+                        "status": "needs_followup",
+                        "attempt_date": "2026-07-01",
+                        "participant_role": "ML practitioner",
+                        "summary": "redacted noisy preview tuning workflow completed without private paths",
+                        "triage_bucket": "review_agent_v3_gap",
+                        "artifact_refs": ["docs/assets/demo/demo_report.md"],
+                        "private_data_included": False,
+                    },
+                    {
+                        "workflow_id": "robustness_distortion_variants",
+                        "status": "needs_followup",
+                        "attempt_date": "2026-07-01",
+                        "participant_role": "ML practitioner",
+                        "summary": "redacted robustness workflow completed without private paths",
+                        "triage_bucket": "workflow_fit_gap",
+                        "artifact_refs": ["docs/assets/demo/demo_report.md"],
+                        "private_data_included": False,
+                    },
+                ]
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return host_records, beta_records
+
+
 def test_activation_runbook_json_lists_manual_evidence_path(tmp_path: Path) -> None:
     host_records, beta_records = _write_empty_records(tmp_path)
 
@@ -118,3 +206,43 @@ def test_beta_response_template_writes_all_workflow_json_files(tmp_path: Path) -
         assert payload["participant_role"] == "ML practitioner"
         assert "redacted" in payload["summary"]
         assert payload["artifact_refs"] == ["docs/assets/demo/demo_report.md"]
+
+
+def test_trust_gate_transition_reports_closed_gates(tmp_path: Path) -> None:
+    before_host_records, before_beta_records = _write_empty_records(tmp_path)
+    after_host_records, after_beta_records = _write_ready_records(tmp_path)
+
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "trust",
+            "gate-transition",
+            "--before-host-records",
+            str(before_host_records),
+            "--before-beta-records",
+            str(before_beta_records),
+            "--after-host-records",
+            str(after_host_records),
+            "--after-beta-records",
+            str(after_beta_records),
+            "--release-tag",
+            "v1.15.0-rc.1",
+            "--format",
+            "json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(result.stdout)
+    closed_gates = {transition["gate"] for transition in payload["gate_transitions"] if transition["closed_gate"]}
+
+    assert payload["transition_status"] == "ready_for_rc_reopen"
+    assert payload["before"]["dashboard_status"] == "action_required"
+    assert payload["after"]["dashboard_status"] == "ready"
+    assert payload["before_trust_score"] == 0
+    assert payload["after_trust_score"] == 100
+    assert closed_gates == {"p0_host_evidence", "beta_validation", "distribution"}
+    assert payload["rc_progress_status"] == "ready_for_release_owner_review"
