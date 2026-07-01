@@ -81,7 +81,9 @@ class BetaResponseDraft(BaseModel):
         if _looks_private_response_text(self.summary):
             msg = "beta response summary must not include private local paths"
             raise ValueError(msg)
-        private_refs = [artifact_ref for artifact_ref in self.artifact_refs if _looks_private_response_text(artifact_ref)]
+        private_refs = [
+            artifact_ref for artifact_ref in self.artifact_refs if _looks_private_response_text(artifact_ref)
+        ]
         if private_refs:
             msg = "beta response artifact_refs must be redacted before import"
             raise ValueError(msg)
@@ -358,7 +360,9 @@ def _record_key(record: BetaValidationRecord) -> tuple[str, object, str]:
 def _looks_private_response_text(value: str) -> bool:
     lowered = value.lower()
     private_prefixes = ("/users/", "/home/", "/private/", "file://")
-    return lowered.startswith(private_prefixes) or " /users/" in lowered or " /home/" in lowered or lowered[1:3] == ":\\"
+    return (
+        lowered.startswith(private_prefixes) or " /users/" in lowered or " /home/" in lowered or lowered[1:3] == ":\\"
+    )
 
 
 def _recommendation_status(*, signal_count: int, product_depth_allowed: bool) -> str:

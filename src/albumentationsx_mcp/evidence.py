@@ -725,16 +725,18 @@ def _privacy_doctor_issues(records: HostManualRuns) -> list[dict[str, str]]:
             issues.append(_privacy_issue(host=host, gate="first_10_minutes_replay", code="synthetic_only_evidence"))
         if not replay.artifacts:
             issues.append(_privacy_issue(host=host, gate="first_10_minutes_replay", code="missing_replay_artifact"))
-        for artifact_ref in replay.artifacts:
-            if _looks_private_artifact_ref(artifact_ref):
-                issues.append(
-                    _privacy_issue(
-                        host=host,
-                        gate="first_10_minutes_replay",
-                        code="private_local_artifact_ref",
-                        artifact_ref=artifact_ref,
-                    )
+        issues.extend(
+            [
+                _privacy_issue(
+                    host=host,
+                    gate="first_10_minutes_replay",
+                    code="private_local_artifact_ref",
+                    artifact_ref=artifact_ref,
                 )
+                for artifact_ref in replay.artifacts
+                if _looks_private_artifact_ref(artifact_ref)
+            ]
+        )
     return issues
 
 
@@ -810,7 +812,9 @@ def _privacy_doctor_next_actions(issues: list[dict[str, str]]) -> list[str]:
     codes = {issue["code"] for issue in issues}
     actions = ["Run albu-mcp evidence import-checklist for each blocked P0 host."]
     if "private_local_artifact_ref" in codes:
-        actions.append("Replace private local artifact refs with redacted docs, artifact://, or public-safe references.")
+        actions.append(
+            "Replace private local artifact refs with redacted docs, artifact://, or public-safe references."
+        )
     if "synthetic_only_evidence" in codes:
         actions.append("Replace synthetic-only notes with reviewer-observed real host UI evidence.")
     if "missing_replay_artifact" in codes:

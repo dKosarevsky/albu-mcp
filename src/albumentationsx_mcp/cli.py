@@ -6,7 +6,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import get_args
+from typing import Any, get_args
 
 from pydantic import ValidationError
 
@@ -149,6 +149,19 @@ def _run_evidence_cli(argv: list[str]) -> None:
     parser = argparse.ArgumentParser(description="Record and validate real MCP host evidence.")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
+    _add_evidence_recording_parsers(subparsers)
+    _add_evidence_packet_parsers(subparsers)
+    _add_evidence_doctor_parsers(subparsers)
+
+    args = parser.parse_args(argv)
+    try:
+        sys.stdout.write(_handle_evidence_command(args))
+    except (ValidationError, ValueError) as exc:
+        sys.stderr.write(f"{exc}\n")
+        raise SystemExit(1) from exc
+
+
+def _add_evidence_recording_parsers(subparsers: Any) -> None:
     host_ui = subparsers.add_parser("record-host-ui", help="Record one manual host UI evidence result.")
     _add_host_record_arguments(host_ui)
 
@@ -164,6 +177,25 @@ def _run_evidence_cli(argv: list[str]) -> None:
         help="Artifact path or URL proving the replay. Can be repeated.",
     )
 
+    import_artifacts = subparsers.add_parser(
+        "import-artifacts",
+        help="Import one reviewer-observed evidence session into both required P0 gates.",
+    )
+    _add_host_record_arguments(import_artifacts)
+    import_artifacts.add_argument("--artifact", action="append", default=[])
+    import_artifacts.add_argument("--confirm-real-host-observed", action="store_true")
+
+    validate_import = subparsers.add_parser(
+        "validate-import",
+        help="Validate a real-host evidence import without writing records.",
+    )
+    _add_host_record_arguments(validate_import)
+    validate_import.add_argument("--artifact", action="append", default=[])
+    validate_import.add_argument("--confirm-real-host-observed", action="store_true")
+    validate_import.add_argument("--format", choices=["text", "json"], default="text")
+
+
+def _add_evidence_packet_parsers(subparsers: Any) -> None:
     run_session = subparsers.add_parser("run-session", help="Print a guided real-host evidence session plan.")
     run_session.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
     run_session.add_argument("--host", choices=get_args(HostName), required=True)
@@ -194,23 +226,6 @@ def _run_evidence_cli(argv: list[str]) -> None:
     packet_bundle.add_argument("--output-dir", type=Path, required=True)
     packet_bundle.add_argument("--format", choices=["markdown", "json"], default="markdown")
 
-    import_artifacts = subparsers.add_parser(
-        "import-artifacts",
-        help="Import one reviewer-observed evidence session into both required P0 gates.",
-    )
-    _add_host_record_arguments(import_artifacts)
-    import_artifacts.add_argument("--artifact", action="append", default=[])
-    import_artifacts.add_argument("--confirm-real-host-observed", action="store_true")
-
-    validate_import = subparsers.add_parser(
-        "validate-import",
-        help="Validate a real-host evidence import without writing records.",
-    )
-    _add_host_record_arguments(validate_import)
-    validate_import.add_argument("--artifact", action="append", default=[])
-    validate_import.add_argument("--confirm-real-host-observed", action="store_true")
-    validate_import.add_argument("--format", choices=["text", "json"], default="text")
-
     import_checklist = subparsers.add_parser(
         "import-checklist",
         help="Build a no-write evidence import checklist.",
@@ -219,6 +234,8 @@ def _run_evidence_cli(argv: list[str]) -> None:
     import_checklist.add_argument("--host", choices=get_args(HostName), required=True)
     import_checklist.add_argument("--format", choices=["text", "json", "markdown"], default="text")
 
+
+def _add_evidence_doctor_parsers(subparsers: Any) -> None:
     doctor = subparsers.add_parser("doctor", help="Inspect P0 evidence gates and print remediation actions.")
     doctor.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
     doctor.add_argument("--format", choices=["text", "json"], default="text")
@@ -237,13 +254,6 @@ def _run_evidence_cli(argv: list[str]) -> None:
 
     status = subparsers.add_parser("status", help="Validate host evidence records and print a compact count.")
     status.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
-
-    args = parser.parse_args(argv)
-    try:
-        sys.stdout.write(_handle_evidence_command(args))
-    except (ValidationError, ValueError) as exc:
-        sys.stderr.write(f"{exc}\n")
-        raise SystemExit(1) from exc
 
 
 def _handle_evidence_command(args: argparse.Namespace) -> str:
