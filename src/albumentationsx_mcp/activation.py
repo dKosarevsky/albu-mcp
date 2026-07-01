@@ -54,6 +54,45 @@ def build_activation_command_center(
     }
 
 
+def build_manual_evidence_runbook(
+    *,
+    host_records_path: Path = Path("docs/HOST_MANUAL_RUNS.json"),
+    beta_records_path: Path = Path("docs/BETA_VALIDATION_RECORDS.json"),
+    release_tag: str = "v1.15.0-rc.1",
+) -> dict[str, Any]:
+    """Build a report-only runbook for collecting real evidence and beta responses."""
+    command_center = build_activation_command_center(
+        host_records_path=host_records_path,
+        beta_records_path=beta_records_path,
+        release_tag=release_tag,
+    )
+    return {
+        "runbook_status": command_center["center_status"],
+        "release_tag": release_tag,
+        "host_records_path": str(host_records_path),
+        "beta_records_path": str(beta_records_path),
+        "writes_records": False,
+        "execution_policy": "report_only",
+        "non_fabrication_policy": (
+            "Record passed only after a reviewer observes the real MCP host UI flow; demo fixture output is not "
+            "P0 evidence and generated smoke output alone is not accepted."
+        ),
+        "operator_scenario": _manual_evidence_operator_scenario(),
+        "expected_outputs": _manual_evidence_expected_outputs(),
+        "command_center_summary": {
+            "center_status": command_center["center_status"],
+            "trust_score": command_center["trust_dashboard"]["trust_score"],
+            "publish_allowed": command_center["rc_candidate"]["publish_allowed"],
+            "blocked_reasons": command_center["rc_candidate"]["blocked_reasons"],
+        },
+        "next_actions": [
+            "Run the scenario commands in order on a real MCP host.",
+            "Import passed records only after reviewer-observed host UI evidence exists.",
+            "Regenerate trust dashboard and RC candidate packet after imports.",
+        ],
+    }
+
+
 def render_activation_command_center_markdown(report: dict[str, Any]) -> str:
     """Render an activation command center report as Markdown."""
     commands = "\n".join(f"- `{command}`" for command in report["operator_commands"])
@@ -73,6 +112,42 @@ def render_activation_command_center_markdown(report: dict[str, Any]) -> str:
     )
 
 
+def render_manual_evidence_runbook_markdown(report: dict[str, Any]) -> str:
+    """Render the manual evidence runbook as Markdown."""
+    scenario = "\n\n".join(
+        (
+            f"### {index}. {step['name']}\n\n"
+            f"Expected output: {step['expected_output']}\n\n"
+            "```bash\n"
+            f"{step['command']}\n"
+            "```"
+        )
+        for index, step in enumerate(report["operator_scenario"], start=1)
+    )
+    expected_outputs = "\n".join(
+        (
+            f"- `{item['command_family']}`: blocked=`{item['status_when_blocked']}`, "
+            f"ready=`{item['status_when_ready']}`"
+        )
+        for item in report["expected_outputs"]
+    )
+    next_actions = "\n".join(f"- {action}" for action in report["next_actions"])
+    return (
+        "# Manual Real Evidence Runbook\n\n"
+        f"Release tag: `{report['release_tag']}`\n\n"
+        f"Runbook status: `{report['runbook_status']}`\n\n"
+        f"Writes records: `{str(report['writes_records']).lower()}`\n\n"
+        "## Non-Fabrication Policy\n\n"
+        f"{report['non_fabrication_policy']}\n\n"
+        "## Operator Scenario\n\n"
+        f"{scenario}\n\n"
+        "## Expected Outputs\n\n"
+        f"{expected_outputs}\n\n"
+        "## Next Actions\n\n"
+        f"{next_actions}\n"
+    )
+
+
 def _operator_commands() -> list[str]:
     return [
         "albu-mcp trust dashboard --format markdown",
@@ -82,4 +157,92 @@ def _operator_commands() -> list[str]:
         "albu-mcp beta intake-wizard --workflow-id noisy_preview_tuning --format json",
         "albu-mcp beta response-validate --input beta-response.json --format json",
         "albu-mcp rc candidate-packet --format markdown",
+    ]
+
+
+def _manual_evidence_operator_scenario() -> list[dict[str, str]]:
+    return [
+        {
+            "name": "Inspect current release gates",
+            "command": "albu-mcp activation command-center --format markdown",
+            "expected_output": "Activation command center with blocked or ready gate summary.",
+        },
+        {
+            "name": "Write P0 host operator packets",
+            "command": "albu-mcp evidence packet-bundle --output-dir docs/operator-packets --format markdown",
+            "expected_output": "Packet bundle index plus one packet for Codex and Claude Code.",
+        },
+        {
+            "name": "Prepare Codex import fields",
+            "command": "albu-mcp evidence import-checklist --host Codex --format markdown",
+            "expected_output": "No-write checklist with validate and import commands.",
+        },
+        {
+            "name": "Prepare Claude Code import fields",
+            "command": "albu-mcp evidence import-checklist --host 'Claude Code' --format markdown",
+            "expected_output": "No-write checklist with validate and import commands.",
+        },
+        {
+            "name": "Validate one reviewer-observed import",
+            "command": (
+                "albu-mcp evidence validate-import --host Codex --status passed --date YYYY-MM-DD "
+                "--evidence 'reviewer observed real host UI' --artifact docs/assets/demo/demo_report.md "
+                "--confirm-real-host-observed --format json"
+            ),
+            "expected_output": "ready_to_import with writes_records=false.",
+        },
+        {
+            "name": "Import the reviewed evidence",
+            "command": (
+                "albu-mcp evidence import-artifacts --host Codex --status passed --date YYYY-MM-DD "
+                "--evidence 'reviewer observed real host UI' --artifact docs/assets/demo/demo_report.md "
+                "--confirm-real-host-observed"
+            ),
+            "expected_output": "Writes both manual_host_ui and first_10_minutes_replay for the selected host.",
+        },
+        {
+            "name": "Check privacy and artifact quality",
+            "command": "albu-mcp evidence privacy-doctor --format json",
+            "expected_output": "ready only when required P0 hosts have redacted artifact refs.",
+        },
+        {
+            "name": "Validate beta response drafts",
+            "command": "albu-mcp beta response-validate --input beta-response.json --format json",
+            "expected_output": "ready_to_import with private_data_included=false.",
+        },
+        {
+            "name": "Review trust gates",
+            "command": "albu-mcp trust dashboard --format markdown",
+            "expected_output": "Trust score and next safest command.",
+        },
+        {
+            "name": "Prepare RC owner review",
+            "command": "albu-mcp rc candidate-packet --format markdown",
+            "expected_output": "Publish commands stay empty while gates are blocked.",
+        },
+    ]
+
+
+def _manual_evidence_expected_outputs() -> list[dict[str, str]]:
+    return [
+        {
+            "command_family": "activation command-center",
+            "status_when_blocked": "blocked",
+            "status_when_ready": "ready",
+        },
+        {
+            "command_family": "evidence validate-import",
+            "status_when_blocked": "validation_error",
+            "status_when_ready": "ready_to_import",
+        },
+        {
+            "command_family": "trust dashboard",
+            "status_when_blocked": "action_required",
+            "status_when_ready": "ready",
+        },
+        {
+            "command_family": "rc candidate-packet",
+            "status_when_blocked": "blocked",
+            "status_when_ready": "ready_for_release_manager_review",
+        },
     ]

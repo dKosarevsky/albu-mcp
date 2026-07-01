@@ -12,7 +12,9 @@ from pydantic import ValidationError
 
 from albumentationsx_mcp.activation import (
     build_activation_command_center,
+    build_manual_evidence_runbook,
     render_activation_command_center_markdown,
+    render_manual_evidence_runbook_markdown,
 )
 from albumentationsx_mcp.beta_validation import (
     BetaValidationRecord,
@@ -124,6 +126,12 @@ def _run_activation_cli(argv: list[str]) -> None:
     command_center.add_argument("--release-tag", default="v1.15.0-rc.1")
     command_center.add_argument("--format", choices=["text", "json", "markdown"], default="text")
 
+    runbook = subparsers.add_parser("runbook", help="Build a manual real-evidence intake runbook.")
+    runbook.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    runbook.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    runbook.add_argument("--release-tag", default="v1.15.0-rc.1")
+    runbook.add_argument("--format", choices=["text", "json", "markdown"], default="text")
+
     args = parser.parse_args(argv)
     try:
         sys.stdout.write(_handle_activation_command(args))
@@ -133,6 +141,21 @@ def _run_activation_cli(argv: list[str]) -> None:
 
 
 def _handle_activation_command(args: argparse.Namespace) -> str:
+    if args.command == "runbook":
+        report = build_manual_evidence_runbook(
+            host_records_path=args.host_records,
+            beta_records_path=args.beta_records,
+            release_tag=args.release_tag,
+        )
+        if args.format == "json":
+            return json.dumps(report, indent=2, sort_keys=True) + "\n"
+        if args.format == "markdown":
+            return render_manual_evidence_runbook_markdown(report)
+        return f"activation runbook {report['runbook_status']} (release_tag={report['release_tag']})\n"
+    return _handle_activation_command_center(args)
+
+
+def _handle_activation_command_center(args: argparse.Namespace) -> str:
     report = build_activation_command_center(
         host_records_path=args.host_records,
         beta_records_path=args.beta_records,
