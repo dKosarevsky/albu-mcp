@@ -38,6 +38,7 @@ from albumentationsx_mcp.evidence import (
     build_evidence_doctor_report,
     build_evidence_execution_packet,
     build_evidence_operator_packet_artifact,
+    build_evidence_packet_bundle_artifacts,
     build_evidence_session_plan,
     build_evidence_unblock_plan,
     import_evidence_artifacts,
@@ -179,6 +180,14 @@ def _run_evidence_cli(argv: list[str]) -> None:
     operator_packet.add_argument("--output-dir", type=Path, required=True)
     operator_packet.add_argument("--format", choices=["markdown", "json"], default="markdown")
 
+    packet_bundle = subparsers.add_parser(
+        "packet-bundle",
+        help="Write P0 host evidence operator packet artifacts.",
+    )
+    packet_bundle.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    packet_bundle.add_argument("--output-dir", type=Path, required=True)
+    packet_bundle.add_argument("--format", choices=["markdown", "json"], default="markdown")
+
     import_artifacts = subparsers.add_parser(
         "import-artifacts",
         help="Import one reviewer-observed evidence session into both required P0 gates.",
@@ -226,6 +235,7 @@ def _handle_evidence_command(args: argparse.Namespace) -> str:
         "run-session": _handle_evidence_run_session,
         "execution-packet": _handle_evidence_execution_packet,
         "operator-packet": _handle_evidence_operator_packet,
+        "packet-bundle": _handle_evidence_packet_bundle,
         "import-artifacts": _handle_evidence_import_artifacts,
         "validate-import": _handle_evidence_validate_import,
         "doctor": _handle_evidence_doctor,
@@ -288,6 +298,16 @@ def _handle_evidence_operator_packet(args: argparse.Namespace) -> str:
     packet_path = args.output_dir / artifact["filename"]
     packet_path.write_text(artifact["content"], encoding="utf-8")
     return f"wrote evidence operator-packet for {args.host} to {packet_path}\n"
+
+
+def _handle_evidence_packet_bundle(args: argparse.Namespace) -> str:
+    bundle = build_evidence_packet_bundle_artifacts(path=args.path, output_format=args.format)
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    index_path = args.output_dir / bundle["index"]["filename"]
+    index_path.write_text(bundle["index"]["content"], encoding="utf-8")
+    for artifact in bundle["packets"]:
+        (args.output_dir / artifact["filename"]).write_text(artifact["content"], encoding="utf-8")
+    return f"wrote evidence packet-bundle for {bundle['host_count']} P0 hosts to {index_path}\n"
 
 
 def _handle_evidence_import_artifacts(args: argparse.Namespace) -> str:

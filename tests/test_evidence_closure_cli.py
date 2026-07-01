@@ -43,3 +43,37 @@ def test_activation_command_center_collects_next_operator_packets(tmp_path: Path
     assert len(payload["beta_intake_wizards"]) == 3
     assert any(command.startswith("albu-mcp evidence packet-bundle") for command in payload["operator_commands"])
     assert any(command.startswith("albu-mcp beta response-validate") for command in payload["operator_commands"])
+
+
+def test_evidence_packet_bundle_writes_p0_host_packets(tmp_path: Path) -> None:
+    evidence_path = tmp_path / "HOST_MANUAL_RUNS.json"
+    evidence_path.write_text('{"manual_host_ui": [], "first_10_minutes_replay": []}\n', encoding="utf-8")
+    output_dir = tmp_path / "packets"
+
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "evidence",
+            "packet-bundle",
+            "--path",
+            str(evidence_path),
+            "--output-dir",
+            str(output_dir),
+            "--format",
+            "markdown",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    index_path = output_dir / "p0-evidence-packet-bundle.md"
+    codex_packet = output_dir / "codex-evidence-operator-packet.md"
+    claude_packet = output_dir / "claude-code-evidence-operator-packet.md"
+
+    assert result.stdout == f"wrote evidence packet-bundle for 2 P0 hosts to {index_path}\n"
+    assert "# P0 Evidence Packet Bundle" in index_path.read_text(encoding="utf-8")
+    assert "# Codex Evidence Operator Packet" in codex_packet.read_text(encoding="utf-8")
+    assert "# Claude Code Evidence Operator Packet" in claude_packet.read_text(encoding="utf-8")

@@ -335,6 +335,46 @@ def build_evidence_operator_packet_artifact(
     }
 
 
+def build_evidence_packet_bundle_artifacts(
+    *,
+    path: Path = Path("docs/HOST_MANUAL_RUNS.json"),
+    output_format: OperatorPacketFormat = "markdown",
+) -> dict[str, Any]:
+    """Render P0 host operator packet artifacts plus a bundle index."""
+    packet_artifacts = [
+        build_evidence_operator_packet_artifact(host=host, path=path, output_format=output_format)
+        for host in P0_REQUIRED_HOSTS
+    ]
+    index_filename = f"p0-evidence-packet-bundle.{_operator_packet_extension(output_format)}"
+    index_content = (
+        json.dumps(
+            {
+                "bundle_status": "ready_to_run",
+                "records_path": str(path),
+                "p0_hosts": list(P0_REQUIRED_HOSTS),
+                "packet_files": [artifact["filename"] for artifact in packet_artifacts],
+                "non_fabrication_policy": _NON_FABRICATION_POLICY,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n"
+        if output_format == "json"
+        else _render_evidence_packet_bundle_markdown(
+            path=path,
+            packet_artifacts=packet_artifacts,
+        )
+    )
+    return {
+        "bundle_status": "ready_to_run",
+        "records_path": str(path),
+        "format": output_format,
+        "host_count": len(packet_artifacts),
+        "index": {"filename": index_filename, "content": index_content},
+        "packets": packet_artifacts,
+    }
+
+
 def build_evidence_artifact_doctor_report(path: Path = Path("docs/HOST_MANUAL_RUNS.json")) -> dict[str, Any]:
     """Inspect evidence artifacts and flag synthetic-only or incomplete P0 records."""
     records = validate_host_manual_runs(path) if path.exists() else HostManualRuns()
@@ -522,6 +562,28 @@ def _render_evidence_operator_packet_markdown(packet: dict[str, Any]) -> str:
         "```\n\n"
         "## Next Actions\n\n"
         f"{next_actions}\n"
+    )
+
+
+def _render_evidence_packet_bundle_markdown(
+    *,
+    path: Path,
+    packet_artifacts: list[dict[str, str]],
+) -> str:
+    packet_links = "\n".join(f"- `{artifact['filename']}` for `{artifact['host']}`" for artifact in packet_artifacts)
+    return (
+        "# P0 Evidence Packet Bundle\n\n"
+        f"Records path: `{path}`\n\n"
+        "## Non-Fabrication Policy\n\n"
+        f"{_NON_FABRICATION_POLICY}\n\n"
+        "## Included Packets\n\n"
+        f"{packet_links}\n\n"
+        "## Next Commands\n\n"
+        "```bash\n"
+        "albu-mcp evidence privacy-doctor --format json\n"
+        "albu-mcp evidence import-checklist --host Codex --format markdown\n"
+        "albu-mcp evidence import-checklist --host 'Claude Code' --format markdown\n"
+        "```\n"
     )
 
 
