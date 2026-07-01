@@ -375,6 +375,81 @@ def build_evidence_packet_bundle_artifacts(
     }
 
 
+def build_evidence_replay_fixture_pack_artifact(
+    *,
+    output_format: OperatorPacketFormat = "markdown",
+) -> dict[str, str]:
+    """Render a local replay fixture pack that is explicitly not evidence."""
+    pack = build_evidence_replay_fixture_pack()
+    content = (
+        json.dumps(pack, indent=2, sort_keys=True) + "\n"
+        if output_format == "json"
+        else _render_evidence_replay_fixture_pack_markdown(pack)
+    )
+    return {
+        "format": output_format,
+        "filename": f"real-host-replay-fixture-pack.{_operator_packet_extension(output_format)}",
+        "content": content,
+    }
+
+
+def build_evidence_replay_fixture_pack() -> dict[str, Any]:
+    """Build a safe fixture pack for replaying a real host flow without closing gates."""
+    return {
+        "pack_status": "ready_to_run",
+        "writes_records": False,
+        "evidence_status": "not_evidence",
+        "fixture_policy": (
+            "This fixture pack is not P0 evidence. It only gives an operator safe demo material for a real MCP "
+            "host run; passed evidence still requires reviewer-observed host UI output."
+        ),
+        "safe_demo_assets": [
+            "docs/assets/demo/inputs/sample-grid.png",
+            "docs/assets/demo/contact_sheet.png",
+            "docs/assets/demo/comparison_contact_sheet.png",
+            "docs/assets/demo/demo_manifest.json",
+            "docs/assets/demo/demo_report.md",
+        ],
+        "expected_preview_flow": [
+            {
+                "tool": "run_host_smoke_check",
+                "expected_result": "preview_ready=true",
+            },
+            {
+                "tool": "render_preview_batch",
+                "expected_result": "preview artifact or contact sheet artifact reference",
+            },
+            {
+                "tool": "compare_preview_runs",
+                "expected_result": "baseline versus candidate comparison summary",
+            },
+            {
+                "tool": "plan_preview_review",
+                "expected_result": "human review checklist for too-noisy or off-goal variants",
+            },
+        ],
+        "expected_artifact_refs": [
+            "docs/assets/demo/demo_report.md",
+            "docs/assets/demo/contact_sheet.png",
+            "docs/assets/demo/comparison_contact_sheet.png",
+        ],
+        "operator_commands": [
+            "albu-mcp activation runbook --format markdown",
+            "albu-mcp evidence import-checklist --host Codex --format markdown",
+            (
+                "albu-mcp evidence validate-import --host Codex --status passed --date YYYY-MM-DD "
+                "--evidence 'reviewer observed real host UI' --artifact docs/assets/demo/demo_report.md "
+                "--confirm-real-host-observed --format json"
+            ),
+        ],
+        "next_actions": [
+            "Use these fixtures only inside a real MCP host session.",
+            "Replace expected artifact refs with reviewer-observed artifact refs before importing passed evidence.",
+            "Run privacy-doctor after any evidence import.",
+        ],
+    }
+
+
 def build_evidence_import_checklist(
     *,
     host: HostName,
@@ -442,6 +517,36 @@ def render_evidence_import_checklist_markdown(checklist: dict[str, Any]) -> str:
         "## Import Command\n\n"
         "```bash\n"
         f"{checklist['import_command']}\n"
+        "```\n\n"
+        "## Next Actions\n\n"
+        f"{next_actions}\n"
+    )
+
+
+def _render_evidence_replay_fixture_pack_markdown(pack: dict[str, Any]) -> str:
+    safe_assets = "\n".join(f"- `{asset}`" for asset in pack["safe_demo_assets"])
+    expected_preview_flow = "\n".join(
+        f"- `{step['tool']}`: {step['expected_result']}" for step in pack["expected_preview_flow"]
+    )
+    expected_artifacts = "\n".join(f"- `{artifact}`" for artifact in pack["expected_artifact_refs"])
+    operator_commands = "\n".join(f"{command}" for command in pack["operator_commands"])
+    next_actions = "\n".join(f"- {action}" for action in pack["next_actions"])
+    return (
+        "# Real Host Replay Fixture Pack\n\n"
+        f"Pack status: `{pack['pack_status']}`\n\n"
+        f"Writes records: `{str(pack['writes_records']).lower()}`\n\n"
+        f"Evidence status: `{pack['evidence_status']}`\n\n"
+        "## Fixture Policy\n\n"
+        f"{pack['fixture_policy']}\n\n"
+        "## Safe Demo Assets\n\n"
+        f"{safe_assets}\n\n"
+        "## expected_preview_flow\n\n"
+        f"{expected_preview_flow}\n\n"
+        "## Expected Artifact Refs\n\n"
+        f"{expected_artifacts}\n\n"
+        "## Operator Commands\n\n"
+        "```bash\n"
+        f"{operator_commands}\n"
         "```\n\n"
         "## Next Actions\n\n"
         f"{next_actions}\n"

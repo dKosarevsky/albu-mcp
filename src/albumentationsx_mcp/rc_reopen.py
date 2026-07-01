@@ -113,6 +113,40 @@ def build_rc_candidate_packet(
     }
 
 
+def build_release_owner_packet(
+    *,
+    host_records_path: Path = Path("docs/HOST_MANUAL_RUNS.json"),
+    beta_records_path: Path = Path("docs/BETA_VALIDATION_RECORDS.json"),
+    release_tag: str = "v1.15.0-rc.1",
+) -> dict[str, Any]:
+    """Build a release-owner handoff packet without performing release actions."""
+    candidate = build_rc_candidate_packet(
+        host_records_path=host_records_path,
+        beta_records_path=beta_records_path,
+        release_tag=release_tag,
+    )
+    publish_allowed = bool(candidate["publish_allowed"])
+    return {
+        "packet_status": "ready_for_owner_go" if publish_allowed else "blocked",
+        "release_tag": release_tag,
+        "publish_allowed": publish_allowed,
+        "blocked_reasons": candidate["blocked_reasons"],
+        "evidence_summary": candidate["evidence_summary"],
+        "beta_summary": candidate["beta_summary"],
+        "required_attachments": _release_owner_required_attachments(),
+        "manual_commands": _release_owner_manual_commands(),
+        "release_owner_checklist": _release_owner_checklist(publish_allowed=publish_allowed),
+        "allowed_publish_commands": candidate["publish_commands"] if publish_allowed else [],
+        "do_not_run_commands": [] if publish_allowed else _publish_commands(release_tag),
+        "do_not_attach": [
+            "Private source images, private dataset paths, or unredacted participant logs.",
+            "Generated fixture output as a substitute for reviewer-observed host evidence.",
+        ],
+        "execution_policy": "Report only; this packet does not create tags, releases, uploads, or evidence records.",
+        "next_actions": _release_owner_next_actions(publish_allowed=publish_allowed),
+    }
+
+
 def render_rc_candidate_packet_markdown(packet: dict[str, Any]) -> str:
     """Render an RC candidate packet as markdown."""
     blocked_reasons = "\n".join(f"- `{reason}`" for reason in packet["blocked_reasons"]) or "- none"
@@ -134,6 +168,41 @@ def render_rc_candidate_packet_markdown(packet: dict[str, Any]) -> str:
         f"{preflight}\n\n"
         "## Publish Commands\n\n"
         f"{publish}\n\n"
+        "## Next Actions\n\n"
+        f"{next_actions}\n"
+    )
+
+
+def render_release_owner_packet_markdown(packet: dict[str, Any]) -> str:
+    """Render a release owner packet as markdown."""
+    blocked_reasons = "\n".join(f"- `{reason}`" for reason in packet["blocked_reasons"]) or "- none"
+    attachments = "\n".join(f"- `{attachment}`" for attachment in packet["required_attachments"])
+    manual_commands = "\n".join(f"- `{command}`" for command in packet["manual_commands"])
+    checklist = "\n".join(f"- {item}" for item in packet["release_owner_checklist"])
+    allowed_publish = "\n".join(f"- `{command}`" for command in packet["allowed_publish_commands"]) or "- none"
+    do_not_run = "\n".join(f"- `{command}`" for command in packet["do_not_run_commands"]) or "- none"
+    do_not_attach = "\n".join(f"- {item}" for item in packet["do_not_attach"])
+    next_actions = "\n".join(f"- {action}" for action in packet["next_actions"])
+    return (
+        "# Release Owner Packet\n\n"
+        f"Release tag: `{packet['release_tag']}`\n\n"
+        f"Packet status: `{packet['packet_status']}`\n\n"
+        f"Publish allowed: `{str(packet['publish_allowed']).lower()}`\n\n"
+        f"Execution policy: {packet['execution_policy']}\n\n"
+        "## Blocked Reasons\n\n"
+        f"{blocked_reasons}\n\n"
+        "## Required Attachments\n\n"
+        f"{attachments}\n\n"
+        "## Manual Commands\n\n"
+        f"{manual_commands}\n\n"
+        "## Release Owner Checklist\n\n"
+        f"{checklist}\n\n"
+        "## Allowed Publish Commands\n\n"
+        f"{allowed_publish}\n\n"
+        "## Do Not Run Until Go\n\n"
+        f"{do_not_run}\n\n"
+        "## Do Not Attach\n\n"
+        f"{do_not_attach}\n\n"
         "## Next Actions\n\n"
         f"{next_actions}\n"
     )
@@ -201,4 +270,59 @@ def _candidate_next_actions(*, publish_allowed: bool) -> list[str]:
     return [
         "Keep RC blocked while real-host evidence or beta validation gates are incomplete.",
         "Use operator_commands to collect real records, then regenerate this packet.",
+    ]
+
+
+def _release_owner_required_attachments() -> list[str]:
+    return [
+        "trust_dashboard_markdown",
+        "trust_gate_transition_report",
+        "rc_candidate_packet",
+        "evidence_privacy_doctor_report",
+        "beta_validation_report",
+        "governed_100_iteration_report",
+    ]
+
+
+def _release_owner_manual_commands() -> list[str]:
+    return [
+        "albu-mcp activation runbook --format markdown",
+        "albu-mcp evidence replay-fixture-pack --output-dir docs/operator-packets --format markdown",
+        "albu-mcp beta response-template --output-dir docs/beta-response-templates --format json",
+        (
+            "albu-mcp trust gate-transition --before-host-records docs/HOST_MANUAL_RUNS.json "
+            "--before-beta-records docs/BETA_VALIDATION_RECORDS.json "
+            "--after-host-records docs/HOST_MANUAL_RUNS.json "
+            "--after-beta-records docs/BETA_VALIDATION_RECORDS.json --format markdown"
+        ),
+        "albu-mcp rc candidate-packet --format markdown",
+    ]
+
+
+def _release_owner_checklist(*, publish_allowed: bool) -> list[str]:
+    common = [
+        "Confirm all required attachments are generated from redacted records.",
+        "Confirm P0 host evidence was reviewer-observed in real Codex and Claude Code host sessions.",
+        "Confirm beta validation records cover all three workflows without private data.",
+    ]
+    if publish_allowed:
+        return [
+            *common,
+            "Review allowed_publish_commands and decide the manual go/no-go.",
+        ]
+    return [
+        *common,
+        "Keep release on hold; do not run publish commands until this packet becomes ready_for_owner_go.",
+    ]
+
+
+def _release_owner_next_actions(*, publish_allowed: bool) -> list[str]:
+    if publish_allowed:
+        return [
+            "Release owner reviews attachments and manually decides whether to run allowed publish commands.",
+            "Keep release notes tied to the same evidence and beta records used in this packet.",
+        ]
+    return [
+        "Complete blocked evidence or beta gates before asking for release owner go.",
+        "Regenerate this packet after trust dashboard reports ready.",
     ]

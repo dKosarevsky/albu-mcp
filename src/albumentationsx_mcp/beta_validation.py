@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from collections import Counter
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
 
@@ -180,6 +180,23 @@ def validate_beta_response_draft(draft: BetaResponseDraft) -> dict[str, Any]:
             "Run albu-mcp beta report --format json after import.",
         ],
     }
+
+
+def build_beta_response_template_artifacts(
+    *,
+    participant_role: str = "ML practitioner",
+    attempt_date: str | None = None,
+) -> list[dict[str, str]]:
+    """Build privacy-safe beta response JSON templates for every required workflow."""
+    resolved_attempt_date = datetime.now(timezone.utc).date().isoformat() if attempt_date is None else attempt_date
+    return [
+        _beta_response_template_artifact(
+            workflow_id=workflow_id,
+            participant_role=participant_role,
+            attempt_date=resolved_attempt_date,
+        )
+        for workflow_id in _WORKFLOW_IDS
+    ]
 
 
 def import_beta_response_draft(
@@ -480,3 +497,26 @@ def _campaign_next_actions(*, product_depth_allowed: bool) -> list[str]:
         "Record only redacted summaries and safe artifact references.",
         "Rerun albu-mcp beta report before opening product-depth implementation.",
     ]
+
+
+def _beta_response_template_artifact(
+    *,
+    workflow_id: WorkflowId,
+    participant_role: str,
+    attempt_date: str,
+) -> dict[str, str]:
+    draft = BetaResponseDraft(
+        workflow_id=workflow_id,
+        status="needs_followup",
+        attempt_date=date.fromisoformat(attempt_date),
+        participant_role=participant_role,
+        summary=f"redacted {workflow_id} outcome; replace with the participant's safe workflow summary",
+        triage_bucket=_default_triage_bucket(workflow_id),
+        artifact_refs=["docs/assets/demo/demo_report.md"],
+        private_data_included=False,
+    )
+    return {
+        "workflow_id": workflow_id,
+        "filename": f"{workflow_id.replace('_', '-')}-beta-response.json",
+        "content": json.dumps(draft.model_dump(mode="json"), indent=2, sort_keys=True) + "\n",
+    }

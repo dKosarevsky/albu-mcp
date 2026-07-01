@@ -12,7 +12,9 @@ from pydantic import ValidationError
 
 from albumentationsx_mcp.activation import (
     build_activation_command_center,
+    build_manual_evidence_runbook,
     render_activation_command_center_markdown,
+    render_manual_evidence_runbook_markdown,
 )
 from albumentationsx_mcp.beta_validation import (
     BetaValidationRecord,
@@ -22,6 +24,7 @@ from albumentationsx_mcp.beta_validation import (
     build_beta_attempt_triage,
     build_beta_campaign_plan,
     build_beta_intake_wizard,
+    build_beta_response_template_artifacts,
     build_beta_trial_pack,
     build_beta_validation_report,
     import_beta_response_draft,
@@ -44,6 +47,7 @@ from albumentationsx_mcp.evidence import (
     build_evidence_operator_packet_artifact,
     build_evidence_packet_bundle_artifacts,
     build_evidence_privacy_doctor_report,
+    build_evidence_replay_fixture_pack_artifact,
     build_evidence_session_plan,
     build_evidence_unblock_plan,
     import_evidence_artifacts,
@@ -58,14 +62,18 @@ from albumentationsx_mcp.rc_reopen import (
     build_rc_candidate_packet,
     build_rc_rehearsal_report,
     build_rc_reopen_report,
+    build_release_owner_packet,
     render_rc_candidate_packet_markdown,
+    render_release_owner_packet_markdown,
 )
 from albumentationsx_mcp.server import ServerSettings, create_mcp_server, settings_from_environment
 from albumentationsx_mcp.trust import (
     build_trust_audit_report,
     build_trust_dashboard_report,
+    build_trust_gate_transition_report,
     build_trust_next_action,
     render_trust_dashboard_markdown,
+    render_trust_gate_transition_markdown,
 )
 
 _SUBCOMMANDS = {"activation", "beta", "distribution", "evidence", "rc", "trust"}
@@ -124,6 +132,12 @@ def _run_activation_cli(argv: list[str]) -> None:
     command_center.add_argument("--release-tag", default="v1.15.0-rc.1")
     command_center.add_argument("--format", choices=["text", "json", "markdown"], default="text")
 
+    runbook = subparsers.add_parser("runbook", help="Build a manual real-evidence intake runbook.")
+    runbook.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    runbook.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    runbook.add_argument("--release-tag", default="v1.15.0-rc.1")
+    runbook.add_argument("--format", choices=["text", "json", "markdown"], default="text")
+
     args = parser.parse_args(argv)
     try:
         sys.stdout.write(_handle_activation_command(args))
@@ -133,6 +147,21 @@ def _run_activation_cli(argv: list[str]) -> None:
 
 
 def _handle_activation_command(args: argparse.Namespace) -> str:
+    if args.command == "runbook":
+        report = build_manual_evidence_runbook(
+            host_records_path=args.host_records,
+            beta_records_path=args.beta_records,
+            release_tag=args.release_tag,
+        )
+        if args.format == "json":
+            return json.dumps(report, indent=2, sort_keys=True) + "\n"
+        if args.format == "markdown":
+            return render_manual_evidence_runbook_markdown(report)
+        return f"activation runbook {report['runbook_status']} (release_tag={report['release_tag']})\n"
+    return _handle_activation_command_center(args)
+
+
+def _handle_activation_command_center(args: argparse.Namespace) -> str:
     report = build_activation_command_center(
         host_records_path=args.host_records,
         beta_records_path=args.beta_records,
@@ -234,6 +263,13 @@ def _add_evidence_packet_parsers(subparsers: Any) -> None:
     import_checklist.add_argument("--host", choices=get_args(HostName), required=True)
     import_checklist.add_argument("--format", choices=["text", "json", "markdown"], default="text")
 
+    replay_fixture_pack = subparsers.add_parser(
+        "replay-fixture-pack",
+        help="Write a safe local replay fixture pack that is not evidence.",
+    )
+    replay_fixture_pack.add_argument("--output-dir", type=Path, required=True)
+    replay_fixture_pack.add_argument("--format", choices=["markdown", "json"], default="markdown")
+
 
 def _add_evidence_doctor_parsers(subparsers: Any) -> None:
     doctor = subparsers.add_parser("doctor", help="Inspect P0 evidence gates and print remediation actions.")
@@ -264,6 +300,7 @@ def _handle_evidence_command(args: argparse.Namespace) -> str:
         "execution-packet": _handle_evidence_execution_packet,
         "operator-packet": _handle_evidence_operator_packet,
         "packet-bundle": _handle_evidence_packet_bundle,
+        "replay-fixture-pack": _handle_evidence_replay_fixture_pack,
         "import-artifacts": _handle_evidence_import_artifacts,
         "validate-import": _handle_evidence_validate_import,
         "import-checklist": _handle_evidence_import_checklist,
@@ -338,6 +375,14 @@ def _handle_evidence_packet_bundle(args: argparse.Namespace) -> str:
     for artifact in bundle["packets"]:
         (args.output_dir / artifact["filename"]).write_text(artifact["content"], encoding="utf-8")
     return f"wrote evidence packet-bundle for {bundle['host_count']} P0 hosts to {index_path}\n"
+
+
+def _handle_evidence_replay_fixture_pack(args: argparse.Namespace) -> str:
+    artifact = build_evidence_replay_fixture_pack_artifact(output_format=args.format)
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    pack_path = args.output_dir / artifact["filename"]
+    pack_path.write_text(artifact["content"], encoding="utf-8")
+    return f"wrote evidence replay-fixture-pack to {pack_path}\n"
 
 
 def _handle_evidence_import_artifacts(args: argparse.Namespace) -> str:
@@ -476,6 +521,14 @@ def _run_beta_cli(argv: list[str]) -> None:
     response_import.add_argument("--input", type=Path, required=True)
     response_import.add_argument("--path", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
 
+    response_template = subparsers.add_parser(
+        "response-template",
+        help="Write privacy-safe beta response JSON templates for all workflows.",
+    )
+    response_template.add_argument("--output-dir", type=Path, required=True)
+    response_template.add_argument("--participant-role", default="ML practitioner")
+    response_template.add_argument("--format", choices=["json"], default="json")
+
     args = parser.parse_args(argv)
     try:
         sys.stdout.write(_handle_beta_command(args))
@@ -495,6 +548,7 @@ def _handle_beta_command(args: argparse.Namespace) -> str:
         "intake-wizard": _handle_beta_intake_wizard,
         "response-validate": _handle_beta_response_validate,
         "response-import": _handle_beta_response_import,
+        "response-template": _handle_beta_response_template,
     }
     return handlers[args.command](args)
 
@@ -590,6 +644,14 @@ def _handle_beta_response_import(args: argparse.Namespace) -> str:
     return f"imported beta response {draft.workflow_id} into {args.path}\n"
 
 
+def _handle_beta_response_template(args: argparse.Namespace) -> str:
+    artifacts = build_beta_response_template_artifacts(participant_role=args.participant_role)
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    for artifact in artifacts:
+        (args.output_dir / artifact["filename"]).write_text(artifact["content"], encoding="utf-8")
+    return f"wrote {len(artifacts)} beta response-template files to {args.output_dir}\n"
+
+
 def _run_rc_cli(argv: list[str]) -> None:
     parser = argparse.ArgumentParser(description="Report RC reopen readiness without mutating release state.")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -612,6 +674,15 @@ def _run_rc_cli(argv: list[str]) -> None:
     candidate_packet.add_argument("--release-tag", default="v1.15.0-rc.1")
     candidate_packet.add_argument("--format", choices=["text", "json", "markdown"], default="text")
 
+    release_owner_packet = subparsers.add_parser(
+        "release-owner-packet",
+        help="Build a release-owner handoff packet without publish actions.",
+    )
+    release_owner_packet.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    release_owner_packet.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    release_owner_packet.add_argument("--release-tag", default="v1.15.0-rc.1")
+    release_owner_packet.add_argument("--format", choices=["text", "json", "markdown"], default="text")
+
     args = parser.parse_args(argv)
     try:
         sys.stdout.write(_handle_rc_command(args))
@@ -621,28 +692,58 @@ def _run_rc_cli(argv: list[str]) -> None:
 
 
 def _handle_rc_command(args: argparse.Namespace) -> str:
-    if args.command == "reopen":
-        report = build_rc_reopen_report(
-            host_records_path=args.host_records,
-            beta_records_path=args.beta_records,
-            release_tag=args.release_tag,
-        )
-        return (
-            json.dumps(report, indent=2, sort_keys=True) + "\n"
-            if args.format == "json"
-            else f"rc reopen {report['rc_decision']} (publish_allowed={str(report['publish_allowed']).lower()})\n"
-        )
-    if args.command == "rehearse":
-        report = build_rc_rehearsal_report(
-            host_records_path=args.host_records,
-            beta_records_path=args.beta_records,
-            release_tag=args.release_tag,
-        )
-        return (
-            json.dumps(report, indent=2, sort_keys=True) + "\n"
-            if args.format == "json"
-            else f"rc rehearse {report['rehearsal_status']} for {args.release_tag}\n"
-        )
+    handlers = {
+        "reopen": _handle_rc_reopen,
+        "rehearse": _handle_rc_rehearse,
+        "candidate-packet": _handle_rc_candidate_packet,
+        "release-owner-packet": _handle_rc_release_owner_packet,
+    }
+    return handlers[args.command](args)
+
+
+def _handle_rc_reopen(args: argparse.Namespace) -> str:
+    report = build_rc_reopen_report(
+        host_records_path=args.host_records,
+        beta_records_path=args.beta_records,
+        release_tag=args.release_tag,
+    )
+    return (
+        json.dumps(report, indent=2, sort_keys=True) + "\n"
+        if args.format == "json"
+        else f"rc reopen {report['rc_decision']} (publish_allowed={str(report['publish_allowed']).lower()})\n"
+    )
+
+
+def _handle_rc_rehearse(args: argparse.Namespace) -> str:
+    report = build_rc_rehearsal_report(
+        host_records_path=args.host_records,
+        beta_records_path=args.beta_records,
+        release_tag=args.release_tag,
+    )
+    return (
+        json.dumps(report, indent=2, sort_keys=True) + "\n"
+        if args.format == "json"
+        else f"rc rehearse {report['rehearsal_status']} for {args.release_tag}\n"
+    )
+
+
+def _handle_rc_release_owner_packet(args: argparse.Namespace) -> str:
+    packet = build_release_owner_packet(
+        host_records_path=args.host_records,
+        beta_records_path=args.beta_records,
+        release_tag=args.release_tag,
+    )
+    if args.format == "json":
+        return json.dumps(packet, indent=2, sort_keys=True) + "\n"
+    if args.format == "markdown":
+        return render_release_owner_packet_markdown(packet)
+    return (
+        f"rc release-owner-packet {packet['packet_status']} "
+        f"(publish_allowed={str(packet['publish_allowed']).lower()})\n"
+    )
+
+
+def _handle_rc_candidate_packet(args: argparse.Namespace) -> str:
     packet = build_rc_candidate_packet(
         host_records_path=args.host_records,
         beta_records_path=args.beta_records,
@@ -708,6 +809,17 @@ def _run_trust_cli(argv: list[str]) -> None:
     dashboard.add_argument("--release-tag", default="v1.15.0-rc.1")
     dashboard.add_argument("--format", choices=["text", "json", "markdown"], default="text")
 
+    gate_transition = subparsers.add_parser(
+        "gate-transition",
+        help="Compare trust gates before and after importing real records.",
+    )
+    gate_transition.add_argument("--before-host-records", type=Path, required=True)
+    gate_transition.add_argument("--before-beta-records", type=Path, required=True)
+    gate_transition.add_argument("--after-host-records", type=Path, required=True)
+    gate_transition.add_argument("--after-beta-records", type=Path, required=True)
+    gate_transition.add_argument("--release-tag", default="v1.15.0-rc.1")
+    gate_transition.add_argument("--format", choices=["text", "json", "markdown"], default="text")
+
     args = parser.parse_args(argv)
     try:
         sys.stdout.write(_handle_trust_command(args))
@@ -717,31 +829,63 @@ def _run_trust_cli(argv: list[str]) -> None:
 
 
 def _handle_trust_command(args: argparse.Namespace) -> str:
-    if args.command == "audit":
-        report = build_trust_audit_report(
-            host_records_path=args.host_records,
-            beta_records_path=args.beta_records,
-            release_tag=args.release_tag,
+    handlers = {
+        "audit": _handle_trust_audit,
+        "next": _handle_trust_next,
+        "dashboard": _handle_trust_dashboard,
+        "gate-transition": _handle_trust_gate_transition,
+    }
+    return handlers[args.command](args)
+
+
+def _handle_trust_audit(args: argparse.Namespace) -> str:
+    report = build_trust_audit_report(
+        host_records_path=args.host_records,
+        beta_records_path=args.beta_records,
+        release_tag=args.release_tag,
+    )
+    return (
+        json.dumps(report, indent=2, sort_keys=True) + "\n"
+        if args.format == "json"
+        else (
+            f"trust audit {report['audit_status']} "
+            f"(trust_score={report['trust_score']}, next='{report['recommended_next_command']}')\n"
         )
-        return (
-            json.dumps(report, indent=2, sort_keys=True) + "\n"
-            if args.format == "json"
-            else (
-                f"trust audit {report['audit_status']} "
-                f"(trust_score={report['trust_score']}, next='{report['recommended_next_command']}')\n"
-            )
-        )
-    if args.command == "next":
-        report = build_trust_next_action(
-            host_records_path=args.host_records,
-            beta_records_path=args.beta_records,
-            release_tag=args.release_tag,
-        )
-        return (
-            json.dumps(report, indent=2, sort_keys=True) + "\n"
-            if args.format == "json"
-            else f"trust next {report['next_status']} {report['recommended_command']}\n"
-        )
+    )
+
+
+def _handle_trust_next(args: argparse.Namespace) -> str:
+    report = build_trust_next_action(
+        host_records_path=args.host_records,
+        beta_records_path=args.beta_records,
+        release_tag=args.release_tag,
+    )
+    return (
+        json.dumps(report, indent=2, sort_keys=True) + "\n"
+        if args.format == "json"
+        else f"trust next {report['next_status']} {report['recommended_command']}\n"
+    )
+
+
+def _handle_trust_gate_transition(args: argparse.Namespace) -> str:
+    report = build_trust_gate_transition_report(
+        before_host_records_path=args.before_host_records,
+        before_beta_records_path=args.before_beta_records,
+        after_host_records_path=args.after_host_records,
+        after_beta_records_path=args.after_beta_records,
+        release_tag=args.release_tag,
+    )
+    if args.format == "json":
+        return json.dumps(report, indent=2, sort_keys=True) + "\n"
+    if args.format == "markdown":
+        return render_trust_gate_transition_markdown(report)
+    return (
+        f"trust gate-transition {report['transition_status']} "
+        f"(before={report['before_trust_score']}, after={report['after_trust_score']})\n"
+    )
+
+
+def _handle_trust_dashboard(args: argparse.Namespace) -> str:
     report = build_trust_dashboard_report(
         host_records_path=args.host_records,
         beta_records_path=args.beta_records,
