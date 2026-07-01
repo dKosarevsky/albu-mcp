@@ -24,6 +24,7 @@ from albumentationsx_mcp.beta_validation import (
     build_beta_attempt_triage,
     build_beta_campaign_plan,
     build_beta_intake_wizard,
+    build_beta_response_template_artifacts,
     build_beta_trial_pack,
     build_beta_validation_report,
     import_beta_response_draft,
@@ -516,6 +517,14 @@ def _run_beta_cli(argv: list[str]) -> None:
     response_import.add_argument("--input", type=Path, required=True)
     response_import.add_argument("--path", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
 
+    response_template = subparsers.add_parser(
+        "response-template",
+        help="Write privacy-safe beta response JSON templates for all workflows.",
+    )
+    response_template.add_argument("--output-dir", type=Path, required=True)
+    response_template.add_argument("--participant-role", default="ML practitioner")
+    response_template.add_argument("--format", choices=["json"], default="json")
+
     args = parser.parse_args(argv)
     try:
         sys.stdout.write(_handle_beta_command(args))
@@ -535,6 +544,7 @@ def _handle_beta_command(args: argparse.Namespace) -> str:
         "intake-wizard": _handle_beta_intake_wizard,
         "response-validate": _handle_beta_response_validate,
         "response-import": _handle_beta_response_import,
+        "response-template": _handle_beta_response_template,
     }
     return handlers[args.command](args)
 
@@ -628,6 +638,14 @@ def _handle_beta_response_import(args: argparse.Namespace) -> str:
     draft = load_beta_response_draft(args.input)
     import_beta_response_draft(path=args.path, draft=draft)
     return f"imported beta response {draft.workflow_id} into {args.path}\n"
+
+
+def _handle_beta_response_template(args: argparse.Namespace) -> str:
+    artifacts = build_beta_response_template_artifacts(participant_role=args.participant_role)
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    for artifact in artifacts:
+        (args.output_dir / artifact["filename"]).write_text(artifact["content"], encoding="utf-8")
+    return f"wrote {len(artifacts)} beta response-template files to {args.output_dir}\n"
 
 
 def _run_rc_cli(argv: list[str]) -> None:
