@@ -183,3 +183,44 @@ def test_beta_response_import_dir_imports_all_templates(tmp_path: Path) -> None:
         "robustness_distortion_variants",
     }
     assert all(record["private_data_included"] is False for record in records)
+
+
+def test_rc_review_pack_writes_release_owner_artifacts(tmp_path: Path) -> None:
+    host_records, beta_records = _write_empty_records(tmp_path)
+    output_dir = tmp_path / "review-pack"
+
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "rc",
+            "review-pack",
+            "--host-records",
+            str(host_records),
+            "--beta-records",
+            str(beta_records),
+            "--output-dir",
+            str(output_dir),
+            "--release-tag",
+            "v1.15.0-rc.1",
+            "--format",
+            "markdown",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    expected_files = {
+        "release-owner-review-pack-index.md",
+        "trust-dashboard.md",
+        "trust-gate-transition.md",
+        "rc-candidate-packet.md",
+        "release-owner-packet.md",
+    }
+    index_content = (output_dir / "release-owner-review-pack-index.md").read_text(encoding="utf-8")
+
+    assert result.stdout == f"wrote rc review-pack with {len(expected_files)} artifacts to {output_dir}\n"
+    assert expected_files <= {path.name for path in output_dir.iterdir()}
+    assert "release-owner-packet.md" in index_content
+    assert "Report only" in index_content

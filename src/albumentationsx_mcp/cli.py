@@ -71,6 +71,7 @@ from albumentationsx_mcp.rc_reopen import (
     render_rc_candidate_packet_markdown,
     render_release_owner_packet_markdown,
 )
+from albumentationsx_mcp.release_review import build_release_owner_review_pack_artifacts
 from albumentationsx_mcp.server import ServerSettings, create_mcp_server, settings_from_environment
 from albumentationsx_mcp.trust import (
     build_trust_audit_report,
@@ -783,6 +784,15 @@ def _run_rc_cli(argv: list[str]) -> None:
     release_owner_packet.add_argument("--release-tag", default="v1.15.0-rc.1")
     release_owner_packet.add_argument("--format", choices=["text", "json", "markdown"], default="text")
 
+    review_pack = subparsers.add_parser("review-pack", help="Write release owner review artifacts.")
+    review_pack.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    review_pack.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    review_pack.add_argument("--before-host-records", type=Path, default=None)
+    review_pack.add_argument("--before-beta-records", type=Path, default=None)
+    review_pack.add_argument("--output-dir", type=Path, required=True)
+    review_pack.add_argument("--release-tag", default="v1.15.0-rc.1")
+    review_pack.add_argument("--format", choices=["markdown", "json"], default="markdown")
+
     args = parser.parse_args(argv)
     try:
         sys.stdout.write(_handle_rc_command(args))
@@ -797,6 +807,7 @@ def _handle_rc_command(args: argparse.Namespace) -> str:
         "rehearse": _handle_rc_rehearse,
         "candidate-packet": _handle_rc_candidate_packet,
         "release-owner-packet": _handle_rc_release_owner_packet,
+        "review-pack": _handle_rc_review_pack,
     }
     return handlers[args.command](args)
 
@@ -841,6 +852,21 @@ def _handle_rc_release_owner_packet(args: argparse.Namespace) -> str:
         f"rc release-owner-packet {packet['packet_status']} "
         f"(publish_allowed={str(packet['publish_allowed']).lower()})\n"
     )
+
+
+def _handle_rc_review_pack(args: argparse.Namespace) -> str:
+    pack = build_release_owner_review_pack_artifacts(
+        host_records_path=args.host_records,
+        beta_records_path=args.beta_records,
+        before_host_records_path=args.before_host_records,
+        before_beta_records_path=args.before_beta_records,
+        release_tag=args.release_tag,
+        output_format=args.format,
+    )
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    for artifact in pack["artifacts"]:
+        (args.output_dir / artifact["filename"]).write_text(artifact["content"], encoding="utf-8")
+    return f"wrote rc review-pack with {pack['artifact_count']} artifacts to {args.output_dir}\n"
 
 
 def _handle_rc_candidate_packet(args: argparse.Namespace) -> str:
