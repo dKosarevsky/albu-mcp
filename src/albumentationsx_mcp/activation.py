@@ -125,10 +125,7 @@ def render_manual_evidence_runbook_markdown(report: dict[str, Any]) -> str:
         for index, step in enumerate(report["operator_scenario"], start=1)
     )
     expected_outputs = "\n".join(
-        (
-            f"- `{item['command_family']}`: blocked=`{item['status_when_blocked']}`, "
-            f"ready=`{item['status_when_ready']}`"
-        )
+        (f"- `{item['command_family']}`: blocked=`{item['status_when_blocked']}`, ready=`{item['status_when_ready']}`")
         for item in report["expected_outputs"]
     )
     next_actions = "\n".join(f"- {action}" for action in report["next_actions"])

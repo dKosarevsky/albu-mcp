@@ -59,12 +59,12 @@ from albumentationsx_mcp.evidence import (
     validate_host_manual_runs,
 )
 from albumentationsx_mcp.rc_reopen import (
-    build_release_owner_packet,
     build_rc_candidate_packet,
     build_rc_rehearsal_report,
     build_rc_reopen_report,
-    render_release_owner_packet_markdown,
+    build_release_owner_packet,
     render_rc_candidate_packet_markdown,
+    render_release_owner_packet_markdown,
 )
 from albumentationsx_mcp.server import ServerSettings, create_mcp_server, settings_from_environment
 from albumentationsx_mcp.trust import (
@@ -692,42 +692,58 @@ def _run_rc_cli(argv: list[str]) -> None:
 
 
 def _handle_rc_command(args: argparse.Namespace) -> str:
-    if args.command == "reopen":
-        report = build_rc_reopen_report(
-            host_records_path=args.host_records,
-            beta_records_path=args.beta_records,
-            release_tag=args.release_tag,
-        )
-        return (
-            json.dumps(report, indent=2, sort_keys=True) + "\n"
-            if args.format == "json"
-            else f"rc reopen {report['rc_decision']} (publish_allowed={str(report['publish_allowed']).lower()})\n"
-        )
-    if args.command == "rehearse":
-        report = build_rc_rehearsal_report(
-            host_records_path=args.host_records,
-            beta_records_path=args.beta_records,
-            release_tag=args.release_tag,
-        )
-        return (
-            json.dumps(report, indent=2, sort_keys=True) + "\n"
-            if args.format == "json"
-            else f"rc rehearse {report['rehearsal_status']} for {args.release_tag}\n"
-        )
-    if args.command == "release-owner-packet":
-        packet = build_release_owner_packet(
-            host_records_path=args.host_records,
-            beta_records_path=args.beta_records,
-            release_tag=args.release_tag,
-        )
-        if args.format == "json":
-            return json.dumps(packet, indent=2, sort_keys=True) + "\n"
-        if args.format == "markdown":
-            return render_release_owner_packet_markdown(packet)
-        return (
-            f"rc release-owner-packet {packet['packet_status']} "
-            f"(publish_allowed={str(packet['publish_allowed']).lower()})\n"
-        )
+    handlers = {
+        "reopen": _handle_rc_reopen,
+        "rehearse": _handle_rc_rehearse,
+        "candidate-packet": _handle_rc_candidate_packet,
+        "release-owner-packet": _handle_rc_release_owner_packet,
+    }
+    return handlers[args.command](args)
+
+
+def _handle_rc_reopen(args: argparse.Namespace) -> str:
+    report = build_rc_reopen_report(
+        host_records_path=args.host_records,
+        beta_records_path=args.beta_records,
+        release_tag=args.release_tag,
+    )
+    return (
+        json.dumps(report, indent=2, sort_keys=True) + "\n"
+        if args.format == "json"
+        else f"rc reopen {report['rc_decision']} (publish_allowed={str(report['publish_allowed']).lower()})\n"
+    )
+
+
+def _handle_rc_rehearse(args: argparse.Namespace) -> str:
+    report = build_rc_rehearsal_report(
+        host_records_path=args.host_records,
+        beta_records_path=args.beta_records,
+        release_tag=args.release_tag,
+    )
+    return (
+        json.dumps(report, indent=2, sort_keys=True) + "\n"
+        if args.format == "json"
+        else f"rc rehearse {report['rehearsal_status']} for {args.release_tag}\n"
+    )
+
+
+def _handle_rc_release_owner_packet(args: argparse.Namespace) -> str:
+    packet = build_release_owner_packet(
+        host_records_path=args.host_records,
+        beta_records_path=args.beta_records,
+        release_tag=args.release_tag,
+    )
+    if args.format == "json":
+        return json.dumps(packet, indent=2, sort_keys=True) + "\n"
+    if args.format == "markdown":
+        return render_release_owner_packet_markdown(packet)
+    return (
+        f"rc release-owner-packet {packet['packet_status']} "
+        f"(publish_allowed={str(packet['publish_allowed']).lower()})\n"
+    )
+
+
+def _handle_rc_candidate_packet(args: argparse.Namespace) -> str:
     packet = build_rc_candidate_packet(
         host_records_path=args.host_records,
         beta_records_path=args.beta_records,
@@ -813,47 +829,63 @@ def _run_trust_cli(argv: list[str]) -> None:
 
 
 def _handle_trust_command(args: argparse.Namespace) -> str:
-    if args.command == "audit":
-        report = build_trust_audit_report(
-            host_records_path=args.host_records,
-            beta_records_path=args.beta_records,
-            release_tag=args.release_tag,
+    handlers = {
+        "audit": _handle_trust_audit,
+        "next": _handle_trust_next,
+        "dashboard": _handle_trust_dashboard,
+        "gate-transition": _handle_trust_gate_transition,
+    }
+    return handlers[args.command](args)
+
+
+def _handle_trust_audit(args: argparse.Namespace) -> str:
+    report = build_trust_audit_report(
+        host_records_path=args.host_records,
+        beta_records_path=args.beta_records,
+        release_tag=args.release_tag,
+    )
+    return (
+        json.dumps(report, indent=2, sort_keys=True) + "\n"
+        if args.format == "json"
+        else (
+            f"trust audit {report['audit_status']} "
+            f"(trust_score={report['trust_score']}, next='{report['recommended_next_command']}')\n"
         )
-        return (
-            json.dumps(report, indent=2, sort_keys=True) + "\n"
-            if args.format == "json"
-            else (
-                f"trust audit {report['audit_status']} "
-                f"(trust_score={report['trust_score']}, next='{report['recommended_next_command']}')\n"
-            )
-        )
-    if args.command == "next":
-        report = build_trust_next_action(
-            host_records_path=args.host_records,
-            beta_records_path=args.beta_records,
-            release_tag=args.release_tag,
-        )
-        return (
-            json.dumps(report, indent=2, sort_keys=True) + "\n"
-            if args.format == "json"
-            else f"trust next {report['next_status']} {report['recommended_command']}\n"
-        )
-    if args.command == "gate-transition":
-        report = build_trust_gate_transition_report(
-            before_host_records_path=args.before_host_records,
-            before_beta_records_path=args.before_beta_records,
-            after_host_records_path=args.after_host_records,
-            after_beta_records_path=args.after_beta_records,
-            release_tag=args.release_tag,
-        )
-        if args.format == "json":
-            return json.dumps(report, indent=2, sort_keys=True) + "\n"
-        if args.format == "markdown":
-            return render_trust_gate_transition_markdown(report)
-        return (
-            f"trust gate-transition {report['transition_status']} "
-            f"(before={report['before_trust_score']}, after={report['after_trust_score']})\n"
-        )
+    )
+
+
+def _handle_trust_next(args: argparse.Namespace) -> str:
+    report = build_trust_next_action(
+        host_records_path=args.host_records,
+        beta_records_path=args.beta_records,
+        release_tag=args.release_tag,
+    )
+    return (
+        json.dumps(report, indent=2, sort_keys=True) + "\n"
+        if args.format == "json"
+        else f"trust next {report['next_status']} {report['recommended_command']}\n"
+    )
+
+
+def _handle_trust_gate_transition(args: argparse.Namespace) -> str:
+    report = build_trust_gate_transition_report(
+        before_host_records_path=args.before_host_records,
+        before_beta_records_path=args.before_beta_records,
+        after_host_records_path=args.after_host_records,
+        after_beta_records_path=args.after_beta_records,
+        release_tag=args.release_tag,
+    )
+    if args.format == "json":
+        return json.dumps(report, indent=2, sort_keys=True) + "\n"
+    if args.format == "markdown":
+        return render_trust_gate_transition_markdown(report)
+    return (
+        f"trust gate-transition {report['transition_status']} "
+        f"(before={report['before_trust_score']}, after={report['after_trust_score']})\n"
+    )
+
+
+def _handle_trust_dashboard(args: argparse.Namespace) -> str:
     report = build_trust_dashboard_report(
         host_records_path=args.host_records,
         beta_records_path=args.beta_records,

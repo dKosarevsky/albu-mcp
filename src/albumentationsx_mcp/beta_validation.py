@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from collections import Counter
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
 
@@ -188,7 +188,7 @@ def build_beta_response_template_artifacts(
     attempt_date: str | None = None,
 ) -> list[dict[str, str]]:
     """Build privacy-safe beta response JSON templates for every required workflow."""
-    resolved_attempt_date = date.today().isoformat() if attempt_date is None else attempt_date
+    resolved_attempt_date = datetime.now(timezone.utc).date().isoformat() if attempt_date is None else attempt_date
     return [
         _beta_response_template_artifact(
             workflow_id=workflow_id,
