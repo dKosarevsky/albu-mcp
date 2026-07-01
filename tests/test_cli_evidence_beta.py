@@ -194,47 +194,68 @@ def test_readme_and_usage_document_operator_cli() -> None:
     readme = Path("README.md").read_text(encoding="utf-8")
     usage = Path("docs/USAGE.md").read_text(encoding="utf-8")
 
-    assert "albu-mcp evidence record-host-ui" in readme
-    assert "albu-mcp evidence run-session" in readme
-    assert "albu-mcp evidence execution-packet" in readme
-    assert "albu-mcp evidence operator-packet" in readme
-    assert "albu-mcp evidence validate-import" in readme
-    assert "albu-mcp evidence artifact-doctor" in readme
-    assert "albu-mcp evidence unblock-plan" in readme
-    assert "albu-mcp evidence doctor" in readme
-    assert "albu-mcp beta triage --format json" in readme
-    assert "albu-mcp beta report" in readme
-    assert "albu-mcp beta campaign-plan" in readme
-    assert "albu-mcp beta trial-pack" in readme
-    assert "albu-mcp beta intake-wizard" in readme
-    assert "albu-mcp rc reopen" in readme
-    assert "albu-mcp rc rehearse" in readme
-    assert "albu-mcp rc candidate-packet" in readme
-    assert "albu-mcp distribution readiness" in readme
-    assert "albu-mcp trust audit" in readme
-    assert "albu-mcp trust next" in readme
-    assert "albu-mcp trust dashboard" in readme
-    assert "`plan_augmentation_policy`" in readme
-    assert "`plan_policy_iteration`" in readme
-    assert "albu-mcp evidence status" in usage
-    assert "albu-mcp evidence run-session" in usage
-    assert "albu-mcp evidence execution-packet" in usage
-    assert "albu-mcp evidence operator-packet" in usage
-    assert "albu-mcp evidence validate-import" in usage
-    assert "albu-mcp evidence artifact-doctor" in usage
-    assert "albu-mcp evidence unblock-plan" in usage
-    assert "albu-mcp evidence doctor" in usage
-    assert "albu-mcp beta record-attempt" in usage
-    assert "albu-mcp beta report" in usage
-    assert "albu-mcp beta campaign-plan" in usage
-    assert "albu-mcp beta trial-pack" in usage
-    assert "albu-mcp beta intake-wizard" in usage
-    assert "albu-mcp rc reopen" in usage
-    assert "albu-mcp rc rehearse" in usage
-    assert "albu-mcp rc candidate-packet" in usage
-    assert "albu-mcp distribution readiness" in usage
-    assert "albu-mcp trust audit" in usage
-    assert "albu-mcp trust next" in usage
-    assert "albu-mcp trust dashboard" in usage
-    assert "`plan_augmentation_policy`" in usage
-    assert "`plan_policy_iteration`" in usage
+    readme_expected = [
+        "albu-mcp activation command-center",
+        "albu-mcp evidence record-host-ui",
+        "albu-mcp evidence run-session",
+        "albu-mcp evidence execution-packet",
+        "albu-mcp evidence operator-packet",
+        "albu-mcp evidence packet-bundle",
+        "albu-mcp evidence import-checklist",
+        "albu-mcp evidence validate-import",
+        "albu-mcp evidence privacy-doctor",
+        "albu-mcp evidence artifact-doctor",
+        "albu-mcp evidence unblock-plan",
+        "albu-mcp evidence doctor",
+        "albu-mcp beta triage --format json",
+        "albu-mcp beta report",
+        "albu-mcp beta campaign-plan",
+        "albu-mcp beta trial-pack",
+        "albu-mcp beta intake-wizard",
+        "albu-mcp beta response-validate",
+        "albu-mcp beta response-import",
+        "albu-mcp rc reopen",
+        "albu-mcp rc rehearse",
+        "albu-mcp rc candidate-packet",
+        "albu-mcp distribution readiness",
+        "albu-mcp trust audit",
+        "albu-mcp trust next",
+        "albu-mcp trust dashboard",
+        "`plan_augmentation_policy`",
+        "`plan_policy_iteration`",
+    ]
+    usage_expected = [
+        "albu-mcp activation command-center",
+        "albu-mcp evidence status",
+        "albu-mcp evidence run-session",
+        "albu-mcp evidence execution-packet",
+        "albu-mcp evidence operator-packet",
+        "albu-mcp evidence packet-bundle",
+        "albu-mcp evidence import-checklist",
+        "albu-mcp evidence validate-import",
+        "albu-mcp evidence privacy-doctor",
+        "albu-mcp evidence artifact-doctor",
+        "albu-mcp evidence unblock-plan",
+        "albu-mcp evidence doctor",
+        "albu-mcp beta record-attempt",
+        "albu-mcp beta report",
+        "albu-mcp beta campaign-plan",
+        "albu-mcp beta trial-pack",
+        "albu-mcp beta intake-wizard",
+        "albu-mcp beta response-validate",
+        "albu-mcp beta response-import",
+        "albu-mcp rc reopen",
+        "albu-mcp rc rehearse",
+        "albu-mcp rc candidate-packet",
+        "albu-mcp distribution readiness",
+        "albu-mcp trust audit",
+        "albu-mcp trust next",
+        "albu-mcp trust dashboard",
+        "`plan_augmentation_policy`",
+        "`plan_policy_iteration`",
+    ]
+
+    for expected in readme_expected:
+        assert expected in readme
+    for expected in usage_expected:
+        assert expected in usage

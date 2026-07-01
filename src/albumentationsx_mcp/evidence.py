@@ -335,6 +335,119 @@ def build_evidence_operator_packet_artifact(
     }
 
 
+def build_evidence_packet_bundle_artifacts(
+    *,
+    path: Path = Path("docs/HOST_MANUAL_RUNS.json"),
+    output_format: OperatorPacketFormat = "markdown",
+) -> dict[str, Any]:
+    """Render P0 host operator packet artifacts plus a bundle index."""
+    packet_artifacts = [
+        build_evidence_operator_packet_artifact(host=host, path=path, output_format=output_format)
+        for host in P0_REQUIRED_HOSTS
+    ]
+    index_filename = f"p0-evidence-packet-bundle.{_operator_packet_extension(output_format)}"
+    index_content = (
+        json.dumps(
+            {
+                "bundle_status": "ready_to_run",
+                "records_path": str(path),
+                "p0_hosts": list(P0_REQUIRED_HOSTS),
+                "packet_files": [artifact["filename"] for artifact in packet_artifacts],
+                "non_fabrication_policy": _NON_FABRICATION_POLICY,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n"
+        if output_format == "json"
+        else _render_evidence_packet_bundle_markdown(
+            path=path,
+            packet_artifacts=packet_artifacts,
+        )
+    )
+    return {
+        "bundle_status": "ready_to_run",
+        "records_path": str(path),
+        "format": output_format,
+        "host_count": len(packet_artifacts),
+        "index": {"filename": index_filename, "content": index_content},
+        "packets": packet_artifacts,
+    }
+
+
+def build_evidence_import_checklist(
+    *,
+    host: HostName,
+    path: Path = Path("docs/HOST_MANUAL_RUNS.json"),
+) -> dict[str, Any]:
+    """Build a no-write checklist for one reviewer-observed evidence import."""
+    return {
+        "checklist_status": "ready_to_fill",
+        "host": host,
+        "records_path": str(path),
+        "writes_records": False,
+        "reviewer_confirmation_policy": _NON_FABRICATION_POLICY,
+        "required_fields": [
+            "host",
+            "status",
+            "date",
+            "evidence",
+            "artifact",
+            "confirm_real_host_observed",
+        ],
+        "artifact_requirements": [
+            "Use redacted artifact refs only.",
+            "Attach at least one first-10-minutes replay artifact for passed evidence.",
+            "Do not use private local dataset paths as committed artifact refs.",
+        ],
+        "validate_command": (
+            "albu-mcp evidence validate-import "
+            f"--host {host!r} --status passed --date YYYY-MM-DD "
+            "--evidence 'reviewer observed real host UI' --artifact docs/assets/demo/demo_report.md "
+            "--confirm-real-host-observed --format json"
+        ),
+        "import_command": (
+            "albu-mcp evidence import-artifacts "
+            f"--host {host!r} --status passed --date YYYY-MM-DD "
+            "--evidence 'reviewer observed real host UI' --artifact docs/assets/demo/demo_report.md "
+            "--confirm-real-host-observed"
+        ),
+        "next_actions": [
+            "Run validate_command before importing.",
+            "Run import_command only after reviewer-observed real host UI evidence exists.",
+            "Run albu-mcp evidence privacy-doctor --format json after import.",
+        ],
+    }
+
+
+def render_evidence_import_checklist_markdown(checklist: dict[str, Any]) -> str:
+    """Render an evidence import checklist as Markdown."""
+    required_fields = "\n".join(f"- `{field}`" for field in checklist["required_fields"])
+    artifact_requirements = "\n".join(f"- {item}" for item in checklist["artifact_requirements"])
+    next_actions = "\n".join(f"- {item}" for item in checklist["next_actions"])
+    return (
+        f"# {checklist['host']} Evidence Import Checklist\n\n"
+        f"Records path: `{checklist['records_path']}`\n\n"
+        f"Writes records: `{str(checklist['writes_records']).lower()}`\n\n"
+        "## Reviewer Confirmation Policy\n\n"
+        f"{checklist['reviewer_confirmation_policy']}\n\n"
+        "## Required Fields\n\n"
+        f"{required_fields}\n\n"
+        "## Artifact Requirements\n\n"
+        f"{artifact_requirements}\n\n"
+        "## Validate Command\n\n"
+        "```bash\n"
+        f"{checklist['validate_command']}\n"
+        "```\n\n"
+        "## Import Command\n\n"
+        "```bash\n"
+        f"{checklist['import_command']}\n"
+        "```\n\n"
+        "## Next Actions\n\n"
+        f"{next_actions}\n"
+    )
+
+
 def build_evidence_artifact_doctor_report(path: Path = Path("docs/HOST_MANUAL_RUNS.json")) -> dict[str, Any]:
     """Inspect evidence artifacts and flag synthetic-only or incomplete P0 records."""
     records = validate_host_manual_runs(path) if path.exists() else HostManualRuns()
@@ -350,6 +463,20 @@ def build_evidence_artifact_doctor_report(path: Path = Path("docs/HOST_MANUAL_RU
         "issue_count": len(issues),
         "issues": issues,
         "next_actions": _artifact_doctor_next_actions(issues),
+    }
+
+
+def build_evidence_privacy_doctor_report(path: Path = Path("docs/HOST_MANUAL_RUNS.json")) -> dict[str, Any]:
+    """Inspect evidence records for private artifact references and unsafe evidence notes."""
+    records = validate_host_manual_runs(path) if path.exists() else HostManualRuns()
+    issues = _privacy_doctor_issues(records)
+    return {
+        "privacy_status": "ready" if not issues else "blocked",
+        "records_path": str(path),
+        "non_fabrication_policy": _NON_FABRICATION_POLICY,
+        "issue_count": len(issues),
+        "issues": issues,
+        "next_actions": _privacy_doctor_next_actions(issues),
     }
 
 
@@ -525,6 +652,28 @@ def _render_evidence_operator_packet_markdown(packet: dict[str, Any]) -> str:
     )
 
 
+def _render_evidence_packet_bundle_markdown(
+    *,
+    path: Path,
+    packet_artifacts: list[dict[str, str]],
+) -> str:
+    packet_links = "\n".join(f"- `{artifact['filename']}` for `{artifact['host']}`" for artifact in packet_artifacts)
+    return (
+        "# P0 Evidence Packet Bundle\n\n"
+        f"Records path: `{path}`\n\n"
+        "## Non-Fabrication Policy\n\n"
+        f"{_NON_FABRICATION_POLICY}\n\n"
+        "## Included Packets\n\n"
+        f"{packet_links}\n\n"
+        "## Next Commands\n\n"
+        "```bash\n"
+        "albu-mcp evidence privacy-doctor --format json\n"
+        "albu-mcp evidence import-checklist --host Codex --format markdown\n"
+        "albu-mcp evidence import-checklist --host 'Claude Code' --format markdown\n"
+        "```\n"
+    )
+
+
 def _host_slug(host: HostName) -> str:
     return host.lower().replace(" ", "-")
 
@@ -558,6 +707,39 @@ def _artifact_doctor_issues(records: HostManualRuns) -> list[dict[str, str]]:
     return issues
 
 
+def _privacy_doctor_issues(records: HostManualRuns) -> list[dict[str, str]]:
+    issues: list[dict[str, str]] = []
+    manual_by_host = {record.host: record for record in records.manual_host_ui}
+    replay_by_host = {record.host: record for record in records.first_10_minutes_replay}
+    for host in P0_REQUIRED_HOSTS:
+        manual = manual_by_host.get(host)
+        replay = replay_by_host.get(host)
+        if manual is None or manual.status != "passed":
+            issues.append(_privacy_issue(host=host, gate="manual_host_ui", code="missing_required_host_gate"))
+        elif _looks_synthetic_only(manual.evidence):
+            issues.append(_privacy_issue(host=host, gate="manual_host_ui", code="synthetic_only_evidence"))
+        if replay is None or replay.status != "passed":
+            issues.append(_privacy_issue(host=host, gate="first_10_minutes_replay", code="missing_required_host_gate"))
+            continue
+        if _looks_synthetic_only(replay.evidence):
+            issues.append(_privacy_issue(host=host, gate="first_10_minutes_replay", code="synthetic_only_evidence"))
+        if not replay.artifacts:
+            issues.append(_privacy_issue(host=host, gate="first_10_minutes_replay", code="missing_replay_artifact"))
+        issues.extend(
+            [
+                _privacy_issue(
+                    host=host,
+                    gate="first_10_minutes_replay",
+                    code="private_local_artifact_ref",
+                    artifact_ref=artifact_ref,
+                )
+                for artifact_ref in replay.artifacts
+                if _looks_private_artifact_ref(artifact_ref)
+            ]
+        )
+    return issues
+
+
 def _artifact_issue(*, host: HostName, gate: str, code: str) -> dict[str, str]:
     messages = {
         "missing_required_host_gate": "Required P0 host gate is not passed.",
@@ -567,9 +749,33 @@ def _artifact_issue(*, host: HostName, gate: str, code: str) -> dict[str, str]:
     return {"host": host, "gate": gate, "code": code, "message": messages[code]}
 
 
+def _privacy_issue(*, host: HostName, gate: str, code: str, artifact_ref: str | None = None) -> dict[str, str]:
+    messages = {
+        "missing_required_host_gate": "Required P0 host gate is not passed.",
+        "synthetic_only_evidence": "Evidence text looks synthetic-only or explicitly lacks reviewer observation.",
+        "missing_replay_artifact": "First-10-minutes replay needs at least one redacted artifact reference.",
+        "private_local_artifact_ref": "Artifact reference looks like a private local path or file URL.",
+    }
+    issue = {"host": host, "gate": gate, "code": code, "message": messages[code]}
+    if artifact_ref is not None:
+        issue["artifact_ref"] = artifact_ref
+    return issue
+
+
 def _looks_synthetic_only(evidence: str) -> bool:
     lowered = evidence.lower()
     return any(marker in lowered for marker in _SYNTHETIC_ONLY_MARKERS)
+
+
+def _looks_private_artifact_ref(artifact_ref: str) -> bool:
+    lowered = artifact_ref.lower()
+    private_prefixes = (
+        "/users/",
+        "/home/",
+        "/private/",
+        "file://",
+    )
+    return lowered.startswith(private_prefixes) or lowered[1:3] == ":\\"
 
 
 def _passed_gate_count(records: HostManualRuns) -> int:
@@ -597,6 +803,22 @@ def _artifact_doctor_next_actions(issues: list[dict[str, str]]) -> list[str]:
         actions.append("Attach at least one redacted first-10-minutes replay artifact reference.")
     if "missing_required_host_gate" in codes:
         actions.append("Run albu-mcp evidence execution-packet for each missing host gate.")
+    return actions
+
+
+def _privacy_doctor_next_actions(issues: list[dict[str, str]]) -> list[str]:
+    if not issues:
+        return ["Run albu-mcp rc candidate-packet --format markdown before release-owner review."]
+    codes = {issue["code"] for issue in issues}
+    actions = ["Run albu-mcp evidence import-checklist for each blocked P0 host."]
+    if "private_local_artifact_ref" in codes:
+        actions.append(
+            "Replace private local artifact refs with redacted docs, artifact://, or public-safe references."
+        )
+    if "synthetic_only_evidence" in codes:
+        actions.append("Replace synthetic-only notes with reviewer-observed real host UI evidence.")
+    if "missing_replay_artifact" in codes:
+        actions.append("Attach at least one privacy-safe first-10-minutes replay artifact reference.")
     return actions
 
 

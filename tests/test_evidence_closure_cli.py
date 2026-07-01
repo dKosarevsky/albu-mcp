@@ -1,0 +1,230 @@
+from __future__ import annotations
+
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+
+def test_activation_command_center_collects_next_operator_packets(tmp_path: Path) -> None:
+    host_records = tmp_path / "HOST_MANUAL_RUNS.json"
+    beta_records = tmp_path / "BETA_VALIDATION_RECORDS.json"
+    host_records.write_text('{"manual_host_ui": [], "first_10_minutes_replay": []}\n', encoding="utf-8")
+    beta_records.write_text('{"records": []}\n', encoding="utf-8")
+
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "activation",
+            "command-center",
+            "--host-records",
+            str(host_records),
+            "--beta-records",
+            str(beta_records),
+            "--release-tag",
+            "v1.15.0-rc.1",
+            "--format",
+            "json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(result.stdout)
+
+    assert payload["center_status"] == "blocked"
+    assert payload["execution_policy"] == "report_only"
+    assert payload["p0_hosts"] == ["Codex", "Claude Code"]
+    assert payload["trust_dashboard"]["dashboard_status"] == "action_required"
+    assert payload["rc_candidate"]["candidate_status"] == "blocked"
+    assert [item["host"] for item in payload["p0_evidence_packets"]] == ["Codex", "Claude Code"]
+    assert len(payload["beta_intake_wizards"]) == 3
+    assert any(command.startswith("albu-mcp evidence packet-bundle") for command in payload["operator_commands"])
+    assert any(command.startswith("albu-mcp beta response-validate") for command in payload["operator_commands"])
+
+
+def test_evidence_packet_bundle_writes_p0_host_packets(tmp_path: Path) -> None:
+    evidence_path = tmp_path / "HOST_MANUAL_RUNS.json"
+    evidence_path.write_text('{"manual_host_ui": [], "first_10_minutes_replay": []}\n', encoding="utf-8")
+    output_dir = tmp_path / "packets"
+
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "evidence",
+            "packet-bundle",
+            "--path",
+            str(evidence_path),
+            "--output-dir",
+            str(output_dir),
+            "--format",
+            "markdown",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    index_path = output_dir / "p0-evidence-packet-bundle.md"
+    codex_packet = output_dir / "codex-evidence-operator-packet.md"
+    claude_packet = output_dir / "claude-code-evidence-operator-packet.md"
+
+    assert result.stdout == f"wrote evidence packet-bundle for 2 P0 hosts to {index_path}\n"
+    assert "# P0 Evidence Packet Bundle" in index_path.read_text(encoding="utf-8")
+    assert "# Codex Evidence Operator Packet" in codex_packet.read_text(encoding="utf-8")
+    assert "# Claude Code Evidence Operator Packet" in claude_packet.read_text(encoding="utf-8")
+
+
+def test_evidence_import_checklist_returns_validate_and_import_commands(tmp_path: Path) -> None:
+    evidence_path = tmp_path / "HOST_MANUAL_RUNS.json"
+    evidence_path.write_text('{"manual_host_ui": [], "first_10_minutes_replay": []}\n', encoding="utf-8")
+
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "evidence",
+            "import-checklist",
+            "--path",
+            str(evidence_path),
+            "--host",
+            "Codex",
+            "--format",
+            "json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(result.stdout)
+
+    assert payload["checklist_status"] == "ready_to_fill"
+    assert payload["host"] == "Codex"
+    assert payload["writes_records"] is False
+    assert "confirm_real_host_observed" in payload["required_fields"]
+    assert payload["reviewer_confirmation_policy"].startswith("Record passed only after")
+    assert payload["validate_command"].startswith("albu-mcp evidence validate-import --host 'Codex'")
+    assert payload["import_command"].startswith("albu-mcp evidence import-artifacts --host 'Codex'")
+
+
+def test_evidence_privacy_doctor_flags_private_artifact_refs(tmp_path: Path) -> None:
+    evidence_path = tmp_path / "HOST_MANUAL_RUNS.json"
+    evidence_path.write_text(
+        json.dumps(
+            {
+                "manual_host_ui": [
+                    {
+                        "host": "Codex",
+                        "status": "passed",
+                        "date": "2026-07-01",
+                        "evidence": "Reviewer observed real Codex host UI.",
+                    }
+                ],
+                "first_10_minutes_replay": [
+                    {
+                        "host": "Codex",
+                        "status": "passed",
+                        "date": "2026-07-01",
+                        "evidence": "Reviewer observed real Codex replay.",
+                        "artifacts": ["/Users/private/dataset/contact_sheet.png"],
+                    }
+                ],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "evidence",
+            "privacy-doctor",
+            "--path",
+            str(evidence_path),
+            "--format",
+            "json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(result.stdout)
+    issue_codes = {issue["code"] for issue in payload["issues"]}
+
+    assert payload["privacy_status"] == "blocked"
+    assert payload["issue_count"] == 3
+    assert "private_local_artifact_ref" in issue_codes
+    assert "missing_required_host_gate" in issue_codes
+    assert "albu-mcp evidence import-checklist" in payload["next_actions"][0]
+
+
+def test_beta_response_validate_and_import_records_privacy_safe_attempt(tmp_path: Path) -> None:
+    response_path = tmp_path / "beta-response.json"
+    records_path = tmp_path / "BETA_VALIDATION_RECORDS.json"
+    response_path.write_text(
+        json.dumps(
+            {
+                "workflow_id": "noisy_preview_tuning",
+                "status": "needs_followup",
+                "attempt_date": "2026-07-01",
+                "participant_role": "CV reviewer",
+                "summary": "Preview variants were useful, but one candidate made the object hard to recognize.",
+                "triage_bucket": "review_agent_v3_gap",
+                "artifact_refs": ["docs/assets/demo/demo_report.md"],
+                "private_data_included": False,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    records_path.write_text('{"records": []}\n', encoding="utf-8")
+
+    validate_result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "beta",
+            "response-validate",
+            "--input",
+            str(response_path),
+            "--format",
+            "json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    import_result = subprocess.run(  # noqa: S603
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "beta",
+            "response-import",
+            "--input",
+            str(response_path),
+            "--path",
+            str(records_path),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    validation = json.loads(validate_result.stdout)
+    records = json.loads(records_path.read_text(encoding="utf-8"))
+
+    assert validation["validation_status"] == "ready_to_import"
+    assert validation["writes_records"] is False
+    assert validation["record"]["workflow_id"] == "noisy_preview_tuning"
+    assert import_result.stdout == f"imported beta response noisy_preview_tuning into {records_path}\n"
+    assert records["records"][0]["participant_role"] == "CV reviewer"
+    assert records["records"][0]["private_data_included"] is False

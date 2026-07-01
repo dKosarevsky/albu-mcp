@@ -58,6 +58,51 @@ class BetaValidationRecord(BaseModel):
         return self
 
 
+class BetaResponseDraft(BaseModel):
+    """One privacy-safe beta response draft before importing it into committed records."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    workflow_id: WorkflowId
+    status: ValidationStatus
+    attempt_date: date
+    participant_role: str = Field(min_length=1)
+    summary: str = Field(min_length=1)
+    triage_bucket: TriageBucket
+    artifact_refs: list[str] = Field(default_factory=list)
+    private_data_included: bool = False
+
+    @model_validator(mode="after")
+    def reject_private_response_data(self) -> BetaResponseDraft:
+        """Reject private paths and explicitly private payloads before import."""
+        if self.private_data_included:
+            msg = "private beta response data must be redacted before import"
+            raise ValueError(msg)
+        if _looks_private_response_text(self.summary):
+            msg = "beta response summary must not include private local paths"
+            raise ValueError(msg)
+        private_refs = [
+            artifact_ref for artifact_ref in self.artifact_refs if _looks_private_response_text(artifact_ref)
+        ]
+        if private_refs:
+            msg = "beta response artifact_refs must be redacted before import"
+            raise ValueError(msg)
+        return self
+
+    def to_record(self) -> BetaValidationRecord:
+        """Convert a validated response draft into the canonical beta validation record."""
+        return BetaValidationRecord(
+            workflow_id=self.workflow_id,
+            status=self.status,
+            attempt_date=self.attempt_date,
+            participant_role=self.participant_role,
+            summary=self.summary,
+            triage_bucket=self.triage_bucket,
+            artifact_refs=self.artifact_refs,
+            private_data_included=False,
+        )
+
+
 class BetaValidationRecords(BaseModel):
     """Committed beta validation attempts."""
 
@@ -107,6 +152,43 @@ def record_beta_validation(
     )
     write_beta_validation_records(path, updated)
     return updated
+
+
+def load_beta_response_draft(path: Path) -> BetaResponseDraft:
+    """Load and validate one privacy-safe beta response draft."""
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        return BetaResponseDraft.model_validate(payload)
+    except json.JSONDecodeError as exc:
+        msg = f"{path}: invalid JSON: {exc.msg}"
+        raise ValueError(msg) from exc
+    except ValidationError as exc:
+        msg = f"{path}: invalid beta response draft\n{exc}"
+        raise ValueError(msg) from exc
+
+
+def validate_beta_response_draft(draft: BetaResponseDraft) -> dict[str, Any]:
+    """Build a no-write validation report for a beta response draft."""
+    record = draft.to_record()
+    return {
+        "validation_status": "ready_to_import",
+        "writes_records": False,
+        "privacy_status": "redacted",
+        "record": record.model_dump(mode="json"),
+        "next_actions": [
+            "Run albu-mcp beta response-import with the same input file after review.",
+            "Run albu-mcp beta report --format json after import.",
+        ],
+    }
+
+
+def import_beta_response_draft(
+    *,
+    path: Path = Path("docs/BETA_VALIDATION_RECORDS.json"),
+    draft: BetaResponseDraft,
+) -> BetaValidationRecords:
+    """Import one validated beta response draft into canonical beta validation records."""
+    return record_beta_validation(path=path, record=draft.to_record())
 
 
 def write_beta_validation_records(path: Path, payload: BetaValidationRecords) -> None:
@@ -273,6 +355,14 @@ def build_beta_intake_wizard(
 
 def _record_key(record: BetaValidationRecord) -> tuple[str, object, str]:
     return (record.workflow_id, record.attempt_date, record.summary)
+
+
+def _looks_private_response_text(value: str) -> bool:
+    lowered = value.lower()
+    private_prefixes = ("/users/", "/home/", "/private/", "file://")
+    return (
+        lowered.startswith(private_prefixes) or " /users/" in lowered or " /home/" in lowered or lowered[1:3] == ":\\"
+    )
 
 
 def _recommendation_status(*, signal_count: int, product_depth_allowed: bool) -> str:
