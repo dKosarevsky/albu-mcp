@@ -28,6 +28,7 @@ from albumentationsx_mcp.beta_validation import (
     build_beta_trial_pack,
     build_beta_validation_report,
     import_beta_response_draft,
+    import_beta_response_draft_dir,
     load_beta_response_draft,
     record_beta_validation,
     summarize_beta_validation_records,
@@ -48,24 +49,31 @@ from albumentationsx_mcp.evidence import (
     build_evidence_packet_bundle_artifacts,
     build_evidence_privacy_doctor_report,
     build_evidence_replay_fixture_pack_artifact,
+    build_evidence_session_manifest_artifact,
     build_evidence_session_plan,
     build_evidence_unblock_plan,
     import_evidence_artifacts,
+    load_evidence_session_manifest,
     record_first_10_minutes_replay,
     record_host_manual_run,
     render_evidence_import_checklist_markdown,
     summarize_host_manual_runs,
     validate_evidence_artifact_import,
+    validate_evidence_session_manifest,
     validate_host_manual_runs,
 )
+from albumentationsx_mcp.intake import build_intake_bundle_artifacts
 from albumentationsx_mcp.rc_reopen import (
     build_rc_candidate_packet,
+    build_rc_go_check_report,
     build_rc_rehearsal_report,
     build_rc_reopen_report,
     build_release_owner_packet,
     render_rc_candidate_packet_markdown,
+    render_rc_go_check_markdown,
     render_release_owner_packet_markdown,
 )
+from albumentationsx_mcp.release_review import ReleaseReviewPackRequest, build_release_owner_review_pack_artifacts
 from albumentationsx_mcp.server import ServerSettings, create_mcp_server, settings_from_environment
 from albumentationsx_mcp.trust import (
     build_trust_audit_report,
@@ -76,31 +84,29 @@ from albumentationsx_mcp.trust import (
     render_trust_gate_transition_markdown,
 )
 
-_SUBCOMMANDS = {"activation", "beta", "distribution", "evidence", "rc", "trust"}
+_SUBCOMMANDS = {"activation", "beta", "distribution", "evidence", "intake", "rc", "trust"}
 
 
 def main(argv: list[str] | None = None) -> None:
     """Run the requested command."""
     resolved_argv = sys.argv[1:] if argv is None else argv
-    if resolved_argv and resolved_argv[0] == "activation":
-        _run_activation_cli(resolved_argv[1:])
-        return
-    if resolved_argv and resolved_argv[0] == "evidence":
-        _run_evidence_cli(resolved_argv[1:])
-        return
-    if resolved_argv and resolved_argv[0] == "beta":
-        _run_beta_cli(resolved_argv[1:])
-        return
-    if resolved_argv and resolved_argv[0] == "rc":
-        _run_rc_cli(resolved_argv[1:])
-        return
-    if resolved_argv and resolved_argv[0] == "distribution":
-        _run_distribution_cli(resolved_argv[1:])
-        return
-    if resolved_argv and resolved_argv[0] == "trust":
-        _run_trust_cli(resolved_argv[1:])
+    if resolved_argv and resolved_argv[0] in _SUBCOMMANDS:
+        _run_cli_subcommand(name=resolved_argv[0], argv=resolved_argv[1:])
         return
     _run_server(resolved_argv)
+
+
+def _run_cli_subcommand(*, name: str, argv: list[str]) -> None:
+    handlers = {
+        "activation": _run_activation_cli,
+        "beta": _run_beta_cli,
+        "distribution": _run_distribution_cli,
+        "evidence": _run_evidence_cli,
+        "intake": _run_intake_cli,
+        "rc": _run_rc_cli,
+        "trust": _run_trust_cli,
+    }
+    handlers[name](argv)
 
 
 def _run_server(argv: list[str]) -> None:
@@ -120,6 +126,40 @@ def _run_server(argv: list[str]) -> None:
 
     server = create_mcp_server(settings)
     server.run(transport=args.transport)
+
+
+def _run_intake_cli(argv: list[str]) -> None:
+    parser = argparse.ArgumentParser(description="Write release-safe manual intake bundles.")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    bundle = subparsers.add_parser("bundle", help="Write one manual evidence and beta intake bundle.")
+    bundle.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    bundle.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    bundle.add_argument("--output-dir", type=Path, required=True)
+    bundle.add_argument("--release-tag", default="v1.15.0-rc.1")
+    bundle.add_argument("--participant-role", default="ML practitioner")
+    bundle.add_argument("--format", choices=["markdown", "json"], default="markdown")
+
+    args = parser.parse_args(argv)
+    try:
+        sys.stdout.write(_handle_intake_command(args))
+    except (ValidationError, ValueError) as exc:
+        sys.stderr.write(f"{exc}\n")
+        raise SystemExit(1) from exc
+
+
+def _handle_intake_command(args: argparse.Namespace) -> str:
+    bundle = build_intake_bundle_artifacts(
+        host_records_path=args.host_records,
+        beta_records_path=args.beta_records,
+        release_tag=args.release_tag,
+        output_format=args.format,
+        participant_role=args.participant_role,
+    )
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    for artifact in bundle["artifacts"]:
+        (args.output_dir / artifact["filename"]).write_text(artifact["content"], encoding="utf-8")
+    return f"wrote intake bundle with {bundle['artifact_count']} artifacts to {args.output_dir}\n"
 
 
 def _run_activation_cli(argv: list[str]) -> None:
@@ -223,6 +263,24 @@ def _add_evidence_recording_parsers(subparsers: Any) -> None:
     validate_import.add_argument("--confirm-real-host-observed", action="store_true")
     validate_import.add_argument("--format", choices=["text", "json"], default="text")
 
+    session_manifest = subparsers.add_parser(
+        "session-manifest",
+        help="Write a reviewer-facing evidence session manifest template.",
+    )
+    session_manifest.add_argument("--host", choices=get_args(HostName), required=True)
+    session_manifest.add_argument("--date", required=True, help="ISO date, for example 2026-07-01.")
+    session_manifest.add_argument("--reviewer", required=True)
+    session_manifest.add_argument("--output-dir", type=Path, required=True)
+    session_manifest.add_argument("--format", choices=["json"], default="json")
+
+    validate_manifest = subparsers.add_parser(
+        "validate-manifest",
+        help="Validate a filled evidence session manifest without writing records.",
+    )
+    validate_manifest.add_argument("--input", type=Path, required=True)
+    validate_manifest.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    validate_manifest.add_argument("--format", choices=["text", "json"], default="text")
+
 
 def _add_evidence_packet_parsers(subparsers: Any) -> None:
     run_session = subparsers.add_parser("run-session", help="Print a guided real-host evidence session plan.")
@@ -303,6 +361,8 @@ def _handle_evidence_command(args: argparse.Namespace) -> str:
         "replay-fixture-pack": _handle_evidence_replay_fixture_pack,
         "import-artifacts": _handle_evidence_import_artifacts,
         "validate-import": _handle_evidence_validate_import,
+        "session-manifest": _handle_evidence_session_manifest,
+        "validate-manifest": _handle_evidence_validate_manifest,
         "import-checklist": _handle_evidence_import_checklist,
         "doctor": _handle_evidence_doctor,
         "artifact-doctor": _handle_evidence_artifact_doctor,
@@ -422,6 +482,28 @@ def _handle_evidence_validate_import(args: argparse.Namespace) -> str:
     )
 
 
+def _handle_evidence_session_manifest(args: argparse.Namespace) -> str:
+    artifact = build_evidence_session_manifest_artifact(
+        host=args.host,
+        run_date=args.date,
+        reviewer=args.reviewer,
+    )
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    manifest_path = args.output_dir / artifact["filename"]
+    manifest_path.write_text(artifact["content"], encoding="utf-8")
+    return f"wrote evidence session-manifest for {args.host} to {manifest_path}\n"
+
+
+def _handle_evidence_validate_manifest(args: argparse.Namespace) -> str:
+    report = validate_evidence_session_manifest(
+        manifest=load_evidence_session_manifest(args.input),
+        records_path=args.path,
+    )
+    if args.format == "json":
+        return json.dumps(report, indent=2, sort_keys=True) + "\n"
+    return f"evidence validate-manifest {report['validation_status']} for {report['host']}\n"
+
+
 def _handle_evidence_import_checklist(args: argparse.Namespace) -> str:
     checklist = build_evidence_import_checklist(host=args.host, path=args.path)
     if args.format == "json":
@@ -507,6 +589,17 @@ def _run_beta_cli(argv: list[str]) -> None:
     intake_wizard.add_argument("--participant-role", default="ML practitioner")
     intake_wizard.add_argument("--format", choices=["text", "json"], default="text")
 
+    _add_beta_response_parsers(subparsers)
+
+    args = parser.parse_args(argv)
+    try:
+        sys.stdout.write(_handle_beta_command(args))
+    except (ValidationError, ValueError) as exc:
+        sys.stderr.write(f"{exc}\n")
+        raise SystemExit(1) from exc
+
+
+def _add_beta_response_parsers(subparsers: Any) -> None:
     response_validate = subparsers.add_parser(
         "response-validate",
         help="Validate a privacy-safe beta response draft without writing records.",
@@ -521,6 +614,14 @@ def _run_beta_cli(argv: list[str]) -> None:
     response_import.add_argument("--input", type=Path, required=True)
     response_import.add_argument("--path", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
 
+    response_import_dir = subparsers.add_parser(
+        "response-import-dir",
+        help="Import every privacy-safe beta response draft in a directory.",
+    )
+    response_import_dir.add_argument("--input-dir", type=Path, required=True)
+    response_import_dir.add_argument("--path", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    response_import_dir.add_argument("--format", choices=["text", "json"], default="text")
+
     response_template = subparsers.add_parser(
         "response-template",
         help="Write privacy-safe beta response JSON templates for all workflows.",
@@ -528,13 +629,6 @@ def _run_beta_cli(argv: list[str]) -> None:
     response_template.add_argument("--output-dir", type=Path, required=True)
     response_template.add_argument("--participant-role", default="ML practitioner")
     response_template.add_argument("--format", choices=["json"], default="json")
-
-    args = parser.parse_args(argv)
-    try:
-        sys.stdout.write(_handle_beta_command(args))
-    except (ValidationError, ValueError) as exc:
-        sys.stderr.write(f"{exc}\n")
-        raise SystemExit(1) from exc
 
 
 def _handle_beta_command(args: argparse.Namespace) -> str:
@@ -548,6 +642,7 @@ def _handle_beta_command(args: argparse.Namespace) -> str:
         "intake-wizard": _handle_beta_intake_wizard,
         "response-validate": _handle_beta_response_validate,
         "response-import": _handle_beta_response_import,
+        "response-import-dir": _handle_beta_response_import_dir,
         "response-template": _handle_beta_response_template,
     }
     return handlers[args.command](args)
@@ -644,6 +739,13 @@ def _handle_beta_response_import(args: argparse.Namespace) -> str:
     return f"imported beta response {draft.workflow_id} into {args.path}\n"
 
 
+def _handle_beta_response_import_dir(args: argparse.Namespace) -> str:
+    report = import_beta_response_draft_dir(input_dir=args.input_dir, path=args.path)
+    if args.format == "json":
+        return json.dumps(report, indent=2, sort_keys=True) + "\n"
+    return f"imported {report['imported_count']} beta responses into {args.path}\n"
+
+
 def _handle_beta_response_template(args: argparse.Namespace) -> str:
     artifacts = build_beta_response_template_artifacts(participant_role=args.participant_role)
     args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -674,6 +776,12 @@ def _run_rc_cli(argv: list[str]) -> None:
     candidate_packet.add_argument("--release-tag", default="v1.15.0-rc.1")
     candidate_packet.add_argument("--format", choices=["text", "json", "markdown"], default="text")
 
+    go_check = subparsers.add_parser("go-check", help="Build a final report-only RC go/no-go check.")
+    go_check.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    go_check.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    go_check.add_argument("--release-tag", default="v1.15.0-rc.1")
+    go_check.add_argument("--format", choices=["text", "json", "markdown"], default="text")
+
     release_owner_packet = subparsers.add_parser(
         "release-owner-packet",
         help="Build a release-owner handoff packet without publish actions.",
@@ -682,6 +790,15 @@ def _run_rc_cli(argv: list[str]) -> None:
     release_owner_packet.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
     release_owner_packet.add_argument("--release-tag", default="v1.15.0-rc.1")
     release_owner_packet.add_argument("--format", choices=["text", "json", "markdown"], default="text")
+
+    review_pack = subparsers.add_parser("review-pack", help="Write release owner review artifacts.")
+    review_pack.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    review_pack.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    review_pack.add_argument("--before-host-records", type=Path, default=None)
+    review_pack.add_argument("--before-beta-records", type=Path, default=None)
+    review_pack.add_argument("--output-dir", type=Path, required=True)
+    review_pack.add_argument("--release-tag", default="v1.15.0-rc.1")
+    review_pack.add_argument("--format", choices=["markdown", "json"], default="markdown")
 
     args = parser.parse_args(argv)
     try:
@@ -696,7 +813,9 @@ def _handle_rc_command(args: argparse.Namespace) -> str:
         "reopen": _handle_rc_reopen,
         "rehearse": _handle_rc_rehearse,
         "candidate-packet": _handle_rc_candidate_packet,
+        "go-check": _handle_rc_go_check,
         "release-owner-packet": _handle_rc_release_owner_packet,
+        "review-pack": _handle_rc_review_pack,
     }
     return handlers[args.command](args)
 
@@ -741,6 +860,39 @@ def _handle_rc_release_owner_packet(args: argparse.Namespace) -> str:
         f"rc release-owner-packet {packet['packet_status']} "
         f"(publish_allowed={str(packet['publish_allowed']).lower()})\n"
     )
+
+
+def _handle_rc_go_check(args: argparse.Namespace) -> str:
+    report = build_rc_go_check_report(
+        host_records_path=args.host_records,
+        beta_records_path=args.beta_records,
+        release_tag=args.release_tag,
+    )
+    if args.format == "json":
+        return json.dumps(report, indent=2, sort_keys=True) + "\n"
+    if args.format == "markdown":
+        return render_rc_go_check_markdown(report)
+    return (
+        f"rc go-check {report['go_decision']} "
+        f"(can_create_release_artifacts={str(report['can_create_release_artifacts']).lower()})\n"
+    )
+
+
+def _handle_rc_review_pack(args: argparse.Namespace) -> str:
+    pack = build_release_owner_review_pack_artifacts(
+        ReleaseReviewPackRequest(
+            host_records_path=args.host_records,
+            beta_records_path=args.beta_records,
+            before_host_records_path=args.before_host_records,
+            before_beta_records_path=args.before_beta_records,
+            release_tag=args.release_tag,
+            output_format=args.format,
+        )
+    )
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    for artifact in pack["artifacts"]:
+        (args.output_dir / artifact["filename"]).write_text(artifact["content"], encoding="utf-8")
+    return f"wrote rc review-pack with {pack['artifact_count']} artifacts to {args.output_dir}\n"
 
 
 def _handle_rc_candidate_packet(args: argparse.Namespace) -> str:

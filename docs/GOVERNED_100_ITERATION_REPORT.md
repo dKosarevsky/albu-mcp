@@ -1,11 +1,11 @@
 # Governed 100-Iteration Execution Report
 
 Requested iterations: `100`
-Executed iterations: `4`
-Stopped at iteration: `4`
+Executed iterations: `5`
+Stopped at iteration: `5`
 Stop reason: `current_priority_gate_blocked`
-Completed paths: `22`
-Completed plan points: `22`
+Completed paths: `28`
+Completed plan points: `28`
 
 ## Execution Policy
 
@@ -36,6 +36,12 @@ No blind implementation loop was executed.
 - Trust Gate Transition path: trust gate-transition compares before/after gate cards.
 - Release Owner Packet path: rc release-owner-packet separates manual go/no-go from publish commands.
 - Governed Loop path: the fourth requested follow-up loop stops at external evidence and beta gates.
+- Intake Bundle path: intake bundle writes a complete manual evidence and beta intake directory.
+- Evidence Manifest path: evidence session-manifest and validate-manifest validate reviewer sessions.
+- Beta Batch Import path: beta response-import-dir imports filled redacted response templates.
+- Release Review Pack path: rc review-pack writes release owner review artifacts.
+- RC Go Check path: rc go-check reports no-go or manual-go-required without publishing.
+- Governed Loop path: the fifth requested follow-up loop stops at external evidence and beta gates.
 
 ## Completed Plan Points
 
@@ -61,6 +67,12 @@ No blind implementation loop was executed.
 20. Added trust gate-transition for before/after trust gate comparisons.
 21. Added rc release-owner-packet for release owner handoff and blocked publish commands.
 22. Stopped the fourth 100-iteration follow-up loop at the same external evidence and beta gates.
+23. Added intake bundle for one-command manual evidence and beta intake artifacts.
+24. Added evidence session-manifest and validate-manifest for reviewer session validation.
+25. Added beta response-import-dir for batch importing redacted response JSON files.
+26. Added rc review-pack for release owner review artifact directories.
+27. Added rc go-check for post-gate no-go or manual-go-required decisions.
+28. Stopped the fifth 100-iteration follow-up loop at the same external evidence and beta gates.
 
 ## Current External Gates
 
@@ -80,8 +92,11 @@ No generated packet, test fixture, or synthetic smoke output is counted as real 
 - `src/albumentationsx_mcp/activation.py`
 - `src/albumentationsx_mcp/evidence.py`
 - `src/albumentationsx_mcp/beta_validation.py`
+- `src/albumentationsx_mcp/intake.py`
+- `src/albumentationsx_mcp/release_review.py`
 - `src/albumentationsx_mcp/trust.py`
 - `src/albumentationsx_mcp/rc_reopen.py`
 - `tests/test_activation_cli.py`
 - `tests/test_evidence_closure_cli.py`
 - `tests/test_real_evidence_intake_cli.py`
+- `tests/test_intake_automation_cli.py`

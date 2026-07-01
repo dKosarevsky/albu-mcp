@@ -81,6 +81,31 @@ class EvidenceArtifactImport:
     confirm_real_host_observed: bool = False
 
 
+class EvidenceSessionManifest(BaseModel):
+    """One reviewer-facing manifest for a manual evidence session."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    manifest_status: Literal["template", "filled"] = "template"
+    host: HostName
+    status: HostStatus = "pending"
+    date: date
+    reviewer: str = Field(min_length=1)
+    evidence: str = "reviewer observed real host UI"
+    artifacts: list[str] = Field(default_factory=list)
+    commands_used: list[str] = Field(default_factory=list)
+    confirm_real_host_observed: bool = False
+    private_data_included: bool = False
+
+    @model_validator(mode="after")
+    def reject_private_manifest_data(self) -> EvidenceSessionManifest:
+        """Keep evidence manifests safe before validation or import."""
+        if self.private_data_included:
+            msg = "private evidence manifest data must be redacted before validation"
+            raise ValueError(msg)
+        return self
+
+
 def validate_host_manual_runs(path: Path = Path("docs/HOST_MANUAL_RUNS.json")) -> HostManualRuns:
     """Load and validate manual host evidence records."""
     try:
@@ -228,6 +253,65 @@ def validate_evidence_artifact_import(request: EvidenceArtifactImport) -> dict[s
             "Run albu-mcp evidence import-artifacts with the same fields after reviewing this validation payload.",
             "Rerun albu-mcp evidence artifact-doctor --format json after import.",
         ],
+    }
+
+
+def build_evidence_session_manifest_artifact(
+    *,
+    host: HostName,
+    run_date: str,
+    reviewer: str,
+) -> dict[str, str]:
+    """Build a JSON evidence session manifest template without recording evidence."""
+    manifest = EvidenceSessionManifest(
+        host=host,
+        date=date.fromisoformat(run_date),
+        reviewer=reviewer,
+        artifacts=["docs/assets/demo/demo_report.md"],
+        commands_used=_session_manifest_commands(host),
+    )
+    return {
+        "host": host,
+        "filename": f"{_host_slug(host)}-evidence-session-manifest.json",
+        "content": json.dumps(manifest.model_dump(mode="json"), indent=2, sort_keys=True) + "\n",
+    }
+
+
+def load_evidence_session_manifest(path: Path) -> EvidenceSessionManifest:
+    """Load and validate one evidence session manifest."""
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        return EvidenceSessionManifest.model_validate(payload)
+    except json.JSONDecodeError as exc:
+        msg = f"{path}: invalid JSON: {exc.msg}"
+        raise ValueError(msg) from exc
+    except ValidationError as exc:
+        msg = f"{path}: invalid evidence session manifest\n{exc}"
+        raise ValueError(msg) from exc
+
+
+def validate_evidence_session_manifest(
+    *,
+    manifest: EvidenceSessionManifest,
+    records_path: Path = Path("docs/HOST_MANUAL_RUNS.json"),
+) -> dict[str, Any]:
+    """Validate a session manifest through the existing no-write import validator."""
+    report = validate_evidence_artifact_import(
+        EvidenceArtifactImport(
+            path=records_path,
+            host=manifest.host,
+            status=manifest.status,
+            run_date=manifest.date.isoformat(),
+            evidence=manifest.evidence,
+            artifacts=manifest.artifacts,
+            confirm_real_host_observed=manifest.confirm_real_host_observed,
+        )
+    )
+    return {
+        **report,
+        "manifest_status": manifest.manifest_status,
+        "reviewer": manifest.reviewer,
+        "commands_used": manifest.commands_used,
     }
 
 
@@ -639,6 +723,15 @@ def _operator_steps(host: HostName) -> list[dict[str, str]]:
             "step": "record",
             "action": "Run import-artifacts only after the reviewer observed the real host UI session.",
         },
+    ]
+
+
+def _session_manifest_commands(host: HostName) -> list[str]:
+    return [
+        "run_host_smoke_check",
+        "render_preview_batch",
+        f"albu-mcp evidence import-checklist --host {host!r} --format markdown",
+        "albu-mcp evidence validate-manifest --input evidence-session-manifest.json --format json",
     ]
 
 
