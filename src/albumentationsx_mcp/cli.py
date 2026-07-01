@@ -73,7 +73,7 @@ from albumentationsx_mcp.rc_reopen import (
     render_rc_go_check_markdown,
     render_release_owner_packet_markdown,
 )
-from albumentationsx_mcp.release_review import build_release_owner_review_pack_artifacts
+from albumentationsx_mcp.release_review import ReleaseReviewPackRequest, build_release_owner_review_pack_artifacts
 from albumentationsx_mcp.server import ServerSettings, create_mcp_server, settings_from_environment
 from albumentationsx_mcp.trust import (
     build_trust_audit_report,
@@ -90,28 +90,23 @@ _SUBCOMMANDS = {"activation", "beta", "distribution", "evidence", "intake", "rc"
 def main(argv: list[str] | None = None) -> None:
     """Run the requested command."""
     resolved_argv = sys.argv[1:] if argv is None else argv
-    if resolved_argv and resolved_argv[0] == "activation":
-        _run_activation_cli(resolved_argv[1:])
-        return
-    if resolved_argv and resolved_argv[0] == "evidence":
-        _run_evidence_cli(resolved_argv[1:])
-        return
-    if resolved_argv and resolved_argv[0] == "intake":
-        _run_intake_cli(resolved_argv[1:])
-        return
-    if resolved_argv and resolved_argv[0] == "beta":
-        _run_beta_cli(resolved_argv[1:])
-        return
-    if resolved_argv and resolved_argv[0] == "rc":
-        _run_rc_cli(resolved_argv[1:])
-        return
-    if resolved_argv and resolved_argv[0] == "distribution":
-        _run_distribution_cli(resolved_argv[1:])
-        return
-    if resolved_argv and resolved_argv[0] == "trust":
-        _run_trust_cli(resolved_argv[1:])
+    if resolved_argv and resolved_argv[0] in _SUBCOMMANDS:
+        _run_cli_subcommand(name=resolved_argv[0], argv=resolved_argv[1:])
         return
     _run_server(resolved_argv)
+
+
+def _run_cli_subcommand(*, name: str, argv: list[str]) -> None:
+    handlers = {
+        "activation": _run_activation_cli,
+        "beta": _run_beta_cli,
+        "distribution": _run_distribution_cli,
+        "evidence": _run_evidence_cli,
+        "intake": _run_intake_cli,
+        "rc": _run_rc_cli,
+        "trust": _run_trust_cli,
+    }
+    handlers[name](argv)
 
 
 def _run_server(argv: list[str]) -> None:
@@ -594,6 +589,17 @@ def _run_beta_cli(argv: list[str]) -> None:
     intake_wizard.add_argument("--participant-role", default="ML practitioner")
     intake_wizard.add_argument("--format", choices=["text", "json"], default="text")
 
+    _add_beta_response_parsers(subparsers)
+
+    args = parser.parse_args(argv)
+    try:
+        sys.stdout.write(_handle_beta_command(args))
+    except (ValidationError, ValueError) as exc:
+        sys.stderr.write(f"{exc}\n")
+        raise SystemExit(1) from exc
+
+
+def _add_beta_response_parsers(subparsers: Any) -> None:
     response_validate = subparsers.add_parser(
         "response-validate",
         help="Validate a privacy-safe beta response draft without writing records.",
@@ -623,13 +629,6 @@ def _run_beta_cli(argv: list[str]) -> None:
     response_template.add_argument("--output-dir", type=Path, required=True)
     response_template.add_argument("--participant-role", default="ML practitioner")
     response_template.add_argument("--format", choices=["json"], default="json")
-
-    args = parser.parse_args(argv)
-    try:
-        sys.stdout.write(_handle_beta_command(args))
-    except (ValidationError, ValueError) as exc:
-        sys.stderr.write(f"{exc}\n")
-        raise SystemExit(1) from exc
 
 
 def _handle_beta_command(args: argparse.Namespace) -> str:
@@ -881,12 +880,14 @@ def _handle_rc_go_check(args: argparse.Namespace) -> str:
 
 def _handle_rc_review_pack(args: argparse.Namespace) -> str:
     pack = build_release_owner_review_pack_artifacts(
-        host_records_path=args.host_records,
-        beta_records_path=args.beta_records,
-        before_host_records_path=args.before_host_records,
-        before_beta_records_path=args.before_beta_records,
-        release_tag=args.release_tag,
-        output_format=args.format,
+        ReleaseReviewPackRequest(
+            host_records_path=args.host_records,
+            beta_records_path=args.beta_records,
+            before_host_records_path=args.before_host_records,
+            before_beta_records_path=args.before_beta_records,
+            release_tag=args.release_tag,
+            output_format=args.format,
+        )
     )
     args.output_dir.mkdir(parents=True, exist_ok=True)
     for artifact in pack["artifacts"]:

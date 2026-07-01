@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
@@ -22,55 +23,50 @@ from albumentationsx_mcp.trust import (
 ReleaseReviewPackFormat = Literal["markdown", "json"]
 
 
-def build_release_owner_review_pack_artifacts(
-    *,
-    host_records_path: Path = Path("docs/HOST_MANUAL_RUNS.json"),
-    beta_records_path: Path = Path("docs/BETA_VALIDATION_RECORDS.json"),
-    before_host_records_path: Path | None = None,
-    before_beta_records_path: Path | None = None,
-    release_tag: str = "v1.15.0-rc.1",
-    output_format: ReleaseReviewPackFormat = "markdown",
-) -> dict[str, Any]:
+@dataclass(frozen=True)
+class ReleaseReviewPackRequest:
+    """Inputs for one release owner review pack."""
+
+    host_records_path: Path = Path("docs/HOST_MANUAL_RUNS.json")
+    beta_records_path: Path = Path("docs/BETA_VALIDATION_RECORDS.json")
+    before_host_records_path: Path | None = None
+    before_beta_records_path: Path | None = None
+    release_tag: str = "v1.15.0-rc.1"
+    output_format: ReleaseReviewPackFormat = "markdown"
+
+
+def build_release_owner_review_pack_artifacts(request: ReleaseReviewPackRequest) -> dict[str, Any]:
     """Build release owner review artifacts without publishing or writing records."""
-    resolved_before_host = host_records_path if before_host_records_path is None else before_host_records_path
-    resolved_before_beta = beta_records_path if before_beta_records_path is None else before_beta_records_path
     artifacts = [
         _trust_dashboard_artifact(
-            host_records_path=host_records_path,
-            beta_records_path=beta_records_path,
-            release_tag=release_tag,
-            output_format=output_format,
+            host_records_path=request.host_records_path,
+            beta_records_path=request.beta_records_path,
+            release_tag=request.release_tag,
+            output_format=request.output_format,
         ),
-        _gate_transition_artifact(
-            before_host_records_path=resolved_before_host,
-            before_beta_records_path=resolved_before_beta,
-            after_host_records_path=host_records_path,
-            after_beta_records_path=beta_records_path,
-            release_tag=release_tag,
-            output_format=output_format,
-        ),
+        _gate_transition_artifact(request),
         _rc_candidate_artifact(
-            host_records_path=host_records_path,
-            beta_records_path=beta_records_path,
-            release_tag=release_tag,
-            output_format=output_format,
+            host_records_path=request.host_records_path,
+            beta_records_path=request.beta_records_path,
+            release_tag=request.release_tag,
+            output_format=request.output_format,
         ),
         _release_owner_artifact(
-            host_records_path=host_records_path,
-            beta_records_path=beta_records_path,
-            release_tag=release_tag,
-            output_format=output_format,
+            host_records_path=request.host_records_path,
+            beta_records_path=request.beta_records_path,
+            release_tag=request.release_tag,
+            output_format=request.output_format,
         ),
     ]
     index = _review_pack_index_artifact(
         artifacts=artifacts,
-        release_tag=release_tag,
-        output_format=output_format,
+        release_tag=request.release_tag,
+        output_format=request.output_format,
     )
     all_artifacts = [index, *artifacts]
     return {
         "pack_status": "ready_for_owner_review",
-        "release_tag": release_tag,
+        "release_tag": request.release_tag,
         "artifact_count": len(all_artifacts),
         "execution_policy": "Report only; this review pack does not create tags, releases, uploads, or records.",
         "artifacts": all_artifacts,
@@ -97,28 +93,20 @@ def _trust_dashboard_artifact(
     return {"filename": f"trust-dashboard.{_extension(output_format)}", "content": content}
 
 
-def _gate_transition_artifact(
-    *,
-    before_host_records_path: Path,
-    before_beta_records_path: Path,
-    after_host_records_path: Path,
-    after_beta_records_path: Path,
-    release_tag: str,
-    output_format: ReleaseReviewPackFormat,
-) -> dict[str, str]:
+def _gate_transition_artifact(request: ReleaseReviewPackRequest) -> dict[str, str]:
     report = build_trust_gate_transition_report(
-        before_host_records_path=before_host_records_path,
-        before_beta_records_path=before_beta_records_path,
-        after_host_records_path=after_host_records_path,
-        after_beta_records_path=after_beta_records_path,
-        release_tag=release_tag,
+        before_host_records_path=request.before_host_records_path or request.host_records_path,
+        before_beta_records_path=request.before_beta_records_path or request.beta_records_path,
+        after_host_records_path=request.host_records_path,
+        after_beta_records_path=request.beta_records_path,
+        release_tag=request.release_tag,
     )
     content = (
         json.dumps(report, indent=2, sort_keys=True) + "\n"
-        if output_format == "json"
+        if request.output_format == "json"
         else render_trust_gate_transition_markdown(report)
     )
-    return {"filename": f"trust-gate-transition.{_extension(output_format)}", "content": content}
+    return {"filename": f"trust-gate-transition.{_extension(request.output_format)}", "content": content}
 
 
 def _rc_candidate_artifact(
