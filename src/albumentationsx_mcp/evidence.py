@@ -375,6 +375,79 @@ def build_evidence_packet_bundle_artifacts(
     }
 
 
+def build_evidence_import_checklist(
+    *,
+    host: HostName,
+    path: Path = Path("docs/HOST_MANUAL_RUNS.json"),
+) -> dict[str, Any]:
+    """Build a no-write checklist for one reviewer-observed evidence import."""
+    return {
+        "checklist_status": "ready_to_fill",
+        "host": host,
+        "records_path": str(path),
+        "writes_records": False,
+        "reviewer_confirmation_policy": _NON_FABRICATION_POLICY,
+        "required_fields": [
+            "host",
+            "status",
+            "date",
+            "evidence",
+            "artifact",
+            "confirm_real_host_observed",
+        ],
+        "artifact_requirements": [
+            "Use redacted artifact refs only.",
+            "Attach at least one first-10-minutes replay artifact for passed evidence.",
+            "Do not use private local dataset paths as committed artifact refs.",
+        ],
+        "validate_command": (
+            "albu-mcp evidence validate-import "
+            f"--host {host!r} --status passed --date YYYY-MM-DD "
+            "--evidence 'reviewer observed real host UI' --artifact docs/assets/demo/demo_report.md "
+            "--confirm-real-host-observed --format json"
+        ),
+        "import_command": (
+            "albu-mcp evidence import-artifacts "
+            f"--host {host!r} --status passed --date YYYY-MM-DD "
+            "--evidence 'reviewer observed real host UI' --artifact docs/assets/demo/demo_report.md "
+            "--confirm-real-host-observed"
+        ),
+        "next_actions": [
+            "Run validate_command before importing.",
+            "Run import_command only after reviewer-observed real host UI evidence exists.",
+            "Run albu-mcp evidence privacy-doctor --format json after import.",
+        ],
+    }
+
+
+def render_evidence_import_checklist_markdown(checklist: dict[str, Any]) -> str:
+    """Render an evidence import checklist as Markdown."""
+    required_fields = "\n".join(f"- `{field}`" for field in checklist["required_fields"])
+    artifact_requirements = "\n".join(f"- {item}" for item in checklist["artifact_requirements"])
+    next_actions = "\n".join(f"- {item}" for item in checklist["next_actions"])
+    return (
+        f"# {checklist['host']} Evidence Import Checklist\n\n"
+        f"Records path: `{checklist['records_path']}`\n\n"
+        f"Writes records: `{str(checklist['writes_records']).lower()}`\n\n"
+        "## Reviewer Confirmation Policy\n\n"
+        f"{checklist['reviewer_confirmation_policy']}\n\n"
+        "## Required Fields\n\n"
+        f"{required_fields}\n\n"
+        "## Artifact Requirements\n\n"
+        f"{artifact_requirements}\n\n"
+        "## Validate Command\n\n"
+        "```bash\n"
+        f"{checklist['validate_command']}\n"
+        "```\n\n"
+        "## Import Command\n\n"
+        "```bash\n"
+        f"{checklist['import_command']}\n"
+        "```\n\n"
+        "## Next Actions\n\n"
+        f"{next_actions}\n"
+    )
+
+
 def build_evidence_artifact_doctor_report(path: Path = Path("docs/HOST_MANUAL_RUNS.json")) -> dict[str, Any]:
     """Inspect evidence artifacts and flag synthetic-only or incomplete P0 records."""
     records = validate_host_manual_runs(path) if path.exists() else HostManualRuns()

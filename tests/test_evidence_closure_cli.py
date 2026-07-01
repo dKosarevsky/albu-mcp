@@ -77,3 +77,36 @@ def test_evidence_packet_bundle_writes_p0_host_packets(tmp_path: Path) -> None:
     assert "# P0 Evidence Packet Bundle" in index_path.read_text(encoding="utf-8")
     assert "# Codex Evidence Operator Packet" in codex_packet.read_text(encoding="utf-8")
     assert "# Claude Code Evidence Operator Packet" in claude_packet.read_text(encoding="utf-8")
+
+
+def test_evidence_import_checklist_returns_validate_and_import_commands(tmp_path: Path) -> None:
+    evidence_path = tmp_path / "HOST_MANUAL_RUNS.json"
+    evidence_path.write_text('{"manual_host_ui": [], "first_10_minutes_replay": []}\n', encoding="utf-8")
+
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "evidence",
+            "import-checklist",
+            "--path",
+            str(evidence_path),
+            "--host",
+            "Codex",
+            "--format",
+            "json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(result.stdout)
+
+    assert payload["checklist_status"] == "ready_to_fill"
+    assert payload["host"] == "Codex"
+    assert payload["writes_records"] is False
+    assert "confirm_real_host_observed" in payload["required_fields"]
+    assert payload["reviewer_confirmation_policy"].startswith("Record passed only after")
+    assert payload["validate_command"].startswith("albu-mcp evidence validate-import --host 'Codex'")
+    assert payload["import_command"].startswith("albu-mcp evidence import-artifacts --host 'Codex'")

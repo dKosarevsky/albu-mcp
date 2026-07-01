@@ -37,6 +37,7 @@ from albumentationsx_mcp.evidence import (
     build_evidence_artifact_doctor_report,
     build_evidence_doctor_report,
     build_evidence_execution_packet,
+    build_evidence_import_checklist,
     build_evidence_operator_packet_artifact,
     build_evidence_packet_bundle_artifacts,
     build_evidence_session_plan,
@@ -44,6 +45,7 @@ from albumentationsx_mcp.evidence import (
     import_evidence_artifacts,
     record_first_10_minutes_replay,
     record_host_manual_run,
+    render_evidence_import_checklist_markdown,
     summarize_host_manual_runs,
     validate_evidence_artifact_import,
     validate_host_manual_runs,
@@ -205,6 +207,14 @@ def _run_evidence_cli(argv: list[str]) -> None:
     validate_import.add_argument("--confirm-real-host-observed", action="store_true")
     validate_import.add_argument("--format", choices=["text", "json"], default="text")
 
+    import_checklist = subparsers.add_parser(
+        "import-checklist",
+        help="Build a no-write evidence import checklist.",
+    )
+    import_checklist.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    import_checklist.add_argument("--host", choices=get_args(HostName), required=True)
+    import_checklist.add_argument("--format", choices=["text", "json", "markdown"], default="text")
+
     doctor = subparsers.add_parser("doctor", help="Inspect P0 evidence gates and print remediation actions.")
     doctor.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
     doctor.add_argument("--format", choices=["text", "json"], default="text")
@@ -238,6 +248,7 @@ def _handle_evidence_command(args: argparse.Namespace) -> str:
         "packet-bundle": _handle_evidence_packet_bundle,
         "import-artifacts": _handle_evidence_import_artifacts,
         "validate-import": _handle_evidence_validate_import,
+        "import-checklist": _handle_evidence_import_checklist,
         "doctor": _handle_evidence_doctor,
         "artifact-doctor": _handle_evidence_artifact_doctor,
         "unblock-plan": _handle_evidence_unblock_plan,
@@ -345,6 +356,15 @@ def _handle_evidence_validate_import(args: argparse.Namespace) -> str:
         f"evidence validate-import {report['validation_status']} "
         f"(host={args.host}, artifacts={report['artifact_count']})\n"
     )
+
+
+def _handle_evidence_import_checklist(args: argparse.Namespace) -> str:
+    checklist = build_evidence_import_checklist(host=args.host, path=args.path)
+    if args.format == "json":
+        return json.dumps(checklist, indent=2, sort_keys=True) + "\n"
+    if args.format == "markdown":
+        return render_evidence_import_checklist_markdown(checklist)
+    return f"evidence import-checklist {checklist['checklist_status']} for {args.host}\n"
 
 
 def _handle_evidence_doctor(args: argparse.Namespace) -> str:
