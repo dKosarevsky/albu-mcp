@@ -52,3 +52,34 @@ def test_activation_runbook_json_lists_manual_evidence_path(tmp_path: Path) -> N
     assert any("rc candidate-packet" in command for command in commands)
     assert "demo fixture output is not P0 evidence" in payload["non_fabrication_policy"]
     assert payload["expected_outputs"][0]["status_when_blocked"] == "blocked"
+
+
+def test_evidence_replay_fixture_pack_writes_non_evidence_markdown(tmp_path: Path) -> None:
+    output_dir = tmp_path / "fixture-pack"
+
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "evidence",
+            "replay-fixture-pack",
+            "--output-dir",
+            str(output_dir),
+            "--format",
+            "markdown",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    pack_path = output_dir / "real-host-replay-fixture-pack.md"
+    content = pack_path.read_text(encoding="utf-8")
+
+    assert result.stdout == f"wrote evidence replay-fixture-pack to {pack_path}\n"
+    assert "# Real Host Replay Fixture Pack" in content
+    assert "This fixture pack is not P0 evidence" in content
+    assert "run_host_smoke_check" in content
+    assert "render_preview_batch" in content
+    assert "docs/assets/demo/demo_report.md" in content
+    assert "expected_preview_flow" in content

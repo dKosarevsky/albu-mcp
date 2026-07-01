@@ -46,6 +46,7 @@ from albumentationsx_mcp.evidence import (
     build_evidence_operator_packet_artifact,
     build_evidence_packet_bundle_artifacts,
     build_evidence_privacy_doctor_report,
+    build_evidence_replay_fixture_pack_artifact,
     build_evidence_session_plan,
     build_evidence_unblock_plan,
     import_evidence_artifacts,
@@ -257,6 +258,13 @@ def _add_evidence_packet_parsers(subparsers: Any) -> None:
     import_checklist.add_argument("--host", choices=get_args(HostName), required=True)
     import_checklist.add_argument("--format", choices=["text", "json", "markdown"], default="text")
 
+    replay_fixture_pack = subparsers.add_parser(
+        "replay-fixture-pack",
+        help="Write a safe local replay fixture pack that is not evidence.",
+    )
+    replay_fixture_pack.add_argument("--output-dir", type=Path, required=True)
+    replay_fixture_pack.add_argument("--format", choices=["markdown", "json"], default="markdown")
+
 
 def _add_evidence_doctor_parsers(subparsers: Any) -> None:
     doctor = subparsers.add_parser("doctor", help="Inspect P0 evidence gates and print remediation actions.")
@@ -287,6 +295,7 @@ def _handle_evidence_command(args: argparse.Namespace) -> str:
         "execution-packet": _handle_evidence_execution_packet,
         "operator-packet": _handle_evidence_operator_packet,
         "packet-bundle": _handle_evidence_packet_bundle,
+        "replay-fixture-pack": _handle_evidence_replay_fixture_pack,
         "import-artifacts": _handle_evidence_import_artifacts,
         "validate-import": _handle_evidence_validate_import,
         "import-checklist": _handle_evidence_import_checklist,
@@ -361,6 +370,14 @@ def _handle_evidence_packet_bundle(args: argparse.Namespace) -> str:
     for artifact in bundle["packets"]:
         (args.output_dir / artifact["filename"]).write_text(artifact["content"], encoding="utf-8")
     return f"wrote evidence packet-bundle for {bundle['host_count']} P0 hosts to {index_path}\n"
+
+
+def _handle_evidence_replay_fixture_pack(args: argparse.Namespace) -> str:
+    artifact = build_evidence_replay_fixture_pack_artifact(output_format=args.format)
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    pack_path = args.output_dir / artifact["filename"]
+    pack_path.write_text(artifact["content"], encoding="utf-8")
+    return f"wrote evidence replay-fixture-pack to {pack_path}\n"
 
 
 def _handle_evidence_import_artifacts(args: argparse.Namespace) -> str:
