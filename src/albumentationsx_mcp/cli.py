@@ -28,6 +28,7 @@ from albumentationsx_mcp.beta_validation import (
     build_beta_trial_pack,
     build_beta_validation_report,
     import_beta_response_draft,
+    import_beta_response_draft_dir,
     load_beta_response_draft,
     record_beta_validation,
     summarize_beta_validation_records,
@@ -604,6 +605,14 @@ def _run_beta_cli(argv: list[str]) -> None:
     response_import.add_argument("--input", type=Path, required=True)
     response_import.add_argument("--path", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
 
+    response_import_dir = subparsers.add_parser(
+        "response-import-dir",
+        help="Import every privacy-safe beta response draft in a directory.",
+    )
+    response_import_dir.add_argument("--input-dir", type=Path, required=True)
+    response_import_dir.add_argument("--path", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    response_import_dir.add_argument("--format", choices=["text", "json"], default="text")
+
     response_template = subparsers.add_parser(
         "response-template",
         help="Write privacy-safe beta response JSON templates for all workflows.",
@@ -631,6 +640,7 @@ def _handle_beta_command(args: argparse.Namespace) -> str:
         "intake-wizard": _handle_beta_intake_wizard,
         "response-validate": _handle_beta_response_validate,
         "response-import": _handle_beta_response_import,
+        "response-import-dir": _handle_beta_response_import_dir,
         "response-template": _handle_beta_response_template,
     }
     return handlers[args.command](args)
@@ -725,6 +735,13 @@ def _handle_beta_response_import(args: argparse.Namespace) -> str:
     draft = load_beta_response_draft(args.input)
     import_beta_response_draft(path=args.path, draft=draft)
     return f"imported beta response {draft.workflow_id} into {args.path}\n"
+
+
+def _handle_beta_response_import_dir(args: argparse.Namespace) -> str:
+    report = import_beta_response_draft_dir(input_dir=args.input_dir, path=args.path)
+    if args.format == "json":
+        return json.dumps(report, indent=2, sort_keys=True) + "\n"
+    return f"imported {report['imported_count']} beta responses into {args.path}\n"
 
 
 def _handle_beta_response_template(args: argparse.Namespace) -> str:

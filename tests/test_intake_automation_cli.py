@@ -130,3 +130,56 @@ def test_evidence_session_manifest_template_validates_without_writing_records(tm
     assert payload["writes_records"] is False
     assert payload["artifact_count"] == 1
     assert host_records.read_text(encoding="utf-8") == '{"manual_host_ui": [], "first_10_minutes_replay": []}\n'
+
+
+def test_beta_response_import_dir_imports_all_templates(tmp_path: Path) -> None:
+    records_path = tmp_path / "BETA_VALIDATION_RECORDS.json"
+    records_path.write_text('{"records": []}\n', encoding="utf-8")
+    template_dir = tmp_path / "beta-templates"
+    subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "beta",
+            "response-template",
+            "--output-dir",
+            str(template_dir),
+            "--format",
+            "json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    result = subprocess.run(  # noqa: S603
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "beta",
+            "response-import-dir",
+            "--input-dir",
+            str(template_dir),
+            "--path",
+            str(records_path),
+            "--format",
+            "json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(result.stdout)
+    records = json.loads(records_path.read_text(encoding="utf-8"))["records"]
+
+    assert payload["import_status"] == "imported"
+    assert payload["imported_count"] == 3
+    assert payload["writes_records"] is True
+    assert {record["workflow_id"] for record in records} == {
+        "dataset_health_before_training",
+        "noisy_preview_tuning",
+        "robustness_distortion_variants",
+    }
+    assert all(record["private_data_included"] is False for record in records)

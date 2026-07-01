@@ -208,6 +208,41 @@ def import_beta_response_draft(
     return record_beta_validation(path=path, record=draft.to_record())
 
 
+def import_beta_response_draft_dir(
+    *,
+    input_dir: Path,
+    path: Path = Path("docs/BETA_VALIDATION_RECORDS.json"),
+) -> dict[str, Any]:
+    """Import every privacy-safe beta response draft in a directory."""
+    draft_paths = sorted(input_dir.glob("*-beta-response.json"))
+    if not draft_paths:
+        msg = f"{input_dir}: no *-beta-response.json files found"
+        raise ValueError(msg)
+    drafts = [load_beta_response_draft(draft_path) for draft_path in draft_paths]
+    records = validate_beta_validation_records(path) if path.exists() else BetaValidationRecords()
+    for draft in drafts:
+        by_key = {_record_key(item): item for item in records.records}
+        record = draft.to_record()
+        by_key[_record_key(record)] = record
+        records = BetaValidationRecords(
+            records=sorted(by_key.values(), key=lambda item: (item.attempt_date, item.workflow_id, item.summary))
+        )
+    write_beta_validation_records(path, records)
+    return {
+        "import_status": "imported",
+        "writes_records": True,
+        "records_path": str(path),
+        "input_dir": str(input_dir),
+        "imported_count": len(drafts),
+        "workflow_ids": [draft.workflow_id for draft in drafts],
+        "privacy_status": "redacted",
+        "next_actions": [
+            "Run albu-mcp beta report --format json after import.",
+            "Run albu-mcp trust dashboard --format markdown before release owner review.",
+        ],
+    }
+
+
 def write_beta_validation_records(path: Path, payload: BetaValidationRecords) -> None:
     """Write beta validation records in the canonical JSON representation."""
     path.parent.mkdir(parents=True, exist_ok=True)
