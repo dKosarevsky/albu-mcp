@@ -59,9 +59,11 @@ from albumentationsx_mcp.evidence import (
     validate_host_manual_runs,
 )
 from albumentationsx_mcp.rc_reopen import (
+    build_release_owner_packet,
     build_rc_candidate_packet,
     build_rc_rehearsal_report,
     build_rc_reopen_report,
+    render_release_owner_packet_markdown,
     render_rc_candidate_packet_markdown,
 )
 from albumentationsx_mcp.server import ServerSettings, create_mcp_server, settings_from_environment
@@ -672,6 +674,15 @@ def _run_rc_cli(argv: list[str]) -> None:
     candidate_packet.add_argument("--release-tag", default="v1.15.0-rc.1")
     candidate_packet.add_argument("--format", choices=["text", "json", "markdown"], default="text")
 
+    release_owner_packet = subparsers.add_parser(
+        "release-owner-packet",
+        help="Build a release-owner handoff packet without publish actions.",
+    )
+    release_owner_packet.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    release_owner_packet.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    release_owner_packet.add_argument("--release-tag", default="v1.15.0-rc.1")
+    release_owner_packet.add_argument("--format", choices=["text", "json", "markdown"], default="text")
+
     args = parser.parse_args(argv)
     try:
         sys.stdout.write(_handle_rc_command(args))
@@ -702,6 +713,20 @@ def _handle_rc_command(args: argparse.Namespace) -> str:
             json.dumps(report, indent=2, sort_keys=True) + "\n"
             if args.format == "json"
             else f"rc rehearse {report['rehearsal_status']} for {args.release_tag}\n"
+        )
+    if args.command == "release-owner-packet":
+        packet = build_release_owner_packet(
+            host_records_path=args.host_records,
+            beta_records_path=args.beta_records,
+            release_tag=args.release_tag,
+        )
+        if args.format == "json":
+            return json.dumps(packet, indent=2, sort_keys=True) + "\n"
+        if args.format == "markdown":
+            return render_release_owner_packet_markdown(packet)
+        return (
+            f"rc release-owner-packet {packet['packet_status']} "
+            f"(publish_allowed={str(packet['publish_allowed']).lower()})\n"
         )
     packet = build_rc_candidate_packet(
         host_records_path=args.host_records,

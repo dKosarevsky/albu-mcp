@@ -21,11 +21,11 @@ def build_governed_iteration_execution_report() -> dict[str, Any]:
     stop_reason = "completed" if rc_decision["decision"] == "go" else "current_priority_gate_blocked"
     return {
         "requested_iteration_count": governor["iteration_count"],
-        "executed_iteration_count": 3,
-        "stopped_at_iteration": 3,
+        "executed_iteration_count": 4,
+        "stopped_at_iteration": 4,
         "stop_reason": stop_reason,
-        "completed_path_count": 16,
-        "completed_plan_point_count": 16,
+        "completed_path_count": 22,
+        "completed_plan_point_count": 22,
         "execution_policy": governor["execution_policy"],
         "safety_policy": "No blind implementation loop was executed.",
         "completed_paths": [
@@ -48,6 +48,12 @@ def build_governed_iteration_execution_report() -> dict[str, Any]:
             "Evidence Privacy path: evidence privacy-doctor checks private artifact refs and unsafe notes.",
             "Beta Response path: beta response-validate and response-import handle redacted response JSON.",
             "Governed Loop path: the third requested follow-up loop stops at external evidence and beta gates.",
+            "Manual Evidence Runbook path: activation runbook provides one copyable real-evidence scenario.",
+            "Evidence Replay Fixture path: evidence replay-fixture-pack exports safe local demo material only.",
+            "Beta Response Template path: beta response-template writes privacy-safe workflow response JSON files.",
+            "Trust Gate Transition path: trust gate-transition compares before/after gate cards.",
+            "Release Owner Packet path: rc release-owner-packet separates manual go/no-go from publish commands.",
+            "Governed Loop path: the fourth requested follow-up loop stops at external evidence and beta gates.",
         ],
         "completed_plan_points": [
             "Added evidence execution-packet for host-specific real MCP runs.",
@@ -66,6 +72,12 @@ def build_governed_iteration_execution_report() -> dict[str, Any]:
             "Added evidence privacy-doctor for private artifact refs and unsafe evidence notes.",
             "Added beta response-validate and response-import for privacy-safe beta response JSON.",
             "Stopped the third 100-iteration follow-up loop at the same external evidence and beta gates.",
+            "Added activation runbook for the copyable manual evidence intake path.",
+            "Added evidence replay-fixture-pack for safe local host replay fixtures that are not evidence.",
+            "Added beta response-template for all three privacy-safe beta workflows.",
+            "Added trust gate-transition for before/after trust gate comparisons.",
+            "Added rc release-owner-packet for release owner handoff and blocked publish commands.",
+            "Stopped the fourth 100-iteration follow-up loop at the same external evidence and beta gates.",
         ],
         "current_external_gates": [
             "p0_host_evidence_missing_or_blocked: requires reviewer-observed real MCP host UI evidence.",
@@ -88,6 +100,7 @@ def build_governed_iteration_execution_report() -> dict[str, Any]:
             "src/albumentationsx_mcp/rc_reopen.py",
             "tests/test_activation_cli.py",
             "tests/test_evidence_closure_cli.py",
+            "tests/test_real_evidence_intake_cli.py",
         ],
     }
 

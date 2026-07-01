@@ -246,3 +246,38 @@ def test_trust_gate_transition_reports_closed_gates(tmp_path: Path) -> None:
     assert payload["after_trust_score"] == 100
     assert closed_gates == {"p0_host_evidence", "beta_validation", "distribution"}
     assert payload["rc_progress_status"] == "ready_for_release_owner_review"
+
+
+def test_rc_release_owner_packet_blocks_publish_commands_until_go(tmp_path: Path) -> None:
+    host_records, beta_records = _write_empty_records(tmp_path)
+
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "rc",
+            "release-owner-packet",
+            "--host-records",
+            str(host_records),
+            "--beta-records",
+            str(beta_records),
+            "--release-tag",
+            "v1.15.0-rc.1",
+            "--format",
+            "json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(result.stdout)
+
+    assert payload["packet_status"] == "blocked"
+    assert payload["publish_allowed"] is False
+    assert payload["allowed_publish_commands"] == []
+    assert "git tag v1.15.0-rc.1" in payload["do_not_run_commands"]
+    assert "trust_gate_transition_report" in payload["required_attachments"]
+    assert "release_owner_checklist" in payload
+    assert "albu-mcp activation runbook --format markdown" in payload["manual_commands"]
+    assert payload["execution_policy"].startswith("Report only")

@@ -10,15 +10,15 @@ from scripts.export_governed_iteration_execution_report import (
 )
 
 
-def test_governed_iteration_execution_report_stops_after_third_blocked_iteration() -> None:
+def test_governed_iteration_execution_report_stops_after_fourth_blocked_iteration() -> None:
     report = build_governed_iteration_execution_report()
 
     assert report["requested_iteration_count"] == 100
-    assert report["executed_iteration_count"] == 3
-    assert report["stopped_at_iteration"] == 3
+    assert report["executed_iteration_count"] == 4
+    assert report["stopped_at_iteration"] == 4
     assert report["stop_reason"] == "current_priority_gate_blocked"
-    assert report["completed_path_count"] == 16
-    assert report["completed_plan_point_count"] == 16
+    assert report["completed_path_count"] == 22
+    assert report["completed_plan_point_count"] == 22
     assert report["completed_plan_points"] == [
         "Added evidence execution-packet for host-specific real MCP runs.",
         "Added evidence artifact-doctor for artifact completeness and synthetic-only checks.",
@@ -36,6 +36,12 @@ def test_governed_iteration_execution_report_stops_after_third_blocked_iteration
         "Added evidence privacy-doctor for private artifact refs and unsafe evidence notes.",
         "Added beta response-validate and response-import for privacy-safe beta response JSON.",
         "Stopped the third 100-iteration follow-up loop at the same external evidence and beta gates.",
+        "Added activation runbook for the copyable manual evidence intake path.",
+        "Added evidence replay-fixture-pack for safe local host replay fixtures that are not evidence.",
+        "Added beta response-template for all three privacy-safe beta workflows.",
+        "Added trust gate-transition for before/after trust gate comparisons.",
+        "Added rc release-owner-packet for release owner handoff and blocked publish commands.",
+        "Stopped the fourth 100-iteration follow-up loop at the same external evidence and beta gates.",
     ]
 
 
@@ -44,7 +50,7 @@ def test_governed_iteration_execution_report_markdown_explains_stop() -> None:
 
     assert markdown.startswith("# Governed 100-Iteration Execution Report\n")
     assert "Requested iterations: `100`" in markdown
-    assert "Executed iterations: `3`" in markdown
+    assert "Executed iterations: `4`" in markdown
     assert "`current_priority_gate_blocked`" in markdown
     assert "evidence execution-packet" in markdown
     assert "artifact-doctor" in markdown
@@ -54,6 +60,11 @@ def test_governed_iteration_execution_report_markdown_explains_stop() -> None:
     assert "activation command-center" in markdown
     assert "evidence packet-bundle" in markdown
     assert "beta response-validate" in markdown
+    assert "activation runbook" in markdown
+    assert "evidence replay-fixture-pack" in markdown
+    assert "beta response-template" in markdown
+    assert "trust gate-transition" in markdown
+    assert "rc release-owner-packet" in markdown
     assert "`p0_host_evidence_missing_or_blocked`" in markdown
     assert "RC reopen rehearsal v2" in markdown
     assert "No blind implementation loop was executed." in markdown
