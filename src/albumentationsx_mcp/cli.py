@@ -24,6 +24,7 @@ from albumentationsx_mcp.beta_validation import (
     build_beta_attempt_triage,
     build_beta_campaign_plan,
     build_beta_intake_wizard,
+    build_beta_loop_pack_artifacts,
     build_beta_response_template_artifacts,
     build_beta_trial_pack,
     build_beta_validation_report,
@@ -38,10 +39,12 @@ from albumentationsx_mcp.beta_validation import (
 from albumentationsx_mcp.distribution import build_distribution_readiness_report
 from albumentationsx_mcp.evidence import (
     EvidenceArtifactImport,
+    EvidenceCollectWizardRequest,
     FirstTenMinutesReplayEvidence,
     HostName,
     HostStatus,
     build_evidence_artifact_doctor_report,
+    build_evidence_collect_wizard,
     build_evidence_doctor_report,
     build_evidence_execution_packet,
     build_evidence_import_checklist,
@@ -61,6 +64,13 @@ from albumentationsx_mcp.evidence import (
     validate_evidence_artifact_import,
     validate_evidence_session_manifest,
     validate_host_manual_runs,
+)
+from albumentationsx_mcp.first_preview import build_first_preview_pack, render_first_preview_pack_markdown
+from albumentationsx_mcp.host_setup import (
+    DEFAULT_ALLOWED_ROOT,
+    DEFAULT_ARTIFACT_ROOT,
+    build_host_setup_probe,
+    render_host_setup_probe_markdown,
 )
 from albumentationsx_mcp.intake import build_intake_bundle_artifacts
 from albumentationsx_mcp.rc_reopen import (
@@ -84,7 +94,7 @@ from albumentationsx_mcp.trust import (
     render_trust_gate_transition_markdown,
 )
 
-_SUBCOMMANDS = {"activation", "beta", "distribution", "evidence", "intake", "rc", "trust"}
+_SUBCOMMANDS = {"activation", "beta", "distribution", "evidence", "host", "intake", "preview", "rc", "trust"}
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -102,7 +112,9 @@ def _run_cli_subcommand(*, name: str, argv: list[str]) -> None:
         "beta": _run_beta_cli,
         "distribution": _run_distribution_cli,
         "evidence": _run_evidence_cli,
+        "host": _run_host_cli,
         "intake": _run_intake_cli,
+        "preview": _run_preview_cli,
         "rc": _run_rc_cli,
         "trust": _run_trust_cli,
     }
@@ -160,6 +172,97 @@ def _handle_intake_command(args: argparse.Namespace) -> str:
     for artifact in bundle["artifacts"]:
         (args.output_dir / artifact["filename"]).write_text(artifact["content"], encoding="utf-8")
     return f"wrote intake bundle with {bundle['artifact_count']} artifacts to {args.output_dir}\n"
+
+
+def _run_host_cli(argv: list[str]) -> None:
+    parser = argparse.ArgumentParser(description="Inspect host setup readiness before real MCP evidence runs.")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    setup_probe = subparsers.add_parser("setup-probe", help="Build or run a host setup readiness probe.")
+    setup_probe.add_argument("--host", choices=get_args(HostName), default=None)
+    setup_probe.add_argument("--live", action="store_true")
+    setup_probe.add_argument("--allowed-root", type=Path, default=DEFAULT_ALLOWED_ROOT)
+    setup_probe.add_argument("--artifact-root", type=Path, default=DEFAULT_ARTIFACT_ROOT)
+    setup_probe.add_argument("--format", choices=["text", "json", "markdown"], default="text")
+    setup_probe.add_argument("--output", type=Path, default=None)
+
+    args = parser.parse_args(argv)
+    try:
+        sys.stdout.write(_handle_host_command(args))
+    except (ValidationError, ValueError) as exc:
+        sys.stderr.write(f"{exc}\n")
+        raise SystemExit(1) from exc
+
+
+def _handle_host_command(args: argparse.Namespace) -> str:
+    if args.command != "setup-probe":
+        msg = f"unsupported host command: {args.command}"
+        raise ValueError(msg)
+    probe = build_host_setup_probe(
+        host=args.host,
+        live=args.live,
+        allowed_root=args.allowed_root,
+        artifact_root=args.artifact_root,
+    )
+    if args.format == "json":
+        content = json.dumps(probe, indent=2, sort_keys=True) + "\n"
+    elif args.format == "markdown":
+        content = render_host_setup_probe_markdown(probe)
+    else:
+        content = (
+            f"host setup-probe {probe['probe_status']} "
+            f"(hosts={probe['summary']['host_count']}, next_action={probe['next_action']})\n"
+        )
+    if args.output is None:
+        return content
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text(content, encoding="utf-8")
+    return f"wrote host setup-probe to {args.output}\n"
+
+
+def _run_preview_cli(argv: list[str]) -> None:
+    parser = argparse.ArgumentParser(description="Build report-only preview operator handoffs.")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    first_pack = subparsers.add_parser("first-pack", help="Build the shortest first-preview operator handoff.")
+    first_pack.add_argument("--dataset-path", type=Path, required=True)
+    first_pack.add_argument("--allowed-root", type=Path, required=True)
+    first_pack.add_argument("--artifact-root", type=Path, required=True)
+    first_pack.add_argument("--task", default="classification")
+    first_pack.add_argument("--max-images", type=int, default=8)
+    first_pack.add_argument("--format", choices=["text", "json", "markdown"], default="text")
+    first_pack.add_argument("--output", type=Path, default=None)
+
+    args = parser.parse_args(argv)
+    try:
+        sys.stdout.write(_handle_preview_command(args))
+    except (ValidationError, ValueError) as exc:
+        sys.stderr.write(f"{exc}\n")
+        raise SystemExit(1) from exc
+
+
+def _handle_preview_command(args: argparse.Namespace) -> str:
+    if args.command != "first-pack":
+        msg = f"unsupported preview command: {args.command}"
+        raise ValueError(msg)
+    pack = build_first_preview_pack(
+        dataset_path=args.dataset_path,
+        allowed_root=args.allowed_root,
+        artifact_root=args.artifact_root,
+        task=args.task,
+        max_images=args.max_images,
+    )
+    if args.format == "json":
+        content = json.dumps(pack, indent=2, sort_keys=True) + "\n"
+    elif args.format == "markdown":
+        content = render_first_preview_pack_markdown(pack)
+    else:
+        content = f"preview first-pack {pack['pack_status']} (renders_images={str(pack['renders_images']).lower()})\n"
+    if args.output is None:
+        return content
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text(content, encoding="utf-8")
+    return f"wrote preview first-pack to {args.output}\n"
 
 
 def _run_activation_cli(argv: list[str]) -> None:
@@ -328,6 +431,18 @@ def _add_evidence_packet_parsers(subparsers: Any) -> None:
     replay_fixture_pack.add_argument("--output-dir", type=Path, required=True)
     replay_fixture_pack.add_argument("--format", choices=["markdown", "json"], default="markdown")
 
+    collect = subparsers.add_parser(
+        "collect",
+        help="Build a no-write operator wizard for collecting real host evidence.",
+    )
+    collect.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    collect.add_argument("--host", choices=get_args(HostName), required=True)
+    collect.add_argument("--date", required=True)
+    collect.add_argument("--reviewer", required=True)
+    collect.add_argument("--output-dir", type=Path, default=Path("evidence-session"))
+    collect.add_argument("--artifact", default="docs/assets/demo/demo_report.md")
+    collect.add_argument("--format", choices=["text", "json"], default="text")
+
 
 def _add_evidence_doctor_parsers(subparsers: Any) -> None:
     doctor = subparsers.add_parser("doctor", help="Inspect P0 evidence gates and print remediation actions.")
@@ -359,6 +474,7 @@ def _handle_evidence_command(args: argparse.Namespace) -> str:
         "operator-packet": _handle_evidence_operator_packet,
         "packet-bundle": _handle_evidence_packet_bundle,
         "replay-fixture-pack": _handle_evidence_replay_fixture_pack,
+        "collect": _handle_evidence_collect,
         "import-artifacts": _handle_evidence_import_artifacts,
         "validate-import": _handle_evidence_validate_import,
         "session-manifest": _handle_evidence_session_manifest,
@@ -443,6 +559,25 @@ def _handle_evidence_replay_fixture_pack(args: argparse.Namespace) -> str:
     pack_path = args.output_dir / artifact["filename"]
     pack_path.write_text(artifact["content"], encoding="utf-8")
     return f"wrote evidence replay-fixture-pack to {pack_path}\n"
+
+
+def _handle_evidence_collect(args: argparse.Namespace) -> str:
+    wizard = build_evidence_collect_wizard(
+        EvidenceCollectWizardRequest(
+            host=args.host,
+            path=args.path,
+            run_date=args.date,
+            reviewer=args.reviewer,
+            output_dir=args.output_dir,
+            artifact_ref=args.artifact,
+        )
+    )
+    if args.format == "json":
+        return json.dumps(wizard, indent=2, sort_keys=True) + "\n"
+    return (
+        f"evidence collect {wizard['wizard_status']} for {args.host} "
+        f"(writes_records={str(wizard['writes_records']).lower()})\n"
+    )
 
 
 def _handle_evidence_import_artifacts(args: argparse.Namespace) -> str:
@@ -589,6 +724,12 @@ def _run_beta_cli(argv: list[str]) -> None:
     intake_wizard.add_argument("--participant-role", default="ML practitioner")
     intake_wizard.add_argument("--format", choices=["text", "json"], default="text")
 
+    loop_pack = subparsers.add_parser("loop-pack", help="Write a privacy-safe beta validation loop pack.")
+    loop_pack.add_argument("--path", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    loop_pack.add_argument("--output-dir", type=Path, required=True)
+    loop_pack.add_argument("--participant-role", default="ML practitioner")
+    loop_pack.add_argument("--format", choices=["markdown", "json"], default="markdown")
+
     _add_beta_response_parsers(subparsers)
 
     args = parser.parse_args(argv)
@@ -640,6 +781,7 @@ def _handle_beta_command(args: argparse.Namespace) -> str:
         "campaign-plan": _handle_beta_campaign_plan,
         "trial-pack": _handle_beta_trial_pack,
         "intake-wizard": _handle_beta_intake_wizard,
+        "loop-pack": _handle_beta_loop_pack,
         "response-validate": _handle_beta_response_validate,
         "response-import": _handle_beta_response_import,
         "response-import-dir": _handle_beta_response_import_dir,
@@ -724,6 +866,18 @@ def _handle_beta_intake_wizard(args: argparse.Namespace) -> str:
     if args.format == "json":
         return json.dumps(wizard, indent=2, sort_keys=True) + "\n"
     return f"beta intake-wizard {wizard['wizard_status']} for {args.workflow_id}\n"
+
+
+def _handle_beta_loop_pack(args: argparse.Namespace) -> str:
+    pack = build_beta_loop_pack_artifacts(
+        validate_beta_validation_records(args.path),
+        participant_role=args.participant_role,
+        output_format=args.format,
+    )
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    for artifact in pack["artifacts"]:
+        (args.output_dir / artifact["filename"]).write_text(artifact["content"], encoding="utf-8")
+    return f"wrote beta loop-pack with {pack['artifact_count']} artifacts to {args.output_dir}\n"
 
 
 def _handle_beta_response_validate(args: argparse.Namespace) -> str:

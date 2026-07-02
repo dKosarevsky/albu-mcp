@@ -1,11 +1,11 @@
 # Governed 100-Iteration Execution Report
 
 Requested iterations: `100`
-Executed iterations: `5`
-Stopped at iteration: `5`
+Executed iterations: `6`
+Stopped at iteration: `6`
 Stop reason: `current_priority_gate_blocked`
-Completed paths: `28`
-Completed plan points: `28`
+Completed paths: `34`
+Completed plan points: `34`
 
 ## Execution Policy
 
@@ -42,6 +42,12 @@ No blind implementation loop was executed.
 - Release Review Pack path: rc review-pack writes release owner review artifacts.
 - RC Go Check path: rc go-check reports no-go or manual-go-required without publishing.
 - Governed Loop path: the fifth requested follow-up loop stops at external evidence and beta gates.
+- Host Setup Probe path: host setup-probe gives one host-specific setup readiness lane.
+- Evidence Collect path: evidence collect packages the no-write real-host evidence operator wizard.
+- First Preview Pack path: preview first-pack gives a short no-render first-preview handoff.
+- README Diet path: README keeps only the short operator command path and links to detailed docs.
+- Beta Loop Pack path: beta loop-pack writes invite, privacy, import, status, and response templates.
+- Governed Loop path: the sixth requested follow-up loop stops at external evidence and beta gates.
 
 ## Completed Plan Points
 
@@ -73,6 +79,12 @@ No blind implementation loop was executed.
 26. Added rc review-pack for release owner review artifact directories.
 27. Added rc go-check for post-gate no-go or manual-go-required decisions.
 28. Stopped the fifth 100-iteration follow-up loop at the same external evidence and beta gates.
+29. Added host setup-probe CLI for host-specific readiness and blocking checks.
+30. Added evidence collect wizard for no-write real-host evidence capture.
+31. Added preview first-pack for a short no-render first-preview operator handoff.
+32. Slimmed README operator workflow and moved full command detail to USAGE.
+33. Added beta loop-pack for redacted external beta attempt collection.
+34. Stopped the sixth 100-iteration follow-up loop at the same external evidence and beta gates.
 
 ## Current External Gates
 
@@ -92,6 +104,8 @@ No generated packet, test fixture, or synthetic smoke output is counted as real 
 - `src/albumentationsx_mcp/activation.py`
 - `src/albumentationsx_mcp/evidence.py`
 - `src/albumentationsx_mcp/beta_validation.py`
+- `src/albumentationsx_mcp/first_preview.py`
+- `src/albumentationsx_mcp/host_setup.py`
 - `src/albumentationsx_mcp/intake.py`
 - `src/albumentationsx_mcp/release_review.py`
 - `src/albumentationsx_mcp/trust.py`
@@ -100,3 +114,4 @@ No generated packet, test fixture, or synthetic smoke output is counted as real 
 - `tests/test_evidence_closure_cli.py`
 - `tests/test_real_evidence_intake_cli.py`
 - `tests/test_intake_automation_cli.py`
+- `tests/test_real_use_unlock_cli.py`

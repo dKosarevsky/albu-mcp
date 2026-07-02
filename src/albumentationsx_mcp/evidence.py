@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shlex
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date
@@ -18,8 +19,8 @@ HOST_NAMES: tuple[HostName, ...] = ("Claude Desktop", "Claude Code", "Cursor", "
 P0_REQUIRED_HOSTS: tuple[HostName, ...] = ("Codex", "Claude Code")
 P0_REQUIRED_GATES: tuple[str, ...] = ("manual_host_ui", "first_10_minutes_replay")
 _NON_FABRICATION_POLICY = (
-    "Record passed only after a reviewer observes the real MCP host UI flow; generated smoke output alone is not "
-    "accepted as P0 evidence."
+    "Record passed only after a reviewer observes the real MCP host UI flow with reviewer-observed real MCP host UI "
+    "evidence; generated smoke output alone is not accepted as P0 evidence."
 )
 _SYNTHETIC_ONLY_MARKERS = ("generated smoke", "smoke output only", "synthetic", "no reviewer-observed")
 
@@ -79,6 +80,18 @@ class EvidenceArtifactImport:
     evidence: str
     artifacts: list[str]
     confirm_real_host_observed: bool = False
+
+
+@dataclass(frozen=True)
+class EvidenceCollectWizardRequest:
+    """Inputs for one no-write real-host evidence collection wizard."""
+
+    host: HostName
+    run_date: str
+    reviewer: str
+    path: Path = Path("docs/HOST_MANUAL_RUNS.json")
+    output_dir: Path = Path("evidence-session")
+    artifact_ref: str = "docs/assets/demo/demo_report.md"
 
 
 class EvidenceSessionManifest(BaseModel):
@@ -203,6 +216,31 @@ def build_evidence_session_plan(
                 f"--host {host!r} --status blocked --date YYYY-MM-DD --evidence '...'"
             ),
         },
+    }
+
+
+def build_evidence_collect_wizard(request: EvidenceCollectWizardRequest) -> dict[str, Any]:
+    """Build one no-write operator path for collecting real host evidence."""
+    date.fromisoformat(request.run_date)
+    records = validate_host_manual_runs(request.path) if request.path.exists() else HostManualRuns()
+    host_status = _host_gate_status(host=request.host, records=records)
+    wizard_status = "ready_for_rc_review" if host_status["overall_status"] == "passed" else "operator_run_required"
+    return {
+        "wizard_status": wizard_status,
+        "host": request.host,
+        "records_path": str(request.path),
+        "run_date": request.run_date,
+        "reviewer": request.reviewer,
+        "writes_records": False,
+        "current_host_status": host_status,
+        "non_fabrication_policy": _NON_FABRICATION_POLICY,
+        "steps": _collect_wizard_steps(request),
+        "next_actions": [
+            "Run the setup probe from the same shell or app context that starts the real MCP host.",
+            "Continue only after a reviewer observes the real MCP host UI and first-preview replay.",
+            "Run validate-manifest before import-artifacts; import-artifacts is the first command that writes records.",
+            "Run privacy-doctor and rc go-check after any real evidence import.",
+        ],
     }
 
 
@@ -724,6 +762,76 @@ def _operator_steps(host: HostName) -> list[dict[str, str]]:
             "action": "Run import-artifacts only after the reviewer observed the real host UI session.",
         },
     ]
+
+
+def _collect_wizard_steps(request: EvidenceCollectWizardRequest) -> list[dict[str, str | bool]]:
+    host_arg = _quote_cli(request.host)
+    output_arg = _quote_cli(str(request.output_dir))
+    path_arg = _quote_cli(str(request.path))
+    artifact_arg = _quote_cli(request.artifact_ref)
+    reviewer_arg = _quote_cli(request.reviewer)
+    manifest_path = f"{output_arg}/{_host_slug(request.host)}-evidence-session-manifest.json"
+    return [
+        {
+            "code": "setup_probe",
+            "writes_records": False,
+            "command": f"albu-mcp host setup-probe --host {host_arg} --live --format json",
+            "expected_result": "probe_status is passed or blocking checks are explicit.",
+        },
+        {
+            "code": "host_smoke",
+            "writes_records": False,
+            "command": "run_host_smoke_check",
+            "expected_result": "preview_ready=true in the real MCP host UI.",
+        },
+        {
+            "code": "first_preview_replay",
+            "writes_records": False,
+            "command": "Follow docs/FIRST_10_MINUTES.md in the real MCP host UI.",
+            "expected_result": "reviewer-observed first-preview replay artifact refs.",
+        },
+        {
+            "code": "session_manifest",
+            "writes_records": False,
+            "command": (
+                f"albu-mcp evidence session-manifest --host {host_arg} --date {request.run_date} "
+                f"--reviewer {reviewer_arg} --output-dir {output_arg} --format json"
+            ),
+            "expected_result": "filled evidence session manifest with redacted artifact refs.",
+        },
+        {
+            "code": "validate_manifest",
+            "writes_records": False,
+            "command": f"albu-mcp evidence validate-manifest --input {manifest_path} --path {path_arg} --format json",
+            "expected_result": "validation_status is ready_to_import.",
+        },
+        {
+            "code": "import_artifacts",
+            "writes_records": True,
+            "command": (
+                f"albu-mcp evidence import-artifacts --host {host_arg} --status passed --date {request.run_date} "
+                f"--evidence 'reviewer observed real MCP host UI and first-10-minutes replay' "
+                f"--artifact {artifact_arg} --confirm-real-host-observed --path {path_arg}"
+            ),
+            "expected_result": "manual_host_ui and first_10_minutes_replay records are written.",
+        },
+        {
+            "code": "privacy_doctor",
+            "writes_records": False,
+            "command": f"albu-mcp evidence privacy-doctor --path {path_arg} --format json",
+            "expected_result": "privacy_status is ready.",
+        },
+        {
+            "code": "rc_go_check",
+            "writes_records": False,
+            "command": "albu-mcp rc go-check --format json",
+            "expected_result": "go_decision reflects current real evidence and beta records.",
+        },
+    ]
+
+
+def _quote_cli(value: str) -> str:
+    return shlex.quote(value)
 
 
 def _session_manifest_commands(host: HostName) -> list[str]:

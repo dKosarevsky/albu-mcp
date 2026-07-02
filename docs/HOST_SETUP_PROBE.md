@@ -2,8 +2,13 @@
 
 Probe status: `manual_probe_required`
 Live probe: `false`
+Writes records: `false`
 Allowed root: `/absolute/path/to/images`
 Artifact root: `/absolute/path/to/albu-artifacts`
+
+## Non-Evidence Policy
+
+Setup probes only validate local readiness. They do not record P0 evidence or replace reviewer-observed real MCP host UI runs.
 
 ## Summary
 
@@ -26,18 +31,19 @@ Artifact root: `/absolute/path/to/albu-artifacts`
 
 ## Host Lanes
 
-| Host | Setup Doc | Required Checks |
-| --- | --- | --- |
-| Codex | `examples/codex_preview_mcp_config.toml` | `uvx`, `allowed_root`, `artifact_root`, `package_command`, `bounded_roots` |
-| Claude Code | `examples/claude_code_preview_command.md` | `uvx`, `claude_cli`, `allowed_root`, `artifact_root`, `package_command`, `bounded_roots` |
-| Cursor | `examples/cursor_preview_mcp_config.json` | `uvx`, `allowed_root`, `artifact_root`, `package_command`, `bounded_roots` |
-| Claude Desktop | `examples/claude_desktop_preview_config.json` | `uvx`, `allowed_root`, `artifact_root`, `package_command`, `bounded_roots` |
+| Host | Setup Doc | Operator Command | Required Checks | Blocking Checks | Next Action |
+| --- | --- | --- | --- | --- | --- |
+| Codex | `examples/codex_preview_mcp_config.toml` | `uvx --from albumentationsx-mcp albumentationsx-mcp` | `uvx`, `allowed_root`, `artifact_root`, `package_command`, `bounded_roots` | `none` | `run_evidence_collect` |
+| Claude Code | `examples/claude_code_preview_command.md` | `claude mcp add albumentationsx -- uvx --from albumentationsx-mcp albumentationsx-mcp` | `uvx`, `claude_cli`, `allowed_root`, `artifact_root`, `package_command`, `bounded_roots` | `none` | `run_evidence_collect` |
+| Cursor | `examples/cursor_preview_mcp_config.json` | `uvx --from albumentationsx-mcp albumentationsx-mcp` | `uvx`, `allowed_root`, `artifact_root`, `package_command`, `bounded_roots` | `none` | `run_evidence_collect` |
+| Claude Desktop | `examples/claude_desktop_preview_config.json` | `uvx --from albumentationsx-mcp albumentationsx-mcp` | `uvx`, `allowed_root`, `artifact_root`, `package_command`, `bounded_roots` | `none` | `run_evidence_collect` |
 
 ## Post-Probe Commands
 
 - `uv run python scripts/check_host_setup_probe.py --live --format json`
+- `albu-mcp host setup-probe --live --format json`
 - `uv run python scripts/check_p0_host_run_preflight.py`
-- `uv run python scripts/check_host_setup_probe.py --output docs/HOST_SETUP_PROBE.md`
+- `albu-mcp evidence collect --host Codex --format json`
 - `uv run python scripts/check_release_readiness.py`
 
 ## Source Docs

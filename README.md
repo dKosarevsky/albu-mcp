@@ -51,7 +51,17 @@ trial is [docs/FIRST_10_MINUTES.md](docs/FIRST_10_MINUTES.md).
 
 ## Operator CLI
 
-Full operator command details are in [docs/USAGE.md](docs/USAGE.md). Current blocked RC path: `albu-mcp intake bundle`, `albu-mcp activation command-center`, `albu-mcp activation runbook`, `albu-mcp evidence run-session`, `albu-mcp evidence execution-packet`, `albu-mcp evidence operator-packet`, `albu-mcp evidence packet-bundle`, `albu-mcp evidence replay-fixture-pack`, `albu-mcp evidence session-manifest`, `albu-mcp evidence validate-manifest`, `albu-mcp evidence import-checklist`, `albu-mcp evidence validate-import`, `albu-mcp evidence privacy-doctor`, `albu-mcp evidence artifact-doctor`, `albu-mcp evidence unblock-plan`, `albu-mcp evidence doctor`, `albu-mcp evidence record-host-ui`, `albu-mcp evidence status`, `albu-mcp beta campaign-plan`, `albu-mcp beta trial-pack`, `albu-mcp beta intake-wizard`, `albu-mcp beta response-validate`, `albu-mcp beta response-import`, `albu-mcp beta response-import-dir`, `albu-mcp beta response-template`, `albu-mcp beta record-attempt`, `albu-mcp beta triage --format json`, `albu-mcp beta report`, `albu-mcp rc reopen`, `albu-mcp rc rehearse`, `albu-mcp rc candidate-packet`, `albu-mcp rc release-owner-packet`, `albu-mcp rc review-pack`, `albu-mcp rc go-check`, `albu-mcp distribution readiness`, `albu-mcp trust audit`, `albu-mcp trust next`, `albu-mcp trust dashboard`, and `albu-mcp trust gate-transition`.
+Full command details are in [docs/USAGE.md](docs/USAGE.md). The shortest real-use operator path is:
+
+```bash
+albu-mcp host setup-probe --host Codex --live --format json
+albu-mcp preview first-pack --dataset-path /absolute/path/to/images --allowed-root /absolute/path/to --artifact-root /absolute/path/to/albu-artifacts --format json
+albu-mcp evidence collect --host Codex --date YYYY-MM-DD --reviewer "Release operator" --format json
+albu-mcp intake bundle --output-dir docs/intake-bundle --format markdown
+albu-mcp beta loop-pack --output-dir docs/beta-loop --format markdown
+albu-mcp rc go-check --format json
+```
+
 Inside MCP hosts, use `plan_augmentation_policy`, `plan_augmentation_policy_candidates`, or `plan_policy_iteration` before rendering and reviewing contact sheets. Generated fixtures and packets are not P0 evidence.
 
 ## Host Workflow

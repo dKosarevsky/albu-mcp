@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 WorkflowId = Literal["robustness_distortion_variants", "noisy_preview_tuning", "dataset_health_before_training"]
 TriageBucket = Literal["host_setup_gap", "review_agent_v3_gap", "dataset_quality_gap", "docs_gap", "workflow_fit_gap"]
 ValidationStatus = Literal["passed", "blocked", "needs_followup"]
+BetaLoopPackFormat = Literal["markdown", "json"]
 _WORKFLOW_IDS: tuple[WorkflowId, ...] = (
     "dataset_health_before_training",
     "noisy_preview_tuning",
@@ -338,6 +339,41 @@ def build_beta_campaign_plan(
     }
 
 
+def build_beta_loop_pack_artifacts(
+    records: BetaValidationRecords,
+    *,
+    participant_role: str = "ML practitioner",
+    output_format: BetaLoopPackFormat = "markdown",
+) -> dict[str, Any]:
+    """Build a privacy-safe beta loop packet without writing validation records."""
+    triage = build_beta_attempt_triage(records)
+    template_artifacts = build_beta_response_template_artifacts(participant_role=participant_role)
+    artifacts = [
+        _beta_loop_index_artifact(
+            triage=triage,
+            template_artifacts=template_artifacts,
+            output_format=output_format,
+        ),
+        _beta_invite_copy_artifact(participant_role=participant_role, output_format=output_format),
+        _beta_privacy_checklist_artifact(output_format=output_format),
+        _beta_import_instructions_artifact(output_format=output_format),
+        _beta_status_summary_artifact(triage=triage, output_format=output_format),
+        *template_artifacts,
+    ]
+    return {
+        "pack_status": triage["triage_status"],
+        "writes_records": False,
+        "privacy_policy": "redacted_only",
+        "artifact_count": len(artifacts),
+        "artifacts": artifacts,
+        "next_actions": [
+            "Send beta-invite-copy.md with one workflow-specific response template.",
+            "Import only filled redacted templates with albu-mcp beta response-import-dir.",
+            "Rerun albu-mcp beta report --format json after importing real beta attempts.",
+        ],
+    }
+
+
 def build_beta_trial_pack(
     *,
     workflow_id: WorkflowId,
@@ -532,6 +568,130 @@ def _campaign_next_actions(*, product_depth_allowed: bool) -> list[str]:
         "Record only redacted summaries and safe artifact references.",
         "Rerun albu-mcp beta report before opening product-depth implementation.",
     ]
+
+
+def _beta_loop_index_artifact(
+    *,
+    triage: dict[str, Any],
+    template_artifacts: list[dict[str, str]],
+    output_format: BetaLoopPackFormat,
+) -> dict[str, str]:
+    payload = {
+        "pack_status": triage["triage_status"],
+        "writes_records": False,
+        "privacy_policy": "redacted_only",
+        "purpose": "Collect redacted beta attempts without private datasets, tokens, screenshots, or full host logs.",
+        "template_files": [artifact["filename"] for artifact in template_artifacts],
+        "summary": triage["summary"],
+    }
+    content = (
+        json.dumps(payload, indent=2, sort_keys=True) + "\n"
+        if output_format == "json"
+        else _render_beta_loop_index_markdown(payload)
+    )
+    return {"filename": f"beta-loop-index.{_beta_loop_extension(output_format)}", "content": content}
+
+
+def _beta_invite_copy_artifact(*, participant_role: str, output_format: BetaLoopPackFormat) -> dict[str, str]:
+    payload = {
+        "participant_role": participant_role,
+        "message": (
+            "Try AlbumentationsX MCP on a small local image folder. Keep data private and return only a redacted "
+            "workflow summary plus safe generated artifact refs."
+        ),
+        "workflow_ids": list(_WORKFLOW_IDS),
+    }
+    content = (
+        json.dumps(payload, indent=2, sort_keys=True) + "\n"
+        if output_format == "json"
+        else (
+            "# Beta Invite Copy\n\n"
+            f"Participant role: `{participant_role}`\n\n"
+            f"{payload['message']}\n\n"
+            "## Workflows\n\n" + "\n".join(f"- `{workflow_id}`" for workflow_id in _WORKFLOW_IDS) + "\n"
+        )
+    )
+    return {"filename": f"beta-invite-copy.{_beta_loop_extension(output_format)}", "content": content}
+
+
+def _beta_privacy_checklist_artifact(*, output_format: BetaLoopPackFormat) -> dict[str, str]:
+    checklist = [
+        "Do not collect private datasets, tokens, screenshots, or full host logs.",
+        "Replace local paths and dataset names with redacted descriptions.",
+        "Use private_data_included=false only after checking every field.",
+        "Link only safe generated artifacts or committed docs assets.",
+    ]
+    payload = {"privacy_policy": "redacted_only", "checklist": checklist}
+    content = (
+        json.dumps(payload, indent=2, sort_keys=True) + "\n"
+        if output_format == "json"
+        else "# Beta Privacy Checklist\n\n" + "\n".join(f"- {item}" for item in checklist) + "\n"
+    )
+    return {"filename": f"beta-privacy-checklist.{_beta_loop_extension(output_format)}", "content": content}
+
+
+def _beta_import_instructions_artifact(*, output_format: BetaLoopPackFormat) -> dict[str, str]:
+    commands = [
+        "albu-mcp beta response-validate --input filled-beta-response.json --format json",
+        "albu-mcp beta response-import-dir --input-dir docs/beta-loop --format json",
+        "albu-mcp beta report --format json",
+        "albu-mcp trust dashboard --format markdown",
+    ]
+    payload = {"writes_records_command": commands[1], "commands": commands}
+    content = (
+        json.dumps(payload, indent=2, sort_keys=True) + "\n"
+        if output_format == "json"
+        else "# Beta Import Instructions\n\n```bash\n" + "\n".join(commands) + "\n```\n"
+    )
+    return {"filename": f"beta-import-instructions.{_beta_loop_extension(output_format)}", "content": content}
+
+
+def _beta_status_summary_artifact(*, triage: dict[str, Any], output_format: BetaLoopPackFormat) -> dict[str, str]:
+    payload = {
+        "pack_status": triage["triage_status"],
+        "product_depth_allowed": triage["product_depth_allowed"],
+        "summary": triage["summary"],
+        "next_actions": triage["next_actions"],
+    }
+    content = (
+        json.dumps(payload, indent=2, sort_keys=True) + "\n"
+        if output_format == "json"
+        else _render_beta_status_summary_markdown(payload)
+    )
+    return {"filename": f"beta-status-summary.{_beta_loop_extension(output_format)}", "content": content}
+
+
+def _render_beta_loop_index_markdown(payload: dict[str, Any]) -> str:
+    template_files = "\n".join(f"- `{filename}`" for filename in payload["template_files"])
+    summary = "\n".join(f"- {key}: `{value}`" for key, value in payload["summary"].items())
+    return (
+        "# Beta Loop Index\n\n"
+        f"Pack status: `{payload['pack_status']}`\n\n"
+        f"Writes records: `{str(payload['writes_records']).lower()}`\n\n"
+        "Use this pack to collect redacted beta attempts without private datasets.\n\n"
+        "## Summary\n\n"
+        f"{summary}\n\n"
+        "## Template Files\n\n"
+        f"{template_files}\n"
+    )
+
+
+def _render_beta_status_summary_markdown(payload: dict[str, Any]) -> str:
+    summary = "\n".join(f"- {key}: `{value}`" for key, value in payload["summary"].items())
+    next_actions = "\n".join(f"- {action}" for action in payload["next_actions"])
+    return (
+        "# Beta Status Summary\n\n"
+        f"Pack status: `{payload['pack_status']}`\n\n"
+        f"Product depth allowed: `{str(payload['product_depth_allowed']).lower()}`\n\n"
+        "## Summary\n\n"
+        f"{summary}\n\n"
+        "## Next Actions\n\n"
+        f"{next_actions}\n"
+    )
+
+
+def _beta_loop_extension(output_format: BetaLoopPackFormat) -> str:
+    return "md" if output_format == "markdown" else "json"
 
 
 def _beta_response_template_artifact(
