@@ -93,6 +93,65 @@ def render_combined_proof_sprint_markdown(report: dict[str, Any]) -> str:
     return _render_index_markdown(report)
 
 
+def build_proof_execution_workspace(
+    *,
+    host_records_path: Path = Path("docs/HOST_MANUAL_RUNS.json"),
+    beta_records_path: Path = Path("docs/BETA_VALIDATION_RECORDS.json"),
+    release_tag: str = "v1.15.0-rc.1",
+) -> dict[str, Any]:
+    """Build one no-write workspace for executing the external proof sprint."""
+    proof_sprint = build_combined_proof_sprint(
+        host_records_path=host_records_path,
+        beta_records_path=beta_records_path,
+        release_tag=release_tag,
+    )
+    real_host_point = _point_by_id(proof_sprint, "real_host_evidence_sprint")
+    beta_point = _point_by_id(proof_sprint, "beta_validation_sprint")
+    steps = [
+        _execution_workspace_step(),
+        _execution_point_step(
+            step_id="real_host_execution",
+            source_point=real_host_point,
+            next_commands=[
+                "albu-mcp activation proof-sprint",
+                "albu-mcp evidence session-folder",
+                "albu-mcp evidence import-manifest",
+            ],
+        ),
+        _execution_point_step(
+            step_id="beta_execution",
+            source_point=beta_point,
+            next_commands=[
+                "albu-mcp beta loop-pack",
+                "albu-mcp beta response-import-dir",
+                "albu-mcp beta report",
+            ],
+        ),
+    ]
+    blocked = any(step["status"].startswith("blocked") for step in steps)
+    return {
+        "workspace_status": "blocked" if blocked else "ready",
+        "writes_records": False,
+        "release_tag": release_tag,
+        "host_records_path": str(host_records_path),
+        "beta_records_path": str(beta_records_path),
+        "step_count": len(steps),
+        "steps": steps,
+        "next_action": "run_workspace_artifacts" if blocked else "run_rc_go_check",
+        "non_fabrication_policy": (
+            "Generated execution workspace files do not count as evidence. Only reviewer-observed real MCP host "
+            "sessions and privacy-safe external beta attempts may close the remaining gates."
+        ),
+        "source_docs": [
+            "docs/GOVERNED_100_ITERATION_REPORT.md",
+            "docs/USAGE.md",
+            "docs/P0_EVIDENCE_IMPORT_GUIDE.md",
+            "docs/BETA_VALIDATION_SPRINT.md",
+            OFFICIAL_ALBUMENTATIONS_MCP_DOCS_URL,
+        ],
+    }
+
+
 def _real_host_evidence_point(*, blocked: bool) -> dict[str, Any]:
     return {
         "id": "real_host_evidence_sprint",
@@ -156,6 +215,45 @@ def _host_onboarding_depth_point(*, implementation_allowed: bool, host_probe: di
             "docs/HOST_FAILURE_COOKBOOK.md",
             "docs/P0_HOST_UNBLOCK_PACK.md",
         ],
+    }
+
+
+def _point_by_id(report: dict[str, Any], point_id: str) -> dict[str, Any]:
+    for point in report["points"]:
+        if point["id"] == point_id:
+            return point
+    msg = f"missing proof sprint point: {point_id}"
+    raise ValueError(msg)
+
+
+def _execution_workspace_step() -> dict[str, Any]:
+    return {
+        "id": "execution_workspace",
+        "title": "Proof execution workspace",
+        "status": "ready_to_write_artifacts",
+        "implementation_allowed": False,
+        "goal": "Write one operator folder for real host evidence, beta validation, and depth gate review.",
+        "next_commands": [
+            "albu-mcp activation execution-workspace --output-dir docs/proof-execution --format markdown",
+        ],
+    }
+
+
+def _execution_point_step(
+    *,
+    step_id: str,
+    source_point: dict[str, Any],
+    next_commands: list[str],
+) -> dict[str, Any]:
+    return {
+        "id": step_id,
+        "title": source_point["title"],
+        "status": source_point["status"],
+        "implementation_allowed": source_point["implementation_allowed"],
+        "goal": source_point["goal"],
+        "success_signal": source_point["success_signal"],
+        "next_commands": next_commands,
+        "source_links": source_point["source_links"],
     }
 
 
