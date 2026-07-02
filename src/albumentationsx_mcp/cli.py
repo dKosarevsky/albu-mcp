@@ -79,7 +79,10 @@ from albumentationsx_mcp.intake import build_intake_bundle_artifacts
 from albumentationsx_mcp.proof_sprint import (
     build_combined_proof_sprint,
     build_combined_proof_sprint_artifacts,
+    build_proof_execution_workspace,
+    build_proof_execution_workspace_artifacts,
     render_combined_proof_sprint_markdown,
+    render_proof_execution_workspace_markdown,
 )
 from albumentationsx_mcp.rc_reopen import (
     build_rc_candidate_packet,
@@ -296,6 +299,16 @@ def _run_activation_cli(argv: list[str]) -> None:
     proof_sprint.add_argument("--output-dir", type=Path, default=None)
     proof_sprint.add_argument("--format", choices=["text", "json", "markdown"], default="text")
 
+    execution_workspace = subparsers.add_parser(
+        "execution-workspace",
+        help="Build a no-write proof execution workspace.",
+    )
+    execution_workspace.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    execution_workspace.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    execution_workspace.add_argument("--release-tag", default="v1.15.0-rc.1")
+    execution_workspace.add_argument("--output-dir", type=Path, default=None)
+    execution_workspace.add_argument("--format", choices=["text", "json", "markdown"], default="text")
+
     args = parser.parse_args(argv)
     try:
         sys.stdout.write(_handle_activation_command(args))
@@ -305,6 +318,8 @@ def _run_activation_cli(argv: list[str]) -> None:
 
 
 def _handle_activation_command(args: argparse.Namespace) -> str:
+    if args.command == "execution-workspace":
+        return _handle_activation_execution_workspace(args)
     if args.command == "proof-sprint":
         return _handle_activation_proof_sprint(args)
     if args.command == "runbook":
@@ -319,6 +334,30 @@ def _handle_activation_command(args: argparse.Namespace) -> str:
             return render_manual_evidence_runbook_markdown(report)
         return f"activation runbook {report['runbook_status']} (release_tag={report['release_tag']})\n"
     return _handle_activation_command_center(args)
+
+
+def _handle_activation_execution_workspace(args: argparse.Namespace) -> str:
+    if args.output_dir is not None:
+        pack = build_proof_execution_workspace_artifacts(
+            host_records_path=args.host_records,
+            beta_records_path=args.beta_records,
+            release_tag=args.release_tag,
+            output_format=args.format,
+        )
+        args.output_dir.mkdir(parents=True, exist_ok=True)
+        for artifact in pack["artifacts"]:
+            (args.output_dir / artifact["filename"]).write_text(artifact["content"], encoding="utf-8")
+        return f"wrote activation execution-workspace with {pack['artifact_count']} artifacts to {args.output_dir}\n"
+    report = build_proof_execution_workspace(
+        host_records_path=args.host_records,
+        beta_records_path=args.beta_records,
+        release_tag=args.release_tag,
+    )
+    if args.format == "json":
+        return json.dumps(report, indent=2, sort_keys=True) + "\n"
+    if args.format == "markdown":
+        return render_proof_execution_workspace_markdown(report)
+    return f"activation execution-workspace {report['workspace_status']} (steps={report['step_count']})\n"
 
 
 def _handle_activation_proof_sprint(args: argparse.Namespace) -> str:

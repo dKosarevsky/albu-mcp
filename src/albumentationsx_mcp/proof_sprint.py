@@ -93,6 +93,118 @@ def render_combined_proof_sprint_markdown(report: dict[str, Any]) -> str:
     return _render_index_markdown(report)
 
 
+def build_proof_execution_workspace(
+    *,
+    host_records_path: Path = Path("docs/HOST_MANUAL_RUNS.json"),
+    beta_records_path: Path = Path("docs/BETA_VALIDATION_RECORDS.json"),
+    release_tag: str = "v1.15.0-rc.1",
+) -> dict[str, Any]:
+    """Build one no-write workspace for executing the external proof sprint."""
+    proof_sprint = build_combined_proof_sprint(
+        host_records_path=host_records_path,
+        beta_records_path=beta_records_path,
+        release_tag=release_tag,
+    )
+    real_host_point = _point_by_id(proof_sprint, "real_host_evidence_sprint")
+    beta_point = _point_by_id(proof_sprint, "beta_validation_sprint")
+    steps = [
+        _execution_workspace_step(),
+        _execution_point_step(
+            step_id="real_host_execution",
+            source_point=real_host_point,
+            next_commands=[
+                "albu-mcp activation proof-sprint",
+                "albu-mcp evidence session-folder",
+                "albu-mcp evidence import-manifest",
+            ],
+        ),
+        _execution_point_step(
+            step_id="beta_execution",
+            source_point=beta_point,
+            next_commands=[
+                "albu-mcp beta loop-pack",
+                "albu-mcp beta response-import-dir",
+                "albu-mcp beta report",
+            ],
+        ),
+    ]
+    blocked = any(step["status"].startswith("blocked") for step in steps)
+    return {
+        "workspace_status": "blocked" if blocked else "ready",
+        "writes_records": False,
+        "release_tag": release_tag,
+        "host_records_path": str(host_records_path),
+        "beta_records_path": str(beta_records_path),
+        "step_count": len(steps),
+        "steps": steps,
+        "next_action": "run_workspace_artifacts" if blocked else "run_rc_go_check",
+        "non_fabrication_policy": (
+            "Generated execution workspace files do not count as evidence. Only reviewer-observed real MCP host "
+            "sessions and privacy-safe external beta attempts may close the remaining gates."
+        ),
+        "source_docs": [
+            "docs/GOVERNED_100_ITERATION_REPORT.md",
+            "docs/USAGE.md",
+            "docs/P0_EVIDENCE_IMPORT_GUIDE.md",
+            "docs/BETA_VALIDATION_SPRINT.md",
+            OFFICIAL_ALBUMENTATIONS_MCP_DOCS_URL,
+        ],
+    }
+
+
+def build_proof_execution_workspace_artifacts(
+    *,
+    host_records_path: Path = Path("docs/HOST_MANUAL_RUNS.json"),
+    beta_records_path: Path = Path("docs/BETA_VALIDATION_RECORDS.json"),
+    release_tag: str = "v1.15.0-rc.1",
+    output_format: str = "markdown",
+) -> dict[str, Any]:
+    """Build a no-write proof execution workspace artifact folder."""
+    workspace = build_proof_execution_workspace(
+        host_records_path=host_records_path,
+        beta_records_path=beta_records_path,
+        release_tag=release_tag,
+    )
+    proof_sprint = build_combined_proof_sprint(
+        host_records_path=host_records_path,
+        beta_records_path=beta_records_path,
+        release_tag=release_tag,
+    )
+    artifacts = [
+        _workspace_index_artifact(workspace=workspace, output_format=output_format),
+        _workspace_step_artifact(
+            filename_stem="real-host-execution-handoff",
+            step=_workspace_step_by_id(workspace, "real_host_execution"),
+            output_format=output_format,
+        ),
+        _workspace_step_artifact(
+            filename_stem="beta-execution-handoff",
+            step=_workspace_step_by_id(workspace, "beta_execution"),
+            output_format=output_format,
+        ),
+        _host_onboarding_gate_artifact(
+            point=_point_by_id(proof_sprint, "host_onboarding_depth"),
+            output_format=output_format,
+        ),
+    ]
+    return {
+        "pack_status": workspace["workspace_status"],
+        "writes_records": False,
+        "artifact_count": len(artifacts),
+        "artifacts": artifacts,
+        "next_actions": [
+            "Run the real-host execution handoff before importing any evidence.",
+            "Run the beta execution handoff with redacted external participant responses.",
+            "Keep host onboarding depth blocked until external gates open.",
+        ],
+    }
+
+
+def render_proof_execution_workspace_markdown(workspace: dict[str, Any]) -> str:
+    """Render the proof execution workspace index as Markdown."""
+    return _render_workspace_index_markdown(workspace)
+
+
 def _real_host_evidence_point(*, blocked: bool) -> dict[str, Any]:
     return {
         "id": "real_host_evidence_sprint",
@@ -157,6 +269,127 @@ def _host_onboarding_depth_point(*, implementation_allowed: bool, host_probe: di
             "docs/P0_HOST_UNBLOCK_PACK.md",
         ],
     }
+
+
+def _point_by_id(report: dict[str, Any], point_id: str) -> dict[str, Any]:
+    for point in report["points"]:
+        if point["id"] == point_id:
+            return point
+    msg = f"missing proof sprint point: {point_id}"
+    raise ValueError(msg)
+
+
+def _execution_workspace_step() -> dict[str, Any]:
+    return {
+        "id": "execution_workspace",
+        "title": "Proof execution workspace",
+        "status": "ready_to_write_artifacts",
+        "implementation_allowed": False,
+        "goal": "Write one operator folder for real host evidence, beta validation, and depth gate review.",
+        "next_commands": [
+            "albu-mcp activation execution-workspace --output-dir docs/proof-execution --format markdown",
+        ],
+    }
+
+
+def _execution_point_step(
+    *,
+    step_id: str,
+    source_point: dict[str, Any],
+    next_commands: list[str],
+) -> dict[str, Any]:
+    return {
+        "id": step_id,
+        "title": source_point["title"],
+        "status": source_point["status"],
+        "implementation_allowed": source_point["implementation_allowed"],
+        "goal": source_point["goal"],
+        "success_signal": source_point["success_signal"],
+        "next_commands": next_commands,
+        "source_links": source_point["source_links"],
+    }
+
+
+def _workspace_step_by_id(workspace: dict[str, Any], step_id: str) -> dict[str, Any]:
+    for step in workspace["steps"]:
+        if step["id"] == step_id:
+            return step
+    msg = f"missing execution workspace step: {step_id}"
+    raise ValueError(msg)
+
+
+def _workspace_index_artifact(*, workspace: dict[str, Any], output_format: str) -> dict[str, str]:
+    content = json_dumps(workspace) if output_format == "json" else _render_workspace_index_markdown(workspace)
+    return {"filename": f"proof-execution-workspace-index.{_extension(output_format)}", "content": content}
+
+
+def _workspace_step_artifact(
+    *,
+    filename_stem: str,
+    step: dict[str, Any],
+    output_format: str,
+) -> dict[str, str]:
+    content = json_dumps(step) if output_format == "json" else _render_workspace_step_markdown(step)
+    return {"filename": f"{filename_stem}.{_extension(output_format)}", "content": content}
+
+
+def _host_onboarding_gate_artifact(*, point: dict[str, Any], output_format: str) -> dict[str, str]:
+    content = json_dumps(point) if output_format == "json" else _render_host_onboarding_gate_markdown(point)
+    return {"filename": f"host-onboarding-depth-gate.{_extension(output_format)}", "content": content}
+
+
+def _render_workspace_index_markdown(workspace: dict[str, Any]) -> str:
+    steps = "\n".join(
+        f"- `{step['id']}`: `{step['status']}`; implementation_allowed=`{str(step['implementation_allowed']).lower()}`"
+        for step in workspace["steps"]
+    )
+    sources = "\n".join(f"- {source}" for source in workspace["source_docs"])
+    return (
+        "# Proof Execution Workspace\n\n"
+        f"Release tag: `{workspace['release_tag']}`\n\n"
+        f"Workspace status: `{workspace['workspace_status']}`\n\n"
+        f"Writes records: `{str(workspace['writes_records']).lower()}`\n\n"
+        f"Next action: `{workspace['next_action']}`\n\n"
+        "## Non-Fabrication Policy\n\n"
+        f"{workspace['non_fabrication_policy']}\n\n"
+        "## Steps\n\n"
+        f"{steps}\n\n"
+        "## Source Docs\n\n"
+        f"{sources}\n"
+    )
+
+
+def _render_workspace_step_markdown(step: dict[str, Any]) -> str:
+    commands = "\n".join(f"- `{command}`" for command in step["next_commands"])
+    links = "\n".join(f"- {link}" for link in step.get("source_links", []))
+    return (
+        f"# {step['title']}\n\n"
+        f"Status: `{step['status']}`\n\n"
+        f"Implementation allowed: `{str(step['implementation_allowed']).lower()}`\n\n"
+        f"Goal: {step['goal']}\n\n"
+        f"Success signal: {step.get('success_signal', 'workspace artifacts are ready for operator execution')}\n\n"
+        "## Next Commands\n\n"
+        f"{commands}\n\n"
+        "## Source Links\n\n"
+        f"{links}\n"
+    )
+
+
+def _render_host_onboarding_gate_markdown(point: dict[str, Any]) -> str:
+    commands = "\n".join(f"- `{command}`" for command in point["next_commands"])
+    links = "\n".join(f"- {link}" for link in point["source_links"])
+    return (
+        "# Host onboarding depth gate\n\n"
+        f"Status: `{point['status']}`\n\n"
+        f"Implementation allowed: `{str(point['implementation_allowed']).lower()}`\n\n"
+        "Depth work stays blocked until P0 real-host evidence and beta validation external gates are open.\n\n"
+        f"Goal: {point['goal']}\n\n"
+        f"Success signal: {point['success_signal']}\n\n"
+        "## Next Commands\n\n"
+        f"{commands}\n\n"
+        "## Source Links\n\n"
+        f"{links}\n"
+    )
 
 
 def _index_artifact(*, report: dict[str, Any], output_format: str) -> dict[str, str]:
