@@ -80,7 +80,9 @@ from albumentationsx_mcp.proof_sprint import (
     build_combined_proof_sprint,
     build_combined_proof_sprint_artifacts,
     build_proof_execution_workspace,
+    build_proof_execution_workspace_artifacts,
     render_combined_proof_sprint_markdown,
+    render_proof_execution_workspace_markdown,
 )
 from albumentationsx_mcp.rc_reopen import (
     build_rc_candidate_packet,
@@ -335,6 +337,17 @@ def _handle_activation_command(args: argparse.Namespace) -> str:
 
 
 def _handle_activation_execution_workspace(args: argparse.Namespace) -> str:
+    if args.output_dir is not None:
+        pack = build_proof_execution_workspace_artifacts(
+            host_records_path=args.host_records,
+            beta_records_path=args.beta_records,
+            release_tag=args.release_tag,
+            output_format=args.format,
+        )
+        args.output_dir.mkdir(parents=True, exist_ok=True)
+        for artifact in pack["artifacts"]:
+            (args.output_dir / artifact["filename"]).write_text(artifact["content"], encoding="utf-8")
+        return f"wrote activation execution-workspace with {pack['artifact_count']} artifacts to {args.output_dir}\n"
     report = build_proof_execution_workspace(
         host_records_path=args.host_records,
         beta_records_path=args.beta_records,
@@ -343,8 +356,7 @@ def _handle_activation_execution_workspace(args: argparse.Namespace) -> str:
     if args.format == "json":
         return json.dumps(report, indent=2, sort_keys=True) + "\n"
     if args.format == "markdown":
-        msg = "activation execution-workspace markdown output requires --output-dir"
-        raise ValueError(msg)
+        return render_proof_execution_workspace_markdown(report)
     return f"activation execution-workspace {report['workspace_status']} (steps={report['step_count']})\n"
 
 

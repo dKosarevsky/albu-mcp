@@ -84,6 +84,7 @@ albu-mcp intake bundle --output-dir docs/intake-bundle --format markdown
 albu-mcp activation command-center --format markdown
 albu-mcp activation runbook --format markdown
 albu-mcp activation proof-sprint --output-dir docs/proof-sprint --format markdown
+albu-mcp activation execution-workspace --output-dir docs/proof-execution --format markdown
 albu-mcp evidence collect --host Codex --date YYYY-MM-DD --reviewer "Release operator" --format json
 albu-mcp evidence run-session --host Codex --format json
 albu-mcp evidence execution-packet --host Codex --format json
@@ -131,7 +132,7 @@ albu-mcp trust gate-transition --before-host-records docs/HOST_MANUAL_RUNS.json 
 
 These commands write privacy-safe JSON records only for explicit `record-*`, `response-import`, `response-import-dir`,
 `import-manifest`, or `import-artifacts` actions. `intake bundle`, `activation command-center`, `activation runbook`,
-`activation proof-sprint`, `run-session`,
+`activation proof-sprint`, `activation execution-workspace`, `run-session`,
 `host setup-probe`, `preview first-pack`, `evidence collect`, `execution-packet`, `operator-packet`, `packet-bundle`,
 `replay-fixture-pack`, `session-folder`, `session-manifest`, `validate-manifest`, `close-host`, `import-checklist`, `validate-import`,
 `privacy-doctor`, `artifact-doctor`, `unblock-plan`, `doctor`, `campaign-plan`, `loop-pack`, `trial-pack`,
