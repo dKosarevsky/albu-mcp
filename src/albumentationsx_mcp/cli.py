@@ -44,6 +44,7 @@ from albumentationsx_mcp.evidence import (
     HostName,
     HostStatus,
     build_evidence_artifact_doctor_report,
+    build_evidence_close_host_report,
     build_evidence_collect_wizard,
     build_evidence_doctor_report,
     build_evidence_execution_packet,
@@ -52,10 +53,12 @@ from albumentationsx_mcp.evidence import (
     build_evidence_packet_bundle_artifacts,
     build_evidence_privacy_doctor_report,
     build_evidence_replay_fixture_pack_artifact,
+    build_evidence_session_folder_artifacts,
     build_evidence_session_manifest_artifact,
     build_evidence_session_plan,
     build_evidence_unblock_plan,
     import_evidence_artifacts,
+    import_evidence_session_manifest,
     load_evidence_session_manifest,
     record_first_10_minutes_replay,
     record_host_manual_run,
@@ -376,6 +379,17 @@ def _add_evidence_recording_parsers(subparsers: Any) -> None:
     session_manifest.add_argument("--output-dir", type=Path, required=True)
     session_manifest.add_argument("--format", choices=["json"], default="json")
 
+    session_folder = subparsers.add_parser(
+        "session-folder",
+        help="Write a no-evidence session folder for one real host evidence run.",
+    )
+    session_folder.add_argument("--host", choices=get_args(HostName), required=True)
+    session_folder.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    session_folder.add_argument("--date", required=True, help="ISO date, for example 2026-07-02.")
+    session_folder.add_argument("--reviewer", required=True)
+    session_folder.add_argument("--output-dir", type=Path, required=True)
+    session_folder.add_argument("--format", choices=["markdown", "json"], default="markdown")
+
     validate_manifest = subparsers.add_parser(
         "validate-manifest",
         help="Validate a filled evidence session manifest without writing records.",
@@ -383,6 +397,14 @@ def _add_evidence_recording_parsers(subparsers: Any) -> None:
     validate_manifest.add_argument("--input", type=Path, required=True)
     validate_manifest.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
     validate_manifest.add_argument("--format", choices=["text", "json"], default="text")
+
+    import_manifest = subparsers.add_parser(
+        "import-manifest",
+        help="Import a validated reviewer-observed evidence session manifest into P0 records.",
+    )
+    import_manifest.add_argument("--input", type=Path, required=True)
+    import_manifest.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    import_manifest.add_argument("--format", choices=["text", "json"], default="text")
 
 
 def _add_evidence_packet_parsers(subparsers: Any) -> None:
@@ -464,6 +486,11 @@ def _add_evidence_doctor_parsers(subparsers: Any) -> None:
     status = subparsers.add_parser("status", help="Validate host evidence records and print a compact count.")
     status.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
 
+    close_host = subparsers.add_parser("close-host", help="Report whether one host evidence gate is closed.")
+    close_host.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    close_host.add_argument("--host", choices=get_args(HostName), required=True)
+    close_host.add_argument("--format", choices=["text", "json"], default="text")
+
 
 def _handle_evidence_command(args: argparse.Namespace) -> str:
     handlers = {
@@ -478,13 +505,16 @@ def _handle_evidence_command(args: argparse.Namespace) -> str:
         "import-artifacts": _handle_evidence_import_artifacts,
         "validate-import": _handle_evidence_validate_import,
         "session-manifest": _handle_evidence_session_manifest,
+        "session-folder": _handle_evidence_session_folder,
         "validate-manifest": _handle_evidence_validate_manifest,
+        "import-manifest": _handle_evidence_import_manifest,
         "import-checklist": _handle_evidence_import_checklist,
         "doctor": _handle_evidence_doctor,
         "artifact-doctor": _handle_evidence_artifact_doctor,
         "privacy-doctor": _handle_evidence_privacy_doctor,
         "unblock-plan": _handle_evidence_unblock_plan,
         "status": _handle_evidence_status,
+        "close-host": _handle_evidence_close_host,
     }
     return handlers[args.command](args)
 
@@ -629,6 +659,20 @@ def _handle_evidence_session_manifest(args: argparse.Namespace) -> str:
     return f"wrote evidence session-manifest for {args.host} to {manifest_path}\n"
 
 
+def _handle_evidence_session_folder(args: argparse.Namespace) -> str:
+    folder = build_evidence_session_folder_artifacts(
+        host=args.host,
+        path=args.path,
+        run_date=args.date,
+        reviewer=args.reviewer,
+        output_format=args.format,
+    )
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    for artifact in folder["artifacts"]:
+        (args.output_dir / artifact["filename"]).write_text(artifact["content"], encoding="utf-8")
+    return f"wrote evidence session-folder with {folder['artifact_count']} artifacts to {args.output_dir}\n"
+
+
 def _handle_evidence_validate_manifest(args: argparse.Namespace) -> str:
     report = validate_evidence_session_manifest(
         manifest=load_evidence_session_manifest(args.input),
@@ -637,6 +681,16 @@ def _handle_evidence_validate_manifest(args: argparse.Namespace) -> str:
     if args.format == "json":
         return json.dumps(report, indent=2, sort_keys=True) + "\n"
     return f"evidence validate-manifest {report['validation_status']} for {report['host']}\n"
+
+
+def _handle_evidence_import_manifest(args: argparse.Namespace) -> str:
+    report = import_evidence_session_manifest(
+        manifest=load_evidence_session_manifest(args.input),
+        records_path=args.path,
+    )
+    if args.format == "json":
+        return json.dumps(report, indent=2, sort_keys=True) + "\n"
+    return f"evidence import-manifest {report['import_status']} for {report['host']}\n"
 
 
 def _handle_evidence_import_checklist(args: argparse.Namespace) -> str:
@@ -681,6 +735,16 @@ def _handle_evidence_unblock_plan(args: argparse.Namespace) -> str:
 
 def _handle_evidence_status(args: argparse.Namespace) -> str:
     return f"{summarize_host_manual_runs(validate_host_manual_runs(args.path))}\n"
+
+
+def _handle_evidence_close_host(args: argparse.Namespace) -> str:
+    report = build_evidence_close_host_report(host=args.host, path=args.path)
+    if args.format == "json":
+        return json.dumps(report, indent=2, sort_keys=True) + "\n"
+    return (
+        f"evidence close-host {report['closure_status']} for {args.host} "
+        f"(missing_gates={len(report['missing_gates'])})\n"
+    )
 
 
 def _run_beta_cli(argv: list[str]) -> None:

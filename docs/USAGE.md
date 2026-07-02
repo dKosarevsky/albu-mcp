@@ -89,8 +89,11 @@ albu-mcp evidence execution-packet --host Codex --format json
 albu-mcp evidence operator-packet --host Codex --output-dir docs/operator-packets --format markdown
 albu-mcp evidence packet-bundle --output-dir docs/operator-packets --format markdown
 albu-mcp evidence replay-fixture-pack --output-dir docs/operator-packets --format markdown
+albu-mcp evidence session-folder --host Codex --date YYYY-MM-DD --reviewer "Release operator" --output-dir docs/operator-packets --format markdown
 albu-mcp evidence session-manifest --host Codex --date 2026-07-01 --reviewer "Release operator" --output-dir docs/operator-packets --format json
 albu-mcp evidence validate-manifest --input docs/operator-packets/codex-evidence-session-manifest.json --format json
+albu-mcp evidence import-manifest --input docs/operator-packets/codex-evidence-session-manifest.json --format json
+albu-mcp evidence close-host --host Codex --format json
 albu-mcp evidence import-checklist --host Codex --format markdown
 albu-mcp evidence validate-import --host Codex --status passed --date 2026-06-30 --evidence "reviewer observed real host UI" --artifact docs/assets/demo/demo_report.md --confirm-real-host-observed --format json
 albu-mcp evidence import-artifacts --host Codex --status passed --date 2026-06-30 --evidence "reviewer observed real host UI" --artifact docs/assets/demo/demo_report.md --confirm-real-host-observed
@@ -125,10 +128,10 @@ albu-mcp trust dashboard --format markdown
 albu-mcp trust gate-transition --before-host-records docs/HOST_MANUAL_RUNS.json --before-beta-records docs/BETA_VALIDATION_RECORDS.json --after-host-records docs/HOST_MANUAL_RUNS.json --after-beta-records docs/BETA_VALIDATION_RECORDS.json --format markdown
 ```
 
-These commands write privacy-safe JSON records only for explicit `record-*`, `response-import`, `response-import-dir`, or
-`import-artifacts` actions. `intake bundle`, `activation command-center`, `activation runbook`, `run-session`,
+These commands write privacy-safe JSON records only for explicit `record-*`, `response-import`, `response-import-dir`,
+`import-manifest`, or `import-artifacts` actions. `intake bundle`, `activation command-center`, `activation runbook`, `run-session`,
 `host setup-probe`, `preview first-pack`, `evidence collect`, `execution-packet`, `operator-packet`, `packet-bundle`,
-`replay-fixture-pack`, `session-manifest`, `validate-manifest`, `import-checklist`, `validate-import`,
+`replay-fixture-pack`, `session-folder`, `session-manifest`, `validate-manifest`, `close-host`, `import-checklist`, `validate-import`,
 `privacy-doctor`, `artifact-doctor`, `unblock-plan`, `doctor`, `campaign-plan`, `loop-pack`, `trial-pack`,
 `intake-wizard`, `response-template`, `response-validate`, `rc reopen`, `rc rehearse`,
 `rc candidate-packet`, `rc release-owner-packet`, `rc review-pack`, `rc go-check`, `distribution readiness`,

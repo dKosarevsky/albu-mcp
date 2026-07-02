@@ -21,11 +21,11 @@ def build_governed_iteration_execution_report() -> dict[str, Any]:
     stop_reason = "completed" if rc_decision["decision"] == "go" else "current_priority_gate_blocked"
     return {
         "requested_iteration_count": governor["iteration_count"],
-        "executed_iteration_count": 6,
-        "stopped_at_iteration": 6,
+        "executed_iteration_count": 7,
+        "stopped_at_iteration": 7,
         "stop_reason": stop_reason,
-        "completed_path_count": 34,
-        "completed_plan_point_count": 34,
+        "completed_path_count": 38,
+        "completed_plan_point_count": 38,
         "execution_policy": governor["execution_policy"],
         "safety_policy": "No blind implementation loop was executed.",
         "completed_paths": [
@@ -66,6 +66,13 @@ def build_governed_iteration_execution_report() -> dict[str, Any]:
             "README Diet path: README keeps only the short operator command path and links to detailed docs.",
             "Beta Loop Pack path: beta loop-pack writes invite, privacy, import, status, and response templates.",
             "Governed Loop path: the sixth requested follow-up loop stops at external evidence and beta gates.",
+            (
+                "Evidence Import Manifest path: evidence import-manifest closes both P0 host gates from a validated "
+                "manifest."
+            ),
+            "Evidence Session Folder path: evidence session-folder writes one no-evidence host closure folder.",
+            "Evidence Close Host path: evidence close-host reports blocked or closed host gate state.",
+            "Governed Loop path: the seventh requested follow-up loop stops at external evidence and beta gates.",
         ],
         "completed_plan_points": [
             "Added evidence execution-packet for host-specific real MCP runs.",
@@ -102,6 +109,10 @@ def build_governed_iteration_execution_report() -> dict[str, Any]:
             "Slimmed README operator workflow and moved full command detail to USAGE.",
             "Added beta loop-pack for redacted external beta attempt collection.",
             "Stopped the sixth 100-iteration follow-up loop at the same external evidence and beta gates.",
+            "Added evidence import-manifest for validated reviewer session imports.",
+            "Added evidence session-folder for one no-evidence host closure folder.",
+            "Added evidence close-host for host-level closure status and next commands.",
+            "Stopped the seventh 100-iteration follow-up loop at the same external evidence and beta gates.",
         ],
         "current_external_gates": [
             "p0_host_evidence_missing_or_blocked: requires reviewer-observed real MCP host UI evidence.",
@@ -131,6 +142,7 @@ def build_governed_iteration_execution_report() -> dict[str, Any]:
             "tests/test_real_evidence_intake_cli.py",
             "tests/test_intake_automation_cli.py",
             "tests/test_real_use_unlock_cli.py",
+            "tests/test_evidence_import_closure_cli.py",
         ],
     }
 

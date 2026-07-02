@@ -1,11 +1,11 @@
 # Governed 100-Iteration Execution Report
 
 Requested iterations: `100`
-Executed iterations: `6`
-Stopped at iteration: `6`
+Executed iterations: `7`
+Stopped at iteration: `7`
 Stop reason: `current_priority_gate_blocked`
-Completed paths: `34`
-Completed plan points: `34`
+Completed paths: `38`
+Completed plan points: `38`
 
 ## Execution Policy
 
@@ -48,6 +48,10 @@ No blind implementation loop was executed.
 - README Diet path: README keeps only the short operator command path and links to detailed docs.
 - Beta Loop Pack path: beta loop-pack writes invite, privacy, import, status, and response templates.
 - Governed Loop path: the sixth requested follow-up loop stops at external evidence and beta gates.
+- Evidence Import Manifest path: evidence import-manifest closes both P0 host gates from a validated manifest.
+- Evidence Session Folder path: evidence session-folder writes one no-evidence host closure folder.
+- Evidence Close Host path: evidence close-host reports blocked or closed host gate state.
+- Governed Loop path: the seventh requested follow-up loop stops at external evidence and beta gates.
 
 ## Completed Plan Points
 
@@ -85,6 +89,10 @@ No blind implementation loop was executed.
 32. Slimmed README operator workflow and moved full command detail to USAGE.
 33. Added beta loop-pack for redacted external beta attempt collection.
 34. Stopped the sixth 100-iteration follow-up loop at the same external evidence and beta gates.
+35. Added evidence import-manifest for validated reviewer session imports.
+36. Added evidence session-folder for one no-evidence host closure folder.
+37. Added evidence close-host for host-level closure status and next commands.
+38. Stopped the seventh 100-iteration follow-up loop at the same external evidence and beta gates.
 
 ## Current External Gates
 
@@ -115,3 +123,4 @@ No generated packet, test fixture, or synthetic smoke output is counted as real 
 - `tests/test_real_evidence_intake_cli.py`
 - `tests/test_intake_automation_cli.py`
 - `tests/test_real_use_unlock_cli.py`
+- `tests/test_evidence_import_closure_cli.py`
