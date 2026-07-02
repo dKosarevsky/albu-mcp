@@ -89,3 +89,51 @@ def test_evidence_collect_cli_builds_no_write_operator_wizard(tmp_path: Path) ->
     assert "--confirm-real-host-observed" in payload["steps"][5]["command"]
     assert "reviewer-observed real MCP host UI" in payload["non_fabrication_policy"]
     assert host_records.read_text(encoding="utf-8") == '{"manual_host_ui": [], "first_10_minutes_replay": []}\n'
+
+
+def test_preview_first_pack_cli_returns_short_no_render_handoff(tmp_path: Path) -> None:
+    dataset_path = tmp_path / "images"
+    artifact_root = tmp_path / "artifacts"
+    dataset_path.mkdir()
+
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "preview",
+            "first-pack",
+            "--dataset-path",
+            str(dataset_path),
+            "--allowed-root",
+            str(tmp_path),
+            "--artifact-root",
+            str(artifact_root),
+            "--task",
+            "classification",
+            "--format",
+            "json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(result.stdout)
+
+    assert payload["pack_status"] == "ready_to_run"
+    assert payload["writes_records"] is False
+    assert payload["renders_images"] is False
+    assert payload["dataset_path"] == str(dataset_path)
+    assert [step["tool"] for step in payload["mcp_sequence"]] == [
+        "run_host_smoke_check",
+        "plan_dataset_onboarding",
+        "build_review_packet",
+        "validate_preview_request",
+        "render_preview_batch",
+        "compare_preview_runs",
+        "plan_preview_review",
+        "export_pipeline",
+    ]
+    assert payload["mcp_sequence"][3]["gate"] == "continue only when valid=true"
+    assert payload["bounded_roots"]["allowed_root"] == str(tmp_path)
+    assert "albumentationsx://examples/first-preview" in payload["host_instruction"]
