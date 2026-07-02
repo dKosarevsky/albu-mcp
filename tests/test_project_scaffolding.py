@@ -475,6 +475,22 @@ def test_public_docs_describe_current_preview_workflow() -> None:
     assert "segmentation masks" in server_json["description"]
 
 
+def test_readme_operator_cli_section_stays_concise() -> None:
+    readme = Path("README.md").read_text(encoding="utf-8")
+    usage = Path("docs/USAGE.md").read_text(encoding="utf-8")
+    operator_section = readme.split("## Operator CLI", 1)[1].split("## Host Workflow", 1)[0]
+
+    assert len(operator_section.splitlines()) <= 18
+    assert operator_section.count("albu-mcp ") <= 8
+    assert "[docs/USAGE.md](docs/USAGE.md)" in operator_section
+    assert "[CHANGELOG.md](CHANGELOG.md)" in readme
+    assert "albu-mcp host setup-probe" in operator_section
+    assert "albu-mcp preview first-pack" in operator_section
+    assert "albu-mcp evidence collect" in operator_section
+    assert "albu-mcp beta loop-pack" in operator_section
+    assert "albu-mcp evidence import-artifacts" in usage
+
+
 def test_release_workflow_checks_versions_and_smokes_published_package() -> None:
     workflow = yaml.safe_load(Path(".github/workflows/release.yml").read_text(encoding="utf-8"))
     build_commands = "\n".join(step.get("run", "") for step in workflow["jobs"]["build"]["steps"])

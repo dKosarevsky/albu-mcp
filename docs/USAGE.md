@@ -90,6 +90,7 @@ albu-mcp evidence session-manifest --host Codex --date 2026-07-01 --reviewer "Re
 albu-mcp evidence validate-manifest --input docs/operator-packets/codex-evidence-session-manifest.json --format json
 albu-mcp evidence import-checklist --host Codex --format markdown
 albu-mcp evidence validate-import --host Codex --status passed --date 2026-06-30 --evidence "reviewer observed real host UI" --artifact docs/assets/demo/demo_report.md --confirm-real-host-observed --format json
+albu-mcp evidence import-artifacts --host Codex --status passed --date 2026-06-30 --evidence "reviewer observed real host UI" --artifact docs/assets/demo/demo_report.md --confirm-real-host-observed
 albu-mcp evidence privacy-doctor --format json
 albu-mcp evidence artifact-doctor --format json
 albu-mcp evidence unblock-plan --format json
