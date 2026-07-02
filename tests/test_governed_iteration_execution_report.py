@@ -10,15 +10,15 @@ from scripts.export_governed_iteration_execution_report import (
 )
 
 
-def test_governed_iteration_execution_report_stops_after_seventh_blocked_iteration() -> None:
+def test_governed_iteration_execution_report_stops_after_eighth_blocked_iteration() -> None:
     report = build_governed_iteration_execution_report()
 
     assert report["requested_iteration_count"] == 100
-    assert report["executed_iteration_count"] == 7
-    assert report["stopped_at_iteration"] == 7
+    assert report["executed_iteration_count"] == 8
+    assert report["stopped_at_iteration"] == 8
     assert report["stop_reason"] == "current_priority_gate_blocked"
-    assert report["completed_path_count"] == 38
-    assert report["completed_plan_point_count"] == 38
+    assert report["completed_path_count"] == 42
+    assert report["completed_plan_point_count"] == 42
     assert report["completed_plan_points"] == [
         "Added evidence execution-packet for host-specific real MCP runs.",
         "Added evidence artifact-doctor for artifact completeness and synthetic-only checks.",
@@ -58,6 +58,10 @@ def test_governed_iteration_execution_report_stops_after_seventh_blocked_iterati
         "Added evidence session-folder for one no-evidence host closure folder.",
         "Added evidence close-host for host-level closure status and next commands.",
         "Stopped the seventh 100-iteration follow-up loop at the same external evidence and beta gates.",
+        "Added activation proof-sprint for one combined real-host, beta, and host-onboarding proof cycle.",
+        "Added proof sprint artifact folders for official-docs beta validation and blocked host onboarding depth.",
+        "Kept host-onboarding depth implementation blocked until P0 host and beta evidence gates open.",
+        "Stopped the eighth 100-iteration follow-up loop at the same external evidence and beta gates.",
     ]
 
 
@@ -66,7 +70,7 @@ def test_governed_iteration_execution_report_markdown_explains_stop() -> None:
 
     assert markdown.startswith("# Governed 100-Iteration Execution Report\n")
     assert "Requested iterations: `100`" in markdown
-    assert "Executed iterations: `7`" in markdown
+    assert "Executed iterations: `8`" in markdown
     assert "`current_priority_gate_blocked`" in markdown
     assert "evidence execution-packet" in markdown
     assert "artifact-doctor" in markdown
@@ -94,6 +98,9 @@ def test_governed_iteration_execution_report_markdown_explains_stop() -> None:
     assert "evidence import-manifest" in markdown
     assert "evidence session-folder" in markdown
     assert "evidence close-host" in markdown
+    assert "activation proof-sprint" in markdown
+    assert "Combined Proof Sprint path" in markdown
+    assert "host-onboarding depth implementation blocked" in markdown
     assert "`p0_host_evidence_missing_or_blocked`" in markdown
     assert "RC reopen rehearsal v2" in markdown
     assert "No blind implementation loop was executed." in markdown

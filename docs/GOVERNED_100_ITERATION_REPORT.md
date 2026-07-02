@@ -1,11 +1,11 @@
 # Governed 100-Iteration Execution Report
 
 Requested iterations: `100`
-Executed iterations: `7`
-Stopped at iteration: `7`
+Executed iterations: `8`
+Stopped at iteration: `8`
 Stop reason: `current_priority_gate_blocked`
-Completed paths: `38`
-Completed plan points: `38`
+Completed paths: `42`
+Completed plan points: `42`
 
 ## Execution Policy
 
@@ -52,6 +52,10 @@ No blind implementation loop was executed.
 - Evidence Session Folder path: evidence session-folder writes one no-evidence host closure folder.
 - Evidence Close Host path: evidence close-host reports blocked or closed host gate state.
 - Governed Loop path: the seventh requested follow-up loop stops at external evidence and beta gates.
+- Combined Proof Sprint path: activation proof-sprint coordinates real-host evidence, beta validation, and host-onboarding depth.
+- Proof Sprint Artifacts path: activation proof-sprint writes official-docs beta validation and blocked host-onboarding handoffs.
+- Host Onboarding Depth Gate path: proof sprint keeps host-onboarding depth implementation blocked until external gates open.
+- Governed Loop path: the eighth requested follow-up loop stops at external evidence and beta gates.
 
 ## Completed Plan Points
 
@@ -93,6 +97,10 @@ No blind implementation loop was executed.
 36. Added evidence session-folder for one no-evidence host closure folder.
 37. Added evidence close-host for host-level closure status and next commands.
 38. Stopped the seventh 100-iteration follow-up loop at the same external evidence and beta gates.
+39. Added activation proof-sprint for one combined real-host, beta, and host-onboarding proof cycle.
+40. Added proof sprint artifact folders for official-docs beta validation and blocked host onboarding depth.
+41. Kept host-onboarding depth implementation blocked until P0 host and beta evidence gates open.
+42. Stopped the eighth 100-iteration follow-up loop at the same external evidence and beta gates.
 
 ## Current External Gates
 
@@ -115,6 +123,7 @@ No generated packet, test fixture, or synthetic smoke output is counted as real 
 - `src/albumentationsx_mcp/first_preview.py`
 - `src/albumentationsx_mcp/host_setup.py`
 - `src/albumentationsx_mcp/intake.py`
+- `src/albumentationsx_mcp/proof_sprint.py`
 - `src/albumentationsx_mcp/release_review.py`
 - `src/albumentationsx_mcp/trust.py`
 - `src/albumentationsx_mcp/rc_reopen.py`
@@ -124,3 +133,4 @@ No generated packet, test fixture, or synthetic smoke output is counted as real 
 - `tests/test_intake_automation_cli.py`
 - `tests/test_real_use_unlock_cli.py`
 - `tests/test_evidence_import_closure_cli.py`
+- `tests/test_combined_proof_sprint_cli.py`

@@ -96,10 +96,8 @@ details and `remediation_actions` are documented in [docs/USAGE.md](docs/USAGE.m
 The public MCP surface is kept stable through reviewed contract snapshots. Compatibility rules are in
 [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
 
-The community guide is now published in the official Albumentations docs:
-[AlbumentationsX MCP integration](https://albumentations.ai/docs/integrations/mcp/). It was accepted upstream in
-[AlbumentationsX#289](https://github.com/albumentations-team/AlbumentationsX/pull/289); source:
-[docs/integrations/mcp.md](https://github.com/albumentations-team/AlbumentationsX/blob/main/docs/integrations/mcp.md).
+The guide is published in the official [Albumentations MCP docs](https://albumentations.ai/docs/integrations/mcp/)
+from [AlbumentationsX#289](https://github.com/albumentations-team/AlbumentationsX/pull/289); [source](https://github.com/albumentations-team/AlbumentationsX/blob/main/docs/integrations/mcp.md).
 
 ## Documentation
 
