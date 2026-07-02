@@ -129,6 +129,7 @@ def test_network_growth_docs_are_linked() -> None:
 
     assert "[docs/NETWORK_GROWTH.md](docs/NETWORK_GROWTH.md)" in readme
     assert "scripts/check_directory_presence.py" in readme
+    assert "https://albumentations.ai/docs/integrations/mcp/" in readme
     assert "albumentations-team/AlbumentationsX/pull/289" in readme
     assert "AlbumentationsX/blob/main/docs/integrations/mcp.md" in readme
     assert "Official MCP Registry" in docs
