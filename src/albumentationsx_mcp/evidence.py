@@ -387,6 +387,80 @@ def import_evidence_session_manifest(
     }
 
 
+def build_evidence_close_host_report(
+    *,
+    host: HostName,
+    path: Path = Path("docs/HOST_MANUAL_RUNS.json"),
+) -> dict[str, Any]:
+    """Build a no-write report showing whether one host evidence gate can close."""
+    records = validate_host_manual_runs(path) if path.exists() else HostManualRuns()
+    host_status = _host_gate_status(host=host, records=records)
+    missing_gates = host_status["missing_gates"]
+    return {
+        "closure_status": "closed" if host_status["overall_status"] == "passed" else "blocked",
+        "host": host,
+        "records_path": str(path),
+        "writes_records": False,
+        "non_fabrication_policy": _NON_FABRICATION_POLICY,
+        "current_host_status": host_status,
+        "missing_gates": missing_gates,
+        "next_commands": _close_host_next_commands(host=host, path=path, missing_gates=missing_gates),
+        "next_actions": _close_host_next_actions(missing_gates),
+    }
+
+
+def build_evidence_session_folder_artifacts(
+    *,
+    host: HostName,
+    path: Path = Path("docs/HOST_MANUAL_RUNS.json"),
+    run_date: str,
+    reviewer: str,
+    output_format: OperatorPacketFormat = "markdown",
+) -> dict[str, Any]:
+    """Build one no-write evidence session folder artifact set."""
+    manifest = build_evidence_session_manifest_artifact(host=host, run_date=run_date, reviewer=reviewer)
+    checklist = build_evidence_import_checklist(host=host, path=path)
+    collect_wizard = build_evidence_collect_wizard(
+        EvidenceCollectWizardRequest(host=host, path=path, run_date=run_date, reviewer=reviewer)
+    )
+    close_host = build_evidence_close_host_report(host=host, path=path)
+    artifacts = [
+        _evidence_session_folder_index_artifact(
+            host=host,
+            path=path,
+            output_format=output_format,
+            artifact_filenames=[
+                manifest["filename"],
+                f"{_host_slug(host)}-evidence-import-checklist.{_operator_packet_extension(output_format)}",
+                f"{_host_slug(host)}-evidence-collect-wizard.json",
+                f"{_host_slug(host)}-evidence-close-host.json",
+            ],
+        ),
+        manifest,
+        {
+            "filename": f"{_host_slug(host)}-evidence-import-checklist.{_operator_packet_extension(output_format)}",
+            "content": _render_checklist_artifact_content(checklist, output_format=output_format),
+        },
+        {
+            "filename": f"{_host_slug(host)}-evidence-collect-wizard.json",
+            "content": json.dumps(collect_wizard, indent=2, sort_keys=True) + "\n",
+        },
+        {
+            "filename": f"{_host_slug(host)}-evidence-close-host.json",
+            "content": json.dumps(close_host, indent=2, sort_keys=True) + "\n",
+        },
+    ]
+    return {
+        "folder_status": "ready_to_run",
+        "host": host,
+        "records_path": str(path),
+        "writes_records": False,
+        "artifact_count": len(artifacts),
+        "artifacts": artifacts,
+        "non_evidence_policy": "Generated session folders are not P0 evidence.",
+    }
+
+
 def build_evidence_doctor_report(path: Path = Path("docs/HOST_MANUAL_RUNS.json")) -> dict[str, Any]:
     """Inspect P0 host evidence records and return actionable remediation for missing gates."""
     records = validate_host_manual_runs(path) if path.exists() else HostManualRuns()
@@ -947,6 +1021,85 @@ def _expected_mcp_tools() -> list[str]:
         "render_preview_batch",
         "compare_preview_runs",
         "plan_preview_review",
+    ]
+
+
+def _evidence_session_folder_index_artifact(
+    *,
+    host: HostName,
+    path: Path,
+    output_format: OperatorPacketFormat,
+    artifact_filenames: list[str],
+) -> dict[str, str]:
+    payload = {
+        "folder_status": "ready_to_run",
+        "host": host,
+        "records_path": str(path),
+        "writes_records": False,
+        "non_evidence_policy": "Generated session folders are not P0 evidence.",
+        "artifact_files": artifact_filenames,
+    }
+    content = (
+        json.dumps(payload, indent=2, sort_keys=True) + "\n"
+        if output_format == "json"
+        else _render_evidence_session_folder_index_markdown(payload)
+    )
+    return {"filename": f"evidence-session-folder-index.{_operator_packet_extension(output_format)}", "content": content}
+
+
+def _render_evidence_session_folder_index_markdown(payload: dict[str, Any]) -> str:
+    artifact_files = "\n".join(f"- `{filename}`" for filename in payload["artifact_files"])
+    return (
+        "# Evidence Session Folder Index\n\n"
+        f"Host: `{payload['host']}`\n\n"
+        f"Records path: `{payload['records_path']}`\n\n"
+        f"Writes records: `{str(payload['writes_records']).lower()}`\n\n"
+        "## Non-Evidence Policy\n\n"
+        f"{payload['non_evidence_policy']}\n\n"
+        "## Artifact Files\n\n"
+        f"{artifact_files}\n"
+    )
+
+
+def _render_checklist_artifact_content(
+    checklist: dict[str, Any],
+    *,
+    output_format: OperatorPacketFormat,
+) -> str:
+    if output_format == "json":
+        return json.dumps(checklist, indent=2, sort_keys=True) + "\n"
+    return render_evidence_import_checklist_markdown(checklist)
+
+
+def _close_host_next_commands(*, host: HostName, path: Path, missing_gates: list[str]) -> list[str]:
+    if not missing_gates:
+        return [
+            "albu-mcp evidence privacy-doctor --format json",
+            "albu-mcp rc go-check --format json",
+        ]
+    host_arg = _quote_cli(host)
+    path_arg = _quote_cli(str(path))
+    return [
+        f"albu-mcp evidence session-folder --host {host_arg} --path {path_arg} --date YYYY-MM-DD "
+        "--reviewer 'Release operator' --output-dir evidence-session --format markdown",
+        (
+            f"albu-mcp evidence import-manifest --input evidence-session/{_host_slug(host)}-evidence-session-manifest.json "
+            f"--path {path_arg} --format json"
+        ),
+        f"albu-mcp evidence close-host --host {host_arg} --path {path_arg} --format json",
+    ]
+
+
+def _close_host_next_actions(missing_gates: list[str]) -> list[str]:
+    if not missing_gates:
+        return [
+            "Run privacy-doctor and rc go-check before release-owner review.",
+            "Do not create tags or releases until all required hosts and beta records pass.",
+        ]
+    return [
+        "Run a reviewer-observed real MCP host UI session.",
+        "Fill the session manifest with redacted artifact refs.",
+        "Import the manifest only after validate-manifest reports ready_to_import.",
     ]
 
 

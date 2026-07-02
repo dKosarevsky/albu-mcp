@@ -52,6 +52,7 @@ from albumentationsx_mcp.evidence import (
     build_evidence_packet_bundle_artifacts,
     build_evidence_privacy_doctor_report,
     build_evidence_replay_fixture_pack_artifact,
+    build_evidence_session_folder_artifacts,
     build_evidence_session_manifest_artifact,
     build_evidence_session_plan,
     build_evidence_unblock_plan,
@@ -377,6 +378,17 @@ def _add_evidence_recording_parsers(subparsers: Any) -> None:
     session_manifest.add_argument("--output-dir", type=Path, required=True)
     session_manifest.add_argument("--format", choices=["json"], default="json")
 
+    session_folder = subparsers.add_parser(
+        "session-folder",
+        help="Write a no-evidence session folder for one real host evidence run.",
+    )
+    session_folder.add_argument("--host", choices=get_args(HostName), required=True)
+    session_folder.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    session_folder.add_argument("--date", required=True, help="ISO date, for example 2026-07-02.")
+    session_folder.add_argument("--reviewer", required=True)
+    session_folder.add_argument("--output-dir", type=Path, required=True)
+    session_folder.add_argument("--format", choices=["markdown", "json"], default="markdown")
+
     validate_manifest = subparsers.add_parser(
         "validate-manifest",
         help="Validate a filled evidence session manifest without writing records.",
@@ -487,6 +499,7 @@ def _handle_evidence_command(args: argparse.Namespace) -> str:
         "import-artifacts": _handle_evidence_import_artifacts,
         "validate-import": _handle_evidence_validate_import,
         "session-manifest": _handle_evidence_session_manifest,
+        "session-folder": _handle_evidence_session_folder,
         "validate-manifest": _handle_evidence_validate_manifest,
         "import-manifest": _handle_evidence_import_manifest,
         "import-checklist": _handle_evidence_import_checklist,
@@ -637,6 +650,20 @@ def _handle_evidence_session_manifest(args: argparse.Namespace) -> str:
     manifest_path = args.output_dir / artifact["filename"]
     manifest_path.write_text(artifact["content"], encoding="utf-8")
     return f"wrote evidence session-manifest for {args.host} to {manifest_path}\n"
+
+
+def _handle_evidence_session_folder(args: argparse.Namespace) -> str:
+    folder = build_evidence_session_folder_artifacts(
+        host=args.host,
+        path=args.path,
+        run_date=args.date,
+        reviewer=args.reviewer,
+        output_format=args.format,
+    )
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    for artifact in folder["artifacts"]:
+        (args.output_dir / artifact["filename"]).write_text(artifact["content"], encoding="utf-8")
+    return f"wrote evidence session-folder with {folder['artifact_count']} artifacts to {args.output_dir}\n"
 
 
 def _handle_evidence_validate_manifest(args: argparse.Namespace) -> str:
