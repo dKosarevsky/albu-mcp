@@ -42,6 +42,7 @@ from albumentationsx_mcp.evidence import (
     HostName,
     HostStatus,
     build_evidence_artifact_doctor_report,
+    build_evidence_collect_wizard,
     build_evidence_doctor_report,
     build_evidence_execution_packet,
     build_evidence_import_checklist,
@@ -381,6 +382,18 @@ def _add_evidence_packet_parsers(subparsers: Any) -> None:
     replay_fixture_pack.add_argument("--output-dir", type=Path, required=True)
     replay_fixture_pack.add_argument("--format", choices=["markdown", "json"], default="markdown")
 
+    collect = subparsers.add_parser(
+        "collect",
+        help="Build a no-write operator wizard for collecting real host evidence.",
+    )
+    collect.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    collect.add_argument("--host", choices=get_args(HostName), required=True)
+    collect.add_argument("--date", required=True)
+    collect.add_argument("--reviewer", required=True)
+    collect.add_argument("--output-dir", type=Path, default=Path("evidence-session"))
+    collect.add_argument("--artifact", default="docs/assets/demo/demo_report.md")
+    collect.add_argument("--format", choices=["text", "json"], default="text")
+
 
 def _add_evidence_doctor_parsers(subparsers: Any) -> None:
     doctor = subparsers.add_parser("doctor", help="Inspect P0 evidence gates and print remediation actions.")
@@ -412,6 +425,7 @@ def _handle_evidence_command(args: argparse.Namespace) -> str:
         "operator-packet": _handle_evidence_operator_packet,
         "packet-bundle": _handle_evidence_packet_bundle,
         "replay-fixture-pack": _handle_evidence_replay_fixture_pack,
+        "collect": _handle_evidence_collect,
         "import-artifacts": _handle_evidence_import_artifacts,
         "validate-import": _handle_evidence_validate_import,
         "session-manifest": _handle_evidence_session_manifest,
@@ -496,6 +510,23 @@ def _handle_evidence_replay_fixture_pack(args: argparse.Namespace) -> str:
     pack_path = args.output_dir / artifact["filename"]
     pack_path.write_text(artifact["content"], encoding="utf-8")
     return f"wrote evidence replay-fixture-pack to {pack_path}\n"
+
+
+def _handle_evidence_collect(args: argparse.Namespace) -> str:
+    wizard = build_evidence_collect_wizard(
+        host=args.host,
+        path=args.path,
+        run_date=args.date,
+        reviewer=args.reviewer,
+        output_dir=args.output_dir,
+        artifact_ref=args.artifact,
+    )
+    if args.format == "json":
+        return json.dumps(wizard, indent=2, sort_keys=True) + "\n"
+    return (
+        f"evidence collect {wizard['wizard_status']} for {args.host} "
+        f"(writes_records={str(wizard['writes_records']).lower()})\n"
+    )
 
 
 def _handle_evidence_import_artifacts(args: argparse.Namespace) -> str:
