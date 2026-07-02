@@ -24,6 +24,7 @@ from albumentationsx_mcp.beta_validation import (
     build_beta_attempt_triage,
     build_beta_campaign_plan,
     build_beta_intake_wizard,
+    build_beta_loop_pack_artifacts,
     build_beta_response_template_artifacts,
     build_beta_trial_pack,
     build_beta_validation_report,
@@ -723,6 +724,12 @@ def _run_beta_cli(argv: list[str]) -> None:
     intake_wizard.add_argument("--participant-role", default="ML practitioner")
     intake_wizard.add_argument("--format", choices=["text", "json"], default="text")
 
+    loop_pack = subparsers.add_parser("loop-pack", help="Write a privacy-safe beta validation loop pack.")
+    loop_pack.add_argument("--path", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    loop_pack.add_argument("--output-dir", type=Path, required=True)
+    loop_pack.add_argument("--participant-role", default="ML practitioner")
+    loop_pack.add_argument("--format", choices=["markdown", "json"], default="markdown")
+
     _add_beta_response_parsers(subparsers)
 
     args = parser.parse_args(argv)
@@ -774,6 +781,7 @@ def _handle_beta_command(args: argparse.Namespace) -> str:
         "campaign-plan": _handle_beta_campaign_plan,
         "trial-pack": _handle_beta_trial_pack,
         "intake-wizard": _handle_beta_intake_wizard,
+        "loop-pack": _handle_beta_loop_pack,
         "response-validate": _handle_beta_response_validate,
         "response-import": _handle_beta_response_import,
         "response-import-dir": _handle_beta_response_import_dir,
@@ -858,6 +866,18 @@ def _handle_beta_intake_wizard(args: argparse.Namespace) -> str:
     if args.format == "json":
         return json.dumps(wizard, indent=2, sort_keys=True) + "\n"
     return f"beta intake-wizard {wizard['wizard_status']} for {args.workflow_id}\n"
+
+
+def _handle_beta_loop_pack(args: argparse.Namespace) -> str:
+    pack = build_beta_loop_pack_artifacts(
+        validate_beta_validation_records(args.path),
+        participant_role=args.participant_role,
+        output_format=args.format,
+    )
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    for artifact in pack["artifacts"]:
+        (args.output_dir / artifact["filename"]).write_text(artifact["content"], encoding="utf-8")
+    return f"wrote beta loop-pack with {pack['artifact_count']} artifacts to {args.output_dir}\n"
 
 
 def _handle_beta_response_validate(args: argparse.Namespace) -> str:

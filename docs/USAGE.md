@@ -78,9 +78,12 @@ retention limit for long-running MCP hosts.
 Use the package CLI for release evidence and beta records without importing repository-only scripts:
 
 ```bash
+albu-mcp host setup-probe --host Codex --live --format json
+albu-mcp preview first-pack --dataset-path /absolute/path/to/images --allowed-root /absolute/path/to --artifact-root /absolute/path/to/albu-artifacts --format json
 albu-mcp intake bundle --output-dir docs/intake-bundle --format markdown
 albu-mcp activation command-center --format markdown
 albu-mcp activation runbook --format markdown
+albu-mcp evidence collect --host Codex --date YYYY-MM-DD --reviewer "Release operator" --format json
 albu-mcp evidence run-session --host Codex --format json
 albu-mcp evidence execution-packet --host Codex --format json
 albu-mcp evidence operator-packet --host Codex --output-dir docs/operator-packets --format markdown
@@ -99,6 +102,7 @@ albu-mcp evidence record-host-ui --host Codex --status passed --date 2026-06-28 
 albu-mcp evidence record-first-10-minutes --host Codex --status passed --date 2026-06-28 --evidence "..." --artifact docs/assets/demo/demo_report.md
 albu-mcp evidence status
 albu-mcp beta campaign-plan --format json
+albu-mcp beta loop-pack --output-dir docs/beta-loop --format markdown
 albu-mcp beta trial-pack --workflow-id noisy_preview_tuning --participant-role "ML practitioner" --format json
 albu-mcp beta intake-wizard --workflow-id noisy_preview_tuning --participant-role "ML practitioner" --format json
 albu-mcp beta response-template --output-dir docs/beta-response-templates --format json
@@ -123,9 +127,10 @@ albu-mcp trust gate-transition --before-host-records docs/HOST_MANUAL_RUNS.json 
 
 These commands write privacy-safe JSON records only for explicit `record-*`, `response-import`, `response-import-dir`, or
 `import-artifacts` actions. `intake bundle`, `activation command-center`, `activation runbook`, `run-session`,
-`execution-packet`, `operator-packet`, `packet-bundle`, `replay-fixture-pack`, `session-manifest`, `validate-manifest`,
-`import-checklist`, `validate-import`, `privacy-doctor`, `artifact-doctor`, `unblock-plan`, `doctor`, `campaign-plan`,
-`trial-pack`, `intake-wizard`, `response-template`, `response-validate`, `rc reopen`, `rc rehearse`,
+`host setup-probe`, `preview first-pack`, `evidence collect`, `execution-packet`, `operator-packet`, `packet-bundle`,
+`replay-fixture-pack`, `session-manifest`, `validate-manifest`, `import-checklist`, `validate-import`,
+`privacy-doctor`, `artifact-doctor`, `unblock-plan`, `doctor`, `campaign-plan`, `loop-pack`, `trial-pack`,
+`intake-wizard`, `response-template`, `response-validate`, `rc reopen`, `rc rehearse`,
 `rc candidate-packet`, `rc release-owner-packet`, `rc review-pack`, `rc go-check`, `distribution readiness`,
 `trust audit`, `trust next`, `trust dashboard`, and `trust gate-transition` are report-only or artifact-only helpers.
 `validate-import` and `validate-manifest` check the same fields before recording, and `import-artifacts` requires

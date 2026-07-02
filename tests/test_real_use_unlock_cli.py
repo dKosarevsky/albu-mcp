@@ -137,3 +137,52 @@ def test_preview_first_pack_cli_returns_short_no_render_handoff(tmp_path: Path) 
     assert payload["mcp_sequence"][3]["gate"] == "continue only when valid=true"
     assert payload["bounded_roots"]["allowed_root"] == str(tmp_path)
     assert "albumentationsx://examples/first-preview" in payload["host_instruction"]
+
+
+def test_beta_loop_pack_cli_writes_privacy_safe_operator_files(tmp_path: Path) -> None:
+    records_path = tmp_path / "BETA_VALIDATION_RECORDS.json"
+    output_dir = tmp_path / "beta-loop"
+    records_path.write_text('{"records": []}\n', encoding="utf-8")
+
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "beta",
+            "loop-pack",
+            "--path",
+            str(records_path),
+            "--output-dir",
+            str(output_dir),
+            "--participant-role",
+            "CV engineer",
+            "--format",
+            "markdown",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    expected_files = {
+        "beta-loop-index.md",
+        "beta-invite-copy.md",
+        "beta-privacy-checklist.md",
+        "beta-import-instructions.md",
+        "beta-status-summary.md",
+        "dataset-health-before-training-beta-response.json",
+        "noisy-preview-tuning-beta-response.json",
+        "robustness-distortion-variants-beta-response.json",
+    }
+    index = (output_dir / "beta-loop-index.md").read_text(encoding="utf-8")
+    template = json.loads((output_dir / "noisy-preview-tuning-beta-response.json").read_text(encoding="utf-8"))
+
+    assert result.stdout == f"wrote beta loop-pack with {len(expected_files)} artifacts to {output_dir}\n"
+    assert expected_files <= {path.name for path in output_dir.iterdir()}
+    assert "redacted beta attempts" in index
+    assert "albu-mcp beta response-import-dir" in (output_dir / "beta-import-instructions.md").read_text(
+        encoding="utf-8"
+    )
+    assert template["participant_role"] == "CV engineer"
+    assert template["private_data_included"] is False
+    assert records_path.read_text(encoding="utf-8") == '{"records": []}\n'
