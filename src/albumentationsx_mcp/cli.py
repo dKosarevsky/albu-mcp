@@ -76,7 +76,11 @@ from albumentationsx_mcp.host_setup import (
     render_host_setup_probe_markdown,
 )
 from albumentationsx_mcp.intake import build_intake_bundle_artifacts
-from albumentationsx_mcp.proof_sprint import build_combined_proof_sprint
+from albumentationsx_mcp.proof_sprint import (
+    build_combined_proof_sprint,
+    build_combined_proof_sprint_artifacts,
+    render_combined_proof_sprint_markdown,
+)
 from albumentationsx_mcp.rc_reopen import (
     build_rc_candidate_packet,
     build_rc_go_check_report,
@@ -289,6 +293,7 @@ def _run_activation_cli(argv: list[str]) -> None:
     proof_sprint.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
     proof_sprint.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
     proof_sprint.add_argument("--release-tag", default="v1.15.0-rc.1")
+    proof_sprint.add_argument("--output-dir", type=Path, default=None)
     proof_sprint.add_argument("--format", choices=["text", "json", "markdown"], default="text")
 
     args = parser.parse_args(argv)
@@ -301,17 +306,7 @@ def _run_activation_cli(argv: list[str]) -> None:
 
 def _handle_activation_command(args: argparse.Namespace) -> str:
     if args.command == "proof-sprint":
-        report = build_combined_proof_sprint(
-            host_records_path=args.host_records,
-            beta_records_path=args.beta_records,
-            release_tag=args.release_tag,
-        )
-        if args.format == "json":
-            return json.dumps(report, indent=2, sort_keys=True) + "\n"
-        if args.format == "markdown":
-            msg = "activation proof-sprint markdown output requires --output-dir"
-            raise ValueError(msg)
-        return f"activation proof-sprint {report['sprint_status']} (points={report['point_count']})\n"
+        return _handle_activation_proof_sprint(args)
     if args.command == "runbook":
         report = build_manual_evidence_runbook(
             host_records_path=args.host_records,
@@ -324,6 +319,30 @@ def _handle_activation_command(args: argparse.Namespace) -> str:
             return render_manual_evidence_runbook_markdown(report)
         return f"activation runbook {report['runbook_status']} (release_tag={report['release_tag']})\n"
     return _handle_activation_command_center(args)
+
+
+def _handle_activation_proof_sprint(args: argparse.Namespace) -> str:
+    if args.output_dir is not None:
+        pack = build_combined_proof_sprint_artifacts(
+            host_records_path=args.host_records,
+            beta_records_path=args.beta_records,
+            release_tag=args.release_tag,
+            output_format=args.format,
+        )
+        args.output_dir.mkdir(parents=True, exist_ok=True)
+        for artifact in pack["artifacts"]:
+            (args.output_dir / artifact["filename"]).write_text(artifact["content"], encoding="utf-8")
+        return f"wrote activation proof-sprint with {pack['artifact_count']} artifacts to {args.output_dir}\n"
+    report = build_combined_proof_sprint(
+        host_records_path=args.host_records,
+        beta_records_path=args.beta_records,
+        release_tag=args.release_tag,
+    )
+    if args.format == "json":
+        return json.dumps(report, indent=2, sort_keys=True) + "\n"
+    if args.format == "markdown":
+        return render_combined_proof_sprint_markdown(report)
+    return f"activation proof-sprint {report['sprint_status']} (points={report['point_count']})\n"
 
 
 def _handle_activation_command_center(args: argparse.Namespace) -> str:

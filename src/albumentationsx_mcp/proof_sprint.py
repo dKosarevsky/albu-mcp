@@ -58,6 +58,41 @@ def build_combined_proof_sprint(
     }
 
 
+def build_combined_proof_sprint_artifacts(
+    *,
+    host_records_path: Path = Path("docs/HOST_MANUAL_RUNS.json"),
+    beta_records_path: Path = Path("docs/BETA_VALIDATION_RECORDS.json"),
+    release_tag: str = "v1.15.0-rc.1",
+    output_format: str = "markdown",
+) -> dict[str, Any]:
+    """Build a no-write artifact folder for the combined proof sprint."""
+    report = build_combined_proof_sprint(
+        host_records_path=host_records_path,
+        beta_records_path=beta_records_path,
+        release_tag=release_tag,
+    )
+    artifacts = [
+        _index_artifact(report=report, output_format=output_format),
+        *[_point_artifact(point=point, output_format=output_format) for point in report["points"]],
+    ]
+    return {
+        "pack_status": report["sprint_status"],
+        "writes_records": False,
+        "artifact_count": len(artifacts),
+        "artifacts": artifacts,
+        "next_actions": [
+            "Run the real host evidence sprint with reviewer-observed MCP host UI sessions.",
+            "Send beta validation templates from the official Albumentations docs link.",
+            "Keep host onboarding depth implementation blocked until real P0 and beta gates open.",
+        ],
+    }
+
+
+def render_combined_proof_sprint_markdown(report: dict[str, Any]) -> str:
+    """Render the combined proof sprint index as Markdown."""
+    return _render_index_markdown(report)
+
+
 def _real_host_evidence_point(*, blocked: bool) -> dict[str, Any]:
     return {
         "id": "real_host_evidence_sprint",
@@ -104,6 +139,7 @@ def _beta_validation_point(*, blocked: bool, beta_report: dict[str, Any]) -> dic
 def _host_onboarding_depth_point(*, implementation_allowed: bool, host_probe: dict[str, Any]) -> dict[str, Any]:
     return {
         "id": "host_onboarding_depth",
+        "artifact_slug": "host-onboarding-depth-sprint",
         "title": "Host onboarding depth",
         "status": "ready_for_depth_plan" if implementation_allowed else "blocked_until_p0_and_beta_gates",
         "implementation_allowed": implementation_allowed,
@@ -121,3 +157,66 @@ def _host_onboarding_depth_point(*, implementation_allowed: bool, host_probe: di
             "docs/P0_HOST_UNBLOCK_PACK.md",
         ],
     }
+
+
+def _index_artifact(*, report: dict[str, Any], output_format: str) -> dict[str, str]:
+    content = json_dumps(report) if output_format == "json" else _render_index_markdown(report)
+    return {"filename": f"combined-proof-sprint-index.{_extension(output_format)}", "content": content}
+
+
+def _point_artifact(*, point: dict[str, Any], output_format: str) -> dict[str, str]:
+    content = json_dumps(point) if output_format == "json" else _render_point_markdown(point)
+    return {"filename": f"{_point_artifact_slug(point)}.{_extension(output_format)}", "content": content}
+
+
+def _render_index_markdown(report: dict[str, Any]) -> str:
+    points = "\n".join(
+        f"- `{point['id']}`: `{point['status']}`; implementation_allowed="
+        f"`{str(point['implementation_allowed']).lower()}`"
+        for point in report["points"]
+    )
+    sources = "\n".join(f"- {source}" for source in report["source_docs"])
+    return (
+        "# Combined Proof Sprint\n\n"
+        f"Release tag: `{report['release_tag']}`\n\n"
+        f"Sprint status: `{report['sprint_status']}`\n\n"
+        f"Writes records: `{str(report['writes_records']).lower()}`\n\n"
+        f"Next action: `{report['next_action']}`\n\n"
+        "## Non-Fabrication Policy\n\n"
+        f"{report['non_fabrication_policy']}\n\n"
+        "## Points\n\n"
+        f"{points}\n\n"
+        "## Source Docs\n\n"
+        f"{sources}\n"
+    )
+
+
+def _render_point_markdown(point: dict[str, Any]) -> str:
+    commands = "\n".join(f"- `{command}`" for command in point["next_commands"])
+    links = "\n".join(f"- {link}" for link in point["source_links"])
+    return (
+        f"# {point['title']}\n\n"
+        f"Status: `{point['status']}`\n\n"
+        f"Implementation allowed: `{str(point['implementation_allowed']).lower()}`\n\n"
+        f"Goal: {point['goal']}\n\n"
+        f"Success signal: {point['success_signal']}\n\n"
+        "## Next Commands\n\n"
+        f"{commands}\n\n"
+        "## Source Links\n\n"
+        f"{links}\n"
+    )
+
+
+def _extension(output_format: str) -> str:
+    return "json" if output_format == "json" else "md"
+
+
+def _point_artifact_slug(point: dict[str, Any]) -> str:
+    return str(point.get("artifact_slug", point["id"].replace("_", "-")))
+
+
+def json_dumps(payload: dict[str, Any]) -> str:
+    """Serialize proof sprint artifacts with stable formatting."""
+    import json
+
+    return json.dumps(payload, indent=2, sort_keys=True) + "\n"
