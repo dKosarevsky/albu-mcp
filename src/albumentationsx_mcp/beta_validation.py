@@ -608,9 +608,7 @@ def _beta_invite_copy_artifact(*, participant_role: str, output_format: BetaLoop
             "# Beta Invite Copy\n\n"
             f"Participant role: `{participant_role}`\n\n"
             f"{payload['message']}\n\n"
-            "## Workflows\n\n"
-            + "\n".join(f"- `{workflow_id}`" for workflow_id in _WORKFLOW_IDS)
-            + "\n"
+            "## Workflows\n\n" + "\n".join(f"- `{workflow_id}`" for workflow_id in _WORKFLOW_IDS) + "\n"
         )
     )
     return {"filename": f"beta-invite-copy.{_beta_loop_extension(output_format)}", "content": content}

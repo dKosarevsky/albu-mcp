@@ -39,6 +39,7 @@ from albumentationsx_mcp.beta_validation import (
 from albumentationsx_mcp.distribution import build_distribution_readiness_report
 from albumentationsx_mcp.evidence import (
     EvidenceArtifactImport,
+    EvidenceCollectWizardRequest,
     FirstTenMinutesReplayEvidence,
     HostName,
     HostStatus,
@@ -64,13 +65,13 @@ from albumentationsx_mcp.evidence import (
     validate_evidence_session_manifest,
     validate_host_manual_runs,
 )
+from albumentationsx_mcp.first_preview import build_first_preview_pack, render_first_preview_pack_markdown
 from albumentationsx_mcp.host_setup import (
     DEFAULT_ALLOWED_ROOT,
     DEFAULT_ARTIFACT_ROOT,
     build_host_setup_probe,
     render_host_setup_probe_markdown,
 )
-from albumentationsx_mcp.first_preview import build_first_preview_pack, render_first_preview_pack_markdown
 from albumentationsx_mcp.intake import build_intake_bundle_artifacts
 from albumentationsx_mcp.rc_reopen import (
     build_rc_candidate_packet,
@@ -256,10 +257,7 @@ def _handle_preview_command(args: argparse.Namespace) -> str:
     elif args.format == "markdown":
         content = render_first_preview_pack_markdown(pack)
     else:
-        content = (
-            f"preview first-pack {pack['pack_status']} "
-            f"(renders_images={str(pack['renders_images']).lower()})\n"
-        )
+        content = f"preview first-pack {pack['pack_status']} (renders_images={str(pack['renders_images']).lower()})\n"
     if args.output is None:
         return content
     args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -565,12 +563,14 @@ def _handle_evidence_replay_fixture_pack(args: argparse.Namespace) -> str:
 
 def _handle_evidence_collect(args: argparse.Namespace) -> str:
     wizard = build_evidence_collect_wizard(
-        host=args.host,
-        path=args.path,
-        run_date=args.date,
-        reviewer=args.reviewer,
-        output_dir=args.output_dir,
-        artifact_ref=args.artifact,
+        EvidenceCollectWizardRequest(
+            host=args.host,
+            path=args.path,
+            run_date=args.date,
+            reviewer=args.reviewer,
+            output_dir=args.output_dir,
+            artifact_ref=args.artifact,
+        )
     )
     if args.format == "json":
         return json.dumps(wizard, indent=2, sort_keys=True) + "\n"

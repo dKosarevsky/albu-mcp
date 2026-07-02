@@ -19,8 +19,8 @@ HOST_NAMES: tuple[HostName, ...] = ("Claude Desktop", "Claude Code", "Cursor", "
 P0_REQUIRED_HOSTS: tuple[HostName, ...] = ("Codex", "Claude Code")
 P0_REQUIRED_GATES: tuple[str, ...] = ("manual_host_ui", "first_10_minutes_replay")
 _NON_FABRICATION_POLICY = (
-    "Record passed only after reviewer-observed real MCP host UI flow; generated smoke output alone is not accepted "
-    "as P0 evidence."
+    "Record passed only after a reviewer observes the real MCP host UI flow with reviewer-observed real MCP host UI "
+    "evidence; generated smoke output alone is not accepted as P0 evidence."
 )
 _SYNTHETIC_ONLY_MARKERS = ("generated smoke", "smoke output only", "synthetic", "no reviewer-observed")
 
@@ -80,6 +80,18 @@ class EvidenceArtifactImport:
     evidence: str
     artifacts: list[str]
     confirm_real_host_observed: bool = False
+
+
+@dataclass(frozen=True)
+class EvidenceCollectWizardRequest:
+    """Inputs for one no-write real-host evidence collection wizard."""
+
+    host: HostName
+    run_date: str
+    reviewer: str
+    path: Path = Path("docs/HOST_MANUAL_RUNS.json")
+    output_dir: Path = Path("evidence-session")
+    artifact_ref: str = "docs/assets/demo/demo_report.md"
 
 
 class EvidenceSessionManifest(BaseModel):
@@ -207,37 +219,22 @@ def build_evidence_session_plan(
     }
 
 
-def build_evidence_collect_wizard(
-    *,
-    host: HostName,
-    path: Path = Path("docs/HOST_MANUAL_RUNS.json"),
-    run_date: str,
-    reviewer: str,
-    output_dir: Path = Path("evidence-session"),
-    artifact_ref: str = "docs/assets/demo/demo_report.md",
-) -> dict[str, Any]:
+def build_evidence_collect_wizard(request: EvidenceCollectWizardRequest) -> dict[str, Any]:
     """Build one no-write operator path for collecting real host evidence."""
-    date.fromisoformat(run_date)
-    records = validate_host_manual_runs(path) if path.exists() else HostManualRuns()
-    host_status = _host_gate_status(host=host, records=records)
+    date.fromisoformat(request.run_date)
+    records = validate_host_manual_runs(request.path) if request.path.exists() else HostManualRuns()
+    host_status = _host_gate_status(host=request.host, records=records)
     wizard_status = "ready_for_rc_review" if host_status["overall_status"] == "passed" else "operator_run_required"
     return {
         "wizard_status": wizard_status,
-        "host": host,
-        "records_path": str(path),
-        "run_date": run_date,
-        "reviewer": reviewer,
+        "host": request.host,
+        "records_path": str(request.path),
+        "run_date": request.run_date,
+        "reviewer": request.reviewer,
         "writes_records": False,
         "current_host_status": host_status,
         "non_fabrication_policy": _NON_FABRICATION_POLICY,
-        "steps": _collect_wizard_steps(
-            host=host,
-            path=path,
-            run_date=run_date,
-            reviewer=reviewer,
-            output_dir=output_dir,
-            artifact_ref=artifact_ref,
-        ),
+        "steps": _collect_wizard_steps(request),
         "next_actions": [
             "Run the setup probe from the same shell or app context that starts the real MCP host.",
             "Continue only after a reviewer observes the real MCP host UI and first-preview replay.",
@@ -767,20 +764,13 @@ def _operator_steps(host: HostName) -> list[dict[str, str]]:
     ]
 
 
-def _collect_wizard_steps(
-    *,
-    host: HostName,
-    path: Path,
-    run_date: str,
-    reviewer: str,
-    output_dir: Path,
-    artifact_ref: str,
-) -> list[dict[str, str | bool]]:
-    host_arg = _quote_cli(host)
-    output_arg = _quote_cli(str(output_dir))
-    path_arg = _quote_cli(str(path))
-    artifact_arg = _quote_cli(artifact_ref)
-    reviewer_arg = _quote_cli(reviewer)
+def _collect_wizard_steps(request: EvidenceCollectWizardRequest) -> list[dict[str, str | bool]]:
+    host_arg = _quote_cli(request.host)
+    output_arg = _quote_cli(str(request.output_dir))
+    path_arg = _quote_cli(str(request.path))
+    artifact_arg = _quote_cli(request.artifact_ref)
+    reviewer_arg = _quote_cli(request.reviewer)
+    manifest_path = f"{output_arg}/{_host_slug(request.host)}-evidence-session-manifest.json"
     return [
         {
             "code": "setup_probe",
@@ -804,7 +794,7 @@ def _collect_wizard_steps(
             "code": "session_manifest",
             "writes_records": False,
             "command": (
-                f"albu-mcp evidence session-manifest --host {host_arg} --date {run_date} "
+                f"albu-mcp evidence session-manifest --host {host_arg} --date {request.run_date} "
                 f"--reviewer {reviewer_arg} --output-dir {output_arg} --format json"
             ),
             "expected_result": "filled evidence session manifest with redacted artifact refs.",
@@ -812,17 +802,14 @@ def _collect_wizard_steps(
         {
             "code": "validate_manifest",
             "writes_records": False,
-            "command": (
-                f"albu-mcp evidence validate-manifest --input {output_arg}/{_host_slug(host)}-evidence-session-manifest.json "
-                f"--path {path_arg} --format json"
-            ),
+            "command": f"albu-mcp evidence validate-manifest --input {manifest_path} --path {path_arg} --format json",
             "expected_result": "validation_status is ready_to_import.",
         },
         {
             "code": "import_artifacts",
             "writes_records": True,
             "command": (
-                f"albu-mcp evidence import-artifacts --host {host_arg} --status passed --date {run_date} "
+                f"albu-mcp evidence import-artifacts --host {host_arg} --status passed --date {request.run_date} "
                 f"--evidence 'reviewer observed real MCP host UI and first-10-minutes replay' "
                 f"--artifact {artifact_arg} --confirm-real-host-observed --path {path_arg}"
             ),

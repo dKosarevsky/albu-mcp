@@ -36,9 +36,7 @@ def test_host_setup_probe_cli_reports_one_host_operator_path(tmp_path: Path) -> 
     assert payload["writes_records"] is False
     assert payload["summary"]["host_count"] == 1
     assert payload["host_lanes"][0]["host"] == "Codex"
-    assert payload["host_lanes"][0]["operator_command"].startswith(
-        "uvx --from albumentationsx-mcp albumentationsx-mcp"
-    )
+    assert payload["host_lanes"][0]["operator_command"].startswith("uvx --from albumentationsx-mcp albumentationsx-mcp")
     assert "claude_cli" not in payload["host_lanes"][0]["blocking_checks"]
     assert payload["next_action"] == "run_live_probe"
 
