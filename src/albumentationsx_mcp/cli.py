@@ -56,6 +56,7 @@ from albumentationsx_mcp.evidence import (
     build_evidence_session_plan,
     build_evidence_unblock_plan,
     import_evidence_artifacts,
+    import_evidence_session_manifest,
     load_evidence_session_manifest,
     record_first_10_minutes_replay,
     record_host_manual_run,
@@ -384,6 +385,14 @@ def _add_evidence_recording_parsers(subparsers: Any) -> None:
     validate_manifest.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
     validate_manifest.add_argument("--format", choices=["text", "json"], default="text")
 
+    import_manifest = subparsers.add_parser(
+        "import-manifest",
+        help="Import a validated reviewer-observed evidence session manifest into P0 records.",
+    )
+    import_manifest.add_argument("--input", type=Path, required=True)
+    import_manifest.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    import_manifest.add_argument("--format", choices=["text", "json"], default="text")
+
 
 def _add_evidence_packet_parsers(subparsers: Any) -> None:
     run_session = subparsers.add_parser("run-session", help="Print a guided real-host evidence session plan.")
@@ -479,6 +488,7 @@ def _handle_evidence_command(args: argparse.Namespace) -> str:
         "validate-import": _handle_evidence_validate_import,
         "session-manifest": _handle_evidence_session_manifest,
         "validate-manifest": _handle_evidence_validate_manifest,
+        "import-manifest": _handle_evidence_import_manifest,
         "import-checklist": _handle_evidence_import_checklist,
         "doctor": _handle_evidence_doctor,
         "artifact-doctor": _handle_evidence_artifact_doctor,
@@ -637,6 +647,16 @@ def _handle_evidence_validate_manifest(args: argparse.Namespace) -> str:
     if args.format == "json":
         return json.dumps(report, indent=2, sort_keys=True) + "\n"
     return f"evidence validate-manifest {report['validation_status']} for {report['host']}\n"
+
+
+def _handle_evidence_import_manifest(args: argparse.Namespace) -> str:
+    report = import_evidence_session_manifest(
+        manifest=load_evidence_session_manifest(args.input),
+        records_path=args.path,
+    )
+    if args.format == "json":
+        return json.dumps(report, indent=2, sort_keys=True) + "\n"
+    return f"evidence import-manifest {report['import_status']} for {report['host']}\n"
 
 
 def _handle_evidence_import_checklist(args: argparse.Namespace) -> str:

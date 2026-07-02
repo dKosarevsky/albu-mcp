@@ -353,6 +353,40 @@ def validate_evidence_session_manifest(
     }
 
 
+def import_evidence_session_manifest(
+    *,
+    manifest: EvidenceSessionManifest,
+    records_path: Path = Path("docs/HOST_MANUAL_RUNS.json"),
+) -> dict[str, Any]:
+    """Import one validated reviewer-observed evidence session manifest into required P0 gates."""
+    validation = validate_evidence_session_manifest(manifest=manifest, records_path=records_path)
+    updated = import_evidence_artifacts(
+        EvidenceArtifactImport(
+            path=records_path,
+            host=manifest.host,
+            status=manifest.status,
+            run_date=manifest.date.isoformat(),
+            evidence=manifest.evidence,
+            artifacts=manifest.artifacts,
+            confirm_real_host_observed=manifest.confirm_real_host_observed,
+        )
+    )
+    return {
+        **validation,
+        "import_status": "imported",
+        "writes_records": True,
+        "records_summary": {
+            "manual_host_ui": len(updated.manual_host_ui),
+            "first_10_minutes_replay": len(updated.first_10_minutes_replay),
+        },
+        "next_actions": [
+            "Run albu-mcp evidence close-host with the same host and records path.",
+            "Run albu-mcp evidence privacy-doctor --format json after import.",
+            "Run albu-mcp rc go-check --format json after all required hosts close.",
+        ],
+    }
+
+
 def build_evidence_doctor_report(path: Path = Path("docs/HOST_MANUAL_RUNS.json")) -> dict[str, Any]:
     """Inspect P0 host evidence records and return actionable remediation for missing gates."""
     records = validate_host_manual_runs(path) if path.exists() else HostManualRuns()
