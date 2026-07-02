@@ -1044,7 +1044,10 @@ def _evidence_session_folder_index_artifact(
         if output_format == "json"
         else _render_evidence_session_folder_index_markdown(payload)
     )
-    return {"filename": f"evidence-session-folder-index.{_operator_packet_extension(output_format)}", "content": content}
+    return {
+        "filename": f"evidence-session-folder-index.{_operator_packet_extension(output_format)}",
+        "content": content,
+    }
 
 
 def _render_evidence_session_folder_index_markdown(payload: dict[str, Any]) -> str:
@@ -1082,10 +1085,9 @@ def _close_host_next_commands(*, host: HostName, path: Path, missing_gates: list
     return [
         f"albu-mcp evidence session-folder --host {host_arg} --path {path_arg} --date YYYY-MM-DD "
         "--reviewer 'Release operator' --output-dir evidence-session --format markdown",
-        (
-            f"albu-mcp evidence import-manifest --input evidence-session/{_host_slug(host)}-evidence-session-manifest.json "
-            f"--path {path_arg} --format json"
-        ),
+        "albu-mcp evidence import-manifest "
+        f"--input evidence-session/{_host_slug(host)}-evidence-session-manifest.json "
+        f"--path {path_arg} --format json",
         f"albu-mcp evidence close-host --host {host_arg} --path {path_arg} --format json",
     ]
 

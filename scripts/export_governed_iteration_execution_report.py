@@ -66,7 +66,10 @@ def build_governed_iteration_execution_report() -> dict[str, Any]:
             "README Diet path: README keeps only the short operator command path and links to detailed docs.",
             "Beta Loop Pack path: beta loop-pack writes invite, privacy, import, status, and response templates.",
             "Governed Loop path: the sixth requested follow-up loop stops at external evidence and beta gates.",
-            "Evidence Import Manifest path: evidence import-manifest closes both P0 host gates from a validated manifest.",
+            (
+                "Evidence Import Manifest path: evidence import-manifest closes both P0 host gates from a validated "
+                "manifest."
+            ),
             "Evidence Session Folder path: evidence session-folder writes one no-evidence host closure folder.",
             "Evidence Close Host path: evidence close-host reports blocked or closed host gate state.",
             "Governed Loop path: the seventh requested follow-up loop stops at external evidence and beta gates.",
