@@ -76,6 +76,7 @@ from albumentationsx_mcp.host_setup import (
     render_host_setup_probe_markdown,
 )
 from albumentationsx_mcp.intake import build_intake_bundle_artifacts
+from albumentationsx_mcp.proof_sprint import build_combined_proof_sprint
 from albumentationsx_mcp.rc_reopen import (
     build_rc_candidate_packet,
     build_rc_go_check_report,
@@ -284,6 +285,12 @@ def _run_activation_cli(argv: list[str]) -> None:
     runbook.add_argument("--release-tag", default="v1.15.0-rc.1")
     runbook.add_argument("--format", choices=["text", "json", "markdown"], default="text")
 
+    proof_sprint = subparsers.add_parser("proof-sprint", help="Build a combined external proof sprint.")
+    proof_sprint.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    proof_sprint.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    proof_sprint.add_argument("--release-tag", default="v1.15.0-rc.1")
+    proof_sprint.add_argument("--format", choices=["text", "json", "markdown"], default="text")
+
     args = parser.parse_args(argv)
     try:
         sys.stdout.write(_handle_activation_command(args))
@@ -293,6 +300,18 @@ def _run_activation_cli(argv: list[str]) -> None:
 
 
 def _handle_activation_command(args: argparse.Namespace) -> str:
+    if args.command == "proof-sprint":
+        report = build_combined_proof_sprint(
+            host_records_path=args.host_records,
+            beta_records_path=args.beta_records,
+            release_tag=args.release_tag,
+        )
+        if args.format == "json":
+            return json.dumps(report, indent=2, sort_keys=True) + "\n"
+        if args.format == "markdown":
+            msg = "activation proof-sprint markdown output requires --output-dir"
+            raise ValueError(msg)
+        return f"activation proof-sprint {report['sprint_status']} (points={report['point_count']})\n"
     if args.command == "runbook":
         report = build_manual_evidence_runbook(
             host_records_path=args.host_records,
