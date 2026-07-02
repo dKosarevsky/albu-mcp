@@ -21,11 +21,11 @@ def build_governed_iteration_execution_report() -> dict[str, Any]:
     stop_reason = "completed" if rc_decision["decision"] == "go" else "current_priority_gate_blocked"
     return {
         "requested_iteration_count": governor["iteration_count"],
-        "executed_iteration_count": 8,
-        "stopped_at_iteration": 8,
+        "executed_iteration_count": 9,
+        "stopped_at_iteration": 9,
         "stop_reason": stop_reason,
-        "completed_path_count": 42,
-        "completed_plan_point_count": 42,
+        "completed_path_count": 46,
+        "completed_plan_point_count": 46,
         "execution_policy": governor["execution_policy"],
         "safety_policy": "No blind implementation loop was executed.",
         "completed_paths": [
@@ -86,6 +86,19 @@ def build_governed_iteration_execution_report() -> dict[str, Any]:
                 "until external gates open."
             ),
             "Governed Loop path: the eighth requested follow-up loop stops at external evidence and beta gates.",
+            (
+                "Proof Execution Workspace path: activation execution-workspace writes one no-write folder for the "
+                "external proof cycle."
+            ),
+            (
+                "Real Host Execution path: proof execution workspace packages the real-host execution handoff and "
+                "manifest import commands."
+            ),
+            (
+                "Beta Execution path: proof execution workspace packages the official-docs beta execution handoff and "
+                "response import commands."
+            ),
+            "Governed Loop path: the ninth requested follow-up loop stops at external evidence and beta gates.",
         ],
         "completed_plan_points": [
             "Added evidence execution-packet for host-specific real MCP runs.",
@@ -130,6 +143,10 @@ def build_governed_iteration_execution_report() -> dict[str, Any]:
             "Added proof sprint artifact folders for official-docs beta validation and blocked host onboarding depth.",
             "Kept host-onboarding depth implementation blocked until P0 host and beta evidence gates open.",
             "Stopped the eighth 100-iteration follow-up loop at the same external evidence and beta gates.",
+            "Added activation execution-workspace for one no-write external proof execution folder.",
+            "Added real-host execution handoff for proof-sprint and evidence manifest import commands.",
+            "Added beta execution handoff for official-docs beta response import and reporting.",
+            "Stopped the ninth 100-iteration follow-up loop at the same external evidence and beta gates.",
         ],
         "current_external_gates": [
             "p0_host_evidence_missing_or_blocked: requires reviewer-observed real MCP host UI evidence.",
@@ -162,6 +179,7 @@ def build_governed_iteration_execution_report() -> dict[str, Any]:
             "tests/test_real_use_unlock_cli.py",
             "tests/test_evidence_import_closure_cli.py",
             "tests/test_combined_proof_sprint_cli.py",
+            "tests/test_proof_execution_workspace_cli.py",
         ],
     }
 
