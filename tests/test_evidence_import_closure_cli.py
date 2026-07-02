@@ -107,3 +107,74 @@ def test_evidence_session_folder_writes_no_write_closure_artifacts(tmp_path: Pat
     assert close_host["closure_status"] == "blocked"
     assert close_host["writes_records"] is False
     assert host_records.read_text(encoding="utf-8") == '{"manual_host_ui": [], "first_10_minutes_replay": []}\n'
+
+
+def test_evidence_close_host_reports_blocked_and_closed_states(tmp_path: Path) -> None:
+    host_records = tmp_path / "HOST_MANUAL_RUNS.json"
+    manifest_path = tmp_path / "codex-evidence-session-manifest.json"
+    _write_empty_host_records(host_records)
+
+    blocked_result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "evidence",
+            "close-host",
+            "--host",
+            "Codex",
+            "--path",
+            str(host_records),
+            "--format",
+            "json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    blocked = json.loads(blocked_result.stdout)
+    assert blocked["closure_status"] == "blocked"
+    assert blocked["writes_records"] is False
+    assert blocked["missing_gates"] == ["manual_host_ui", "first_10_minutes_replay"]
+    assert any("evidence import-manifest" in command for command in blocked["next_commands"])
+
+    _write_filled_manifest(manifest_path)
+    subprocess.run(  # noqa: S603
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "evidence",
+            "import-manifest",
+            "--input",
+            str(manifest_path),
+            "--path",
+            str(host_records),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    closed_result = subprocess.run(  # noqa: S603
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "evidence",
+            "close-host",
+            "--host",
+            "Codex",
+            "--path",
+            str(host_records),
+            "--format",
+            "json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    closed = json.loads(closed_result.stdout)
+
+    assert closed["closure_status"] == "closed"
+    assert closed["missing_gates"] == []
+    assert "albu-mcp rc go-check --format json" in closed["next_commands"]

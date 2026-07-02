@@ -44,6 +44,7 @@ from albumentationsx_mcp.evidence import (
     HostName,
     HostStatus,
     build_evidence_artifact_doctor_report,
+    build_evidence_close_host_report,
     build_evidence_collect_wizard,
     build_evidence_doctor_report,
     build_evidence_execution_packet,
@@ -485,6 +486,11 @@ def _add_evidence_doctor_parsers(subparsers: Any) -> None:
     status = subparsers.add_parser("status", help="Validate host evidence records and print a compact count.")
     status.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
 
+    close_host = subparsers.add_parser("close-host", help="Report whether one host evidence gate is closed.")
+    close_host.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    close_host.add_argument("--host", choices=get_args(HostName), required=True)
+    close_host.add_argument("--format", choices=["text", "json"], default="text")
+
 
 def _handle_evidence_command(args: argparse.Namespace) -> str:
     handlers = {
@@ -508,6 +514,7 @@ def _handle_evidence_command(args: argparse.Namespace) -> str:
         "privacy-doctor": _handle_evidence_privacy_doctor,
         "unblock-plan": _handle_evidence_unblock_plan,
         "status": _handle_evidence_status,
+        "close-host": _handle_evidence_close_host,
     }
     return handlers[args.command](args)
 
@@ -728,6 +735,16 @@ def _handle_evidence_unblock_plan(args: argparse.Namespace) -> str:
 
 def _handle_evidence_status(args: argparse.Namespace) -> str:
     return f"{summarize_host_manual_runs(validate_host_manual_runs(args.path))}\n"
+
+
+def _handle_evidence_close_host(args: argparse.Namespace) -> str:
+    report = build_evidence_close_host_report(host=args.host, path=args.path)
+    if args.format == "json":
+        return json.dumps(report, indent=2, sort_keys=True) + "\n"
+    return (
+        f"evidence close-host {report['closure_status']} for {args.host} "
+        f"(missing_gates={len(report['missing_gates'])})\n"
+    )
 
 
 def _run_beta_cli(argv: list[str]) -> None:

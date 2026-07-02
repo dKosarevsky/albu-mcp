@@ -10,15 +10,15 @@ from scripts.export_governed_iteration_execution_report import (
 )
 
 
-def test_governed_iteration_execution_report_stops_after_sixth_blocked_iteration() -> None:
+def test_governed_iteration_execution_report_stops_after_seventh_blocked_iteration() -> None:
     report = build_governed_iteration_execution_report()
 
     assert report["requested_iteration_count"] == 100
-    assert report["executed_iteration_count"] == 6
-    assert report["stopped_at_iteration"] == 6
+    assert report["executed_iteration_count"] == 7
+    assert report["stopped_at_iteration"] == 7
     assert report["stop_reason"] == "current_priority_gate_blocked"
-    assert report["completed_path_count"] == 34
-    assert report["completed_plan_point_count"] == 34
+    assert report["completed_path_count"] == 38
+    assert report["completed_plan_point_count"] == 38
     assert report["completed_plan_points"] == [
         "Added evidence execution-packet for host-specific real MCP runs.",
         "Added evidence artifact-doctor for artifact completeness and synthetic-only checks.",
@@ -54,6 +54,10 @@ def test_governed_iteration_execution_report_stops_after_sixth_blocked_iteration
         "Slimmed README operator workflow and moved full command detail to USAGE.",
         "Added beta loop-pack for redacted external beta attempt collection.",
         "Stopped the sixth 100-iteration follow-up loop at the same external evidence and beta gates.",
+        "Added evidence import-manifest for validated reviewer session imports.",
+        "Added evidence session-folder for one no-evidence host closure folder.",
+        "Added evidence close-host for host-level closure status and next commands.",
+        "Stopped the seventh 100-iteration follow-up loop at the same external evidence and beta gates.",
     ]
 
 
@@ -62,7 +66,7 @@ def test_governed_iteration_execution_report_markdown_explains_stop() -> None:
 
     assert markdown.startswith("# Governed 100-Iteration Execution Report\n")
     assert "Requested iterations: `100`" in markdown
-    assert "Executed iterations: `6`" in markdown
+    assert "Executed iterations: `7`" in markdown
     assert "`current_priority_gate_blocked`" in markdown
     assert "evidence execution-packet" in markdown
     assert "artifact-doctor" in markdown
@@ -87,6 +91,9 @@ def test_governed_iteration_execution_report_markdown_explains_stop() -> None:
     assert "preview first-pack" in markdown
     assert "README keeps only the short operator command path" in markdown
     assert "beta loop-pack" in markdown
+    assert "evidence import-manifest" in markdown
+    assert "evidence session-folder" in markdown
+    assert "evidence close-host" in markdown
     assert "`p0_host_evidence_missing_or_blocked`" in markdown
     assert "RC reopen rehearsal v2" in markdown
     assert "No blind implementation loop was executed." in markdown
