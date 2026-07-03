@@ -96,8 +96,13 @@ albu-mcp evidence replay-fixture-pack --output-dir docs/operator-packets --forma
 albu-mcp evidence session-folder --host Codex --date YYYY-MM-DD --reviewer "Release operator" --output-dir docs/operator-packets --format markdown
 albu-mcp evidence session-manifest --host Codex --date 2026-07-01 --reviewer "Release operator" --output-dir docs/operator-packets --format json
 albu-mcp evidence validate-manifest --input docs/operator-packets/codex-evidence-session-manifest.json --format json
+albu-mcp evidence proof-runner --input docs/operator-packets/codex-evidence-session-manifest.json --format json
 albu-mcp evidence import-manifest --input docs/operator-packets/codex-evidence-session-manifest.json --format json
 albu-mcp evidence close-host --host Codex --format json
+albu-mcp evidence proof-status --format json
+albu-mcp evidence transition-pack --before-host-records docs/HOST_MANUAL_RUNS.json --after-host-records docs/HOST_MANUAL_RUNS.json --beta-records docs/BETA_VALIDATION_RECORDS.json --output-dir docs/operator-packets --format markdown
+albu-mcp evidence rc-unblock-preview --format json
+albu-mcp evidence transcript-template --host Codex --output-dir docs/operator-packets --format markdown
 albu-mcp evidence import-checklist --host Codex --format markdown
 albu-mcp evidence validate-import --host Codex --status passed --date 2026-06-30 --evidence "reviewer observed real host UI" --artifact docs/assets/demo/demo_report.md --confirm-real-host-observed --format json
 albu-mcp evidence import-artifacts --host Codex --status passed --date 2026-06-30 --evidence "reviewer observed real host UI" --artifact docs/assets/demo/demo_report.md --confirm-real-host-observed
@@ -137,7 +142,8 @@ These commands write privacy-safe JSON records only for explicit `record-*`, `re
 `activation proof-sprint`, `activation execution-workspace`, `activation real-proof-run`,
 `activation evidence-first-cycle`, `run-session`,
 `host setup-probe`, `preview first-pack`, `evidence collect`, `execution-packet`, `operator-packet`, `packet-bundle`,
-`replay-fixture-pack`, `session-folder`, `session-manifest`, `validate-manifest`, `close-host`, `import-checklist`, `validate-import`,
+`replay-fixture-pack`, `session-folder`, `session-manifest`, `validate-manifest`, `proof-runner`, `close-host`,
+`proof-status`, `transition-pack`, `rc-unblock-preview`, `transcript-template`, `import-checklist`, `validate-import`,
 `privacy-doctor`, `artifact-doctor`, `unblock-plan`, `doctor`, `campaign-plan`, `loop-pack`, `trial-pack`,
 `intake-wizard`, `response-template`, `response-validate`, `rc reopen`, `rc rehearse`,
 `rc candidate-packet`, `rc release-owner-packet`, `rc review-pack`, `rc go-check`, `distribution readiness`,

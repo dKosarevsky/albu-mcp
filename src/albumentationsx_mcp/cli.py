@@ -68,6 +68,16 @@ from albumentationsx_mcp.evidence import (
     validate_evidence_session_manifest,
     validate_host_manual_runs,
 )
+from albumentationsx_mcp.evidence_proof import (
+    EvidenceProofRequest,
+    EvidenceTransitionPackRequest,
+    RcUnblockPreviewRequest,
+    build_evidence_proof_runner,
+    build_evidence_proof_status,
+    build_evidence_transition_pack_artifacts,
+    build_operator_transcript_template_artifact,
+    build_rc_unblock_preview,
+)
 from albumentationsx_mcp.first_preview import build_first_preview_pack, render_first_preview_pack_markdown
 from albumentationsx_mcp.host_setup import (
     DEFAULT_ALLOWED_ROOT,
@@ -624,6 +634,54 @@ def _add_evidence_packet_parsers(subparsers: Any) -> None:
     collect.add_argument("--artifact", default="docs/assets/demo/demo_report.md")
     collect.add_argument("--format", choices=["text", "json"], default="text")
 
+    _add_evidence_proof_loop_parsers(subparsers)
+
+
+def _add_evidence_proof_loop_parsers(subparsers: Any) -> None:
+    proof_runner = subparsers.add_parser(
+        "proof-runner",
+        help="Validate one evidence manifest and print the safe import sequence.",
+    )
+    proof_runner.add_argument("--input", type=Path, required=True)
+    proof_runner.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    proof_runner.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    proof_runner.add_argument("--format", choices=["text", "json"], default="text")
+
+    proof_status = subparsers.add_parser(
+        "proof-status",
+        help="Report required P0 host evidence gaps.",
+    )
+    proof_status.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    proof_status.add_argument("--format", choices=["text", "json"], default="text")
+
+    transition_pack = subparsers.add_parser(
+        "transition-pack",
+        help="Write a no-record trust transition and RC go-check preview pack.",
+    )
+    transition_pack.add_argument("--before-host-records", type=Path, required=True)
+    transition_pack.add_argument("--after-host-records", type=Path, required=True)
+    transition_pack.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    transition_pack.add_argument("--output-dir", type=Path, required=True)
+    transition_pack.add_argument("--release-tag", default="v1.15.0-rc.1")
+    transition_pack.add_argument("--format", choices=["markdown", "json"], default="markdown")
+
+    rc_unblock_preview = subparsers.add_parser(
+        "rc-unblock-preview",
+        help="Preview RC blockers and no-write unlock commands.",
+    )
+    rc_unblock_preview.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    rc_unblock_preview.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    rc_unblock_preview.add_argument("--release-tag", default="v1.15.0-rc.1")
+    rc_unblock_preview.add_argument("--format", choices=["text", "json"], default="text")
+
+    transcript_template = subparsers.add_parser(
+        "transcript-template",
+        help="Write a privacy-safe operator transcript template.",
+    )
+    transcript_template.add_argument("--host", choices=get_args(HostName), required=True)
+    transcript_template.add_argument("--output-dir", type=Path, required=True)
+    transcript_template.add_argument("--format", choices=["markdown", "json"], default="markdown")
+
 
 def _add_evidence_doctor_parsers(subparsers: Any) -> None:
     doctor = subparsers.add_parser("doctor", help="Inspect P0 evidence gates and print remediation actions.")
@@ -661,6 +719,11 @@ def _handle_evidence_command(args: argparse.Namespace) -> str:
         "packet-bundle": _handle_evidence_packet_bundle,
         "replay-fixture-pack": _handle_evidence_replay_fixture_pack,
         "collect": _handle_evidence_collect,
+        "proof-runner": _handle_evidence_proof_runner,
+        "proof-status": _handle_evidence_proof_status,
+        "transition-pack": _handle_evidence_transition_pack,
+        "rc-unblock-preview": _handle_evidence_rc_unblock_preview,
+        "transcript-template": _handle_evidence_transcript_template,
         "import-artifacts": _handle_evidence_import_artifacts,
         "validate-import": _handle_evidence_validate_import,
         "session-manifest": _handle_evidence_session_manifest,
@@ -767,6 +830,70 @@ def _handle_evidence_collect(args: argparse.Namespace) -> str:
         f"evidence collect {wizard['wizard_status']} for {args.host} "
         f"(writes_records={str(wizard['writes_records']).lower()})\n"
     )
+
+
+def _handle_evidence_proof_runner(args: argparse.Namespace) -> str:
+    report = build_evidence_proof_runner(
+        EvidenceProofRequest(
+            manifest_path=args.input,
+            records_path=args.path,
+            beta_records_path=args.beta_records,
+        )
+    )
+    if args.format == "json":
+        return json.dumps(report, indent=2, sort_keys=True) + "\n"
+    return f"evidence proof-runner {report['runner_status']} for {report['host']}\n"
+
+
+def _handle_evidence_proof_status(args: argparse.Namespace) -> str:
+    report = build_evidence_proof_status(records_path=args.path)
+    if args.format == "json":
+        return json.dumps(report, indent=2, sort_keys=True) + "\n"
+    return (
+        f"evidence proof-status {report['status']} "
+        f"(blocked_hosts={report['blocked_host_count']}/{report['host_count']})\n"
+    )
+
+
+def _handle_evidence_transition_pack(args: argparse.Namespace) -> str:
+    pack = build_evidence_transition_pack_artifacts(
+        EvidenceTransitionPackRequest(
+            before_host_records_path=args.before_host_records,
+            after_host_records_path=args.after_host_records,
+            beta_records_path=args.beta_records,
+            release_tag=args.release_tag,
+            output_format=args.format,
+        )
+    )
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    for artifact in pack["artifacts"]:
+        (args.output_dir / artifact["filename"]).write_text(artifact["content"], encoding="utf-8")
+    return f"wrote evidence transition-pack with {pack['artifact_count']} artifacts to {args.output_dir}\n"
+
+
+def _handle_evidence_rc_unblock_preview(args: argparse.Namespace) -> str:
+    preview = build_rc_unblock_preview(
+        RcUnblockPreviewRequest(
+            host_records_path=args.host_records,
+            beta_records_path=args.beta_records,
+            release_tag=args.release_tag,
+        )
+    )
+    if args.format == "json":
+        return json.dumps(preview, indent=2, sort_keys=True) + "\n"
+    return (
+        f"evidence rc-unblock-preview {preview['preview_status']} "
+        f"(blocked_reasons={len(preview['blocked_reasons'])}, publish_allowed="
+        f"{str(preview['publish_allowed']).lower()})\n"
+    )
+
+
+def _handle_evidence_transcript_template(args: argparse.Namespace) -> str:
+    artifact = build_operator_transcript_template_artifact(host=args.host, output_format=args.format)
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    template_path = args.output_dir / artifact["filename"]
+    template_path.write_text(artifact["content"], encoding="utf-8")
+    return f"wrote evidence transcript-template for {args.host} to {template_path}\n"
 
 
 def _handle_evidence_import_artifacts(args: argparse.Namespace) -> str:
