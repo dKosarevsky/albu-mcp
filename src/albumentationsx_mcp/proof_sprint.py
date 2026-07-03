@@ -205,6 +205,47 @@ def render_proof_execution_workspace_markdown(workspace: dict[str, Any]) -> str:
     return _render_workspace_index_markdown(workspace)
 
 
+def build_real_proof_run_1(
+    *,
+    host_records_path: Path = Path("docs/HOST_MANUAL_RUNS.json"),
+    beta_records_path: Path = Path("docs/BETA_VALIDATION_RECORDS.json"),
+    release_tag: str = "v1.15.0-rc.1",
+) -> dict[str, Any]:
+    """Build one no-write real proof run handoff report."""
+    workspace = build_proof_execution_workspace(
+        host_records_path=host_records_path,
+        beta_records_path=beta_records_path,
+        release_tag=release_tag,
+    )
+    points = [
+        _real_host_proof_run_point(_workspace_step_by_id(workspace, "real_host_execution")),
+        _beta_acquisition_loop_point(_workspace_step_by_id(workspace, "beta_execution")),
+        _p1_host_onboarding_gate_point(workspace=workspace),
+    ]
+    blocked = any(point["status"].startswith("blocked") for point in points)
+    return {
+        "run_status": "blocked" if blocked else "ready",
+        "writes_records": False,
+        "release_tag": release_tag,
+        "host_records_path": str(host_records_path),
+        "beta_records_path": str(beta_records_path),
+        "point_count": len(points),
+        "points": points,
+        "next_action": "run_real_host_handoff" if blocked else "run_rc_go_check",
+        "non_fabrication_policy": (
+            "Generated real-proof-run files do not count as evidence. Only reviewer-observed real MCP host sessions "
+            "and privacy-safe external beta attempts may close the remaining gates."
+        ),
+        "source_docs": [
+            "docs/GOVERNED_100_ITERATION_REPORT.md",
+            "docs/USAGE.md",
+            "docs/P0_EVIDENCE_IMPORT_GUIDE.md",
+            "docs/BETA_VALIDATION_SPRINT.md",
+            OFFICIAL_ALBUMENTATIONS_MCP_DOCS_URL,
+        ],
+    }
+
+
 def _real_host_evidence_point(*, blocked: bool) -> dict[str, Any]:
     return {
         "id": "real_host_evidence_sprint",
@@ -223,6 +264,57 @@ def _real_host_evidence_point(*, blocked: bool) -> dict[str, Any]:
             "docs/HOST_EVIDENCE_CAPTURE_KIT.md",
             OFFICIAL_ALBUMENTATIONS_MCP_DOCS_URL,
         ],
+    }
+
+
+def _real_host_proof_run_point(step: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": "real_host_proof_run",
+        "title": "Real host proof run",
+        "status": step["status"],
+        "implementation_allowed": False,
+        "goal": "Run one reviewer-observed MCP host session before importing any evidence.",
+        "success_signal": step["success_signal"],
+        "next_commands": [
+            "albu-mcp activation execution-workspace",
+            "albu-mcp evidence session-folder",
+            "albu-mcp evidence import-manifest",
+        ],
+        "source_links": step["source_links"],
+    }
+
+
+def _beta_acquisition_loop_point(step: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": "beta_acquisition_loop",
+        "title": "Beta acquisition loop",
+        "status": step["status"],
+        "implementation_allowed": False,
+        "goal": "Collect one privacy-safe external beta response through the official docs path.",
+        "success_signal": step["success_signal"],
+        "next_commands": [
+            "albu-mcp beta loop-pack",
+            "albu-mcp beta response-import-dir",
+            "albu-mcp beta report",
+        ],
+        "source_links": [*step["source_links"], OFFICIAL_ALBUMENTATIONS_MCP_DOCS_URL],
+    }
+
+
+def _p1_host_onboarding_gate_point(*, workspace: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": "p1_host_onboarding_gate",
+        "title": "P1 host onboarding gate",
+        "status": "blocked_until_external_gates",
+        "implementation_allowed": False,
+        "goal": "Keep P1 host-onboarding implementation gated until real host and beta evidence exist.",
+        "success_signal": "P0 host evidence and beta validation records are present before host-onboarding depth work.",
+        "next_commands": [
+            "albu-mcp activation real-proof-run",
+            "albu-mcp activation execution-workspace",
+            "albu-mcp trust dashboard",
+        ],
+        "source_links": [*workspace["source_docs"], "docs/HOST_ONBOARDING_DEPTH_PLAN.md"],
     }
 
 
