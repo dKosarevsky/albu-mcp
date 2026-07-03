@@ -10,15 +10,15 @@ from scripts.export_governed_iteration_execution_report import (
 )
 
 
-def test_governed_iteration_execution_report_stops_after_ninth_blocked_iteration() -> None:
+def test_governed_iteration_execution_report_stops_after_tenth_blocked_iteration() -> None:
     report = build_governed_iteration_execution_report()
 
     assert report["requested_iteration_count"] == 100
-    assert report["executed_iteration_count"] == 9
-    assert report["stopped_at_iteration"] == 9
+    assert report["executed_iteration_count"] == 10
+    assert report["stopped_at_iteration"] == 10
     assert report["stop_reason"] == "current_priority_gate_blocked"
-    assert report["completed_path_count"] == 46
-    assert report["completed_plan_point_count"] == 46
+    assert report["completed_path_count"] == 50
+    assert report["completed_plan_point_count"] == 50
     assert report["completed_plan_points"] == [
         "Added evidence execution-packet for host-specific real MCP runs.",
         "Added evidence artifact-doctor for artifact completeness and synthetic-only checks.",
@@ -66,6 +66,10 @@ def test_governed_iteration_execution_report_stops_after_ninth_blocked_iteration
         "Added real-host execution handoff for proof-sprint and evidence manifest import commands.",
         "Added beta execution handoff for official-docs beta response import and reporting.",
         "Stopped the ninth 100-iteration follow-up loop at the same external evidence and beta gates.",
+        "Added activation real-proof-run for one no-write real proof run handoff.",
+        "Added beta acquisition loop artifacts for official-docs external response collection.",
+        "Kept P1 host-onboarding work gated behind real host and beta evidence.",
+        "Stopped the tenth 100-iteration follow-up loop at the same external evidence and beta gates.",
     ]
 
 
@@ -74,7 +78,7 @@ def test_governed_iteration_execution_report_markdown_explains_stop() -> None:
 
     assert markdown.startswith("# Governed 100-Iteration Execution Report\n")
     assert "Requested iterations: `100`" in markdown
-    assert "Executed iterations: `9`" in markdown
+    assert "Executed iterations: `10`" in markdown
     assert "`current_priority_gate_blocked`" in markdown
     assert "evidence execution-packet" in markdown
     assert "artifact-doctor" in markdown
@@ -109,6 +113,10 @@ def test_governed_iteration_execution_report_markdown_explains_stop() -> None:
     assert "Proof Execution Workspace path" in markdown
     assert "real-host execution handoff" in markdown
     assert "beta execution handoff" in markdown
+    assert "activation real-proof-run" in markdown
+    assert "Real Proof Run path" in markdown
+    assert "Beta Acquisition Loop path" in markdown
+    assert "P1 Host Onboarding Gate path" in markdown
     assert "`p0_host_evidence_missing_or_blocked`" in markdown
     assert "RC reopen rehearsal v2" in markdown
     assert "No blind implementation loop was executed." in markdown
