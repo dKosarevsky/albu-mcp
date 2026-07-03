@@ -7,7 +7,10 @@ from pathlib import Path
 from typing import Any
 
 from albumentationsx_mcp.evidence import (
+    P0_REQUIRED_HOSTS,
     EvidenceSessionManifest,
+    HostName,
+    build_evidence_close_host_report,
     load_evidence_session_manifest,
     validate_evidence_session_manifest,
 )
@@ -38,6 +41,26 @@ def build_evidence_proof_runner(request: EvidenceProofRequest) -> dict[str, Any]
         "non_fabrication_policy": (
             "The proof runner validates and sequences commands only. It does not write P0 evidence records; "
             "only evidence import-manifest writes records after reviewer-observed real host evidence is confirmed."
+        ),
+    }
+
+
+def build_evidence_proof_status(*, records_path: Path = Path("docs/HOST_MANUAL_RUNS.json")) -> dict[str, Any]:
+    """Build a no-write status report for required P0 host evidence gates."""
+    hosts = [_proof_status_host(host=host, records_path=records_path) for host in P0_REQUIRED_HOSTS]
+    blocked_hosts = [host for host in hosts if host["closure_status"] != "closed"]
+    return {
+        "status": "blocked" if blocked_hosts else "ready_for_rc_reopen",
+        "writes_records": False,
+        "records_path": str(records_path),
+        "required_hosts": list(P0_REQUIRED_HOSTS),
+        "host_count": len(hosts),
+        "blocked_host_count": len(blocked_hosts),
+        "hosts": hosts,
+        "next_action": ("run_proof_runner_for_first_blocked_host" if blocked_hosts else "run_trust_gate_transition"),
+        "non_fabrication_policy": (
+            "Proof status reads host evidence records only. It does not mark generated files or synthetic smoke output "
+            "as P0 evidence."
         ),
     }
 
@@ -77,3 +100,14 @@ def _proof_runner_next_commands(
             "--format markdown"
         ),
     ]
+
+
+def _proof_status_host(*, host: HostName, records_path: Path) -> dict[str, Any]:
+    report = build_evidence_close_host_report(host=host, path=records_path)
+    return {
+        "host": report["host"],
+        "closure_status": report["closure_status"],
+        "missing_gates": report["missing_gates"],
+        "current_host_status": report["current_host_status"],
+        "next_commands": report["next_commands"],
+    }

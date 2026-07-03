@@ -68,7 +68,11 @@ from albumentationsx_mcp.evidence import (
     validate_evidence_session_manifest,
     validate_host_manual_runs,
 )
-from albumentationsx_mcp.evidence_proof import EvidenceProofRequest, build_evidence_proof_runner
+from albumentationsx_mcp.evidence_proof import (
+    EvidenceProofRequest,
+    build_evidence_proof_runner,
+    build_evidence_proof_status,
+)
 from albumentationsx_mcp.first_preview import build_first_preview_pack, render_first_preview_pack_markdown
 from albumentationsx_mcp.host_setup import (
     DEFAULT_ALLOWED_ROOT,
@@ -634,6 +638,13 @@ def _add_evidence_packet_parsers(subparsers: Any) -> None:
     proof_runner.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
     proof_runner.add_argument("--format", choices=["text", "json"], default="text")
 
+    proof_status = subparsers.add_parser(
+        "proof-status",
+        help="Report required P0 host evidence gaps.",
+    )
+    proof_status.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    proof_status.add_argument("--format", choices=["text", "json"], default="text")
+
 
 def _add_evidence_doctor_parsers(subparsers: Any) -> None:
     doctor = subparsers.add_parser("doctor", help="Inspect P0 evidence gates and print remediation actions.")
@@ -672,6 +683,7 @@ def _handle_evidence_command(args: argparse.Namespace) -> str:
         "replay-fixture-pack": _handle_evidence_replay_fixture_pack,
         "collect": _handle_evidence_collect,
         "proof-runner": _handle_evidence_proof_runner,
+        "proof-status": _handle_evidence_proof_status,
         "import-artifacts": _handle_evidence_import_artifacts,
         "validate-import": _handle_evidence_validate_import,
         "session-manifest": _handle_evidence_session_manifest,
@@ -791,6 +803,16 @@ def _handle_evidence_proof_runner(args: argparse.Namespace) -> str:
     if args.format == "json":
         return json.dumps(report, indent=2, sort_keys=True) + "\n"
     return f"evidence proof-runner {report['runner_status']} for {report['host']}\n"
+
+
+def _handle_evidence_proof_status(args: argparse.Namespace) -> str:
+    report = build_evidence_proof_status(records_path=args.path)
+    if args.format == "json":
+        return json.dumps(report, indent=2, sort_keys=True) + "\n"
+    return (
+        f"evidence proof-status {report['status']} "
+        f"(blocked_hosts={report['blocked_host_count']}/{report['host_count']})\n"
+    )
 
 
 def _handle_evidence_import_artifacts(args: argparse.Namespace) -> str:

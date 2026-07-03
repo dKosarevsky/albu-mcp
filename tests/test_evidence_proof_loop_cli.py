@@ -79,3 +79,36 @@ def test_evidence_proof_runner_reports_no_write_import_flow(tmp_path: Path) -> N
         ),
     ]
     assert host_records.read_text(encoding="utf-8") == '{"manual_host_ui": [], "first_10_minutes_replay": []}\n'
+
+
+def test_evidence_proof_status_reports_required_host_gaps(tmp_path: Path) -> None:
+    host_records, _ = _write_empty_records(tmp_path)
+
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "evidence",
+            "proof-status",
+            "--path",
+            str(host_records),
+            "--format",
+            "json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(result.stdout)
+
+    assert payload["status"] == "blocked"
+    assert payload["writes_records"] is False
+    assert payload["required_hosts"] == ["Codex", "Claude Code"]
+    assert payload["host_count"] == 2
+    assert [host["host"] for host in payload["hosts"]] == ["Codex", "Claude Code"]
+    assert all(host["closure_status"] == "blocked" for host in payload["hosts"])
+    assert all(host["missing_gates"] == ["manual_host_ui", "first_10_minutes_replay"] for host in payload["hosts"])
+    assert all(host["next_commands"] for host in payload["hosts"])
+    assert payload["next_action"] == "run_proof_runner_for_first_blocked_host"
+    assert host_records.read_text(encoding="utf-8") == '{"manual_host_ui": [], "first_10_minutes_replay": []}\n'
