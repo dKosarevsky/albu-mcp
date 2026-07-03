@@ -48,6 +48,18 @@ def test_activation_evidence_first_cycle_reports_five_no_write_tracks(tmp_path: 
         "distribution_adoption_handoff",
     ]
     assert payload["next_action"] == "run_evidence_first_result_pack"
+    assert payload["readiness_summary"] == {
+        "gate_transition_status": "blocked_until_gate_transition",
+        "p1_implementation_allowed": False,
+        "publish_allowed": False,
+        "release_readiness_command": "albu-mcp distribution readiness --format json",
+    }
+    assert payload["tracks"][2]["status"] == "blocked_until_gate_transition"
+    assert "albu-mcp trust gate-transition" in payload["tracks"][2]["next_commands"][0]
+    assert "albu-mcp rc go-check --format markdown" in payload["tracks"][2]["next_commands"]
+    assert "albu-mcp distribution readiness --format json" in payload["tracks"][2]["next_commands"]
+    assert payload["tracks"][4]["publish_allowed"] is False
+    assert payload["tracks"][4]["status"] == "blocked_until_release_gates"
     assert "Generated evidence-first-cycle files do not count as evidence" in payload["non_fabrication_policy"]
     assert host_records.read_text(encoding="utf-8") == '{"manual_host_ui": [], "first_10_minutes_replay": []}\n'
     assert beta_records.read_text(encoding="utf-8") == '{"records": []}\n'

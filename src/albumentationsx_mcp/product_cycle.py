@@ -69,6 +69,7 @@ def build_evidence_first_cycle(request: EvidenceFirstCycleRequest) -> dict[str, 
         "before_beta_records_path": str(before_beta),
         "track_count": len(tracks),
         "tracks": tracks,
+        "readiness_summary": _readiness_summary(tracks),
         "next_action": "run_evidence_first_result_pack" if blocked else "run_distribution_readiness",
         "non_fabrication_policy": (
             "Generated evidence-first-cycle files do not count as evidence. Only reviewer-observed real MCP host "
@@ -82,6 +83,16 @@ def build_evidence_first_cycle(request: EvidenceFirstCycleRequest) -> dict[str, 
             "docs/HOST_ONBOARDING_DEPTH_PLAN.md",
             OFFICIAL_ALBUMENTATIONS_MCP_DOCS_URL,
         ],
+    }
+
+
+def _readiness_summary(tracks: list[dict[str, Any]]) -> dict[str, Any]:
+    by_id = {track["id"]: track for track in tracks}
+    return {
+        "gate_transition_status": by_id["gate_transition_release_readiness"]["status"],
+        "p1_implementation_allowed": by_id["p1_host_onboarding_gate"]["implementation_allowed"],
+        "publish_allowed": by_id["distribution_adoption_handoff"]["publish_allowed"],
+        "release_readiness_command": "albu-mcp distribution readiness --format json",
     }
 
 
