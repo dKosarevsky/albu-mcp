@@ -10,15 +10,15 @@ from scripts.export_governed_iteration_execution_report import (
 )
 
 
-def test_governed_iteration_execution_report_stops_after_eleventh_blocked_iteration() -> None:
+def test_governed_iteration_execution_report_stops_after_twelfth_blocked_iteration() -> None:
     report = build_governed_iteration_execution_report()
 
     assert report["requested_iteration_count"] == 100
-    assert report["executed_iteration_count"] == 11
-    assert report["stopped_at_iteration"] == 11
+    assert report["executed_iteration_count"] == 12
+    assert report["stopped_at_iteration"] == 12
     assert report["stop_reason"] == "current_priority_gate_blocked"
-    assert report["completed_path_count"] == 56
-    assert report["completed_plan_point_count"] == 56
+    assert report["completed_path_count"] == 62
+    assert report["completed_plan_point_count"] == 62
     assert report["completed_plan_points"] == [
         "Added evidence execution-packet for host-specific real MCP runs.",
         "Added evidence artifact-doctor for artifact completeness and synthetic-only checks.",
@@ -76,61 +76,77 @@ def test_governed_iteration_execution_report_stops_after_eleventh_blocked_iterat
         "Added distribution adoption handoff gated behind release readiness.",
         "Kept P1 host-onboarding depth behind real host and beta evidence gates.",
         "Stopped the eleventh 100-iteration follow-up loop at the same external evidence and beta gates.",
+        "Added evidence proof-runner for no-write manifest validation and import sequencing.",
+        "Added evidence proof-status for required P0 host gap review.",
+        "Added evidence transition-pack for trust transition and RC go-check artifacts.",
+        "Added rc-unblock-preview for release blocker and unlock command review.",
+        "Added operator transcript template for privacy-safe reviewer notes.",
+        "Stopped the twelfth 100-iteration follow-up loop at the same external evidence and beta gates.",
     ]
 
 
 def test_governed_iteration_execution_report_markdown_explains_stop() -> None:
     markdown = render_governed_iteration_execution_report_markdown(build_governed_iteration_execution_report())
+    expected_terms = [
+        "Requested iterations: `100`",
+        "Executed iterations: `12`",
+        "`current_priority_gate_blocked`",
+        "evidence execution-packet",
+        "artifact-doctor",
+        "beta trial-pack",
+        "evidence operator-packet",
+        "beta intake-wizard",
+        "activation command-center",
+        "evidence packet-bundle",
+        "beta response-validate",
+        "activation runbook",
+        "evidence replay-fixture-pack",
+        "beta response-template",
+        "trust gate-transition",
+        "rc release-owner-packet",
+        "intake bundle",
+        "evidence session-manifest",
+        "beta response-import-dir",
+        "rc review-pack",
+        "rc go-check",
+        "host setup-probe",
+        "evidence collect",
+        "preview first-pack",
+        "README keeps only the short operator command path",
+        "beta loop-pack",
+        "evidence import-manifest",
+        "evidence session-folder",
+        "evidence close-host",
+        "activation proof-sprint",
+        "Combined Proof Sprint path",
+        "host-onboarding depth implementation blocked",
+        "activation execution-workspace",
+        "Proof Execution Workspace path",
+        "real-host execution handoff",
+        "beta execution handoff",
+        "activation real-proof-run",
+        "Real Proof Run path",
+        "Beta Acquisition Loop path",
+        "P1 Host Onboarding Gate path",
+        "activation evidence-first-cycle",
+        "Evidence First Cycle path",
+        "Evidence-First Result path",
+        "Gate Transition Readiness path",
+        "Distribution Adoption path",
+        "evidence proof-runner",
+        "Evidence Proof Runner path",
+        "Evidence Proof Status path",
+        "Evidence Transition Pack path",
+        "RC Unblock Preview path",
+        "Operator Transcript Template path",
+        "`p0_host_evidence_missing_or_blocked`",
+        "RC reopen rehearsal v2",
+        "No blind implementation loop was executed.",
+    ]
 
     assert markdown.startswith("# Governed 100-Iteration Execution Report\n")
-    assert "Requested iterations: `100`" in markdown
-    assert "Executed iterations: `11`" in markdown
-    assert "`current_priority_gate_blocked`" in markdown
-    assert "evidence execution-packet" in markdown
-    assert "artifact-doctor" in markdown
-    assert "beta trial-pack" in markdown
-    assert "evidence operator-packet" in markdown
-    assert "beta intake-wizard" in markdown
-    assert "activation command-center" in markdown
-    assert "evidence packet-bundle" in markdown
-    assert "beta response-validate" in markdown
-    assert "activation runbook" in markdown
-    assert "evidence replay-fixture-pack" in markdown
-    assert "beta response-template" in markdown
-    assert "trust gate-transition" in markdown
-    assert "rc release-owner-packet" in markdown
-    assert "intake bundle" in markdown
-    assert "evidence session-manifest" in markdown
-    assert "beta response-import-dir" in markdown
-    assert "rc review-pack" in markdown
-    assert "rc go-check" in markdown
-    assert "host setup-probe" in markdown
-    assert "evidence collect" in markdown
-    assert "preview first-pack" in markdown
-    assert "README keeps only the short operator command path" in markdown
-    assert "beta loop-pack" in markdown
-    assert "evidence import-manifest" in markdown
-    assert "evidence session-folder" in markdown
-    assert "evidence close-host" in markdown
-    assert "activation proof-sprint" in markdown
-    assert "Combined Proof Sprint path" in markdown
-    assert "host-onboarding depth implementation blocked" in markdown
-    assert "activation execution-workspace" in markdown
-    assert "Proof Execution Workspace path" in markdown
-    assert "real-host execution handoff" in markdown
-    assert "beta execution handoff" in markdown
-    assert "activation real-proof-run" in markdown
-    assert "Real Proof Run path" in markdown
-    assert "Beta Acquisition Loop path" in markdown
-    assert "P1 Host Onboarding Gate path" in markdown
-    assert "activation evidence-first-cycle" in markdown
-    assert "Evidence First Cycle path" in markdown
-    assert "Evidence-First Result path" in markdown
-    assert "Gate Transition Readiness path" in markdown
-    assert "Distribution Adoption path" in markdown
-    assert "`p0_host_evidence_missing_or_blocked`" in markdown
-    assert "RC reopen rehearsal v2" in markdown
-    assert "No blind implementation loop was executed." in markdown
+    for term in expected_terms:
+        assert term in markdown
 
 
 def test_committed_governed_iteration_execution_report_is_current() -> None:
