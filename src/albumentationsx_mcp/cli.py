@@ -75,6 +75,7 @@ from albumentationsx_mcp.evidence_proof import (
     build_evidence_proof_runner,
     build_evidence_proof_status,
     build_evidence_transition_pack_artifacts,
+    build_operator_transcript_template_artifact,
     build_rc_unblock_preview,
 )
 from albumentationsx_mcp.first_preview import build_first_preview_pack, render_first_preview_pack_markdown
@@ -673,6 +674,14 @@ def _add_evidence_proof_loop_parsers(subparsers: Any) -> None:
     rc_unblock_preview.add_argument("--release-tag", default="v1.15.0-rc.1")
     rc_unblock_preview.add_argument("--format", choices=["text", "json"], default="text")
 
+    transcript_template = subparsers.add_parser(
+        "transcript-template",
+        help="Write a privacy-safe operator transcript template.",
+    )
+    transcript_template.add_argument("--host", choices=get_args(HostName), required=True)
+    transcript_template.add_argument("--output-dir", type=Path, required=True)
+    transcript_template.add_argument("--format", choices=["markdown", "json"], default="markdown")
+
 
 def _add_evidence_doctor_parsers(subparsers: Any) -> None:
     doctor = subparsers.add_parser("doctor", help="Inspect P0 evidence gates and print remediation actions.")
@@ -714,6 +723,7 @@ def _handle_evidence_command(args: argparse.Namespace) -> str:
         "proof-status": _handle_evidence_proof_status,
         "transition-pack": _handle_evidence_transition_pack,
         "rc-unblock-preview": _handle_evidence_rc_unblock_preview,
+        "transcript-template": _handle_evidence_transcript_template,
         "import-artifacts": _handle_evidence_import_artifacts,
         "validate-import": _handle_evidence_validate_import,
         "session-manifest": _handle_evidence_session_manifest,
@@ -876,6 +886,14 @@ def _handle_evidence_rc_unblock_preview(args: argparse.Namespace) -> str:
         f"(blocked_reasons={len(preview['blocked_reasons'])}, publish_allowed="
         f"{str(preview['publish_allowed']).lower()})\n"
     )
+
+
+def _handle_evidence_transcript_template(args: argparse.Namespace) -> str:
+    artifact = build_operator_transcript_template_artifact(host=args.host, output_format=args.format)
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    template_path = args.output_dir / artifact["filename"]
+    template_path.write_text(artifact["content"], encoding="utf-8")
+    return f"wrote evidence transcript-template for {args.host} to {template_path}\n"
 
 
 def _handle_evidence_import_artifacts(args: argparse.Namespace) -> str:

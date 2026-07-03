@@ -167,6 +167,44 @@ def build_rc_unblock_preview(request: RcUnblockPreviewRequest) -> dict[str, Any]
     }
 
 
+def build_operator_transcript_template_artifact(
+    *,
+    host: HostName,
+    output_format: str = "markdown",
+) -> dict[str, str]:
+    """Build a privacy-safe operator transcript template artifact."""
+    payload = {
+        "template_status": "ready",
+        "writes_records": False,
+        "host": host,
+        "required_fields": [
+            "Reviewer",
+            "Session date",
+            "Commands used",
+            "Observed host behavior",
+            "Artifacts attached",
+            "Private data check",
+        ],
+        "privacy_note": (
+            "Do not include private source images, private dataset paths, credentials, API keys, or unredacted "
+            "participant logs."
+        ),
+        "evidence_policy": (
+            "Generated transcript templates are not P0 evidence. Import only reviewer-observed real host evidence "
+            "with confirm_real_host_observed=true."
+        ),
+    }
+    slug = _host_slug(host)
+    return {
+        "filename": f"{slug}-operator-transcript-template.{_artifact_extension(output_format)}",
+        "content": _format_payload(
+            payload=payload,
+            markdown=_render_operator_transcript_template_markdown(payload),
+            output_format=output_format,
+        ),
+    }
+
+
 def build_evidence_proof_status(*, records_path: Path = Path("docs/HOST_MANUAL_RUNS.json")) -> dict[str, Any]:
     """Build a no-write status report for required P0 host evidence gates."""
     hosts = [_proof_status_host(host=host, records_path=records_path) for host in P0_REQUIRED_HOSTS]
@@ -267,6 +305,34 @@ def _format_transition_pack_index(
         "## Non-Fabrication Policy\n\n"
         "Generated transition artifacts are reports only. They do not replace reviewer-observed real host evidence.\n"
     )
+
+
+def _render_operator_transcript_template_markdown(payload: dict[str, Any]) -> str:
+    return (
+        f"# {payload['host']} Operator Transcript Template\n\n"
+        f"Host: `{payload['host']}`\n\n"
+        "Reviewer:\n\n"
+        "Session date:\n\n"
+        "## Commands used\n\n"
+        "```bash\n"
+        "# Paste only non-secret commands that were run in the real MCP host session.\n"
+        "```\n\n"
+        "## Observed host behavior\n\n"
+        "- Real host UI/session observed:\n"
+        "- Preview or workflow result reviewed:\n"
+        "- Human-readable outcome:\n\n"
+        "## Artifacts attached\n\n"
+        "- Redacted screenshot/report/log path or URL:\n"
+        "- Artifact privacy check completed:\n\n"
+        "## Privacy note\n\n"
+        f"{payload['privacy_note']}\n\n"
+        "## Evidence policy\n\n"
+        f"{payload['evidence_policy']}\n"
+    )
+
+
+def _host_slug(host: HostName) -> str:
+    return host.lower().replace(" ", "-")
 
 
 def _proof_runner_next_commands(

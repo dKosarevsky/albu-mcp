@@ -206,3 +206,36 @@ def test_evidence_rc_unblock_preview_reports_release_blockers(tmp_path: Path) ->
     assert payload["rc_go_decision"] == "no_go"
     assert host_records.read_text(encoding="utf-8") == host_before
     assert beta_records.read_text(encoding="utf-8") == beta_before
+
+
+def test_evidence_transcript_template_writes_privacy_safe_markdown(tmp_path: Path) -> None:
+    output_dir = tmp_path / "transcripts"
+
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "evidence",
+            "transcript-template",
+            "--host",
+            "Codex",
+            "--output-dir",
+            str(output_dir),
+            "--format",
+            "markdown",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    template_path = output_dir / "codex-operator-transcript-template.md"
+    markdown = template_path.read_text(encoding="utf-8")
+
+    assert result.stdout == f"wrote evidence transcript-template for Codex to {template_path}\n"
+    assert "# Codex Operator Transcript Template" in markdown
+    assert "Reviewer:" in markdown
+    assert "Host: `Codex`" in markdown
+    assert "Commands used" in markdown
+    assert "Privacy note" in markdown
+    assert "Generated transcript templates are not P0 evidence" in markdown
