@@ -21,11 +21,11 @@ def build_governed_iteration_execution_report() -> dict[str, Any]:
     stop_reason = "completed" if rc_decision["decision"] == "go" else "current_priority_gate_blocked"
     return {
         "requested_iteration_count": governor["iteration_count"],
-        "executed_iteration_count": 10,
-        "stopped_at_iteration": 10,
+        "executed_iteration_count": 11,
+        "stopped_at_iteration": 11,
         "stop_reason": stop_reason,
-        "completed_path_count": 50,
-        "completed_plan_point_count": 50,
+        "completed_path_count": 56,
+        "completed_plan_point_count": 56,
         "execution_policy": governor["execution_policy"],
         "safety_policy": "No blind implementation loop was executed.",
         "completed_paths": [
@@ -106,6 +106,27 @@ def build_governed_iteration_execution_report() -> dict[str, Any]:
                 "evidence gates."
             ),
             "Governed Loop path: the tenth requested follow-up loop stops at external evidence and beta gates.",
+            (
+                "Evidence First Cycle path: activation evidence-first-cycle packages five no-write product tracks "
+                "over external gates."
+            ),
+            (
+                "Evidence-First Result path: evidence-first-cycle packages validated manifest import and host "
+                "closure commands."
+            ),
+            (
+                "Gate Transition Readiness path: evidence-first-cycle exposes trust transition, rc go-check, and "
+                "distribution readiness commands."
+            ),
+            (
+                "P1 Host Onboarding Gate path: evidence-first-cycle keeps host-onboarding depth behind real host "
+                "and beta gates."
+            ),
+            (
+                "Distribution Adoption path: evidence-first-cycle gates PyPI, GitHub release, MCP Registry, and "
+                "upstream docs handoff behind release readiness."
+            ),
+            "Governed Loop path: the eleventh requested follow-up loop stops at external evidence and beta gates.",
         ],
         "completed_plan_points": [
             "Added evidence execution-packet for host-specific real MCP runs.",
@@ -158,6 +179,12 @@ def build_governed_iteration_execution_report() -> dict[str, Any]:
             "Added beta acquisition loop artifacts for official-docs external response collection.",
             "Kept P1 host-onboarding work gated behind real host and beta evidence.",
             "Stopped the tenth 100-iteration follow-up loop at the same external evidence and beta gates.",
+            "Added activation evidence-first-cycle for one no-write five-track product cycle.",
+            "Added evidence-first result handoff for validated manifest import and host closure.",
+            "Added gate transition readiness summary for release and distribution commands.",
+            "Added distribution adoption handoff gated behind release readiness.",
+            "Kept P1 host-onboarding depth behind real host and beta evidence gates.",
+            "Stopped the eleventh 100-iteration follow-up loop at the same external evidence and beta gates.",
         ],
         "current_external_gates": [
             "p0_host_evidence_missing_or_blocked: requires reviewer-observed real MCP host UI evidence.",
@@ -180,6 +207,7 @@ def build_governed_iteration_execution_report() -> dict[str, Any]:
             "src/albumentationsx_mcp/host_setup.py",
             "src/albumentationsx_mcp/intake.py",
             "src/albumentationsx_mcp/proof_sprint.py",
+            "src/albumentationsx_mcp/product_cycle.py",
             "src/albumentationsx_mcp/release_review.py",
             "src/albumentationsx_mcp/trust.py",
             "src/albumentationsx_mcp/rc_reopen.py",
@@ -192,6 +220,7 @@ def build_governed_iteration_execution_report() -> dict[str, Any]:
             "tests/test_combined_proof_sprint_cli.py",
             "tests/test_proof_execution_workspace_cli.py",
             "tests/test_real_proof_run_cli.py",
+            "tests/test_evidence_first_cycle_cli.py",
         ],
     }
 
