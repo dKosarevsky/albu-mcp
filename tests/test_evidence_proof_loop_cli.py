@@ -162,3 +162,47 @@ def test_evidence_transition_pack_writes_trust_and_rc_artifacts(tmp_path: Path) 
     assert "After trust score" in transition
     assert "# RC Go Check" in rc_preview
     assert "Go decision: `no_go`" in rc_preview
+
+
+def test_evidence_rc_unblock_preview_reports_release_blockers(tmp_path: Path) -> None:
+    host_records, beta_records = _write_empty_records(tmp_path)
+    host_before = host_records.read_text(encoding="utf-8")
+    beta_before = beta_records.read_text(encoding="utf-8")
+
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "evidence",
+            "rc-unblock-preview",
+            "--host-records",
+            str(host_records),
+            "--beta-records",
+            str(beta_records),
+            "--format",
+            "json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(result.stdout)
+
+    assert payload["preview_status"] == "blocked"
+    assert payload["writes_records"] is False
+    assert payload["publish_allowed"] is False
+    assert payload["blocked_reasons"] == [
+        "p0_host_evidence_missing_or_blocked",
+        "beta_validation_incomplete",
+    ]
+    assert payload["next_unlock_commands"] == [
+        "albu-mcp evidence proof-status --format json",
+        "albu-mcp beta loop-pack --output-dir docs/beta-loop --format markdown",
+        "albu-mcp rc go-check --format markdown",
+    ]
+    assert payload["release_readiness_command"] == "albu-mcp distribution readiness --format json"
+    assert payload["proof_status"]["blocked_host_count"] == 2
+    assert payload["rc_go_decision"] == "no_go"
+    assert host_records.read_text(encoding="utf-8") == host_before
+    assert beta_records.read_text(encoding="utf-8") == beta_before

@@ -15,7 +15,11 @@ from albumentationsx_mcp.evidence import (
     load_evidence_session_manifest,
     validate_evidence_session_manifest,
 )
-from albumentationsx_mcp.rc_reopen import build_rc_go_check_report, render_rc_go_check_markdown
+from albumentationsx_mcp.rc_reopen import (
+    build_rc_go_check_report,
+    build_rc_reopen_report,
+    render_rc_go_check_markdown,
+)
 from albumentationsx_mcp.trust import build_trust_gate_transition_report, render_trust_gate_transition_markdown
 
 
@@ -37,6 +41,15 @@ class EvidenceTransitionPackRequest:
     beta_records_path: Path = Path("docs/BETA_VALIDATION_RECORDS.json")
     release_tag: str = "v1.15.0-rc.1"
     output_format: str = "markdown"
+
+
+@dataclass(frozen=True)
+class RcUnblockPreviewRequest:
+    """Inputs for a no-write RC unblock preview."""
+
+    host_records_path: Path = Path("docs/HOST_MANUAL_RUNS.json")
+    beta_records_path: Path = Path("docs/BETA_VALIDATION_RECORDS.json")
+    release_tag: str = "v1.15.0-rc.1"
 
 
 def build_evidence_proof_runner(request: EvidenceProofRequest) -> dict[str, Any]:
@@ -115,6 +128,41 @@ def build_evidence_transition_pack_artifacts(request: EvidenceTransitionPackRequ
         "non_fabrication_policy": (
             "The transition pack is report-only. It does not import host evidence, write beta records, tag releases, "
             "publish packages, or treat generated artifacts as P0 evidence."
+        ),
+    }
+
+
+def build_rc_unblock_preview(request: RcUnblockPreviewRequest) -> dict[str, Any]:
+    """Build a no-write preview of remaining RC blockers and unlock commands."""
+    proof_status = build_evidence_proof_status(records_path=request.host_records_path)
+    rc_reopen = build_rc_reopen_report(
+        host_records_path=request.host_records_path,
+        beta_records_path=request.beta_records_path,
+        release_tag=request.release_tag,
+    )
+    rc_go_check = build_rc_go_check_report(
+        host_records_path=request.host_records_path,
+        beta_records_path=request.beta_records_path,
+        release_tag=request.release_tag,
+    )
+    publish_allowed = bool(rc_reopen["publish_allowed"])
+    return {
+        "preview_status": "ready_for_release_owner_review" if publish_allowed else "blocked",
+        "writes_records": False,
+        "release_tag": request.release_tag,
+        "host_records_path": str(request.host_records_path),
+        "beta_records_path": str(request.beta_records_path),
+        "publish_allowed": publish_allowed,
+        "blocked_reasons": rc_reopen["blocked_reasons"],
+        "proof_status": proof_status,
+        "rc_reopen_decision": rc_reopen["rc_decision"],
+        "rc_go_decision": rc_go_check["go_decision"],
+        "release_owner_packet_status": rc_go_check["release_owner_packet_status"],
+        "next_unlock_commands": _rc_unblock_next_unlock_commands(publish_allowed=publish_allowed),
+        "release_readiness_command": "albu-mcp distribution readiness --format json",
+        "execution_policy": (
+            "Report only; this preview does not write evidence records, create tags, publish releases, or upload "
+            "packages."
         ),
     }
 
@@ -260,6 +308,19 @@ def _transition_pack_next_actions(request: EvidenceTransitionPackRequest) -> lis
             f"--host-records {request.after_host_records_path} --beta-records {request.beta_records_path} "
             f"--release-tag {request.release_tag} --format markdown"
         ),
+    ]
+
+
+def _rc_unblock_next_unlock_commands(*, publish_allowed: bool) -> list[str]:
+    if publish_allowed:
+        return [
+            "albu-mcp rc go-check --format markdown",
+            "albu-mcp distribution readiness --format json",
+        ]
+    return [
+        "albu-mcp evidence proof-status --format json",
+        "albu-mcp beta loop-pack --output-dir docs/beta-loop --format markdown",
+        "albu-mcp rc go-check --format markdown",
     ]
 
 
