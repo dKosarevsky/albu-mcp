@@ -76,6 +76,12 @@ from albumentationsx_mcp.host_setup import (
     render_host_setup_probe_markdown,
 )
 from albumentationsx_mcp.intake import build_intake_bundle_artifacts
+from albumentationsx_mcp.product_cycle import (
+    EvidenceFirstCycleRequest,
+    build_evidence_first_cycle,
+    build_evidence_first_cycle_artifacts,
+    render_evidence_first_cycle_markdown,
+)
 from albumentationsx_mcp.proof_sprint import (
     build_combined_proof_sprint,
     build_combined_proof_sprint_artifacts,
@@ -319,6 +325,19 @@ def _run_activation_cli(argv: list[str]) -> None:
     real_proof_run.add_argument("--output-dir", type=Path, default=None)
     real_proof_run.add_argument("--format", choices=["text", "json", "markdown"], default="text")
 
+    evidence_first_cycle = subparsers.add_parser(
+        "evidence-first-cycle",
+        help="Build a no-write evidence-first product cycle.",
+    )
+    evidence_first_cycle.add_argument("--host", choices=get_args(HostName), required=True)
+    evidence_first_cycle.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    evidence_first_cycle.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    evidence_first_cycle.add_argument("--before-host-records", type=Path, default=None)
+    evidence_first_cycle.add_argument("--before-beta-records", type=Path, default=None)
+    evidence_first_cycle.add_argument("--release-tag", default="v1.15.0-rc.1")
+    evidence_first_cycle.add_argument("--output-dir", type=Path, default=None)
+    evidence_first_cycle.add_argument("--format", choices=["text", "json", "markdown"], default="text")
+
     args = parser.parse_args(argv)
     try:
         sys.stdout.write(_handle_activation_command(args))
@@ -330,12 +349,36 @@ def _run_activation_cli(argv: list[str]) -> None:
 def _handle_activation_command(args: argparse.Namespace) -> str:
     handlers = {
         "command-center": _handle_activation_command_center,
+        "evidence-first-cycle": _handle_activation_evidence_first_cycle,
         "execution-workspace": _handle_activation_execution_workspace,
         "proof-sprint": _handle_activation_proof_sprint,
         "real-proof-run": _handle_activation_real_proof_run,
         "runbook": _handle_activation_runbook,
     }
     return handlers[args.command](args)
+
+
+def _handle_activation_evidence_first_cycle(args: argparse.Namespace) -> str:
+    request = EvidenceFirstCycleRequest(
+        host=args.host,
+        host_records_path=args.host_records,
+        beta_records_path=args.beta_records,
+        before_host_records_path=args.before_host_records,
+        before_beta_records_path=args.before_beta_records,
+        release_tag=args.release_tag,
+    )
+    if args.output_dir is not None:
+        pack = build_evidence_first_cycle_artifacts(request, output_format=args.format)
+        args.output_dir.mkdir(parents=True, exist_ok=True)
+        for artifact in pack["artifacts"]:
+            (args.output_dir / artifact["filename"]).write_text(artifact["content"], encoding="utf-8")
+        return f"wrote activation evidence-first-cycle with {pack['artifact_count']} artifacts to {args.output_dir}\n"
+    report = build_evidence_first_cycle(request)
+    if args.format == "json":
+        return json.dumps(report, indent=2, sort_keys=True) + "\n"
+    if args.format == "markdown":
+        return render_evidence_first_cycle_markdown(report)
+    return f"activation evidence-first-cycle {report['cycle_status']} (tracks={report['track_count']})\n"
 
 
 def _handle_activation_runbook(args: argparse.Namespace) -> str:
