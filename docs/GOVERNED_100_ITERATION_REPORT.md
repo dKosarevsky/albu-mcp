@@ -1,11 +1,11 @@
 # Governed 100-Iteration Execution Report
 
 Requested iterations: `100`
-Executed iterations: `9`
-Stopped at iteration: `9`
+Executed iterations: `10`
+Stopped at iteration: `10`
 Stop reason: `current_priority_gate_blocked`
-Completed paths: `46`
-Completed plan points: `46`
+Completed paths: `50`
+Completed plan points: `50`
 
 ## Execution Policy
 
@@ -60,6 +60,10 @@ No blind implementation loop was executed.
 - Real Host Execution path: proof execution workspace packages the real-host execution handoff and manifest import commands.
 - Beta Execution path: proof execution workspace packages the official-docs beta execution handoff and response import commands.
 - Governed Loop path: the ninth requested follow-up loop stops at external evidence and beta gates.
+- Real Proof Run path: activation real-proof-run packages one no-write real host proof run handoff.
+- Beta Acquisition Loop path: real-proof-run writes official-docs beta response collection artifacts.
+- P1 Host Onboarding Gate path: real-proof-run keeps host-onboarding depth blocked behind external evidence gates.
+- Governed Loop path: the tenth requested follow-up loop stops at external evidence and beta gates.
 
 ## Completed Plan Points
 
@@ -109,6 +113,10 @@ No blind implementation loop was executed.
 44. Added real-host execution handoff for proof-sprint and evidence manifest import commands.
 45. Added beta execution handoff for official-docs beta response import and reporting.
 46. Stopped the ninth 100-iteration follow-up loop at the same external evidence and beta gates.
+47. Added activation real-proof-run for one no-write real proof run handoff.
+48. Added beta acquisition loop artifacts for official-docs external response collection.
+49. Kept P1 host-onboarding work gated behind real host and beta evidence.
+50. Stopped the tenth 100-iteration follow-up loop at the same external evidence and beta gates.
 
 ## Current External Gates
 
@@ -143,3 +151,4 @@ No generated packet, test fixture, or synthetic smoke output is counted as real 
 - `tests/test_evidence_import_closure_cli.py`
 - `tests/test_combined_proof_sprint_cli.py`
 - `tests/test_proof_execution_workspace_cli.py`
+- `tests/test_real_proof_run_cli.py`
