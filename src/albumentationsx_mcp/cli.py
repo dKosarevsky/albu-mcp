@@ -76,7 +76,12 @@ from albumentationsx_mcp.host_setup import (
     render_host_setup_probe_markdown,
 )
 from albumentationsx_mcp.intake import build_intake_bundle_artifacts
-from albumentationsx_mcp.product_cycle import EvidenceFirstCycleRequest, build_evidence_first_cycle
+from albumentationsx_mcp.product_cycle import (
+    EvidenceFirstCycleRequest,
+    build_evidence_first_cycle,
+    build_evidence_first_cycle_artifacts,
+    render_evidence_first_cycle_markdown,
+)
 from albumentationsx_mcp.proof_sprint import (
     build_combined_proof_sprint,
     build_combined_proof_sprint_artifacts,
@@ -354,23 +359,25 @@ def _handle_activation_command(args: argparse.Namespace) -> str:
 
 
 def _handle_activation_evidence_first_cycle(args: argparse.Namespace) -> str:
-    if args.output_dir is not None:
-        msg = "activation evidence-first-cycle artifact output is implemented in the next cycle step"
-        raise ValueError(msg)
-    report = build_evidence_first_cycle(
-        EvidenceFirstCycleRequest(
-            host=args.host,
-            host_records_path=args.host_records,
-            beta_records_path=args.beta_records,
-            before_host_records_path=args.before_host_records,
-            before_beta_records_path=args.before_beta_records,
-            release_tag=args.release_tag,
-        )
+    request = EvidenceFirstCycleRequest(
+        host=args.host,
+        host_records_path=args.host_records,
+        beta_records_path=args.beta_records,
+        before_host_records_path=args.before_host_records,
+        before_beta_records_path=args.before_beta_records,
+        release_tag=args.release_tag,
     )
+    if args.output_dir is not None:
+        pack = build_evidence_first_cycle_artifacts(request, output_format=args.format)
+        args.output_dir.mkdir(parents=True, exist_ok=True)
+        for artifact in pack["artifacts"]:
+            (args.output_dir / artifact["filename"]).write_text(artifact["content"], encoding="utf-8")
+        return f"wrote activation evidence-first-cycle with {pack['artifact_count']} artifacts to {args.output_dir}\n"
+    report = build_evidence_first_cycle(request)
     if args.format == "json":
         return json.dumps(report, indent=2, sort_keys=True) + "\n"
     if args.format == "markdown":
-        return json.dumps(report, indent=2, sort_keys=True) + "\n"
+        return render_evidence_first_cycle_markdown(report)
     return f"activation evidence-first-cycle {report['cycle_status']} (tracks={report['track_count']})\n"
 
 

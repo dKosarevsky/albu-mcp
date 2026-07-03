@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -82,6 +83,36 @@ def build_evidence_first_cycle(request: EvidenceFirstCycleRequest) -> dict[str, 
             OFFICIAL_ALBUMENTATIONS_MCP_DOCS_URL,
         ],
     }
+
+
+def build_evidence_first_cycle_artifacts(
+    request: EvidenceFirstCycleRequest,
+    *,
+    output_format: str = "markdown",
+) -> dict[str, Any]:
+    """Build a no-write artifact folder for one evidence-first product cycle."""
+    report = build_evidence_first_cycle(request)
+    artifacts = [
+        _cycle_index_artifact(report=report, output_format=output_format),
+        *[_cycle_track_artifact(track=track, output_format=output_format) for track in report["tracks"]],
+    ]
+    return {
+        "pack_status": report["cycle_status"],
+        "writes_records": False,
+        "artifact_count": len(artifacts),
+        "artifacts": artifacts,
+        "next_actions": [
+            "Run the evidence-first result pack with a reviewer-observed real MCP host session.",
+            "Collect external beta responses through the official Albumentations MCP docs path.",
+            "Regenerate trust transition and distribution readiness after real records change.",
+            "Keep P1 host onboarding and public distribution blocked until external gates open.",
+        ],
+    }
+
+
+def render_evidence_first_cycle_markdown(report: dict[str, Any]) -> str:
+    """Render the evidence-first cycle index as Markdown."""
+    return _render_cycle_index_markdown(report)
 
 
 def _evidence_first_result_track(*, host: HostName, evidence: dict[str, Any]) -> dict[str, Any]:
@@ -190,6 +221,78 @@ def _p1_host_onboarding_gate_track(
             "docs/PRODUCT_DEPTH_GATE.md",
         ],
     }
+
+
+def _cycle_index_artifact(*, report: dict[str, Any], output_format: str) -> dict[str, str]:
+    content = _json_dumps(report) if output_format == "json" else _render_cycle_index_markdown(report)
+    return {"filename": f"evidence-first-cycle-index.{_extension(output_format)}", "content": content}
+
+
+def _cycle_track_artifact(*, track: dict[str, Any], output_format: str) -> dict[str, str]:
+    content = _json_dumps(track) if output_format == "json" else _render_cycle_track_markdown(track)
+    return {"filename": f"{track['id'].replace('_', '-')}.{_extension(output_format)}", "content": content}
+
+
+def _render_cycle_index_markdown(report: dict[str, Any]) -> str:
+    tracks = "\n".join(
+        f"- `{track['id']}`: `{track['status']}`; implementation_allowed="
+        f"`{str(track['implementation_allowed']).lower()}`"
+        for track in report["tracks"]
+    )
+    sources = "\n".join(f"- {source}" for source in report["source_docs"])
+    return (
+        "# Evidence First Cycle\n\n"
+        f"Release tag: `{report['release_tag']}`\n\n"
+        f"Host: `{report['host']}`\n\n"
+        f"Cycle status: `{report['cycle_status']}`\n\n"
+        f"Writes records: `{str(report['writes_records']).lower()}`\n\n"
+        f"Next action: `{report['next_action']}`\n\n"
+        "## Non-Fabrication Policy\n\n"
+        f"{report['non_fabrication_policy']}\n\n"
+        "## Tracks\n\n"
+        f"{tracks}\n\n"
+        "## Source Docs\n\n"
+        f"{sources}\n"
+    )
+
+
+def _render_cycle_track_markdown(track: dict[str, Any]) -> str:
+    commands = "\n".join(f"- `{command}`" for command in track["next_commands"])
+    links = "\n".join(f"- {link}" for link in track["source_links"])
+    gate_note = (
+        "\nThis track stays blocked until external gates have real host and beta evidence.\n"
+        if track["id"] == "p1_host_onboarding_gate"
+        else ""
+    )
+    publish_note = _publish_note(track)
+    return (
+        f"# {track['title']}\n\n"
+        f"Status: `{track['status']}`\n\n"
+        f"Implementation allowed: `{str(track['implementation_allowed']).lower()}`\n\n"
+        f"Writes records: `{str(track['writes_records']).lower()}`\n"
+        f"{gate_note}"
+        f"{publish_note}\n"
+        f"Goal: {track['goal']}\n\n"
+        f"Success signal: {track['success_signal']}\n\n"
+        "## Next Commands\n\n"
+        f"{commands}\n\n"
+        "## Source Links\n\n"
+        f"{links}\n"
+    )
+
+
+def _publish_note(track: dict[str, Any]) -> str:
+    if "publish_allowed" not in track:
+        return ""
+    return f"\nPublish allowed: `{str(track['publish_allowed']).lower()}`\n"
+
+
+def _extension(output_format: str) -> str:
+    return "json" if output_format == "json" else "md"
+
+
+def _json_dumps(payload: dict[str, Any]) -> str:
+    return json.dumps(payload, indent=2, sort_keys=True) + "\n"
 
 
 def _distribution_adoption_handoff_track(*, distribution: dict[str, Any]) -> dict[str, Any]:
