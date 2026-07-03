@@ -70,8 +70,10 @@ from albumentationsx_mcp.evidence import (
 )
 from albumentationsx_mcp.evidence_proof import (
     EvidenceProofRequest,
+    EvidenceTransitionPackRequest,
     build_evidence_proof_runner,
     build_evidence_proof_status,
+    build_evidence_transition_pack_artifacts,
 )
 from albumentationsx_mcp.first_preview import build_first_preview_pack, render_first_preview_pack_markdown
 from albumentationsx_mcp.host_setup import (
@@ -645,6 +647,17 @@ def _add_evidence_packet_parsers(subparsers: Any) -> None:
     proof_status.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
     proof_status.add_argument("--format", choices=["text", "json"], default="text")
 
+    transition_pack = subparsers.add_parser(
+        "transition-pack",
+        help="Write a no-record trust transition and RC go-check preview pack.",
+    )
+    transition_pack.add_argument("--before-host-records", type=Path, required=True)
+    transition_pack.add_argument("--after-host-records", type=Path, required=True)
+    transition_pack.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    transition_pack.add_argument("--output-dir", type=Path, required=True)
+    transition_pack.add_argument("--release-tag", default="v1.15.0-rc.1")
+    transition_pack.add_argument("--format", choices=["markdown", "json"], default="markdown")
+
 
 def _add_evidence_doctor_parsers(subparsers: Any) -> None:
     doctor = subparsers.add_parser("doctor", help="Inspect P0 evidence gates and print remediation actions.")
@@ -684,6 +697,7 @@ def _handle_evidence_command(args: argparse.Namespace) -> str:
         "collect": _handle_evidence_collect,
         "proof-runner": _handle_evidence_proof_runner,
         "proof-status": _handle_evidence_proof_status,
+        "transition-pack": _handle_evidence_transition_pack,
         "import-artifacts": _handle_evidence_import_artifacts,
         "validate-import": _handle_evidence_validate_import,
         "session-manifest": _handle_evidence_session_manifest,
@@ -813,6 +827,22 @@ def _handle_evidence_proof_status(args: argparse.Namespace) -> str:
         f"evidence proof-status {report['status']} "
         f"(blocked_hosts={report['blocked_host_count']}/{report['host_count']})\n"
     )
+
+
+def _handle_evidence_transition_pack(args: argparse.Namespace) -> str:
+    pack = build_evidence_transition_pack_artifacts(
+        EvidenceTransitionPackRequest(
+            before_host_records_path=args.before_host_records,
+            after_host_records_path=args.after_host_records,
+            beta_records_path=args.beta_records,
+            release_tag=args.release_tag,
+            output_format=args.format,
+        )
+    )
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    for artifact in pack["artifacts"]:
+        (args.output_dir / artifact["filename"]).write_text(artifact["content"], encoding="utf-8")
+    return f"wrote evidence transition-pack with {pack['artifact_count']} artifacts to {args.output_dir}\n"
 
 
 def _handle_evidence_import_artifacts(args: argparse.Namespace) -> str:

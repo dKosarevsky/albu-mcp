@@ -112,3 +112,53 @@ def test_evidence_proof_status_reports_required_host_gaps(tmp_path: Path) -> Non
     assert all(host["next_commands"] for host in payload["hosts"])
     assert payload["next_action"] == "run_proof_runner_for_first_blocked_host"
     assert host_records.read_text(encoding="utf-8") == '{"manual_host_ui": [], "first_10_minutes_replay": []}\n'
+
+
+def test_evidence_transition_pack_writes_trust_and_rc_artifacts(tmp_path: Path) -> None:
+    before_host, beta_records = _write_empty_records(tmp_path)
+    after_host = tmp_path / "AFTER_HOST_MANUAL_RUNS.json"
+    after_host.write_text(before_host.read_text(encoding="utf-8"), encoding="utf-8")
+    output_dir = tmp_path / "transition-pack"
+
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "evidence",
+            "transition-pack",
+            "--before-host-records",
+            str(before_host),
+            "--after-host-records",
+            str(after_host),
+            "--beta-records",
+            str(beta_records),
+            "--output-dir",
+            str(output_dir),
+            "--format",
+            "markdown",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    expected_files = {
+        "trust-transition-pack-index.md",
+        "trust-gate-transition.md",
+        "rc-go-check-preview.md",
+    }
+    index = (output_dir / "trust-transition-pack-index.md").read_text(encoding="utf-8")
+    transition = (output_dir / "trust-gate-transition.md").read_text(encoding="utf-8")
+    rc_preview = (output_dir / "rc-go-check-preview.md").read_text(encoding="utf-8")
+
+    assert result.stdout == f"wrote evidence transition-pack with {len(expected_files)} artifacts to {output_dir}\n"
+    assert expected_files == {path.name for path in output_dir.iterdir()}
+    assert "# Trust Transition Pack" in index
+    assert "Writes records: `false`" in index
+    assert "albu-mcp trust gate-transition" in index
+    assert "albu-mcp rc go-check" in index
+    assert "# Trust Gate Transition Report" in transition
+    assert "Before trust score" in transition
+    assert "After trust score" in transition
+    assert "# RC Go Check" in rc_preview
+    assert "Go decision: `no_go`" in rc_preview
