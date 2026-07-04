@@ -1,0 +1,12 @@
+{
+  "artifact_refs": [
+    "docs/assets/demo/demo_report.md"
+  ],
+  "attempt_date": "2026-07-04",
+  "participant_role": "ML practitioner",
+  "private_data_included": false,
+  "status": "needs_followup",
+  "summary": "redacted dataset_health_before_training outcome; replace with the participant's safe workflow summary",
+  "triage_bucket": "dataset_quality_gap",
+  "workflow_id": "dataset_health_before_training"
+}
