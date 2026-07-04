@@ -89,6 +89,7 @@ albu-mcp activation real-proof-run --output-dir docs/real-proof-run-1 --format m
 albu-mcp activation evidence-first-cycle --host Codex --output-dir docs/evidence-first-cycle --format markdown
 albu-mcp activation acquisition-cycle --host Codex --output-dir docs/acquisition-cycle --format markdown
 albu-mcp activation evidence-cockpit --host Codex --output-dir docs/evidence-cockpit --format markdown
+albu-mcp activation evidence-product-loop --host Codex --output-dir docs/evidence-product-loop --format markdown
 albu-mcp evidence collect --host Codex --date YYYY-MM-DD --reviewer "Release operator" --format json
 albu-mcp evidence run-session --host Codex --format json
 albu-mcp evidence execution-packet --host Codex --format json
@@ -142,12 +143,13 @@ albu-mcp trust gate-transition --before-host-records docs/HOST_MANUAL_RUNS.json 
 These commands write privacy-safe JSON records only for explicit `record-*`, `response-import`, `response-import-dir`,
 `import-manifest`, or `import-artifacts` actions. `intake bundle`, `activation command-center`, `activation runbook`,
 `activation proof-sprint`, `activation execution-workspace`, `activation real-proof-run`,
-`activation evidence-first-cycle`, `activation acquisition-cycle`, `activation evidence-cockpit`, `run-session`,
-`host setup-probe`, `preview first-pack`, `evidence collect`, `execution-packet`, `operator-packet`, `packet-bundle`,
-`replay-fixture-pack`, `session-folder`, `session-manifest`, `validate-manifest`, `proof-runner`, `close-host`,
-`proof-status`, `transition-pack`, `rc-unblock-preview`, `transcript-template`, `import-checklist`, `validate-import`,
-`privacy-doctor`, `artifact-doctor`, `unblock-plan`, `doctor`, `campaign-plan`, `loop-pack`, `trial-pack`,
-`intake-wizard`, `response-template`, `response-validate`, `rc reopen`, `rc rehearse`,
+`activation evidence-first-cycle`, `activation acquisition-cycle`, `activation evidence-cockpit`,
+`activation evidence-product-loop`, `run-session`, `host setup-probe`, `preview first-pack`, `evidence collect`,
+`execution-packet`, `operator-packet`, `packet-bundle`, `replay-fixture-pack`, `session-folder`, `session-manifest`,
+`validate-manifest`, `proof-runner`, `close-host`, `proof-status`, `transition-pack`, `rc-unblock-preview`,
+`transcript-template`, `import-checklist`, `validate-import`, `privacy-doctor`, `artifact-doctor`, `unblock-plan`,
+`doctor`, `campaign-plan`, `loop-pack`, `trial-pack`, `intake-wizard`, `response-template`, `response-validate`,
+`rc reopen`, `rc rehearse`,
 `rc candidate-packet`, `rc release-owner-packet`, `rc review-pack`, `rc go-check`, `distribution readiness`,
 `trust audit`, `trust next`, `trust dashboard`, and `trust gate-transition` are report-only or artifact-only helpers.
 `validate-import` and `validate-manifest` check the same fields before recording, and `import-artifacts` requires
