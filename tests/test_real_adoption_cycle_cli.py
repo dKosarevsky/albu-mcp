@@ -67,3 +67,51 @@ def test_activation_real_adoption_cycle_reports_three_no_write_lanes(tmp_path: P
     assert "No generated packet" in payload["non_fabrication_policy"]
     assert host_records.read_text(encoding="utf-8") == host_before
     assert beta_records.read_text(encoding="utf-8") == beta_before
+
+
+def test_activation_real_adoption_cycle_writes_operator_artifacts(tmp_path: Path) -> None:
+    host_records, beta_records = _write_empty_records(tmp_path)
+    output_dir = tmp_path / "real-adoption-cycle"
+
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "activation",
+            "real-adoption-cycle",
+            "--host",
+            "Codex",
+            "--host-records",
+            str(host_records),
+            "--beta-records",
+            str(beta_records),
+            "--output-dir",
+            str(output_dir),
+            "--format",
+            "markdown",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    expected_files = {
+        "real-adoption-cycle-index.md",
+        "real-evidence-intake.md",
+        "beta-signal-sprint.md",
+        "first-product-fix-gate.md",
+    }
+    index = (output_dir / "real-adoption-cycle-index.md").read_text(encoding="utf-8")
+    real_evidence = (output_dir / "real-evidence-intake.md").read_text(encoding="utf-8")
+    beta_signal = (output_dir / "beta-signal-sprint.md").read_text(encoding="utf-8")
+    product_fix = (output_dir / "first-product-fix-gate.md").read_text(encoding="utf-8")
+
+    assert (
+        result.stdout == f"wrote activation real-adoption-cycle with {len(expected_files)} artifacts to {output_dir}\n"
+    )
+    assert expected_files == {path.name for path in output_dir.iterdir()}
+    assert "# Real Adoption Cycle" in index
+    assert "Writes records: `false`" in index
+    assert "albu-mcp evidence import-manifest" in real_evidence
+    assert "albu-mcp beta loop-pack" in beta_signal
+    assert "blocked_until_external_evidence" in product_fix

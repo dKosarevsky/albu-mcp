@@ -134,6 +134,7 @@ from albumentationsx_mcp.rc_reopen import (
 from albumentationsx_mcp.real_adoption_cycle import (
     RealAdoptionCycleRequest,
     build_real_adoption_cycle,
+    build_real_adoption_cycle_artifacts,
     render_real_adoption_cycle_markdown,
 )
 from albumentationsx_mcp.release_review import ReleaseReviewPackRequest, build_release_owner_review_pack_artifacts
@@ -432,6 +433,7 @@ def _add_activation_real_adoption_cycle_parser(subparsers: Any) -> None:
     real_adoption_cycle.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
     real_adoption_cycle.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
     real_adoption_cycle.add_argument("--release-tag", default="v1.15.0-rc.1")
+    real_adoption_cycle.add_argument("--output-dir", type=Path, default=None)
     real_adoption_cycle.add_argument("--format", choices=["text", "json", "markdown"], default="text")
 
 
@@ -458,6 +460,12 @@ def _handle_activation_real_adoption_cycle(args: argparse.Namespace) -> str:
         beta_records_path=args.beta_records,
         release_tag=args.release_tag,
     )
+    if args.output_dir is not None:
+        pack = build_real_adoption_cycle_artifacts(request, output_format=args.format)
+        args.output_dir.mkdir(parents=True, exist_ok=True)
+        for artifact in pack["artifacts"]:
+            (args.output_dir / artifact["filename"]).write_text(artifact["content"], encoding="utf-8")
+        return f"wrote activation real-adoption-cycle with {pack['artifact_count']} artifacts to {args.output_dir}\n"
     report = build_real_adoption_cycle(request)
     if args.format == "json":
         return json.dumps(report, indent=2, sort_keys=True) + "\n"

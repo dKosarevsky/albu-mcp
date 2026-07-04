@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -49,6 +50,25 @@ def build_real_adoption_cycle(request: RealAdoptionCycleRequest) -> dict[str, An
     }
 
 
+def build_real_adoption_cycle_artifacts(
+    request: RealAdoptionCycleRequest,
+    *,
+    output_format: str = "markdown",
+) -> dict[str, Any]:
+    """Build no-write real adoption cycle artifacts for operators."""
+    report = build_real_adoption_cycle(request)
+    artifacts = [
+        _cycle_index_artifact(report=report, output_format=output_format),
+        *[_cycle_lane_artifact(lane=lane, output_format=output_format) for lane in report["lanes"]],
+    ]
+    return {
+        "pack_status": report["cycle_status"],
+        "writes_records": False,
+        "artifact_count": len(artifacts),
+        "artifacts": artifacts,
+    }
+
+
 def render_real_adoption_cycle_markdown(report: dict[str, Any]) -> str:
     """Render the real adoption cycle as Markdown."""
     lanes = "\n".join(
@@ -67,6 +87,51 @@ def render_real_adoption_cycle_markdown(report: dict[str, Any]) -> str:
         "## Non-Fabrication Policy\n\n"
         f"{report['non_fabrication_policy']}\n"
     )
+
+
+def _cycle_index_artifact(*, report: dict[str, Any], output_format: str) -> dict[str, str]:
+    return {
+        "filename": f"real-adoption-cycle-index.{_extension(output_format)}",
+        "content": _json_dumps(report) if output_format == "json" else render_real_adoption_cycle_markdown(report),
+    }
+
+
+def _cycle_lane_artifact(*, lane: dict[str, Any], output_format: str) -> dict[str, str]:
+    return {
+        "filename": f"{lane['id'].replace('_', '-')}.{_extension(output_format)}",
+        "content": _json_dumps(lane) if output_format == "json" else _render_lane_markdown(lane),
+    }
+
+
+def _render_lane_markdown(lane: dict[str, Any]) -> str:
+    commands = "\n".join(f"- `{command}`" for command in lane.get("next_commands", [])) or "- none"
+    summary = "\n".join(f"- `{key}`: `{value}`" for key, value in lane.get("summary", {}).items()) or "- none"
+    blocked_reasons = "\n".join(f"- `{reason}`" for reason in lane.get("blocked_reasons", [])) or "- none"
+    return (
+        f"# {lane['title']}\n\n"
+        f"Lane id: `{lane['id']}`\n\n"
+        f"Status: `{lane['status']}`\n\n"
+        f"Writes records: `{str(lane['writes_records']).lower()}`\n\n"
+        "## Summary\n\n"
+        f"{summary}\n\n"
+        "## Blocked Reasons\n\n"
+        f"{blocked_reasons}\n\n"
+        "## Next Commands\n\n"
+        f"{commands}\n"
+    )
+
+
+def _extension(output_format: str) -> str:
+    if output_format == "markdown":
+        return "md"
+    if output_format == "json":
+        return "json"
+    msg = f"unsupported real adoption cycle format: {output_format}"
+    raise ValueError(msg)
+
+
+def _json_dumps(payload: dict[str, Any]) -> str:
+    return json.dumps(payload, indent=2, sort_keys=True) + "\n"
 
 
 def _real_evidence_intake_lane(
