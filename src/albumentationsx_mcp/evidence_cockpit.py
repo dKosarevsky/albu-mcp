@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -47,6 +48,30 @@ def build_evidence_cockpit(request: EvidenceCockpitRequest) -> dict[str, Any]:
     }
 
 
+def build_evidence_cockpit_artifacts(
+    request: EvidenceCockpitRequest,
+    *,
+    output_format: str = "markdown",
+) -> dict[str, Any]:
+    """Build no-write cockpit artifacts for one real evidence run."""
+    report = build_evidence_cockpit(request)
+    artifacts = [
+        _cockpit_index_artifact(report=report, output_format=output_format),
+        *[_cockpit_phase_artifact(phase=phase, output_format=output_format) for phase in report["phases"]],
+    ]
+    return {
+        "pack_status": report["cockpit_status"],
+        "writes_records": False,
+        "artifact_count": len(artifacts),
+        "artifacts": artifacts,
+    }
+
+
+def render_evidence_cockpit_markdown(report: dict[str, Any]) -> str:
+    """Render the cockpit index as Markdown."""
+    return _render_cockpit_index_markdown(report)
+
+
 def _setup_probe_phase(request: EvidenceCockpitRequest) -> dict[str, Any]:
     return {
         "id": "setup_probe",
@@ -67,13 +92,73 @@ def _session_capture_phase(request: EvidenceCockpitRequest) -> dict[str, Any]:
         "title": "Session capture",
         "status": "blocked_until_setup_probe",
         "writes_records": False,
-        "goal": "Prepare privacy-safe reviewer notes and a manifest template for the real host session.",
+        "goal": ("Prepare privacy-safe reviewer notes and a manifest template for Reviewer-observed real MCP host UI."),
         "next_commands": [
             "albu-mcp evidence transcript-template",
             f"albu-mcp evidence session-manifest --host {request.host} --date YYYY-MM-DD --reviewer 'Release operator'",
             f"albu-mcp evidence session-folder --host {request.host} --date YYYY-MM-DD --reviewer 'Release operator'",
         ],
     }
+
+
+def _cockpit_index_artifact(*, report: dict[str, Any], output_format: str) -> dict[str, str]:
+    return {
+        "filename": f"evidence-cockpit-index.{_extension(output_format)}",
+        "content": _json_dumps(report) if output_format == "json" else _render_cockpit_index_markdown(report),
+    }
+
+
+def _cockpit_phase_artifact(*, phase: dict[str, Any], output_format: str) -> dict[str, str]:
+    return {
+        "filename": f"{phase['id'].replace('_', '-')}.{_extension(output_format)}",
+        "content": _json_dumps(phase) if output_format == "json" else _render_phase_markdown(phase),
+    }
+
+
+def _render_cockpit_index_markdown(report: dict[str, Any]) -> str:
+    phases = "\n".join(
+        f"- `{phase['id']}`: `{phase['status']}`; writes_records=`{str(phase['writes_records']).lower()}`"
+        for phase in report["phases"]
+    )
+    return (
+        "# Real Evidence Execution Cockpit\n\n"
+        f"Release tag: `{report['release_tag']}`\n\n"
+        f"Host: `{report['host']}`\n\n"
+        f"Cockpit status: `{report['cockpit_status']}`\n\n"
+        f"Writes records: `{str(report['writes_records']).lower()}`\n\n"
+        f"Next action: `{report['next_action']}`\n\n"
+        "## Phases\n\n"
+        f"{phases}\n\n"
+        "## Non-Fabrication Policy\n\n"
+        f"{report['non_fabrication_policy']}\n"
+    )
+
+
+def _render_phase_markdown(phase: dict[str, Any]) -> str:
+    commands = "\n".join(f"- `{command}`" for command in phase.get("next_commands", [])) or "- none"
+    return (
+        f"# {phase['title']}\n\n"
+        f"Phase id: `{phase['id']}`\n\n"
+        f"Status: `{phase['status']}`\n\n"
+        f"Writes records: `{str(phase['writes_records']).lower()}`\n\n"
+        "## Goal\n\n"
+        f"{phase['goal']}\n\n"
+        "## Next Commands\n\n"
+        f"{commands}\n"
+    )
+
+
+def _extension(output_format: str) -> str:
+    if output_format == "markdown":
+        return "md"
+    if output_format == "json":
+        return "json"
+    msg = f"unsupported evidence cockpit format: {output_format}"
+    raise ValueError(msg)
+
+
+def _json_dumps(payload: dict[str, Any]) -> str:
+    return json.dumps(payload, indent=2, sort_keys=True) + "\n"
 
 
 def _manifest_import_phase(request: EvidenceCockpitRequest) -> dict[str, Any]:
