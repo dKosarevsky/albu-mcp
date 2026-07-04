@@ -10,15 +10,15 @@ from scripts.export_governed_iteration_execution_report import (
 )
 
 
-def test_governed_iteration_execution_report_stops_after_thirteenth_blocked_iteration() -> None:
+def test_governed_iteration_execution_report_stops_after_fourteenth_blocked_iteration() -> None:
     report = build_governed_iteration_execution_report()
 
     assert report["requested_iteration_count"] == 100
-    assert report["executed_iteration_count"] == 13
-    assert report["stopped_at_iteration"] == 13
+    assert report["executed_iteration_count"] == 14
+    assert report["stopped_at_iteration"] == 14
     assert report["stop_reason"] == "current_priority_gate_blocked"
-    assert report["completed_path_count"] == 66
-    assert report["completed_plan_point_count"] == 66
+    assert report["completed_path_count"] == 70
+    assert report["completed_plan_point_count"] == 70
     assert report["completed_plan_points"] == [
         "Added evidence execution-packet for host-specific real MCP runs.",
         "Added evidence artifact-doctor for artifact completeness and synthetic-only checks.",
@@ -86,6 +86,10 @@ def test_governed_iteration_execution_report_stops_after_thirteenth_blocked_iter
         "Added acquisition-cycle artifact pack for real evidence, beta acquisition, and product-depth gate handoff.",
         "Added product-depth gate reasons to keep P1 work blocked until external records exist.",
         "Stopped the thirteenth 100-iteration follow-up loop at the same external evidence and beta gates.",
+        "Added activation evidence-cockpit for one real host evidence execution control surface.",
+        "Added evidence-cockpit artifact pack for setup, session capture, manifest import, and post-import review.",
+        "Added post-import review handoff for proof status, transition pack, and RC unblock preview.",
+        "Stopped the fourteenth 100-iteration follow-up loop at the same external evidence and beta gates.",
     ]
 
 
@@ -93,7 +97,7 @@ def test_governed_iteration_execution_report_markdown_explains_stop() -> None:
     markdown = render_governed_iteration_execution_report_markdown(build_governed_iteration_execution_report())
     expected_terms = [
         "Requested iterations: `100`",
-        "Executed iterations: `13`",
+        "Executed iterations: `14`",
         "`current_priority_gate_blocked`",
         "evidence execution-packet",
         "artifact-doctor",
@@ -147,6 +151,10 @@ def test_governed_iteration_execution_report_markdown_explains_stop() -> None:
         "Real Evidence Beta Acquisition path",
         "Acquisition Artifact Pack path",
         "Product Depth Gate Reasons path",
+        "activation evidence-cockpit",
+        "Evidence Cockpit Control path",
+        "Evidence Cockpit Artifact path",
+        "Post-Import Review path",
         "`p0_host_evidence_missing_or_blocked`",
         "RC reopen rehearsal v2",
         "No blind implementation loop was executed.",

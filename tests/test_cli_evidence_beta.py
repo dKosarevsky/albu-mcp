@@ -211,6 +211,7 @@ def test_readme_and_usage_document_operator_cli() -> None:
         "albu-mcp activation command-center",
         "albu-mcp activation runbook",
         "albu-mcp activation acquisition-cycle",
+        "albu-mcp activation evidence-cockpit",
         "albu-mcp evidence collect",
         "albu-mcp evidence status",
         "albu-mcp evidence run-session",

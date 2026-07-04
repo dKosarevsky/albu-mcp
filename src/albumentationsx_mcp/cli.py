@@ -74,6 +74,12 @@ from albumentationsx_mcp.evidence import (
     validate_evidence_session_manifest,
     validate_host_manual_runs,
 )
+from albumentationsx_mcp.evidence_cockpit import (
+    EvidenceCockpitRequest,
+    build_evidence_cockpit,
+    build_evidence_cockpit_artifacts,
+    render_evidence_cockpit_markdown,
+)
 from albumentationsx_mcp.evidence_proof import (
     EvidenceProofRequest,
     EvidenceTransitionPackRequest,
@@ -355,6 +361,7 @@ def _run_activation_cli(argv: list[str]) -> None:
     evidence_first_cycle.add_argument("--format", choices=["text", "json", "markdown"], default="text")
 
     _add_activation_acquisition_cycle_parser(subparsers)
+    _add_activation_evidence_cockpit_parser(subparsers)
 
     args = parser.parse_args(argv)
     try:
@@ -377,10 +384,24 @@ def _add_activation_acquisition_cycle_parser(subparsers: Any) -> None:
     acquisition_cycle.add_argument("--format", choices=["text", "json", "markdown"], default="text")
 
 
+def _add_activation_evidence_cockpit_parser(subparsers: Any) -> None:
+    evidence_cockpit = subparsers.add_parser(
+        "evidence-cockpit",
+        help="Build a no-write cockpit for one real host evidence run.",
+    )
+    evidence_cockpit.add_argument("--host", choices=get_args(HostName), required=True)
+    evidence_cockpit.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    evidence_cockpit.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    evidence_cockpit.add_argument("--release-tag", default="v1.15.0-rc.1")
+    evidence_cockpit.add_argument("--output-dir", type=Path, default=None)
+    evidence_cockpit.add_argument("--format", choices=["text", "json", "markdown"], default="text")
+
+
 def _handle_activation_command(args: argparse.Namespace) -> str:
     handlers = {
         "acquisition-cycle": _handle_activation_acquisition_cycle,
         "command-center": _handle_activation_command_center,
+        "evidence-cockpit": _handle_activation_evidence_cockpit,
         "evidence-first-cycle": _handle_activation_evidence_first_cycle,
         "execution-workspace": _handle_activation_execution_workspace,
         "proof-sprint": _handle_activation_proof_sprint,
@@ -388,6 +409,27 @@ def _handle_activation_command(args: argparse.Namespace) -> str:
         "runbook": _handle_activation_runbook,
     }
     return handlers[args.command](args)
+
+
+def _handle_activation_evidence_cockpit(args: argparse.Namespace) -> str:
+    request = EvidenceCockpitRequest(
+        host=args.host,
+        host_records_path=args.host_records,
+        beta_records_path=args.beta_records,
+        release_tag=args.release_tag,
+    )
+    if args.output_dir is not None:
+        pack = build_evidence_cockpit_artifacts(request, output_format=args.format)
+        args.output_dir.mkdir(parents=True, exist_ok=True)
+        for artifact in pack["artifacts"]:
+            (args.output_dir / artifact["filename"]).write_text(artifact["content"], encoding="utf-8")
+        return f"wrote activation evidence-cockpit with {pack['artifact_count']} artifacts to {args.output_dir}\n"
+    report = build_evidence_cockpit(request)
+    if args.format == "json":
+        return json.dumps(report, indent=2, sort_keys=True) + "\n"
+    if args.format == "markdown":
+        return render_evidence_cockpit_markdown(report)
+    return f"activation evidence-cockpit {report['cockpit_status']} (phases={report['phase_count']})\n"
 
 
 def _handle_activation_acquisition_cycle(args: argparse.Namespace) -> str:
