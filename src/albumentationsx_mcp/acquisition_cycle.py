@@ -30,7 +30,7 @@ def build_acquisition_cycle(request: AcquisitionCycleRequest) -> dict[str, Any]:
     lanes = [
         _real_evidence_acquisition_lane(request=request, proof_status=proof_status),
         _beta_acquisition_lane(beta_report=beta_report),
-        _product_depth_gate_lane(),
+        _product_depth_gate_lane(proof_status=proof_status, beta_report=beta_report),
     ]
     blocked = any(lane["status"].startswith("blocked") for lane in lanes)
     return {
@@ -114,13 +114,21 @@ def _beta_acquisition_lane(*, beta_report: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _product_depth_gate_lane() -> dict[str, Any]:
+def _product_depth_gate_lane(*, proof_status: dict[str, Any], beta_report: dict[str, Any]) -> dict[str, Any]:
+    blocked_reasons = _product_depth_blocked_reasons(proof_status=proof_status, beta_report=beta_report)
+    implementation_allowed = not blocked_reasons
     return {
         "id": "product_depth_gate",
         "title": "Product depth gate",
-        "status": "blocked_until_external_gates",
-        "implementation_allowed": False,
+        "status": "ready_for_product_depth" if implementation_allowed else "blocked_until_external_gates",
+        "implementation_allowed": implementation_allowed,
         "writes_records": False,
+        "blocked_reasons": blocked_reasons,
+        "next_commands": [
+            "albu-mcp activation acquisition-cycle --host Codex --format json",
+            "albu-mcp evidence proof-status --format json",
+            "albu-mcp beta report --format json",
+        ],
     }
 
 
@@ -160,6 +168,7 @@ def _render_cycle_index_markdown(report: dict[str, Any]) -> str:
 def _render_lane_markdown(lane: dict[str, Any]) -> str:
     commands = "\n".join(f"- `{command}`" for command in lane.get("next_commands", [])) or "- none"
     summary = "\n".join(f"- `{key}`: `{value}`" for key, value in lane.get("summary", {}).items()) or "- none"
+    blocked_reasons = "\n".join(f"- `{reason}`" for reason in lane.get("blocked_reasons", [])) or "- none"
     docs = ""
     if "docs_link" in lane:
         docs = f"\n## Source\n\n- [{lane['docs_link_label']}]({lane['docs_link']})\n"
@@ -170,6 +179,8 @@ def _render_lane_markdown(lane: dict[str, Any]) -> str:
         f"Writes records: `{str(lane['writes_records']).lower()}`\n\n"
         "## Summary\n\n"
         f"{summary}\n\n"
+        "## Blocked Reasons\n\n"
+        f"{blocked_reasons}\n\n"
         "## Next Commands\n\n"
         f"{commands}\n"
         f"{docs}"
@@ -187,3 +198,12 @@ def _extension(output_format: str) -> str:
 
 def _json_dumps(payload: dict[str, Any]) -> str:
     return json.dumps(payload, indent=2, sort_keys=True) + "\n"
+
+
+def _product_depth_blocked_reasons(*, proof_status: dict[str, Any], beta_report: dict[str, Any]) -> list[str]:
+    reasons: list[str] = []
+    if proof_status["status"] != "ready_for_rc_reopen":
+        reasons.append("p0_host_evidence_missing_or_blocked")
+    if not beta_report["product_depth_allowed"]:
+        reasons.append("beta_validation_incomplete")
+    return reasons

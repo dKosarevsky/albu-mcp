@@ -51,6 +51,13 @@ def test_activation_acquisition_cycle_reports_real_evidence_lane(tmp_path: Path)
     assert "albu-mcp evidence transcript-template" in payload["lanes"][0]["next_commands"]
     assert "albu-mcp evidence proof-runner" in payload["lanes"][0]["next_commands"]
     assert "albu-mcp evidence import-manifest" in payload["lanes"][0]["next_commands"]
+    assert payload["lanes"][2]["id"] == "product_depth_gate"
+    assert payload["lanes"][2]["implementation_allowed"] is False
+    assert payload["lanes"][2]["blocked_reasons"] == [
+        "p0_host_evidence_missing_or_blocked",
+        "beta_validation_incomplete",
+    ]
+    assert payload["next_action"] == "run_real_evidence_acquisition"
     assert host_records.read_text(encoding="utf-8") == host_before
     assert beta_records.read_text(encoding="utf-8") == beta_before
 
