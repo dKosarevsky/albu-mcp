@@ -53,3 +53,48 @@ def test_activation_acquisition_cycle_reports_real_evidence_lane(tmp_path: Path)
     assert "albu-mcp evidence import-manifest" in payload["lanes"][0]["next_commands"]
     assert host_records.read_text(encoding="utf-8") == host_before
     assert beta_records.read_text(encoding="utf-8") == beta_before
+
+
+def test_activation_acquisition_cycle_writes_three_acquisition_artifacts(tmp_path: Path) -> None:
+    host_records, beta_records = _write_empty_records(tmp_path)
+    output_dir = tmp_path / "acquisition-cycle"
+
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "activation",
+            "acquisition-cycle",
+            "--host",
+            "Codex",
+            "--host-records",
+            str(host_records),
+            "--beta-records",
+            str(beta_records),
+            "--output-dir",
+            str(output_dir),
+            "--format",
+            "markdown",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    expected_files = {
+        "acquisition-cycle-index.md",
+        "real-evidence-acquisition.md",
+        "beta-acquisition.md",
+        "product-depth-gate.md",
+    }
+    index = (output_dir / "acquisition-cycle-index.md").read_text(encoding="utf-8")
+    beta = (output_dir / "beta-acquisition.md").read_text(encoding="utf-8")
+
+    assert result.stdout == f"wrote activation acquisition-cycle with {len(expected_files)} artifacts to {output_dir}\n"
+    assert expected_files == {path.name for path in output_dir.iterdir()}
+    assert "# Real Evidence Beta Acquisition Cycle" in index
+    assert "Writes records: `false`" in index
+    assert "albu-mcp beta loop-pack" in beta
+    assert "albu-mcp beta response-template" in beta
+    assert "albu-mcp beta response-import-dir" in beta
+    assert "Official Albumentations MCP docs" in beta
