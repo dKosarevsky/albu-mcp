@@ -1,0 +1,12 @@
+{
+  "artifact_refs": [
+    "docs/assets/demo/demo_report.md"
+  ],
+  "attempt_date": "2026-07-04",
+  "participant_role": "ML practitioner",
+  "private_data_included": false,
+  "status": "needs_followup",
+  "summary": "redacted robustness_distortion_variants outcome; replace with the participant's safe workflow summary",
+  "triage_bucket": "workflow_fit_gap",
+  "workflow_id": "robustness_distortion_variants"
+}
