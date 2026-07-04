@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -48,6 +49,25 @@ def build_evidence_product_loop(request: EvidenceProductLoopRequest) -> dict[str
     }
 
 
+def build_evidence_product_loop_artifacts(
+    request: EvidenceProductLoopRequest,
+    *,
+    output_format: str = "markdown",
+) -> dict[str, Any]:
+    """Build no-write evidence-to-product artifacts for operators."""
+    report = build_evidence_product_loop(request)
+    artifacts = [
+        _loop_index_artifact(report=report, output_format=output_format),
+        *[_loop_section_artifact(section=section, output_format=output_format) for section in report["sections"]],
+    ]
+    return {
+        "pack_status": report["loop_status"],
+        "writes_records": False,
+        "artifact_count": len(artifacts),
+        "artifacts": artifacts,
+    }
+
+
 def render_evidence_product_loop_markdown(report: dict[str, Any]) -> str:
     """Render the evidence-to-product loop as Markdown."""
     sections = "\n".join(
@@ -66,6 +86,51 @@ def render_evidence_product_loop_markdown(report: dict[str, Any]) -> str:
         "## Non-Fabrication Policy\n\n"
         f"{report['non_fabrication_policy']}\n"
     )
+
+
+def _loop_index_artifact(*, report: dict[str, Any], output_format: str) -> dict[str, str]:
+    return {
+        "filename": f"evidence-product-loop-index.{_extension(output_format)}",
+        "content": _json_dumps(report) if output_format == "json" else render_evidence_product_loop_markdown(report),
+    }
+
+
+def _loop_section_artifact(*, section: dict[str, Any], output_format: str) -> dict[str, str]:
+    return {
+        "filename": f"{section['id'].replace('_', '-')}.{_extension(output_format)}",
+        "content": _json_dumps(section) if output_format == "json" else _render_section_markdown(section),
+    }
+
+
+def _render_section_markdown(section: dict[str, Any]) -> str:
+    commands = "\n".join(f"- `{command}`" for command in section.get("next_commands", [])) or "- none"
+    summary = "\n".join(f"- `{key}`: `{value}`" for key, value in section.get("summary", {}).items()) or "- none"
+    blocked_reasons = "\n".join(f"- `{reason}`" for reason in section.get("blocked_reasons", [])) or "- none"
+    return (
+        f"# {section['title']}\n\n"
+        f"Section id: `{section['id']}`\n\n"
+        f"Status: `{section['status']}`\n\n"
+        f"Writes records: `{str(section['writes_records']).lower()}`\n\n"
+        "## Summary\n\n"
+        f"{summary}\n\n"
+        "## Blocked Reasons\n\n"
+        f"{blocked_reasons}\n\n"
+        "## Next Commands\n\n"
+        f"{commands}\n"
+    )
+
+
+def _extension(output_format: str) -> str:
+    if output_format == "markdown":
+        return "md"
+    if output_format == "json":
+        return "json"
+    msg = f"unsupported evidence product loop format: {output_format}"
+    raise ValueError(msg)
+
+
+def _json_dumps(payload: dict[str, Any]) -> str:
+    return json.dumps(payload, indent=2, sort_keys=True) + "\n"
 
 
 def _real_host_evidence_section(

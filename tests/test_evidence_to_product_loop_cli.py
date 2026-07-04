@@ -65,3 +65,52 @@ def test_activation_evidence_product_loop_reports_no_write_friction_summary(tmp_
     assert "No generated packet" in payload["non_fabrication_policy"]
     assert host_records.read_text(encoding="utf-8") == host_before
     assert beta_records.read_text(encoding="utf-8") == beta_before
+
+
+def test_activation_evidence_product_loop_writes_operator_artifacts(tmp_path: Path) -> None:
+    host_records, beta_records = _write_empty_records(tmp_path)
+    output_dir = tmp_path / "evidence-product-loop"
+
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "activation",
+            "evidence-product-loop",
+            "--host",
+            "Codex",
+            "--host-records",
+            str(host_records),
+            "--beta-records",
+            str(beta_records),
+            "--output-dir",
+            str(output_dir),
+            "--format",
+            "markdown",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    expected_files = {
+        "evidence-product-loop-index.md",
+        "real-host-evidence.md",
+        "beta-validation.md",
+        "product-backlog.md",
+    }
+    index = (output_dir / "evidence-product-loop-index.md").read_text(encoding="utf-8")
+    real_host = (output_dir / "real-host-evidence.md").read_text(encoding="utf-8")
+    beta = (output_dir / "beta-validation.md").read_text(encoding="utf-8")
+    backlog = (output_dir / "product-backlog.md").read_text(encoding="utf-8")
+
+    assert (
+        result.stdout
+        == f"wrote activation evidence-product-loop with {len(expected_files)} artifacts to {output_dir}\n"
+    )
+    assert expected_files == {path.name for path in output_dir.iterdir()}
+    assert "# Evidence-to-Product Loop" in index
+    assert "Writes records: `false`" in index
+    assert "albu-mcp activation evidence-cockpit" in real_host
+    assert "albu-mcp beta loop-pack" in beta
+    assert "blocked_until_external_evidence" in backlog
