@@ -10,6 +10,12 @@ from typing import Any, get_args
 
 from pydantic import ValidationError
 
+from albumentationsx_mcp.acquisition_cycle import (
+    AcquisitionCycleRequest,
+    build_acquisition_cycle,
+    build_acquisition_cycle_artifacts,
+    render_acquisition_cycle_markdown,
+)
 from albumentationsx_mcp.activation import (
     build_activation_command_center,
     build_manual_evidence_runbook,
@@ -348,6 +354,8 @@ def _run_activation_cli(argv: list[str]) -> None:
     evidence_first_cycle.add_argument("--output-dir", type=Path, default=None)
     evidence_first_cycle.add_argument("--format", choices=["text", "json", "markdown"], default="text")
 
+    _add_activation_acquisition_cycle_parser(subparsers)
+
     args = parser.parse_args(argv)
     try:
         sys.stdout.write(_handle_activation_command(args))
@@ -356,8 +364,22 @@ def _run_activation_cli(argv: list[str]) -> None:
         raise SystemExit(1) from exc
 
 
+def _add_activation_acquisition_cycle_parser(subparsers: Any) -> None:
+    acquisition_cycle = subparsers.add_parser(
+        "acquisition-cycle",
+        help="Build a no-write real evidence and beta acquisition cycle.",
+    )
+    acquisition_cycle.add_argument("--host", choices=get_args(HostName), required=True)
+    acquisition_cycle.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    acquisition_cycle.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    acquisition_cycle.add_argument("--release-tag", default="v1.15.0-rc.1")
+    acquisition_cycle.add_argument("--output-dir", type=Path, default=None)
+    acquisition_cycle.add_argument("--format", choices=["text", "json", "markdown"], default="text")
+
+
 def _handle_activation_command(args: argparse.Namespace) -> str:
     handlers = {
+        "acquisition-cycle": _handle_activation_acquisition_cycle,
         "command-center": _handle_activation_command_center,
         "evidence-first-cycle": _handle_activation_evidence_first_cycle,
         "execution-workspace": _handle_activation_execution_workspace,
@@ -366,6 +388,27 @@ def _handle_activation_command(args: argparse.Namespace) -> str:
         "runbook": _handle_activation_runbook,
     }
     return handlers[args.command](args)
+
+
+def _handle_activation_acquisition_cycle(args: argparse.Namespace) -> str:
+    request = AcquisitionCycleRequest(
+        host=args.host,
+        host_records_path=args.host_records,
+        beta_records_path=args.beta_records,
+        release_tag=args.release_tag,
+    )
+    if args.output_dir is not None:
+        pack = build_acquisition_cycle_artifacts(request, output_format=args.format)
+        args.output_dir.mkdir(parents=True, exist_ok=True)
+        for artifact in pack["artifacts"]:
+            (args.output_dir / artifact["filename"]).write_text(artifact["content"], encoding="utf-8")
+        return f"wrote activation acquisition-cycle with {pack['artifact_count']} artifacts to {args.output_dir}\n"
+    report = build_acquisition_cycle(request)
+    if args.format == "json":
+        return json.dumps(report, indent=2, sort_keys=True) + "\n"
+    if args.format == "markdown":
+        return render_acquisition_cycle_markdown(report)
+    return f"activation acquisition-cycle {report['cycle_status']} (lanes={report['lane_count']})\n"
 
 
 def _handle_activation_evidence_first_cycle(args: argparse.Namespace) -> str:
