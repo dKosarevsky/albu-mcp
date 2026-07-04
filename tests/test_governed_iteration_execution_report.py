@@ -10,15 +10,15 @@ from scripts.export_governed_iteration_execution_report import (
 )
 
 
-def test_governed_iteration_execution_report_stops_after_fifteenth_blocked_iteration() -> None:
+def test_governed_iteration_execution_report_stops_after_sixteenth_blocked_iteration() -> None:
     report = build_governed_iteration_execution_report()
 
     assert report["requested_iteration_count"] == 100
-    assert report["executed_iteration_count"] == 15
-    assert report["stopped_at_iteration"] == 15
+    assert report["executed_iteration_count"] == 16
+    assert report["stopped_at_iteration"] == 16
     assert report["stop_reason"] == "current_priority_gate_blocked"
-    assert report["completed_path_count"] == 73
-    assert report["completed_plan_point_count"] == 73
+    assert report["completed_path_count"] == 76
+    assert report["completed_plan_point_count"] == 76
     assert report["completed_plan_points"] == [
         "Added evidence execution-packet for host-specific real MCP runs.",
         "Added evidence artifact-doctor for artifact completeness and synthetic-only checks.",
@@ -93,6 +93,9 @@ def test_governed_iteration_execution_report_stops_after_fifteenth_blocked_itera
         "Added activation evidence-product-loop for one no-write evidence-to-product friction summary.",
         "Added evidence-product-loop artifact pack for real host, beta validation, and product backlog handoffs.",
         "Stopped the fifteenth 100-iteration follow-up loop at the same external evidence and beta gates.",
+        "Added activation real-adoption-cycle for one no-write real adoption control surface.",
+        "Added real-adoption-cycle artifact pack for real evidence, beta signal, and first product fix handoffs.",
+        "Stopped the sixteenth 100-iteration follow-up loop at the same external evidence and beta gates.",
     ]
 
 
@@ -100,7 +103,7 @@ def test_governed_iteration_execution_report_markdown_explains_stop() -> None:
     markdown = render_governed_iteration_execution_report_markdown(build_governed_iteration_execution_report())
     expected_terms = [
         "Requested iterations: `100`",
-        "Executed iterations: `15`",
+        "Executed iterations: `16`",
         "`current_priority_gate_blocked`",
         "evidence execution-packet",
         "artifact-doctor",
@@ -161,6 +164,9 @@ def test_governed_iteration_execution_report_markdown_explains_stop() -> None:
         "activation evidence-product-loop",
         "Evidence-to-Product Summary path",
         "Evidence-to-Product Artifact path",
+        "activation real-adoption-cycle",
+        "Real Adoption Summary path",
+        "Real Adoption Artifact path",
         "`p0_host_evidence_missing_or_blocked`",
         "RC reopen rehearsal v2",
         "No blind implementation loop was executed.",

@@ -21,11 +21,11 @@ def build_governed_iteration_execution_report() -> dict[str, Any]:
     stop_reason = "completed" if rc_decision["decision"] == "go" else "current_priority_gate_blocked"
     return {
         "requested_iteration_count": governor["iteration_count"],
-        "executed_iteration_count": 15,
-        "stopped_at_iteration": 15,
+        "executed_iteration_count": 16,
+        "stopped_at_iteration": 16,
         "stop_reason": stop_reason,
-        "completed_path_count": 73,
-        "completed_plan_point_count": 73,
+        "completed_path_count": 76,
+        "completed_plan_point_count": 76,
         "execution_policy": governor["execution_policy"],
         "safety_policy": "No blind implementation loop was executed.",
         "completed_paths": [
@@ -177,6 +177,15 @@ def build_governed_iteration_execution_report() -> dict[str, Any]:
                 "and product-backlog operator handoffs."
             ),
             "Governed Loop path: the fifteenth requested follow-up loop stops at external evidence and beta gates.",
+            (
+                "Real Adoption Summary path: activation real-adoption-cycle coordinates real evidence intake, "
+                "beta signal collection, and first product fix gating."
+            ),
+            (
+                "Real Adoption Artifact path: real-adoption-cycle writes real-evidence, beta-signal, and "
+                "first-product-fix operator handoffs."
+            ),
+            "Governed Loop path: the sixteenth requested follow-up loop stops at external evidence and beta gates.",
         ],
         "completed_plan_points": [
             "Added evidence execution-packet for host-specific real MCP runs.",
@@ -258,6 +267,9 @@ def build_governed_iteration_execution_report() -> dict[str, Any]:
             "Added activation evidence-product-loop for one no-write evidence-to-product friction summary.",
             ("Added evidence-product-loop artifact pack for real host, beta validation, and product backlog handoffs."),
             "Stopped the fifteenth 100-iteration follow-up loop at the same external evidence and beta gates.",
+            "Added activation real-adoption-cycle for one no-write real adoption control surface.",
+            ("Added real-adoption-cycle artifact pack for real evidence, beta signal, and first product fix handoffs."),
+            "Stopped the sixteenth 100-iteration follow-up loop at the same external evidence and beta gates.",
         ],
         "current_external_gates": [
             "p0_host_evidence_missing_or_blocked: requires reviewer-observed real MCP host UI evidence.",
@@ -285,6 +297,7 @@ def build_governed_iteration_execution_report() -> dict[str, Any]:
             "src/albumentationsx_mcp/evidence_cockpit.py",
             "src/albumentationsx_mcp/evidence_product_loop.py",
             "src/albumentationsx_mcp/evidence_proof.py",
+            "src/albumentationsx_mcp/real_adoption_cycle.py",
             "src/albumentationsx_mcp/release_review.py",
             "src/albumentationsx_mcp/trust.py",
             "src/albumentationsx_mcp/rc_reopen.py",
@@ -302,6 +315,7 @@ def build_governed_iteration_execution_report() -> dict[str, Any]:
             "tests/test_real_evidence_beta_acquisition_cli.py",
             "tests/test_real_evidence_cockpit_cli.py",
             "tests/test_evidence_to_product_loop_cli.py",
+            "tests/test_real_adoption_cycle_cli.py",
         ],
     }
 
