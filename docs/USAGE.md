@@ -102,6 +102,7 @@ albu-mcp evidence session-manifest --host Codex --date 2026-07-01 --reviewer "Re
 albu-mcp evidence validate-manifest --input docs/operator-packets/codex-evidence-session-manifest.json --format json
 albu-mcp evidence proof-runner --input docs/operator-packets/codex-evidence-session-manifest.json --format json
 albu-mcp evidence import-manifest --input docs/operator-packets/codex-evidence-session-manifest.json --format json
+albu-mcp evidence import-wizard --host-manifest docs/operator-packets/codex-evidence-session-manifest.json --host-manifest docs/operator-packets/claude-code-evidence-session-manifest.json --beta-dir docs/beta-response-templates --format json
 albu-mcp evidence close-host --host Codex --format json
 albu-mcp evidence proof-status --format json
 albu-mcp evidence transition-pack --before-host-records docs/HOST_MANUAL_RUNS.json --after-host-records docs/HOST_MANUAL_RUNS.json --beta-records docs/BETA_VALIDATION_RECORDS.json --output-dir docs/operator-packets --format markdown
@@ -142,15 +143,17 @@ albu-mcp trust gate-transition --before-host-records docs/HOST_MANUAL_RUNS.json 
 ```
 
 These commands write privacy-safe JSON records only for explicit `record-*`, `response-import`, `response-import-dir`,
-`import-manifest`, or `import-artifacts` actions. `intake bundle`, `activation command-center`, `activation runbook`,
-`activation proof-sprint`, `activation execution-workspace`, `activation real-proof-run`,
+`import-manifest`, `import-wizard --import-ready`, or `import-artifacts` actions. `intake bundle`,
+`activation command-center`, `activation runbook`, `activation proof-sprint`, `activation execution-workspace`,
+`activation real-proof-run`,
 `activation evidence-first-cycle`, `activation acquisition-cycle`, `activation evidence-cockpit`,
 `activation evidence-product-loop`, `activation real-adoption-cycle`, `run-session`, `host setup-probe`,
 `preview first-pack`, `evidence collect`, `execution-packet`, `operator-packet`, `packet-bundle`,
-`replay-fixture-pack`, `session-folder`, `session-manifest`, `validate-manifest`, `proof-runner`, `close-host`,
-`proof-status`, `transition-pack`, `rc-unblock-preview`, `transcript-template`, `import-checklist`, `validate-import`,
-`privacy-doctor`, `artifact-doctor`, `unblock-plan`, `doctor`, `campaign-plan`, `loop-pack`, `trial-pack`,
-`intake-wizard`, `response-template`, `response-validate`, `rc reopen`, `rc rehearse`,
+`replay-fixture-pack`, `session-folder`, `session-manifest`, `validate-manifest`, `proof-runner`, `import-wizard`
+without `--import-ready`, `close-host`, `proof-status`, `transition-pack`, `rc-unblock-preview`,
+`transcript-template`, `import-checklist`, `validate-import`, `privacy-doctor`, `artifact-doctor`, `unblock-plan`,
+`doctor`, `campaign-plan`, `loop-pack`, `trial-pack`, `intake-wizard`, `response-template`, `response-validate`,
+`rc reopen`, `rc rehearse`,
 `rc candidate-packet`, `rc release-owner-packet`, `rc review-pack`, `rc go-check`, `distribution readiness`,
 `trust audit`, `trust next`, `trust dashboard`, and `trust gate-transition` are report-only or artifact-only helpers.
 `validate-import` and `validate-manifest` check the same fields before recording, and `import-artifacts` requires

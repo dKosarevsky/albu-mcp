@@ -99,7 +99,28 @@ albu-mcp beta response-validate \
   --format json
 ```
 
-Import the filled directory:
+Before importing individual records, run the combined import wizard in no-write mode:
+
+```bash
+albu-mcp evidence import-wizard \
+  --host-manifest docs/operator-packets/codex-evidence-session-manifest.json \
+  --host-manifest docs/operator-packets/claude-code-evidence-session-manifest.json \
+  --beta-dir docs/beta-response-templates \
+  --format json
+```
+
+When the wizard reports `ready_to_import`, import the filled host manifests and beta directory:
+
+```bash
+albu-mcp evidence import-wizard \
+  --host-manifest docs/operator-packets/codex-evidence-session-manifest.json \
+  --host-manifest docs/operator-packets/claude-code-evidence-session-manifest.json \
+  --beta-dir docs/beta-response-templates \
+  --import-ready \
+  --format json
+```
+
+Alternatively, import the filled beta directory directly:
 
 ```bash
 albu-mcp beta response-import-dir \

@@ -224,6 +224,7 @@ def test_readme_and_usage_document_operator_cli() -> None:
         "albu-mcp evidence session-manifest",
         "albu-mcp evidence validate-manifest",
         "albu-mcp evidence proof-runner",
+        "albu-mcp evidence import-wizard",
         "albu-mcp evidence import-checklist",
         "albu-mcp evidence proof-status",
         "albu-mcp evidence transition-pack",

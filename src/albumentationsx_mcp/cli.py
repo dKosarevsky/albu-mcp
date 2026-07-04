@@ -80,6 +80,12 @@ from albumentationsx_mcp.evidence_cockpit import (
     build_evidence_cockpit_artifacts,
     render_evidence_cockpit_markdown,
 )
+from albumentationsx_mcp.evidence_import_wizard import (
+    EvidenceImportWizardRequest,
+    build_evidence_import_wizard,
+    render_evidence_import_wizard_json,
+    render_evidence_import_wizard_markdown,
+)
 from albumentationsx_mcp.evidence_product_loop import (
     EvidenceProductLoopRequest,
     build_evidence_product_loop,
@@ -744,6 +750,19 @@ def _add_evidence_recording_parsers(subparsers: Any) -> None:
     import_manifest.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
     import_manifest.add_argument("--format", choices=["text", "json"], default="text")
 
+    import_wizard = subparsers.add_parser(
+        "import-wizard",
+        help="Validate host manifests and beta drafts before importing real evidence records.",
+    )
+    import_wizard.add_argument("--host", choices=get_args(HostName), default="Codex")
+    import_wizard.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    import_wizard.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    import_wizard.add_argument("--host-manifest", action="append", type=Path, default=[])
+    import_wizard.add_argument("--beta-dir", type=Path, required=True)
+    import_wizard.add_argument("--release-tag", default="v1.15.0-rc.1")
+    import_wizard.add_argument("--import-ready", action="store_true")
+    import_wizard.add_argument("--format", choices=["text", "json", "markdown"], default="text")
+
 
 def _add_evidence_packet_parsers(subparsers: Any) -> None:
     run_session = subparsers.add_parser("run-session", help="Print a guided real-host evidence session plan.")
@@ -899,6 +918,7 @@ def _handle_evidence_command(args: argparse.Namespace) -> str:
         "session-folder": _handle_evidence_session_folder,
         "validate-manifest": _handle_evidence_validate_manifest,
         "import-manifest": _handle_evidence_import_manifest,
+        "import-wizard": _handle_evidence_import_wizard,
         "import-checklist": _handle_evidence_import_checklist,
         "doctor": _handle_evidence_doctor,
         "artifact-doctor": _handle_evidence_artifact_doctor,
@@ -1146,6 +1166,30 @@ def _handle_evidence_import_manifest(args: argparse.Namespace) -> str:
     if args.format == "json":
         return json.dumps(report, indent=2, sort_keys=True) + "\n"
     return f"evidence import-manifest {report['import_status']} for {report['host']}\n"
+
+
+def _handle_evidence_import_wizard(args: argparse.Namespace) -> str:
+    report = build_evidence_import_wizard(
+        EvidenceImportWizardRequest(
+            host_manifest_paths=tuple(args.host_manifest),
+            beta_dir_path=args.beta_dir,
+            host_records_path=args.host_records,
+            beta_records_path=args.beta_records,
+            host=args.host,
+            release_tag=args.release_tag,
+            import_ready=args.import_ready,
+        )
+    )
+    if args.format == "json":
+        return render_evidence_import_wizard_json(report)
+    if args.format == "markdown":
+        return render_evidence_import_wizard_markdown(report)
+    return (
+        f"evidence import-wizard {report['wizard_status']} "
+        f"(host_manifests={report['host_manifest_count']}, "
+        f"beta_drafts={report['beta_draft_count']}, "
+        f"writes_records={str(report['writes_records']).lower()})\n"
+    )
 
 
 def _handle_evidence_import_checklist(args: argparse.Namespace) -> str:
