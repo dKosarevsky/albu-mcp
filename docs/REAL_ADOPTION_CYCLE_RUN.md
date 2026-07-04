@@ -47,6 +47,8 @@ To choose the first product fix, collect and import both inputs below:
 - Reviewer-observed real MCP host evidence for the required host gate.
 - At least one privacy-safe beta validation record for every required beta workflow.
 
+Use `docs/REAL_EVIDENCE_INPUT_CHECKLIST.md` for the minimal fill/validate/import workflow.
+
 After importing those records, rerun:
 
 ```bash
