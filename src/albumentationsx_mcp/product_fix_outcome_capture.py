@@ -51,7 +51,7 @@ def build_product_fix_outcome_capture(request: ProductFixOutcomeCaptureRequest) 
 
     selected_fix = outcome["selected_fix"]
     triage_bucket = selected_fix["triage_bucket"]
-    workflow_id = _POST_FIX_WORKFLOW_BY_BUCKET[triage_bucket]
+    workflow_id = post_fix_workflow_for_bucket(triage_bucket)
     response_filename = f"post-fix-{workflow_id.replace('_', '-')}-beta-response.json"
     response = _post_fix_beta_response(
         workflow_id=workflow_id,
@@ -60,7 +60,11 @@ def build_product_fix_outcome_capture(request: ProductFixOutcomeCaptureRequest) 
         attempt_date=_resolve_attempt_date(request.attempt_date),
     )
     validation_commands = [
-        f"albu-mcp beta response-validate --input docs/product-fix-outcome-capture/{response_filename} --format json"
+        f"albu-mcp beta response-validate --input docs/product-fix-outcome-capture/{response_filename} --format json",
+        (
+            "albu-mcp activation product-fix-outcome-import-guard "
+            f"--host {request.host} --input docs/product-fix-outcome-capture/{response_filename} --format json"
+        ),
     ]
     import_commands = [
         (
@@ -136,6 +140,11 @@ def render_product_fix_outcome_capture_markdown(report: dict[str, Any]) -> str:
         "## Commands\n\n"
         f"{_render_list([*report['validation_commands'], *report['import_commands']], code=True)}\n"
     )
+
+
+def post_fix_workflow_for_bucket(triage_bucket: TriageBucket) -> WorkflowId:
+    """Return the canonical post-fix beta workflow for a product fix triage bucket."""
+    return _POST_FIX_WORKFLOW_BY_BUCKET[triage_bucket]
 
 
 def _blocked_capture_report(

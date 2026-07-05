@@ -241,6 +241,12 @@ def test_readme_and_usage_document_operator_cli() -> None:
             "albu-mcp activation product-fix-outcome-capture --host Codex "
             "--output-dir docs/product-fix-outcome-capture --format markdown"
         ),
+        "albu-mcp activation product-fix-outcome-import-guard",
+        (
+            "albu-mcp activation product-fix-outcome-import-guard --host Codex "
+            "--input docs/product-fix-outcome-capture/post-fix-noisy-preview-tuning-beta-response.json "
+            "--output-dir docs/product-fix-outcome-import-guard --format markdown"
+        ),
         "albu-mcp evidence collect",
         "albu-mcp evidence status",
         "albu-mcp evidence run-session",
