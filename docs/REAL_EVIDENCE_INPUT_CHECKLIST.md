@@ -137,6 +137,7 @@ albu-mcp activation real-adoption-cycle --host Codex --format json
 albu-mcp activation evidence-product-loop --host Codex --format json
 albu-mcp beta triage --format json
 albu-mcp activation first-product-fix --host Codex --format json
+albu-mcp activation first-product-fix --host Codex --output-dir docs/first-product-fix --format markdown
 ```
 
 Only select the first product fix when:

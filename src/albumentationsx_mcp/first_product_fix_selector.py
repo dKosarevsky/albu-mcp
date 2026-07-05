@@ -130,6 +130,26 @@ def build_first_product_fix_selector(request: FirstProductFixSelectorRequest) ->
     }
 
 
+def build_first_product_fix_selector_artifacts(
+    request: FirstProductFixSelectorRequest,
+    *,
+    output_format: str = "markdown",
+) -> dict[str, Any]:
+    """Build artifact-only handoff files for the first product fix selector."""
+    report = build_first_product_fix_selector(request)
+    artifacts = [
+        _selector_index_artifact(report=report, output_format=output_format),
+        _selected_fix_artifact(report=report, output_format=output_format),
+        _implementation_checklist_artifact(report=report, output_format=output_format),
+    ]
+    return {
+        "pack_status": report["selector_status"],
+        "writes_records": False,
+        "artifact_count": len(artifacts),
+        "artifacts": artifacts,
+    }
+
+
 def render_first_product_fix_selector_json(report: dict[str, Any]) -> str:
     """Render a first product fix selector report as JSON."""
     return json.dumps(report, indent=2, sort_keys=True) + "\n"
@@ -164,6 +184,157 @@ def render_first_product_fix_selector_markdown(report: dict[str, Any]) -> str:
         "## Source Decisions\n\n"
         f"{decisions or '- none'}\n"
     )
+
+
+def _selector_index_artifact(*, report: dict[str, Any], output_format: str) -> dict[str, str]:
+    payload = {
+        "artifact": "first_product_fix_index",
+        "selector_status": report["selector_status"],
+        "implementation_allowed": report["implementation_allowed"],
+        "writes_records": False,
+        "host": report["host"],
+        "release_tag": report["release_tag"],
+        "host_records_path": report["host_records_path"],
+        "beta_records_path": report["beta_records_path"],
+        "next_commands": report["next_commands"],
+    }
+    return {
+        "filename": f"first-product-fix-index.{_artifact_extension(output_format)}",
+        "content": _format_artifact_payload(
+            payload=payload,
+            markdown=_render_selector_index_markdown(payload),
+            output_format=output_format,
+        ),
+    }
+
+
+def _selected_fix_artifact(*, report: dict[str, Any], output_format: str) -> dict[str, str]:
+    payload = {
+        "artifact": "selected_fix",
+        "selector_status": report["selector_status"],
+        "implementation_allowed": report["implementation_allowed"],
+        "writes_records": False,
+        "blocked_reasons": report["blocked_reasons"],
+        "selected_fix": report["selected_fix"],
+    }
+    return {
+        "filename": f"selected-fix.{_artifact_extension(output_format)}",
+        "content": _format_artifact_payload(
+            payload=payload,
+            markdown=_render_selected_fix_markdown(payload),
+            output_format=output_format,
+        ),
+    }
+
+
+def _implementation_checklist_artifact(*, report: dict[str, Any], output_format: str) -> dict[str, str]:
+    payload = {
+        "artifact": "implementation_checklist",
+        "checklist_status": "ready" if report["implementation_allowed"] else "blocked",
+        "writes_records": False,
+        "implementation_packet": report["implementation_packet"],
+        "items": _implementation_checklist_items(report),
+    }
+    return {
+        "filename": f"implementation-checklist.{_artifact_extension(output_format)}",
+        "content": _format_artifact_payload(
+            payload=payload,
+            markdown=_render_implementation_checklist_markdown(payload),
+            output_format=output_format,
+        ),
+    }
+
+
+def _render_selector_index_markdown(payload: dict[str, Any]) -> str:
+    commands = "\n".join(f"- `{command}`" for command in payload["next_commands"]) or "- none"
+    return (
+        "# First Product Fix Index\n\n"
+        f"Selector status: `{payload['selector_status']}`\n\n"
+        f"Implementation allowed: `{str(payload['implementation_allowed']).lower()}`\n\n"
+        f"Writes records: `{str(payload['writes_records']).lower()}`\n\n"
+        f"Host: `{payload['host']}`\n\n"
+        f"Release tag: `{payload['release_tag']}`\n\n"
+        "## Next Commands\n\n"
+        f"{commands}\n"
+    )
+
+
+def _render_selected_fix_markdown(payload: dict[str, Any]) -> str:
+    selected_fix = payload["selected_fix"]
+    if selected_fix is None:
+        blocked = "\n".join(f"- `{reason}`" for reason in payload["blocked_reasons"]) or "- none"
+        return (
+            "# Selected Fix\n\n"
+            f"Selector status: `{payload['selector_status']}`\n\n"
+            "Selected fix: `none`\n\n"
+            "## Blocked Reasons\n\n"
+            f"{blocked}\n"
+        )
+    return (
+        "# Selected Fix\n\n"
+        f"Selector status: `{payload['selector_status']}`\n\n"
+        f"Product area: `{selected_fix['product_area']}`\n\n"
+        f"Triage bucket: `{selected_fix['triage_bucket']}`\n\n"
+        f"Priority: `{selected_fix['priority']}`\n\n"
+        f"Candidate: {selected_fix['candidate']}\n\n"
+        f"Success signal: {selected_fix['success_signal']}\n"
+    )
+
+
+def _render_implementation_checklist_markdown(payload: dict[str, Any]) -> str:
+    items = "\n".join(f"- {item}" for item in payload["items"])
+    packet = payload["implementation_packet"]
+    packet_summary = (
+        "- none"
+        if packet is None
+        else (
+            f"- Product area: `{packet['product_area']}`\n"
+            f"- Scope: {packet['scope']}\n"
+            f"- Success signal: {packet['success_signal']}"
+        )
+    )
+    return (
+        "# Implementation Checklist\n\n"
+        f"Checklist status: `{payload['checklist_status']}`\n\n"
+        f"Writes records: `{str(payload['writes_records']).lower()}`\n\n"
+        "## Checklist\n\n"
+        f"{items}\n\n"
+        "## Implementation Packet\n\n"
+        f"{packet_summary}\n"
+    )
+
+
+def _implementation_checklist_items(report: dict[str, Any]) -> list[str]:
+    if not report["implementation_allowed"]:
+        return [
+            "Do not implement runtime product changes while selector status is blocked.",
+            "Collect reviewer-observed host evidence and privacy-safe beta validation records first.",
+            "Rerun albu-mcp activation first-product-fix --host Codex --format json after imports.",
+        ]
+    packet = report["implementation_packet"]
+    return [
+        *packet["test_strategy"],
+        "Keep the first product fix scoped to the selected product area.",
+        "Do not edit host or beta evidence records while implementing product behavior.",
+    ]
+
+
+def _artifact_extension(output_format: str) -> str:
+    if output_format == "markdown":
+        return "md"
+    if output_format == "json":
+        return "json"
+    msg = f"unsupported first product fix artifact format: {output_format}"
+    raise ValueError(msg)
+
+
+def _format_artifact_payload(*, payload: dict[str, Any], markdown: str, output_format: str) -> str:
+    if output_format == "markdown":
+        return markdown
+    if output_format == "json":
+        return json.dumps(payload, indent=2, sort_keys=True) + "\n"
+    msg = f"unsupported first product fix artifact format: {output_format}"
+    raise ValueError(msg)
 
 
 def _first_product_fix_gate(adoption_cycle: dict[str, Any]) -> dict[str, Any]:
