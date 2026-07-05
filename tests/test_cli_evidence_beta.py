@@ -216,6 +216,11 @@ def test_readme_and_usage_document_operator_cli() -> None:
         "albu-mcp activation real-adoption-cycle",
         "albu-mcp activation first-product-fix",
         "albu-mcp activation first-product-fix --host Codex --output-dir docs/first-product-fix --format markdown",
+        "albu-mcp activation product-fix-implementation-plan",
+        (
+            "albu-mcp activation product-fix-implementation-plan --host Codex "
+            "--output-dir docs/product-fix-implementation-plan --format markdown"
+        ),
         "albu-mcp evidence collect",
         "albu-mcp evidence status",
         "albu-mcp evidence run-session",
