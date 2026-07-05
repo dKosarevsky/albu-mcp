@@ -104,6 +104,7 @@ albu-mcp activation product-fix-outcome-import-guard --host Codex --input docs/p
 albu-mcp activation product-fix-outcome-rehearsal --host Codex --input docs/product-fix-outcome-capture/post-fix-noisy-preview-tuning-beta-response.json --output-dir docs/product-fix-outcome-rehearsal --format markdown
 albu-mcp activation product-fix-closure-snapshot --host Codex --input docs/product-fix-outcome-capture/post-fix-noisy-preview-tuning-beta-response.json --output-dir docs/product-fix-closure-snapshot --format markdown
 albu-mcp activation product-fix-closure-runbook --host Codex --input docs/product-fix-outcome-capture/post-fix-noisy-preview-tuning-beta-response.json --output-dir docs/product-fix-closure-runbook --format markdown
+albu-mcp activation product-fix-closure-import --host Codex --input docs/product-fix-outcome-capture/post-fix-noisy-preview-tuning-beta-response.json --confirm-import-ready --format json
 albu-mcp activation product-fix-closure-pack --host Codex --before-beta-records docs/product-fix-closure-snapshot/before-beta-validation-records.json --output-dir docs/product-fix-closure-pack --format markdown
 albu-mcp activation product-fix-outcome --host Codex --format json
 albu-mcp activation product-fix-outcome --host Codex --output-dir docs/product-fix-outcome --format markdown
@@ -159,7 +160,8 @@ albu-mcp trust gate-transition --before-host-records docs/HOST_MANUAL_RUNS.json 
 ```
 
 These commands write privacy-safe JSON records only for explicit `record-*`, `response-import`, `response-import-dir`,
-`import-manifest`, `import-wizard --import-ready`, or `import-artifacts` actions. `intake bundle`,
+`activation product-fix-closure-import --confirm-import-ready`, `import-manifest`,
+`import-wizard --import-ready`, or `import-artifacts` actions. `intake bundle`,
 `activation command-center`, `activation runbook`, `activation proof-sprint`, `activation execution-workspace`,
 `activation real-proof-run`,
 `activation evidence-first-cycle`, `activation acquisition-cycle`, `activation evidence-cockpit`,
@@ -168,7 +170,7 @@ These commands write privacy-safe JSON records only for explicit `record-*`, `re
 `activation product-fix-validation`, `activation product-fix-outcome-capture`,
 `activation product-fix-outcome-import-guard`, `activation product-fix-outcome-rehearsal`,
 `activation product-fix-closure-snapshot`, `activation product-fix-closure-runbook`,
-`activation product-fix-closure-pack`,
+`activation product-fix-closure-import` without `--confirm-import-ready`, `activation product-fix-closure-pack`,
 `activation product-fix-outcome`, `host setup-probe`,
 `preview first-pack`, `evidence collect`, `execution-packet`, `operator-packet`, `packet-bundle`,
 `replay-fixture-pack`, `session-folder`, `session-manifest`, `validate-manifest`, `proof-runner`, `import-wizard`
