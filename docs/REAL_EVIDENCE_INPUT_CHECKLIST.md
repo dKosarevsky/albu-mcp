@@ -148,6 +148,7 @@ albu-mcp activation product-fix-outcome-capture --host Codex --output-dir docs/p
 albu-mcp activation product-fix-outcome-import-guard --host Codex --input docs/product-fix-outcome-capture/post-fix-noisy-preview-tuning-beta-response.json --output-dir docs/product-fix-outcome-import-guard --format markdown
 albu-mcp activation product-fix-outcome-rehearsal --host Codex --input docs/product-fix-outcome-capture/post-fix-noisy-preview-tuning-beta-response.json --output-dir docs/product-fix-outcome-rehearsal --format markdown
 albu-mcp activation product-fix-closure-snapshot --host Codex --input docs/product-fix-outcome-capture/post-fix-noisy-preview-tuning-beta-response.json --output-dir docs/product-fix-closure-snapshot --format markdown
+albu-mcp activation product-fix-closure-runbook --host Codex --input docs/product-fix-outcome-capture/post-fix-noisy-preview-tuning-beta-response.json --output-dir docs/product-fix-closure-runbook --format markdown
 albu-mcp activation product-fix-closure-pack --host Codex --before-beta-records docs/product-fix-closure-snapshot/before-beta-validation-records.json --output-dir docs/product-fix-closure-pack --format markdown
 albu-mcp activation product-fix-outcome --host Codex --format json
 albu-mcp activation product-fix-outcome --host Codex --output-dir docs/product-fix-outcome --format markdown
