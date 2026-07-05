@@ -97,6 +97,8 @@ albu-mcp activation product-fix-implementation-plan --host Codex --format json
 albu-mcp activation product-fix-implementation-plan --host Codex --output-dir docs/product-fix-implementation-plan --format markdown
 albu-mcp activation product-fix-execution-guard --host Codex --format json
 albu-mcp activation product-fix-execution-guard --host Codex --output-dir docs/product-fix-execution-guard --format markdown
+albu-mcp activation product-fix-validation --host Codex --format json
+albu-mcp activation product-fix-validation --host Codex --output-dir docs/product-fix-validation --format markdown
 albu-mcp evidence collect --host Codex --date YYYY-MM-DD --reviewer "Release operator" --format json
 albu-mcp evidence run-session --host Codex --format json
 albu-mcp evidence execution-packet --host Codex --format json
@@ -155,7 +157,7 @@ These commands write privacy-safe JSON records only for explicit `record-*`, `re
 `activation evidence-first-cycle`, `activation acquisition-cycle`, `activation evidence-cockpit`,
 `activation evidence-product-loop`, `activation real-adoption-cycle`, `activation first-product-fix`,
 `activation product-fix-implementation-plan`, `activation product-fix-execution-guard`, `run-session`,
-`host setup-probe`,
+`activation product-fix-validation`, `host setup-probe`,
 `preview first-pack`, `evidence collect`, `execution-packet`, `operator-packet`, `packet-bundle`,
 `replay-fixture-pack`, `session-folder`, `session-manifest`, `validate-manifest`, `proof-runner`, `import-wizard`
 without `--import-ready`, `close-host`, `proof-status`, `transition-pack`, `rc-unblock-preview`,
