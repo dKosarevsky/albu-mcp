@@ -136,13 +136,15 @@ After host and beta imports, rerun:
 albu-mcp activation real-adoption-cycle --host Codex --format json
 albu-mcp activation evidence-product-loop --host Codex --format json
 albu-mcp beta triage --format json
+albu-mcp activation first-product-fix --host Codex --format json
 ```
 
 Only select the first product fix when:
 
 - `cycle_status` is `ready_for_first_product_fix`
 - `implementation_allowed` is `true`
-- `candidate_backlog_item_count` is greater than `0`
+- `selector_status` is `ready_for_implementation`
+- `selected_fix` is not `null`
 - `triage_status` is not `blocked_until_beta_signal`
 
 ## Stop Conditions

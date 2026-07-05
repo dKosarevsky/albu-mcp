@@ -103,6 +103,12 @@ from albumentationsx_mcp.evidence_proof import (
     build_rc_unblock_preview,
 )
 from albumentationsx_mcp.first_preview import build_first_preview_pack, render_first_preview_pack_markdown
+from albumentationsx_mcp.first_product_fix_selector import (
+    FirstProductFixSelectorRequest,
+    build_first_product_fix_selector,
+    render_first_product_fix_selector_json,
+    render_first_product_fix_selector_markdown,
+)
 from albumentationsx_mcp.host_setup import (
     DEFAULT_ALLOWED_ROOT,
     DEFAULT_ARTIFACT_ROOT,
@@ -381,6 +387,7 @@ def _run_activation_cli(argv: list[str]) -> None:
     _add_activation_acquisition_cycle_parser(subparsers)
     _add_activation_evidence_cockpit_parser(subparsers)
     _add_activation_evidence_product_loop_parser(subparsers)
+    _add_activation_first_product_fix_parser(subparsers)
     _add_activation_real_adoption_cycle_parser(subparsers)
 
     args = parser.parse_args(argv)
@@ -443,6 +450,18 @@ def _add_activation_real_adoption_cycle_parser(subparsers: Any) -> None:
     real_adoption_cycle.add_argument("--format", choices=["text", "json", "markdown"], default="text")
 
 
+def _add_activation_first_product_fix_parser(subparsers: Any) -> None:
+    first_product_fix = subparsers.add_parser(
+        "first-product-fix",
+        help="Select the first product fix after real adoption gates pass.",
+    )
+    first_product_fix.add_argument("--host", choices=get_args(HostName), required=True)
+    first_product_fix.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    first_product_fix.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    first_product_fix.add_argument("--release-tag", default="v1.15.0-rc.1")
+    first_product_fix.add_argument("--format", choices=["text", "json", "markdown"], default="text")
+
+
 def _handle_activation_command(args: argparse.Namespace) -> str:
     handlers = {
         "acquisition-cycle": _handle_activation_acquisition_cycle,
@@ -451,6 +470,7 @@ def _handle_activation_command(args: argparse.Namespace) -> str:
         "evidence-first-cycle": _handle_activation_evidence_first_cycle,
         "evidence-product-loop": _handle_activation_evidence_product_loop,
         "execution-workspace": _handle_activation_execution_workspace,
+        "first-product-fix": _handle_activation_first_product_fix,
         "proof-sprint": _handle_activation_proof_sprint,
         "real-adoption-cycle": _handle_activation_real_adoption_cycle,
         "real-proof-run": _handle_activation_real_proof_run,
@@ -478,6 +498,25 @@ def _handle_activation_real_adoption_cycle(args: argparse.Namespace) -> str:
     if args.format == "markdown":
         return render_real_adoption_cycle_markdown(report)
     return f"activation real-adoption-cycle {report['cycle_status']} (lanes={report['lane_count']})\n"
+
+
+def _handle_activation_first_product_fix(args: argparse.Namespace) -> str:
+    report = build_first_product_fix_selector(
+        FirstProductFixSelectorRequest(
+            host=args.host,
+            host_records_path=args.host_records,
+            beta_records_path=args.beta_records,
+            release_tag=args.release_tag,
+        )
+    )
+    if args.format == "json":
+        return render_first_product_fix_selector_json(report)
+    if args.format == "markdown":
+        return render_first_product_fix_selector_markdown(report)
+    return (
+        f"activation first-product-fix {report['selector_status']} "
+        f"(implementation_allowed={str(report['implementation_allowed']).lower()})\n"
+    )
 
 
 def _handle_activation_evidence_product_loop(args: argparse.Namespace) -> str:
