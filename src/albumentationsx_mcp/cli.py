@@ -106,6 +106,7 @@ from albumentationsx_mcp.first_preview import build_first_preview_pack, render_f
 from albumentationsx_mcp.first_product_fix_selector import (
     FirstProductFixSelectorRequest,
     build_first_product_fix_selector,
+    build_first_product_fix_selector_artifacts,
     render_first_product_fix_selector_json,
     render_first_product_fix_selector_markdown,
 )
@@ -459,6 +460,7 @@ def _add_activation_first_product_fix_parser(subparsers: Any) -> None:
     first_product_fix.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
     first_product_fix.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
     first_product_fix.add_argument("--release-tag", default="v1.15.0-rc.1")
+    first_product_fix.add_argument("--output-dir", type=Path, default=None)
     first_product_fix.add_argument("--format", choices=["text", "json", "markdown"], default="text")
 
 
@@ -501,14 +503,19 @@ def _handle_activation_real_adoption_cycle(args: argparse.Namespace) -> str:
 
 
 def _handle_activation_first_product_fix(args: argparse.Namespace) -> str:
-    report = build_first_product_fix_selector(
-        FirstProductFixSelectorRequest(
-            host=args.host,
-            host_records_path=args.host_records,
-            beta_records_path=args.beta_records,
-            release_tag=args.release_tag,
-        )
+    request = FirstProductFixSelectorRequest(
+        host=args.host,
+        host_records_path=args.host_records,
+        beta_records_path=args.beta_records,
+        release_tag=args.release_tag,
     )
+    if args.output_dir is not None:
+        pack = build_first_product_fix_selector_artifacts(request, output_format=args.format)
+        args.output_dir.mkdir(parents=True, exist_ok=True)
+        for artifact in pack["artifacts"]:
+            (args.output_dir / artifact["filename"]).write_text(artifact["content"], encoding="utf-8")
+        return f"wrote activation first-product-fix with {pack['artifact_count']} artifacts to {args.output_dir}\n"
+    report = build_first_product_fix_selector(request)
     if args.format == "json":
         return render_first_product_fix_selector_json(report)
     if args.format == "markdown":

@@ -147,6 +147,55 @@ def test_activation_first_product_fix_blocks_without_external_evidence(tmp_path:
     assert beta_records.read_text(encoding="utf-8") == beta_before
 
 
+def test_activation_first_product_fix_writes_blocked_markdown_artifacts(tmp_path: Path) -> None:
+    host_records, beta_records = _write_empty_records(tmp_path)
+    output_dir = tmp_path / "first-product-fix"
+    host_before = host_records.read_text(encoding="utf-8")
+    beta_before = beta_records.read_text(encoding="utf-8")
+
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "activation",
+            "first-product-fix",
+            "--host",
+            "Codex",
+            "--host-records",
+            str(host_records),
+            "--beta-records",
+            str(beta_records),
+            "--output-dir",
+            str(output_dir),
+            "--format",
+            "markdown",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    expected_files = {
+        "first-product-fix-index.md",
+        "selected-fix.md",
+        "implementation-checklist.md",
+    }
+    index = (output_dir / "first-product-fix-index.md").read_text(encoding="utf-8")
+    selected_fix = (output_dir / "selected-fix.md").read_text(encoding="utf-8")
+    checklist = (output_dir / "implementation-checklist.md").read_text(encoding="utf-8")
+
+    assert result.stdout == f"wrote activation first-product-fix with {len(expected_files)} artifacts to {output_dir}\n"
+    assert expected_files == {path.name for path in output_dir.iterdir()}
+    assert "Selector status: `blocked_until_external_evidence`" in index
+    assert "Writes records: `false`" in index
+    assert "`p0_host_evidence_missing_or_blocked`" in selected_fix
+    assert "`beta_validation_records_missing`" in selected_fix
+    assert "Do not implement runtime product changes while selector status is blocked." in checklist
+    assert host_records.read_text(encoding="utf-8") == host_before
+    assert beta_records.read_text(encoding="utf-8") == beta_before
+
+
 def test_activation_first_product_fix_selects_ready_beta_fix(tmp_path: Path) -> None:
     host_records, beta_records = _write_ready_records(tmp_path)
 
@@ -209,3 +258,57 @@ def test_activation_first_product_fix_selects_ready_beta_fix(tmp_path: Path) -> 
 
     assert "preview_review_agent" in markdown_result.stdout
     assert "Repeated noisy-preview feedback maps to safer candidate adjustments." in markdown_result.stdout
+
+
+def test_activation_first_product_fix_writes_ready_json_artifacts(tmp_path: Path) -> None:
+    host_records, beta_records = _write_ready_records(tmp_path)
+    output_dir = tmp_path / "first-product-fix-json"
+    host_before = host_records.read_text(encoding="utf-8")
+    beta_before = beta_records.read_text(encoding="utf-8")
+
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "activation",
+            "first-product-fix",
+            "--host",
+            "Codex",
+            "--host-records",
+            str(host_records),
+            "--beta-records",
+            str(beta_records),
+            "--output-dir",
+            str(output_dir),
+            "--format",
+            "json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    expected_files = {
+        "first-product-fix-index.json",
+        "selected-fix.json",
+        "implementation-checklist.json",
+    }
+    index = json.loads((output_dir / "first-product-fix-index.json").read_text(encoding="utf-8"))
+    selected_fix = json.loads((output_dir / "selected-fix.json").read_text(encoding="utf-8"))
+    checklist = json.loads((output_dir / "implementation-checklist.json").read_text(encoding="utf-8"))
+
+    assert result.stdout == f"wrote activation first-product-fix with {len(expected_files)} artifacts to {output_dir}\n"
+    assert expected_files == {path.name for path in output_dir.iterdir()}
+    assert index["selector_status"] == "ready_for_implementation"
+    assert index["implementation_allowed"] is True
+    assert index["writes_records"] is False
+    assert selected_fix["selected_fix"]["product_area"] == "preview_review_agent"
+    assert selected_fix["selected_fix"]["triage_bucket"] == "review_agent_v3_gap"
+    assert checklist["checklist_status"] == "ready"
+    assert checklist["implementation_packet"]["success_signal"] == (
+        "Repeated noisy-preview feedback maps to safer candidate adjustments."
+    )
+    assert checklist["items"][0].startswith("Write failing tests for preview_review_agent")
+    assert host_records.read_text(encoding="utf-8") == host_before
+    assert beta_records.read_text(encoding="utf-8") == beta_before

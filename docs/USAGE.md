@@ -92,6 +92,7 @@ albu-mcp activation evidence-cockpit --host Codex --output-dir docs/evidence-coc
 albu-mcp activation evidence-product-loop --host Codex --output-dir docs/evidence-product-loop --format markdown
 albu-mcp activation real-adoption-cycle --host Codex --output-dir docs/real-adoption-cycle --format markdown
 albu-mcp activation first-product-fix --host Codex --format json
+albu-mcp activation first-product-fix --host Codex --output-dir docs/first-product-fix --format markdown
 albu-mcp evidence collect --host Codex --date YYYY-MM-DD --reviewer "Release operator" --format json
 albu-mcp evidence run-session --host Codex --format json
 albu-mcp evidence execution-packet --host Codex --format json
