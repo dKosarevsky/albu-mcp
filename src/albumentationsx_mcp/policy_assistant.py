@@ -18,6 +18,7 @@ from albumentationsx_mcp.presets import Intensity, adjust_pipeline, recommend_pi
 _GATE_REASON = (
     "Policy recommendations are starter candidates; render and compare previews before accepting them for training."
 )
+_READABILITY_CRITICAL_TAGS = {"object_unrecognizable"}
 
 
 def plan_augmentation_policy(  # noqa: PLR0913 - mirrors the MCP tool input contract.
@@ -106,11 +107,7 @@ def plan_augmentation_policy_candidates(  # noqa: PLR0913 - mirrors the MCP tool
         recommended_next_tool="render_preview_batch",
         applied_feedback_tags=applied_feedback_tags,
         candidates=candidates,
-        comparison_checklist=[
-            "Render all candidates on the same image sample and seed.",
-            "Compare contact sheets before accepting any candidate.",
-            "Record concrete feedback tags for rejected candidates.",
-        ],
+        comparison_checklist=_comparison_checklist(applied_feedback_tags),
     )
 
 
@@ -150,7 +147,7 @@ def plan_policy_iteration(  # noqa: PLR0913 - mirrors the MCP tool input contrac
         accepted_candidate_id=accepted_candidate_id,
         feedback_tags=applied_feedback_tags,
         candidate_set=candidate_set,
-        next_actions=_iteration_next_actions(accepted=accepted),
+        next_actions=_iteration_next_actions(accepted=accepted, feedback_tags=applied_feedback_tags),
     )
 
 
@@ -166,6 +163,9 @@ def _canonical_feedback_tags(feedback_tags: list[str]) -> list[str]:
 
 
 def _candidate_profiles(*, bounded_count: int, feedback_tags: list[str]) -> list[dict[str, str]]:
+    if _is_readability_recovery_feedback(feedback_tags):
+        return _readability_recovery_candidate_profiles()[:bounded_count]
+
     suffix = " with feedback-aware softening" if feedback_tags else ""
     profiles = [
         {
@@ -200,6 +200,60 @@ def _candidate_profiles(*, bounded_count: int, feedback_tags: list[str]) -> list
         },
     ]
     return profiles[:bounded_count]
+
+
+def _readability_recovery_candidate_profiles() -> list[dict[str, str]]:
+    return [
+        {
+            "candidate_id": "minimal_change",
+            "intensity": "low",
+            "tradeoff": "Readability recovery fallback; smallest change before adding more augmentation variety.",
+            "review_focus": "Confirm the object is recognizable before adding more augmentation variety.",
+        },
+        {
+            "candidate_id": "conservative",
+            "intensity": "low",
+            "tradeoff": "Readability recovery candidate with low destructive risk and softened noise.",
+            "review_focus": "Check that the object remains readable across the reviewed examples.",
+        },
+        {
+            "candidate_id": "review_safe",
+            "intensity": "medium",
+            "tradeoff": "Readability recovery medium candidate for reviewer-focused safety checks.",
+            "review_focus": "Compare object recognizability before accepting any extra robustness pressure.",
+        },
+        {
+            "candidate_id": "balanced",
+            "intensity": "medium",
+            "tradeoff": "Readability recovery recheck once minimal and conservative candidates remain recognizable.",
+            "review_focus": "Use only if lower-risk candidates preserve the target object clearly.",
+        },
+        {
+            "candidate_id": "annotation_safe",
+            "intensity": "low",
+            "tradeoff": "Readability recovery candidate for annotation-sensitive datasets.",
+            "review_focus": "Confirm labels, masks, or boxes still match the visible object.",
+        },
+    ]
+
+
+def _comparison_checklist(feedback_tags: list[str]) -> list[str]:
+    checklist = [
+        "Render all candidates on the same image sample and seed.",
+        "Compare contact sheets before accepting any candidate.",
+        "Record concrete feedback tags for rejected candidates.",
+    ]
+    if _is_readability_recovery_feedback(feedback_tags):
+        checklist.insert(1, "Do not reintroduce aggressive candidates until object readability is restored.")
+    return checklist
+
+
+def _is_readability_recovery_feedback(feedback_tags: list[str]) -> bool:
+    for feedback_tag in feedback_tags:
+        base_tag, _, _ = feedback_tag.partition(":")
+        if base_tag in _READABILITY_CRITICAL_TAGS:
+            return True
+    return False
 
 
 def _next_tools(recommended_next_tool: str) -> list[str]:
@@ -243,11 +297,17 @@ def _rationale(*, task: str, objective: str, intensity: Intensity, risk_level: s
     )
 
 
-def _iteration_next_actions(*, accepted: bool) -> list[str]:
+def _iteration_next_actions(*, accepted: bool, feedback_tags: list[str]) -> list[str]:
     if accepted:
         return [
             "Export only after confirming the accepted candidate preview artifacts.",
             "Record the accepted candidate id, feedback tags, and report artifact references.",
+        ]
+    if _is_readability_recovery_feedback(feedback_tags):
+        return [
+            "Restore object readability before exploring more augmentation variety.",
+            "Render the recovery candidate set on the same reviewed inputs and seed.",
+            "Reject any candidate where the target object is still hard to recognize.",
         ]
     return [
         "Render the next candidate set before accepting a training policy.",
