@@ -136,6 +136,13 @@ from albumentationsx_mcp.product_fix_closure_pack import (
     render_product_fix_closure_pack_json,
     render_product_fix_closure_pack_markdown,
 )
+from albumentationsx_mcp.product_fix_closure_pipeline import (
+    ProductFixClosurePipelineRequest,
+    build_product_fix_closure_pipeline,
+    build_product_fix_closure_pipeline_artifacts,
+    render_product_fix_closure_pipeline_json,
+    render_product_fix_closure_pipeline_markdown,
+)
 from albumentationsx_mcp.product_fix_closure_receipt import (
     ProductFixClosureReceiptRequest,
     build_product_fix_closure_receipt,
@@ -428,6 +435,7 @@ def _run_activation_cli(argv: list[str]) -> None:
     _add_activation_first_product_fix_parser(subparsers)
     _add_activation_product_fix_closure_import_parser(subparsers)
     _add_activation_product_fix_closure_pack_parser(subparsers)
+    _add_activation_product_fix_closure_pipeline_parser(subparsers)
     _add_activation_product_fix_closure_receipt_parser(subparsers)
     _add_activation_product_fix_closure_snapshot_parser(subparsers)
     _add_activation_product_fix_closure_runbook_parser(subparsers)
@@ -598,6 +606,24 @@ def _add_activation_product_fix_closure_import_parser(subparsers: Any) -> None:
     closure_import.add_argument("--format", choices=["text", "json", "markdown"], default="text")
 
 
+def _add_activation_product_fix_closure_pipeline_parser(subparsers: Any) -> None:
+    pipeline = subparsers.add_parser(
+        "product-fix-closure-pipeline",
+        help="Build a no-write pipeline status for closing one product fix.",
+    )
+    pipeline.add_argument("--host", choices=get_args(HostName), required=True)
+    pipeline.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    pipeline.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    pipeline.add_argument("--input", type=Path, required=True)
+    pipeline.add_argument("--snapshot-dir", type=Path, default=Path("docs/product-fix-closure-snapshot"))
+    pipeline.add_argument("--closure-output-dir", type=Path, default=Path("docs/product-fix-closure-pack"))
+    pipeline.add_argument("--receipt-output-dir", type=Path, default=Path("docs/product-fix-closure-receipt"))
+    pipeline.add_argument("--final-outcome-output-dir", type=Path, default=Path("docs/product-fix-outcome"))
+    pipeline.add_argument("--release-tag", default="v1.15.0-rc.1")
+    pipeline.add_argument("--output-dir", type=Path, default=None)
+    pipeline.add_argument("--format", choices=["text", "json", "markdown"], default="text")
+
+
 def _add_activation_product_fix_closure_receipt_parser(subparsers: Any) -> None:
     receipt = subparsers.add_parser(
         "product-fix-closure-receipt",
@@ -752,6 +778,7 @@ def _handle_activation_command(args: argparse.Namespace) -> str:
         "first-product-fix": _handle_activation_first_product_fix,
         "product-fix-closure-import": _handle_activation_product_fix_closure_import,
         "product-fix-closure-pack": _handle_activation_product_fix_closure_pack,
+        "product-fix-closure-pipeline": _handle_activation_product_fix_closure_pipeline,
         "product-fix-closure-receipt": _handle_activation_product_fix_closure_receipt,
         "product-fix-closure-runbook": _handle_activation_product_fix_closure_runbook,
         "product-fix-closure-snapshot": _handle_activation_product_fix_closure_snapshot,
@@ -861,6 +888,38 @@ def _handle_activation_product_fix_closure_import(args: argparse.Namespace) -> s
     return (
         f"activation product-fix-closure-import {report['import_status']} "
         f"(writes_records={str(report['writes_records']).lower()})\n"
+    )
+
+
+def _handle_activation_product_fix_closure_pipeline(args: argparse.Namespace) -> str:
+    request = ProductFixClosurePipelineRequest(
+        host=args.host,
+        input_path=args.input,
+        host_records_path=args.host_records,
+        beta_records_path=args.beta_records,
+        snapshot_dir=args.snapshot_dir,
+        closure_output_dir=args.closure_output_dir,
+        receipt_output_dir=args.receipt_output_dir,
+        final_outcome_output_dir=args.final_outcome_output_dir,
+        release_tag=args.release_tag,
+    )
+    if args.output_dir is not None:
+        pack = build_product_fix_closure_pipeline_artifacts(request, output_format=args.format)
+        args.output_dir.mkdir(parents=True, exist_ok=True)
+        for artifact in pack["artifacts"]:
+            (args.output_dir / artifact["filename"]).write_text(artifact["content"], encoding="utf-8")
+        return (
+            "wrote activation product-fix-closure-pipeline "
+            f"with {pack['artifact_count']} artifacts to {args.output_dir}\n"
+        )
+    report = build_product_fix_closure_pipeline(request)
+    if args.format == "json":
+        return render_product_fix_closure_pipeline_json(report)
+    if args.format == "markdown":
+        return render_product_fix_closure_pipeline_markdown(report)
+    return (
+        f"activation product-fix-closure-pipeline {report['pipeline_status']} "
+        f"(import_status={report['import_status']})\n"
     )
 
 

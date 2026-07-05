@@ -104,6 +104,7 @@ albu-mcp activation product-fix-outcome-import-guard --host Codex --input docs/p
 albu-mcp activation product-fix-outcome-rehearsal --host Codex --input docs/product-fix-outcome-capture/post-fix-noisy-preview-tuning-beta-response.json --output-dir docs/product-fix-outcome-rehearsal --format markdown
 albu-mcp activation product-fix-closure-snapshot --host Codex --input docs/product-fix-outcome-capture/post-fix-noisy-preview-tuning-beta-response.json --output-dir docs/product-fix-closure-snapshot --format markdown
 albu-mcp activation product-fix-closure-runbook --host Codex --input docs/product-fix-outcome-capture/post-fix-noisy-preview-tuning-beta-response.json --output-dir docs/product-fix-closure-runbook --format markdown
+albu-mcp activation product-fix-closure-pipeline --host Codex --input docs/product-fix-outcome-capture/post-fix-noisy-preview-tuning-beta-response.json --output-dir docs/product-fix-closure-pipeline --format markdown
 albu-mcp activation product-fix-closure-import --host Codex --input docs/product-fix-outcome-capture/post-fix-noisy-preview-tuning-beta-response.json --confirm-import-ready --format json
 albu-mcp activation product-fix-closure-receipt --host Codex --before-beta-records docs/product-fix-closure-snapshot/before-beta-validation-records.json --output-dir docs/product-fix-closure-receipt --format markdown
 albu-mcp activation product-fix-closure-pack --host Codex --before-beta-records docs/product-fix-closure-snapshot/before-beta-validation-records.json --output-dir docs/product-fix-closure-pack --format markdown
@@ -171,8 +172,9 @@ These commands write privacy-safe JSON records only for explicit `record-*`, `re
 `activation product-fix-validation`, `activation product-fix-outcome-capture`,
 `activation product-fix-outcome-import-guard`, `activation product-fix-outcome-rehearsal`,
 `activation product-fix-closure-snapshot`, `activation product-fix-closure-runbook`,
-`activation product-fix-closure-import` without `--confirm-import-ready`, `activation product-fix-closure-receipt`,
-`activation product-fix-closure-pack`, `activation product-fix-outcome`, `host setup-probe`,
+`activation product-fix-closure-pipeline`, `activation product-fix-closure-import` without `--confirm-import-ready`,
+`activation product-fix-closure-receipt`, `activation product-fix-closure-pack`, `activation product-fix-outcome`,
+`host setup-probe`,
 `preview first-pack`, `evidence collect`, `execution-packet`, `operator-packet`, `packet-bundle`,
 `replay-fixture-pack`, `session-folder`, `session-manifest`, `validate-manifest`, `proof-runner`, `import-wizard`
 without `--import-ready`, `close-host`, `proof-status`, `transition-pack`, `rc-unblock-preview`,
