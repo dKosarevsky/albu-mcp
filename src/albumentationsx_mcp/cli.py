@@ -123,6 +123,13 @@ from albumentationsx_mcp.product_cycle import (
     build_evidence_first_cycle_artifacts,
     render_evidence_first_cycle_markdown,
 )
+from albumentationsx_mcp.product_fix_execution_guard import (
+    ProductFixExecutionGuardRequest,
+    build_product_fix_execution_guard,
+    build_product_fix_execution_guard_artifacts,
+    render_product_fix_execution_guard_json,
+    render_product_fix_execution_guard_markdown,
+)
 from albumentationsx_mcp.product_fix_implementation_plan import (
     ProductFixImplementationPlanRequest,
     build_product_fix_implementation_plan,
@@ -386,6 +393,7 @@ def _run_activation_cli(argv: list[str]) -> None:
     _add_activation_evidence_cockpit_parser(subparsers)
     _add_activation_evidence_product_loop_parser(subparsers)
     _add_activation_first_product_fix_parser(subparsers)
+    _add_activation_product_fix_execution_guard_parser(subparsers)
     _add_activation_product_fix_implementation_plan_parser(subparsers)
     _add_activation_real_adoption_cycle_parser(subparsers)
 
@@ -491,6 +499,19 @@ def _add_activation_product_fix_implementation_plan_parser(subparsers: Any) -> N
     implementation_plan.add_argument("--format", choices=["text", "json", "markdown"], default="text")
 
 
+def _add_activation_product_fix_execution_guard_parser(subparsers: Any) -> None:
+    execution_guard = subparsers.add_parser(
+        "product-fix-execution-guard",
+        help="Build a no-write guarded branch handoff for the selected product fix.",
+    )
+    execution_guard.add_argument("--host", choices=get_args(HostName), required=True)
+    execution_guard.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    execution_guard.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    execution_guard.add_argument("--release-tag", default="v1.15.0-rc.1")
+    execution_guard.add_argument("--output-dir", type=Path, default=None)
+    execution_guard.add_argument("--format", choices=["text", "json", "markdown"], default="text")
+
+
 def _handle_activation_command(args: argparse.Namespace) -> str:
     handlers = {
         "acquisition-cycle": _handle_activation_acquisition_cycle,
@@ -500,6 +521,7 @@ def _handle_activation_command(args: argparse.Namespace) -> str:
         "evidence-product-loop": _handle_activation_evidence_product_loop,
         "execution-workspace": _handle_activation_execution_workspace,
         "first-product-fix": _handle_activation_first_product_fix,
+        "product-fix-execution-guard": _handle_activation_product_fix_execution_guard,
         "product-fix-implementation-plan": _handle_activation_product_fix_implementation_plan,
         "proof-sprint": _handle_activation_proof_sprint,
         "real-adoption-cycle": _handle_activation_real_adoption_cycle,
@@ -578,6 +600,33 @@ def _handle_activation_product_fix_implementation_plan(args: argparse.Namespace)
     return (
         f"activation product-fix-implementation-plan {report['plan_status']} "
         f"(implementation_allowed={str(report['implementation_allowed']).lower()})\n"
+    )
+
+
+def _handle_activation_product_fix_execution_guard(args: argparse.Namespace) -> str:
+    request = ProductFixExecutionGuardRequest(
+        host=args.host,
+        host_records_path=args.host_records,
+        beta_records_path=args.beta_records,
+        release_tag=args.release_tag,
+    )
+    if args.output_dir is not None:
+        pack = build_product_fix_execution_guard_artifacts(request, output_format=args.format)
+        args.output_dir.mkdir(parents=True, exist_ok=True)
+        for artifact in pack["artifacts"]:
+            (args.output_dir / artifact["filename"]).write_text(artifact["content"], encoding="utf-8")
+        return (
+            "wrote activation product-fix-execution-guard "
+            f"with {pack['artifact_count']} artifacts to {args.output_dir}\n"
+        )
+    report = build_product_fix_execution_guard(request)
+    if args.format == "json":
+        return render_product_fix_execution_guard_json(report)
+    if args.format == "markdown":
+        return render_product_fix_execution_guard_markdown(report)
+    return (
+        f"activation product-fix-execution-guard {report['guard_status']} "
+        f"(execution_allowed={str(report['execution_allowed']).lower()})\n"
     )
 
 
