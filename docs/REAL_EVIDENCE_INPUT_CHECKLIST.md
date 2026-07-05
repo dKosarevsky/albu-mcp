@@ -145,6 +145,7 @@ albu-mcp activation product-fix-execution-guard --host Codex --output-dir docs/p
 albu-mcp activation product-fix-validation --host Codex --format json
 albu-mcp activation product-fix-validation --host Codex --output-dir docs/product-fix-validation --format markdown
 albu-mcp activation product-fix-outcome-capture --host Codex --output-dir docs/product-fix-outcome-capture --format markdown
+albu-mcp activation product-fix-outcome-import-guard --host Codex --input docs/product-fix-outcome-capture/post-fix-noisy-preview-tuning-beta-response.json --output-dir docs/product-fix-outcome-import-guard --format markdown
 albu-mcp activation product-fix-outcome --host Codex --format json
 albu-mcp activation product-fix-outcome --host Codex --output-dir docs/product-fix-outcome --format markdown
 ```
