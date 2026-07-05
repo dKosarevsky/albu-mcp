@@ -158,6 +158,13 @@ from albumentationsx_mcp.product_fix_outcome_import_guard import (
     render_product_fix_outcome_import_guard_json,
     render_product_fix_outcome_import_guard_markdown,
 )
+from albumentationsx_mcp.product_fix_outcome_rehearsal import (
+    ProductFixOutcomeRehearsalRequest,
+    build_product_fix_outcome_rehearsal,
+    build_product_fix_outcome_rehearsal_artifacts,
+    render_product_fix_outcome_rehearsal_json,
+    render_product_fix_outcome_rehearsal_markdown,
+)
 from albumentationsx_mcp.product_fix_validation import (
     ProductFixValidationRequest,
     build_product_fix_validation,
@@ -425,6 +432,7 @@ def _run_activation_cli(argv: list[str]) -> None:
     _add_activation_product_fix_implementation_plan_parser(subparsers)
     _add_activation_product_fix_outcome_capture_parser(subparsers)
     _add_activation_product_fix_outcome_import_guard_parser(subparsers)
+    _add_activation_product_fix_outcome_rehearsal_parser(subparsers)
     _add_activation_product_fix_outcome_parser(subparsers)
     _add_activation_product_fix_validation_parser(subparsers)
     _add_activation_real_adoption_cycle_parser(subparsers)
@@ -599,6 +607,20 @@ def _add_activation_product_fix_outcome_import_guard_parser(subparsers: Any) -> 
     import_guard.add_argument("--format", choices=["text", "json", "markdown"], default="text")
 
 
+def _add_activation_product_fix_outcome_rehearsal_parser(subparsers: Any) -> None:
+    rehearsal = subparsers.add_parser(
+        "product-fix-outcome-rehearsal",
+        help="Rehearse post-fix outcome capture, draft guard, and projected outcome without importing records.",
+    )
+    rehearsal.add_argument("--host", choices=get_args(HostName), required=True)
+    rehearsal.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    rehearsal.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    rehearsal.add_argument("--input", type=Path, required=True)
+    rehearsal.add_argument("--release-tag", default="v1.15.0-rc.1")
+    rehearsal.add_argument("--output-dir", type=Path, default=None)
+    rehearsal.add_argument("--format", choices=["text", "json", "markdown"], default="text")
+
+
 def _handle_activation_command(args: argparse.Namespace) -> str:
     handlers = {
         "acquisition-cycle": _handle_activation_acquisition_cycle,
@@ -612,6 +634,7 @@ def _handle_activation_command(args: argparse.Namespace) -> str:
         "product-fix-implementation-plan": _handle_activation_product_fix_implementation_plan,
         "product-fix-outcome-capture": _handle_activation_product_fix_outcome_capture,
         "product-fix-outcome-import-guard": _handle_activation_product_fix_outcome_import_guard,
+        "product-fix-outcome-rehearsal": _handle_activation_product_fix_outcome_rehearsal,
         "product-fix-outcome": _handle_activation_product_fix_outcome,
         "product-fix-validation": _handle_activation_product_fix_validation,
         "proof-sprint": _handle_activation_proof_sprint,
@@ -821,6 +844,34 @@ def _handle_activation_product_fix_outcome_import_guard(args: argparse.Namespace
         return render_product_fix_outcome_import_guard_markdown(report)
     return (
         f"activation product-fix-outcome-import-guard {report['guard_status']} "
+        f"(import_allowed={str(report['import_allowed']).lower()})\n"
+    )
+
+
+def _handle_activation_product_fix_outcome_rehearsal(args: argparse.Namespace) -> str:
+    request = ProductFixOutcomeRehearsalRequest(
+        host=args.host,
+        input_path=args.input,
+        host_records_path=args.host_records,
+        beta_records_path=args.beta_records,
+        release_tag=args.release_tag,
+    )
+    if args.output_dir is not None:
+        pack = build_product_fix_outcome_rehearsal_artifacts(request, output_format=args.format)
+        args.output_dir.mkdir(parents=True, exist_ok=True)
+        for artifact in pack["artifacts"]:
+            (args.output_dir / artifact["filename"]).write_text(artifact["content"], encoding="utf-8")
+        return (
+            "wrote activation product-fix-outcome-rehearsal "
+            f"with {pack['artifact_count']} artifacts to {args.output_dir}\n"
+        )
+    report = build_product_fix_outcome_rehearsal(request)
+    if args.format == "json":
+        return render_product_fix_outcome_rehearsal_json(report)
+    if args.format == "markdown":
+        return render_product_fix_outcome_rehearsal_markdown(report)
+    return (
+        f"activation product-fix-outcome-rehearsal {report['rehearsal_status']} "
         f"(import_allowed={str(report['import_allowed']).lower()})\n"
     )
 
