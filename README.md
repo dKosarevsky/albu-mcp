@@ -1,7 +1,6 @@
 # AlbumentationsX MCP
 
-Model Context Protocol server for [AlbumentationsX](https://github.com/albumentations-team/AlbumentationsX): transform
-discovery, pipeline validation, deterministic previews, feedback loops, and reproducible exports for computer vision.
+Model Context Protocol server for [AlbumentationsX](https://github.com/albumentations-team/AlbumentationsX): transform discovery, pipeline validation, deterministic previews, feedback loops, and reproducible exports for computer vision.
 
 <!-- mcp-name: io.github.dKosarevsky/albu-mcp -->
 
@@ -9,6 +8,7 @@ discovery, pipeline validation, deterministic previews, feedback loops, and repr
 [![PyPI](https://img.shields.io/pypi/v/albumentationsx-mcp)](https://pypi.org/project/albumentationsx-mcp/)
 [![Python](https://img.shields.io/badge/python-3.10--3.13-blue)](pyproject.toml)
 [![MCP Registry](https://img.shields.io/badge/MCP%20Registry-active-green)](https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.dKosarevsky/albu-mcp)
+[![skills.sh](https://skills.sh/b/dKosarevsky/albu-mcp)](https://skills.sh/dKosarevsky/albu-mcp)
 
 ## Purpose
 
@@ -20,8 +20,7 @@ AlbumentationsX MCP is a thin, typed MCP layer around existing AlbumentationsX p
 - record concrete feedback such as `too_noisy:high`;
 - export accepted pipelines and review reports.
 
-The server does not execute arbitrary Python, fetch remote images, overwrite datasets, or train models. Local preview
-access is bounded by `--allowed-root`, and generated artifacts are written under `--artifact-root`.
+The server does not execute arbitrary Python, fetch remote images, overwrite datasets, or train models. Local preview access is bounded by `--allowed-root`, and generated artifacts are written under `--artifact-root`.
 
 ## Quick Start
 
@@ -47,7 +46,9 @@ uvx --from albumentationsx-mcp albumentationsx-mcp \
 ```
 
 Copyable host snippets are in [examples](examples/). Full setup is in [docs/INSTALL.md](docs/INSTALL.md); the guided
-trial is [docs/FIRST_10_MINUTES.md](docs/FIRST_10_MINUTES.md).
+trial is [docs/FIRST_10_MINUTES.md](docs/FIRST_10_MINUTES.md). Agent skill:
+`npx skills add dKosarevsky/albu-mcp`; this installs agent guidance, not the MCP server; run the server with
+`uvx --from albumentationsx-mcp albumentationsx-mcp`.
 
 ## Operator CLI
 
@@ -123,8 +124,5 @@ from [AlbumentationsX#289](https://github.com/albumentations-team/Albumentations
 
 ## Verification
 
-Core local gate: `uv run pytest`, `uv run ruff check .`, `uv run ruff format --check .`, `uv run ty check`,
-`uv run python scripts/check_release_readiness.py`, and `uv build`. Release-specific gates are in
-[docs/RELEASE.md](docs/RELEASE.md).
-Tracked guards include `scripts/check_host_acceptance_report.py`, `scripts/check_contract_snapshots.py`, and
-`scripts/check_directory_presence.py`.
+Core gate: `uv run pytest`, `uv run ruff check .`, `uv run ruff format --check .`, `uv run ty check`,
+`uv run python scripts/check_release_readiness.py`, and `uv build`. Release-specific gates are in [docs/RELEASE.md](docs/RELEASE.md); tracked guards include `scripts/check_host_acceptance_report.py`, `scripts/check_contract_snapshots.py`, and `scripts/check_directory_presence.py`.
