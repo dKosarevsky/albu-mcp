@@ -144,6 +144,8 @@ albu-mcp activation product-fix-execution-guard --host Codex --format json
 albu-mcp activation product-fix-execution-guard --host Codex --output-dir docs/product-fix-execution-guard --format markdown
 albu-mcp activation product-fix-validation --host Codex --format json
 albu-mcp activation product-fix-validation --host Codex --output-dir docs/product-fix-validation --format markdown
+albu-mcp activation product-fix-outcome --host Codex --format json
+albu-mcp activation product-fix-outcome --host Codex --output-dir docs/product-fix-outcome --format markdown
 ```
 
 Only select the first product fix when:
