@@ -123,6 +123,13 @@ from albumentationsx_mcp.product_cycle import (
     build_evidence_first_cycle_artifacts,
     render_evidence_first_cycle_markdown,
 )
+from albumentationsx_mcp.product_fix_closure_pack import (
+    ProductFixClosurePackRequest,
+    build_product_fix_closure_pack,
+    build_product_fix_closure_pack_artifacts,
+    render_product_fix_closure_pack_json,
+    render_product_fix_closure_pack_markdown,
+)
 from albumentationsx_mcp.product_fix_execution_guard import (
     ProductFixExecutionGuardRequest,
     build_product_fix_execution_guard,
@@ -428,6 +435,7 @@ def _run_activation_cli(argv: list[str]) -> None:
     _add_activation_evidence_cockpit_parser(subparsers)
     _add_activation_evidence_product_loop_parser(subparsers)
     _add_activation_first_product_fix_parser(subparsers)
+    _add_activation_product_fix_closure_pack_parser(subparsers)
     _add_activation_product_fix_execution_guard_parser(subparsers)
     _add_activation_product_fix_implementation_plan_parser(subparsers)
     _add_activation_product_fix_outcome_capture_parser(subparsers)
@@ -524,6 +532,20 @@ def _add_activation_first_product_fix_parser(subparsers: Any) -> None:
     first_product_fix.add_argument("--release-tag", default="v1.15.0-rc.1")
     first_product_fix.add_argument("--output-dir", type=Path, default=None)
     first_product_fix.add_argument("--format", choices=["text", "json", "markdown"], default="text")
+
+
+def _add_activation_product_fix_closure_pack_parser(subparsers: Any) -> None:
+    closure_pack = subparsers.add_parser(
+        "product-fix-closure-pack",
+        help="Build a no-write post-import closure pack for one product fix.",
+    )
+    closure_pack.add_argument("--host", choices=get_args(HostName), required=True)
+    closure_pack.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    closure_pack.add_argument("--before-beta-records", type=Path, required=True)
+    closure_pack.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    closure_pack.add_argument("--release-tag", default="v1.15.0-rc.1")
+    closure_pack.add_argument("--output-dir", type=Path, default=None)
+    closure_pack.add_argument("--format", choices=["text", "json", "markdown"], default="text")
 
 
 def _add_activation_product_fix_implementation_plan_parser(subparsers: Any) -> None:
@@ -630,6 +652,7 @@ def _handle_activation_command(args: argparse.Namespace) -> str:
         "evidence-product-loop": _handle_activation_evidence_product_loop,
         "execution-workspace": _handle_activation_execution_workspace,
         "first-product-fix": _handle_activation_first_product_fix,
+        "product-fix-closure-pack": _handle_activation_product_fix_closure_pack,
         "product-fix-execution-guard": _handle_activation_product_fix_execution_guard,
         "product-fix-implementation-plan": _handle_activation_product_fix_implementation_plan,
         "product-fix-outcome-capture": _handle_activation_product_fix_outcome_capture,
@@ -687,6 +710,33 @@ def _handle_activation_first_product_fix(args: argparse.Namespace) -> str:
     return (
         f"activation first-product-fix {report['selector_status']} "
         f"(implementation_allowed={str(report['implementation_allowed']).lower()})\n"
+    )
+
+
+def _handle_activation_product_fix_closure_pack(args: argparse.Namespace) -> str:
+    request = ProductFixClosurePackRequest(
+        host=args.host,
+        host_records_path=args.host_records,
+        before_beta_records_path=args.before_beta_records,
+        beta_records_path=args.beta_records,
+        release_tag=args.release_tag,
+    )
+    if args.output_dir is not None:
+        pack = build_product_fix_closure_pack_artifacts(request, output_format=args.format)
+        args.output_dir.mkdir(parents=True, exist_ok=True)
+        for artifact in pack["artifacts"]:
+            (args.output_dir / artifact["filename"]).write_text(artifact["content"], encoding="utf-8")
+        return (
+            f"wrote activation product-fix-closure-pack with {pack['artifact_count']} artifacts to {args.output_dir}\n"
+        )
+    report = build_product_fix_closure_pack(request)
+    if args.format == "json":
+        return render_product_fix_closure_pack_json(report)
+    if args.format == "markdown":
+        return render_product_fix_closure_pack_markdown(report)
+    return (
+        f"activation product-fix-closure-pack {report['closure_status']} "
+        f"(new_records={report['evidence_diff']['new_record_count']})\n"
     )
 
 

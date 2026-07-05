@@ -253,6 +253,12 @@ def test_readme_and_usage_document_operator_cli() -> None:
             "--input docs/product-fix-outcome-capture/post-fix-noisy-preview-tuning-beta-response.json "
             "--output-dir docs/product-fix-outcome-rehearsal --format markdown"
         ),
+        "albu-mcp activation product-fix-closure-pack",
+        (
+            "albu-mcp activation product-fix-closure-pack --host Codex "
+            "--before-beta-records docs/product-fix-outcome-rehearsal/before-beta-validation-records.json "
+            "--output-dir docs/product-fix-closure-pack --format markdown"
+        ),
         "albu-mcp evidence collect",
         "albu-mcp evidence status",
         "albu-mcp evidence run-session",

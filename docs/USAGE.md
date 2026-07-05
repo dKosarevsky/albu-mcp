@@ -102,6 +102,7 @@ albu-mcp activation product-fix-validation --host Codex --output-dir docs/produc
 albu-mcp activation product-fix-outcome-capture --host Codex --output-dir docs/product-fix-outcome-capture --format markdown
 albu-mcp activation product-fix-outcome-import-guard --host Codex --input docs/product-fix-outcome-capture/post-fix-noisy-preview-tuning-beta-response.json --output-dir docs/product-fix-outcome-import-guard --format markdown
 albu-mcp activation product-fix-outcome-rehearsal --host Codex --input docs/product-fix-outcome-capture/post-fix-noisy-preview-tuning-beta-response.json --output-dir docs/product-fix-outcome-rehearsal --format markdown
+albu-mcp activation product-fix-closure-pack --host Codex --before-beta-records docs/product-fix-outcome-rehearsal/before-beta-validation-records.json --output-dir docs/product-fix-closure-pack --format markdown
 albu-mcp activation product-fix-outcome --host Codex --format json
 albu-mcp activation product-fix-outcome --host Codex --output-dir docs/product-fix-outcome --format markdown
 albu-mcp evidence collect --host Codex --date YYYY-MM-DD --reviewer "Release operator" --format json
@@ -164,7 +165,7 @@ These commands write privacy-safe JSON records only for explicit `record-*`, `re
 `activation product-fix-implementation-plan`, `activation product-fix-execution-guard`, `run-session`,
 `activation product-fix-validation`, `activation product-fix-outcome-capture`,
 `activation product-fix-outcome-import-guard`, `activation product-fix-outcome-rehearsal`,
-`activation product-fix-outcome`, `host setup-probe`,
+`activation product-fix-closure-pack`, `activation product-fix-outcome`, `host setup-probe`,
 `preview first-pack`, `evidence collect`, `execution-packet`, `operator-packet`, `packet-bundle`,
 `replay-fixture-pack`, `session-folder`, `session-manifest`, `validate-manifest`, `proof-runner`, `import-wizard`
 without `--import-ready`, `close-host`, `proof-status`, `transition-pack`, `rc-unblock-preview`,
