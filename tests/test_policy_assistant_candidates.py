@@ -43,6 +43,33 @@ def test_policy_assistant_v2_preserves_feedback_in_candidates() -> None:
     assert any("feedback" in candidate.tradeoff.lower() for candidate in result.candidates)
 
 
+def test_policy_assistant_routes_unreadable_feedback_to_recovery_candidates() -> None:
+    result = plan_augmentation_policy_candidates(
+        task="classification",
+        objective="robustness",
+        targets=["image"],
+        feedback_tags=["too_noisy:high", "object_unrecognizable:high"],
+        candidate_count=4,
+    )
+
+    assert result.applied_feedback_tags == ["object_unrecognizable:high", "too_noisy:high"]
+    assert [candidate.candidate_id for candidate in result.candidates] == [
+        "minimal_change",
+        "conservative",
+        "review_safe",
+        "balanced",
+    ]
+    assert all(candidate.plan.intensity != "high" for candidate in result.candidates)
+    assert all(candidate.candidate_id != "aggressive" for candidate in result.candidates)
+    assert result.candidates[0].preview_request_hint["review_focus"] == (
+        "Confirm the object is recognizable before adding more augmentation variety."
+    )
+    assert any("readability recovery" in candidate.tradeoff.lower() for candidate in result.candidates)
+    assert (
+        "Do not reintroduce aggressive candidates until object readability is restored." in result.comparison_checklist
+    )
+
+
 def test_policy_iteration_carries_rejections_into_next_candidates() -> None:
     result = plan_policy_iteration(
         task="classification",
@@ -61,6 +88,27 @@ def test_policy_iteration_carries_rejections_into_next_candidates() -> None:
     assert result.candidate_set.applied_feedback_tags == ["too_noisy:high"]
     assert result.candidate_set.recommended_next_tool == "render_preview_batch"
     assert result.next_actions[0] == "Render the next candidate set before accepting a training policy."
+
+
+def test_policy_iteration_prioritizes_readability_recovery_after_unreadable_feedback() -> None:
+    result = plan_policy_iteration(
+        task="classification",
+        objective="robustness",
+        targets=["image"],
+        feedback_tags=["object_unrecognizable:high", "too_noisy:high"],
+        rejected_candidate_ids=["aggressive"],
+        accepted_candidate_id=None,
+        iteration=2,
+    )
+
+    assert result.iteration_status == "needs_preview"
+    assert [candidate.candidate_id for candidate in result.candidate_set.candidates] == [
+        "minimal_change",
+        "conservative",
+        "review_safe",
+    ]
+    assert all(candidate.plan.intensity != "high" for candidate in result.candidate_set.candidates)
+    assert result.next_actions[0] == "Restore object readability before exploring more augmentation variety."
 
 
 def test_policy_iteration_acceptance_still_requires_export_review() -> None:
