@@ -256,8 +256,14 @@ def test_readme_and_usage_document_operator_cli() -> None:
         "albu-mcp activation product-fix-closure-pack",
         (
             "albu-mcp activation product-fix-closure-pack --host Codex "
-            "--before-beta-records docs/product-fix-outcome-rehearsal/before-beta-validation-records.json "
+            "--before-beta-records docs/product-fix-closure-snapshot/before-beta-validation-records.json "
             "--output-dir docs/product-fix-closure-pack --format markdown"
+        ),
+        "albu-mcp activation product-fix-closure-snapshot",
+        (
+            "albu-mcp activation product-fix-closure-snapshot --host Codex "
+            "--input docs/product-fix-outcome-capture/post-fix-noisy-preview-tuning-beta-response.json "
+            "--output-dir docs/product-fix-closure-snapshot --format markdown"
         ),
         "albu-mcp evidence collect",
         "albu-mcp evidence status",
