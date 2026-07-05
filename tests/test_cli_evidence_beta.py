@@ -271,6 +271,12 @@ def test_readme_and_usage_document_operator_cli() -> None:
             "--input docs/product-fix-outcome-capture/post-fix-noisy-preview-tuning-beta-response.json "
             "--confirm-import-ready --format json"
         ),
+        "albu-mcp activation product-fix-closure-receipt",
+        (
+            "albu-mcp activation product-fix-closure-receipt --host Codex "
+            "--before-beta-records docs/product-fix-closure-snapshot/before-beta-validation-records.json "
+            "--output-dir docs/product-fix-closure-receipt --format markdown"
+        ),
         "albu-mcp activation product-fix-closure-snapshot",
         (
             "albu-mcp activation product-fix-closure-snapshot --host Codex "

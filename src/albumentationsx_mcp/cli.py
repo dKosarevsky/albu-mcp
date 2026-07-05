@@ -136,6 +136,13 @@ from albumentationsx_mcp.product_fix_closure_pack import (
     render_product_fix_closure_pack_json,
     render_product_fix_closure_pack_markdown,
 )
+from albumentationsx_mcp.product_fix_closure_receipt import (
+    ProductFixClosureReceiptRequest,
+    build_product_fix_closure_receipt,
+    build_product_fix_closure_receipt_artifacts,
+    render_product_fix_closure_receipt_json,
+    render_product_fix_closure_receipt_markdown,
+)
 from albumentationsx_mcp.product_fix_closure_runbook import (
     ProductFixClosureRunbookRequest,
     build_product_fix_closure_runbook,
@@ -421,6 +428,7 @@ def _run_activation_cli(argv: list[str]) -> None:
     _add_activation_first_product_fix_parser(subparsers)
     _add_activation_product_fix_closure_import_parser(subparsers)
     _add_activation_product_fix_closure_pack_parser(subparsers)
+    _add_activation_product_fix_closure_receipt_parser(subparsers)
     _add_activation_product_fix_closure_snapshot_parser(subparsers)
     _add_activation_product_fix_closure_runbook_parser(subparsers)
     _add_activation_product_fix_execution_guard_parser(subparsers)
@@ -590,6 +598,22 @@ def _add_activation_product_fix_closure_import_parser(subparsers: Any) -> None:
     closure_import.add_argument("--format", choices=["text", "json", "markdown"], default="text")
 
 
+def _add_activation_product_fix_closure_receipt_parser(subparsers: Any) -> None:
+    receipt = subparsers.add_parser(
+        "product-fix-closure-receipt",
+        help="Build a no-write receipt for the guarded import-to-closure handoff.",
+    )
+    receipt.add_argument("--host", choices=get_args(HostName), required=True)
+    receipt.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    receipt.add_argument("--before-beta-records", type=Path, required=True)
+    receipt.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    receipt.add_argument("--snapshot-path", type=Path, default=None)
+    receipt.add_argument("--closure-output-dir", type=Path, default=Path("docs/product-fix-closure-pack"))
+    receipt.add_argument("--release-tag", default="v1.15.0-rc.1")
+    receipt.add_argument("--output-dir", type=Path, default=None)
+    receipt.add_argument("--format", choices=["text", "json", "markdown"], default="text")
+
+
 def _add_activation_product_fix_closure_snapshot_parser(subparsers: Any) -> None:
     snapshot = subparsers.add_parser(
         "product-fix-closure-snapshot",
@@ -728,6 +752,7 @@ def _handle_activation_command(args: argparse.Namespace) -> str:
         "first-product-fix": _handle_activation_first_product_fix,
         "product-fix-closure-import": _handle_activation_product_fix_closure_import,
         "product-fix-closure-pack": _handle_activation_product_fix_closure_pack,
+        "product-fix-closure-receipt": _handle_activation_product_fix_closure_receipt,
         "product-fix-closure-runbook": _handle_activation_product_fix_closure_runbook,
         "product-fix-closure-snapshot": _handle_activation_product_fix_closure_snapshot,
         "product-fix-execution-guard": _handle_activation_product_fix_execution_guard,
@@ -836,6 +861,36 @@ def _handle_activation_product_fix_closure_import(args: argparse.Namespace) -> s
     return (
         f"activation product-fix-closure-import {report['import_status']} "
         f"(writes_records={str(report['writes_records']).lower()})\n"
+    )
+
+
+def _handle_activation_product_fix_closure_receipt(args: argparse.Namespace) -> str:
+    request = ProductFixClosureReceiptRequest(
+        host=args.host,
+        host_records_path=args.host_records,
+        before_beta_records_path=args.before_beta_records,
+        beta_records_path=args.beta_records,
+        snapshot_path=args.snapshot_path,
+        closure_output_dir=args.closure_output_dir,
+        release_tag=args.release_tag,
+    )
+    if args.output_dir is not None:
+        pack = build_product_fix_closure_receipt_artifacts(request, output_format=args.format)
+        args.output_dir.mkdir(parents=True, exist_ok=True)
+        for artifact in pack["artifacts"]:
+            (args.output_dir / artifact["filename"]).write_text(artifact["content"], encoding="utf-8")
+        return (
+            "wrote activation product-fix-closure-receipt "
+            f"with {pack['artifact_count']} artifacts to {args.output_dir}\n"
+        )
+    report = build_product_fix_closure_receipt(request)
+    if args.format == "json":
+        return render_product_fix_closure_receipt_json(report)
+    if args.format == "markdown":
+        return render_product_fix_closure_receipt_markdown(report)
+    return (
+        f"activation product-fix-closure-receipt {report['receipt_status']} "
+        f"(new_records={report['new_record_count']})\n"
     )
 
 

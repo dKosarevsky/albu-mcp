@@ -107,6 +107,9 @@ def test_activation_product_fix_closure_import_writes_snapshot_and_imports_when_
         for record in beta_after["records"]
     )
     assert any(
+        command.startswith("albu-mcp activation product-fix-closure-receipt") for command in payload["next_commands"]
+    )
+    assert any(
         command.startswith("albu-mcp activation product-fix-closure-pack") for command in payload["next_commands"]
     )
 

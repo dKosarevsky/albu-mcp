@@ -92,6 +92,7 @@ def build_product_fix_closure_import(request: ProductFixClosureImportRequest) ->
         )
     )
     closure_command = _closure_command(request=request, snapshot_path=snapshot_path)
+    receipt_command = _receipt_command(request=request, snapshot_path=snapshot_path)
     final_outcome_command = _final_outcome_command(request)
     return _base_report(
         request=request,
@@ -107,6 +108,7 @@ def build_product_fix_closure_import(request: ProductFixClosureImportRequest) ->
             imported_record=imported_record,
             post_import_outcome=post_import_outcome,
             next_commands=[
+                receipt_command,
                 closure_command,
                 final_outcome_command,
                 f"albu-mcp activation evidence-product-loop --host {request.host} --format json",
@@ -214,6 +216,15 @@ def _closure_command(*, request: ProductFixClosureImportRequest, snapshot_path: 
         f"albu-mcp activation product-fix-closure-pack --host {request.host} "
         f"--host-records {request.host_records_path} --before-beta-records {snapshot_path} "
         f"--beta-records {request.beta_records_path} --output-dir {request.closure_output_dir} --format markdown"
+    )
+
+
+def _receipt_command(*, request: ProductFixClosureImportRequest, snapshot_path: Path) -> str:
+    return (
+        f"albu-mcp activation product-fix-closure-receipt --host {request.host} "
+        f"--host-records {request.host_records_path} --before-beta-records {snapshot_path} "
+        f"--beta-records {request.beta_records_path} --snapshot-path {snapshot_path} "
+        "--output-dir docs/product-fix-closure-receipt --format markdown"
     )
 
 
