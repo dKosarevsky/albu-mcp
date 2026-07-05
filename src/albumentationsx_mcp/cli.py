@@ -123,6 +123,13 @@ from albumentationsx_mcp.product_cycle import (
     build_evidence_first_cycle_artifacts,
     render_evidence_first_cycle_markdown,
 )
+from albumentationsx_mcp.product_fix_implementation_plan import (
+    ProductFixImplementationPlanRequest,
+    build_product_fix_implementation_plan,
+    build_product_fix_implementation_plan_artifacts,
+    render_product_fix_implementation_plan_json,
+    render_product_fix_implementation_plan_markdown,
+)
 from albumentationsx_mcp.proof_sprint import (
     build_combined_proof_sprint,
     build_combined_proof_sprint_artifacts,
@@ -336,18 +343,8 @@ def _run_activation_cli(argv: list[str]) -> None:
     parser = argparse.ArgumentParser(description="Build report-only activation command center packets.")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    command_center = subparsers.add_parser("command-center", help="Build the release activation command center.")
-    command_center.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
-    command_center.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
-    command_center.add_argument("--release-tag", default="v1.15.0-rc.1")
-    command_center.add_argument("--format", choices=["text", "json", "markdown"], default="text")
-
-    runbook = subparsers.add_parser("runbook", help="Build a manual real-evidence intake runbook.")
-    runbook.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
-    runbook.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
-    runbook.add_argument("--release-tag", default="v1.15.0-rc.1")
-    runbook.add_argument("--format", choices=["text", "json", "markdown"], default="text")
-
+    _add_activation_command_center_parser(subparsers)
+    _add_activation_runbook_parser(subparsers)
     proof_sprint = subparsers.add_parser("proof-sprint", help="Build a combined external proof sprint.")
     proof_sprint.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
     proof_sprint.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
@@ -389,6 +386,7 @@ def _run_activation_cli(argv: list[str]) -> None:
     _add_activation_evidence_cockpit_parser(subparsers)
     _add_activation_evidence_product_loop_parser(subparsers)
     _add_activation_first_product_fix_parser(subparsers)
+    _add_activation_product_fix_implementation_plan_parser(subparsers)
     _add_activation_real_adoption_cycle_parser(subparsers)
 
     args = parser.parse_args(argv)
@@ -397,6 +395,22 @@ def _run_activation_cli(argv: list[str]) -> None:
     except (ValidationError, ValueError) as exc:
         sys.stderr.write(f"{exc}\n")
         raise SystemExit(1) from exc
+
+
+def _add_activation_command_center_parser(subparsers: Any) -> None:
+    command_center = subparsers.add_parser("command-center", help="Build the release activation command center.")
+    command_center.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    command_center.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    command_center.add_argument("--release-tag", default="v1.15.0-rc.1")
+    command_center.add_argument("--format", choices=["text", "json", "markdown"], default="text")
+
+
+def _add_activation_runbook_parser(subparsers: Any) -> None:
+    runbook = subparsers.add_parser("runbook", help="Build a manual real-evidence intake runbook.")
+    runbook.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    runbook.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    runbook.add_argument("--release-tag", default="v1.15.0-rc.1")
+    runbook.add_argument("--format", choices=["text", "json", "markdown"], default="text")
 
 
 def _add_activation_acquisition_cycle_parser(subparsers: Any) -> None:
@@ -464,6 +478,19 @@ def _add_activation_first_product_fix_parser(subparsers: Any) -> None:
     first_product_fix.add_argument("--format", choices=["text", "json", "markdown"], default="text")
 
 
+def _add_activation_product_fix_implementation_plan_parser(subparsers: Any) -> None:
+    implementation_plan = subparsers.add_parser(
+        "product-fix-implementation-plan",
+        help="Build a no-write TDD plan for the selected product fix.",
+    )
+    implementation_plan.add_argument("--host", choices=get_args(HostName), required=True)
+    implementation_plan.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    implementation_plan.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    implementation_plan.add_argument("--release-tag", default="v1.15.0-rc.1")
+    implementation_plan.add_argument("--output-dir", type=Path, default=None)
+    implementation_plan.add_argument("--format", choices=["text", "json", "markdown"], default="text")
+
+
 def _handle_activation_command(args: argparse.Namespace) -> str:
     handlers = {
         "acquisition-cycle": _handle_activation_acquisition_cycle,
@@ -473,6 +500,7 @@ def _handle_activation_command(args: argparse.Namespace) -> str:
         "evidence-product-loop": _handle_activation_evidence_product_loop,
         "execution-workspace": _handle_activation_execution_workspace,
         "first-product-fix": _handle_activation_first_product_fix,
+        "product-fix-implementation-plan": _handle_activation_product_fix_implementation_plan,
         "proof-sprint": _handle_activation_proof_sprint,
         "real-adoption-cycle": _handle_activation_real_adoption_cycle,
         "real-proof-run": _handle_activation_real_proof_run,
@@ -522,6 +550,33 @@ def _handle_activation_first_product_fix(args: argparse.Namespace) -> str:
         return render_first_product_fix_selector_markdown(report)
     return (
         f"activation first-product-fix {report['selector_status']} "
+        f"(implementation_allowed={str(report['implementation_allowed']).lower()})\n"
+    )
+
+
+def _handle_activation_product_fix_implementation_plan(args: argparse.Namespace) -> str:
+    request = ProductFixImplementationPlanRequest(
+        host=args.host,
+        host_records_path=args.host_records,
+        beta_records_path=args.beta_records,
+        release_tag=args.release_tag,
+    )
+    if args.output_dir is not None:
+        pack = build_product_fix_implementation_plan_artifacts(request, output_format=args.format)
+        args.output_dir.mkdir(parents=True, exist_ok=True)
+        for artifact in pack["artifacts"]:
+            (args.output_dir / artifact["filename"]).write_text(artifact["content"], encoding="utf-8")
+        return (
+            "wrote activation product-fix-implementation-plan "
+            f"with {pack['artifact_count']} artifacts to {args.output_dir}\n"
+        )
+    report = build_product_fix_implementation_plan(request)
+    if args.format == "json":
+        return render_product_fix_implementation_plan_json(report)
+    if args.format == "markdown":
+        return render_product_fix_implementation_plan_markdown(report)
+    return (
+        f"activation product-fix-implementation-plan {report['plan_status']} "
         f"(implementation_allowed={str(report['implementation_allowed']).lower()})\n"
     )
 
