@@ -137,6 +137,13 @@ from albumentationsx_mcp.product_fix_implementation_plan import (
     render_product_fix_implementation_plan_json,
     render_product_fix_implementation_plan_markdown,
 )
+from albumentationsx_mcp.product_fix_outcome import (
+    ProductFixOutcomeRequest,
+    build_product_fix_outcome,
+    build_product_fix_outcome_artifacts,
+    render_product_fix_outcome_json,
+    render_product_fix_outcome_markdown,
+)
 from albumentationsx_mcp.product_fix_validation import (
     ProductFixValidationRequest,
     build_product_fix_validation,
@@ -402,6 +409,7 @@ def _run_activation_cli(argv: list[str]) -> None:
     _add_activation_first_product_fix_parser(subparsers)
     _add_activation_product_fix_execution_guard_parser(subparsers)
     _add_activation_product_fix_implementation_plan_parser(subparsers)
+    _add_activation_product_fix_outcome_parser(subparsers)
     _add_activation_product_fix_validation_parser(subparsers)
     _add_activation_real_adoption_cycle_parser(subparsers)
 
@@ -533,6 +541,19 @@ def _add_activation_product_fix_validation_parser(subparsers: Any) -> None:
     validation.add_argument("--format", choices=["text", "json", "markdown"], default="text")
 
 
+def _add_activation_product_fix_outcome_parser(subparsers: Any) -> None:
+    outcome = subparsers.add_parser(
+        "product-fix-outcome",
+        help="Decide whether a validated product fix is accepted by real beta evidence.",
+    )
+    outcome.add_argument("--host", choices=get_args(HostName), required=True)
+    outcome.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    outcome.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    outcome.add_argument("--release-tag", default="v1.15.0-rc.1")
+    outcome.add_argument("--output-dir", type=Path, default=None)
+    outcome.add_argument("--format", choices=["text", "json", "markdown"], default="text")
+
+
 def _handle_activation_command(args: argparse.Namespace) -> str:
     handlers = {
         "acquisition-cycle": _handle_activation_acquisition_cycle,
@@ -544,6 +565,7 @@ def _handle_activation_command(args: argparse.Namespace) -> str:
         "first-product-fix": _handle_activation_first_product_fix,
         "product-fix-execution-guard": _handle_activation_product_fix_execution_guard,
         "product-fix-implementation-plan": _handle_activation_product_fix_implementation_plan,
+        "product-fix-outcome": _handle_activation_product_fix_outcome,
         "product-fix-validation": _handle_activation_product_fix_validation,
         "proof-sprint": _handle_activation_proof_sprint,
         "real-adoption-cycle": _handle_activation_real_adoption_cycle,
@@ -673,6 +695,29 @@ def _handle_activation_product_fix_validation(args: argparse.Namespace) -> str:
     return (
         f"activation product-fix-validation {report['validation_status']} "
         f"(fix_validated={str(report['fix_validated']).lower()})\n"
+    )
+
+
+def _handle_activation_product_fix_outcome(args: argparse.Namespace) -> str:
+    request = ProductFixOutcomeRequest(
+        host=args.host,
+        host_records_path=args.host_records,
+        beta_records_path=args.beta_records,
+        release_tag=args.release_tag,
+    )
+    if args.output_dir is not None:
+        pack = build_product_fix_outcome_artifacts(request, output_format=args.format)
+        args.output_dir.mkdir(parents=True, exist_ok=True)
+        for artifact in pack["artifacts"]:
+            (args.output_dir / artifact["filename"]).write_text(artifact["content"], encoding="utf-8")
+        return f"wrote activation product-fix-outcome with {pack['artifact_count']} artifacts to {args.output_dir}\n"
+    report = build_product_fix_outcome(request)
+    if args.format == "json":
+        return render_product_fix_outcome_json(report)
+    if args.format == "markdown":
+        return render_product_fix_outcome_markdown(report)
+    return (
+        f"activation product-fix-outcome {report['outcome_status']} (accepted={str(report['fix_accepted']).lower()})\n"
     )
 
 
