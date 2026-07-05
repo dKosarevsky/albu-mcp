@@ -64,7 +64,10 @@ def test_activation_product_fix_closure_runbook_builds_ready_operator_sequence(t
     assert payload["snapshot_path"] == "docs/product-fix-closure-snapshot/before-beta-validation-records.json"
     assert payload["stop_conditions"] == []
     assert [step["id"] for step in payload["operator_sequence"]] == _OPERATOR_SEQUENCE_IDS
-    assert f"albu-mcp beta response-import --input {draft_path} --path {beta_records}" in payload["next_commands"]
+    assert (
+        f"albu-mcp activation product-fix-closure-import --host Codex "
+        f"--input {draft_path} --confirm-import-ready --format json"
+    ) in payload["next_commands"]
     assert any(
         command.startswith("albu-mcp activation product-fix-closure-pack") for command in payload["next_commands"]
     )
@@ -101,6 +104,7 @@ def test_activation_product_fix_closure_runbook_builds_ready_operator_sequence(t
     assert "Import allowed: `true`" in markdown_result.stdout
     assert "snapshot_before_import" in markdown_result.stdout
     assert "albu-mcp activation product-fix-closure-snapshot" in markdown_result.stdout
+    assert "albu-mcp activation product-fix-closure-import" in markdown_result.stdout
     assert "albu-mcp activation product-fix-closure-pack" in markdown_result.stdout
 
 
@@ -197,6 +201,7 @@ def test_activation_product_fix_closure_runbook_writes_markdown_artifacts(tmp_pa
     assert "Import allowed: `true`" in index
     assert "snapshot_before_import" in sequence
     assert "albu-mcp activation product-fix-closure-snapshot" in sequence
+    assert "albu-mcp activation product-fix-closure-import" in sequence
     assert "albu-mcp activation product-fix-closure-pack" in sequence
     assert "No active stop conditions." in stops
     assert host_records.read_text(encoding="utf-8") == host_before

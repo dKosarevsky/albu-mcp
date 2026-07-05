@@ -248,7 +248,7 @@ def _operator_sequence(
             step_id="import_post_fix_response",
             status="operator_action_required" if snapshot["import_allowed"] else "not_run",
             summary="Import the guarded post-fix beta response after reviewer approval.",
-            command=snapshot["import_command"],
+            command=commands["import"],
         ),
         _sequence_step(
             step_id="build_closure_pack",
@@ -287,7 +287,7 @@ def _operator_commands(
             f"albu-mcp activation product-fix-closure-snapshot --host {request.host} "
             f"--input {request.input_path} --output-dir {request.snapshot_dir} --format markdown"
         ),
-        "import": snapshot["import_command"],
+        "import": _guarded_import_command(request),
         "closure": snapshot["closure_command"],
         "final_outcome": (
             f"albu-mcp activation product-fix-outcome --host {request.host} "
@@ -303,6 +303,13 @@ def _sequence_step(*, step_id: str, status: str, summary: str, command: str | No
         "summary": summary,
         "command": command,
     }
+
+
+def _guarded_import_command(request: ProductFixClosureRunbookRequest) -> str:
+    return (
+        f"albu-mcp activation product-fix-closure-import --host {request.host} "
+        f"--input {request.input_path} --confirm-import-ready --format json"
+    )
 
 
 def _next_commands(operator_sequence: list[dict[str, Any]]) -> list[str]:
