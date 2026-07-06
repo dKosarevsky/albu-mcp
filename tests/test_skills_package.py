@@ -75,3 +75,10 @@ def test_readme_links_skills_sh_install_path() -> None:
     ]
     for expected_text in expected:
         assert expected_text in readme
+
+
+def test_skills_cli_local_install_artifacts_are_ignored() -> None:
+    gitignore = (ROOT / ".gitignore").read_text(encoding="utf-8")
+
+    assert ".agents/" in gitignore
+    assert "skills-lock.json" in gitignore

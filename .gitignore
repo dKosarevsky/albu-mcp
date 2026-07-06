@@ -9,6 +9,8 @@ dist/
 *.egg-info/
 artifacts/
 .golden-evals/
+.agents/
+skills-lock.json
 .coverage
 coverage.xml
 .worktrees/
