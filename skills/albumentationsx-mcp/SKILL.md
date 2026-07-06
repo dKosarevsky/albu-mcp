@@ -25,6 +25,20 @@ uvx --from albumentationsx-mcp albumentationsx-mcp \
   --artifact-root /absolute/path/to/albu-artifacts
 ```
 
+## First Run Prompt
+
+Use this as the first host task:
+
+```text
+Use AlbumentationsX MCP on `DATASET_PATH`. Use `ALLOWED_ROOT` for image access and `ARTIFACT_ROOT` for generated outputs. Read `albumentationsx://examples/client-smoke`, call `run_host_smoke_check`, and continue only when `preview_ready` is true. If `preview_ready` is false, call `diagnose_environment` and stop before rendering. Then call `plan_dataset_onboarding`, `build_review_packet`, `validate_preview_request`, and `render_preview_batch`. Render at most 6 images on the first pass. Show the contact sheet path and ask for concrete feedback before `adjust_pipeline` or `export_pipeline`.
+```
+
+## Host Config Hints
+
+- Claude Desktop, Cursor, Claude Code, and Codex configs should call the same `uvx --from` command.
+- Keep `--allowed-root` and `--artifact-root` absolute. Do not rely on the host process working directory for image access.
+- Restart the host after editing MCP config, then run `run_host_smoke_check`.
+
 ## Host Workflow
 
 1. Read `albumentationsx://examples/client-smoke`.
@@ -43,6 +57,12 @@ uvx --from albumentationsx-mcp albumentationsx-mcp \
 - Do not treat generated fixtures, contact sheets, or rehearsals as real beta evidence.
 - Keep all image reads under `--allowed-root` and all generated files under `--artifact-root`.
 - Re-run validation after changing paths, masks, bboxes, labels, or annotation formats.
+
+## Stop Conditions
+
+- Missing real dataset path: ask for one.
+- Path outside `--allowed-root`: refuse that path and ask for a bounded path.
+- User asks for many variants: render a small first batch before expanding.
 
 ## Evidence Workflows
 

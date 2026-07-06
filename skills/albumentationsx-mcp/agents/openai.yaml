@@ -1,4 +1,4 @@
 interface:
   display_name: "AlbumentationsX MCP"
   short_description: "Install and operate AlbumentationsX MCP from agent hosts."
-  default_prompt: "Use AlbumentationsX MCP to configure a bounded local preview workflow, smoke-check the host, render a small preview batch, record feedback, and export the accepted pipeline."
+  default_prompt: "Use AlbumentationsX MCP to configure a bounded local preview workflow; ask for dataset path, allowed root, and artifact root when they are missing; smoke-check the host, render a small preview batch, record feedback, and export the accepted pipeline."

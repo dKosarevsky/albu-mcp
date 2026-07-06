@@ -50,6 +50,42 @@ def test_skills_sh_package_has_installable_agent_skill() -> None:
     assert not (SKILL_DIR / "README.md").exists()
 
 
+def test_agent_skill_contains_first_run_playbook() -> None:
+    skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+
+    expected = [
+        "## First Run Prompt",
+        "Use AlbumentationsX MCP on `DATASET_PATH`.",
+        "`ALLOWED_ROOT`",
+        "`ARTIFACT_ROOT`",
+        "If `preview_ready` is false, call `diagnose_environment` and stop before rendering.",
+        "Render at most 6 images on the first pass.",
+        "Show the contact sheet path and ask for concrete feedback before `adjust_pipeline` or `export_pipeline`.",
+    ]
+    for expected_text in expected:
+        assert expected_text in skill
+
+
+def test_agent_skill_documents_host_config_hints_and_stop_conditions() -> None:
+    skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+    openai_yaml = (SKILL_DIR / "agents" / "openai.yaml").read_text(encoding="utf-8")
+
+    expected_skill_text = [
+        "## Host Config Hints",
+        "Claude Desktop, Cursor, Claude Code, and Codex configs should call the same `uvx --from` command.",
+        "Do not rely on the host process working directory for image access.",
+        "Restart the host after editing MCP config, then run `run_host_smoke_check`.",
+        "## Stop Conditions",
+        "Missing real dataset path: ask for one.",
+        "Path outside `--allowed-root`: refuse that path and ask for a bounded path.",
+        "User asks for many variants: render a small first batch before expanding.",
+    ]
+    for expected_text in expected_skill_text:
+        assert expected_text in skill
+
+    assert "ask for dataset path, allowed root, and artifact root when they are missing" in openai_yaml
+
+
 def test_skills_sh_display_config_groups_agent_skill() -> None:
     config = json.loads((ROOT / "skills.sh.json").read_text(encoding="utf-8"))
 
