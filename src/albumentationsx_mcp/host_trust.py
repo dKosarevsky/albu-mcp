@@ -25,13 +25,19 @@ def build_host_trust_dashboard(
     *,
     path: Path = Path("docs/HOST_MANUAL_RUNS.json"),
     host: HostName | None = None,
+    include_session: bool = False,
 ) -> dict[str, Any]:
     """Build one report-only next-action dashboard for MCP host trust gates."""
     records = validate_host_manual_runs(path) if path.exists() else HostManualRuns()
     host_lanes = [_host_lane(host_name=host_name, records=records) for host_name in _ordered_hosts(host)]
     next_lane = next((lane for lane in host_lanes if lane["overall_status"] != "passed"), None)
     p0_blocked_count = sum(1 for lane in host_lanes if lane["priority"] == "p0" and lane["overall_status"] != "passed")
-    return {
+    regeneration_command = "albu-mcp host next-action --format markdown --output docs/HOST_TRUST_DASHBOARD.md"
+    if include_session:
+        regeneration_command = (
+            "albu-mcp host next-action --include-session --format markdown --output docs/HOST_TRUST_DASHBOARD.md"
+        )
+    report: dict[str, Any] = {
         "dashboard_status": "blocked" if p0_blocked_count else "ready",
         "records_path": str(path),
         "execution_policy": "report_only",
@@ -40,13 +46,17 @@ def build_host_trust_dashboard(
         "next_host": next_lane["host"] if next_lane else None,
         "next_command": next_lane["next_command"] if next_lane else "albu-mcp trust next --format json",
         "host_lanes": host_lanes,
-        "regeneration_command": "albu-mcp host next-action --format markdown --output docs/HOST_TRUST_DASHBOARD.md",
+        "regeneration_command": regeneration_command,
     }
+    if include_session and next_lane is not None:
+        report["guided_session"] = _guided_session(next_lane)
+    return report
 
 
 def render_host_trust_dashboard_markdown(report: dict[str, Any]) -> str:
     """Render the host-level trust dashboard as compact Markdown."""
     rows = "\n".join(_markdown_row(lane) for lane in report["host_lanes"])
+    guided_session = _guided_session_markdown(report.get("guided_session"))
     return (
         "# Host Trust Dashboard\n\n"
         f"Records path: `{report['records_path']}`\n\n"
@@ -61,6 +71,7 @@ def render_host_trust_dashboard_markdown(report: dict[str, Any]) -> str:
         "```bash\n"
         f"{report['regeneration_command']}\n"
         "```\n\n"
+        f"{guided_session}"
         "## Operator Rules\n\n"
         "- Record `passed` only after reviewer-observed real MCP host UI evidence.\n"
         "- Keep private dataset paths out of committed evidence records.\n"
@@ -144,6 +155,41 @@ def _record_command(host_name: HostName) -> str:
     )
 
 
+def _guided_session(lane: dict[str, Any]) -> dict[str, Any]:
+    host_name = lane["host"]
+    manifest_path = f"docs/operator-packets/{_host_slug(host_name)}-evidence-session-manifest.json"
+    return {
+        "host": host_name,
+        "next_gate": lane["next_gate"],
+        "writes_records": False,
+        "manifest_path": manifest_path,
+        "commands": {
+            "collect": lane["next_command"],
+            "session_manifest": (
+                f"albu-mcp evidence session-manifest --host {_quote(host_name)} --date YYYY-MM-DD "
+                "--reviewer '<reviewer>' --output-dir docs/operator-packets --format json"
+            ),
+            "validate_manifest": f"albu-mcp evidence validate-manifest --input {manifest_path} --format json",
+            "import_artifacts": lane["record_command"],
+            "privacy_doctor": "albu-mcp evidence privacy-doctor --format json",
+            "artifact_doctor": "albu-mcp evidence artifact-doctor --format json",
+            "regenerate_dashboard": (
+                "albu-mcp host next-action --include-session --format markdown --output docs/HOST_TRUST_DASHBOARD.md"
+            ),
+        },
+        "stop_conditions": [
+            "Do not run import_artifacts until a reviewer observes the real MCP host UI session.",
+            "Do not record passed evidence without --confirm-real-host-observed.",
+            "Do not commit private dataset paths or file:// artifact references.",
+            "Do not treat generated smoke output as manual host evidence.",
+        ],
+    }
+
+
+def _host_slug(host_name: str) -> str:
+    return host_name.lower().replace(" ", "-")
+
+
 def _quote(value: str) -> str:
     return shlex.quote(value)
 
@@ -154,4 +200,22 @@ def _markdown_row(lane: dict[str, Any]) -> str:
         f"| {lane['host']} | `{lane['priority']}` | `{lane['overall_status']}` | "
         f"`{gate_statuses['manual_host_ui']}` | `{gate_statuses['first_10_minutes_replay']}` | "
         f"{lane['next_action']} | `{lane['next_command']}` |"
+    )
+
+
+def _guided_session_markdown(session: dict[str, Any] | None) -> str:
+    if session is None:
+        return ""
+    commands = "\n".join(f"- `{name}`: `{command}`" for name, command in session["commands"].items())
+    stop_conditions = "\n".join(f"- {condition}" for condition in session["stop_conditions"])
+    return (
+        "## Guided Session\n\n"
+        f"`host`: `{session['host']}`\n\n"
+        f"`next_gate`: `{session['next_gate']}`\n\n"
+        f"`manifest_path`: `{session['manifest_path']}`\n\n"
+        f"`writes_records`: `{str(session['writes_records']).lower()}`\n\n"
+        "### Commands\n\n"
+        f"{commands}\n\n"
+        "### Stop Conditions\n\n"
+        f"{stop_conditions}\n\n"
     )
