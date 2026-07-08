@@ -79,6 +79,7 @@ Use the package CLI for release evidence and beta records without importing repo
 
 ```bash
 albu-mcp host setup-probe --host Codex --live --format json
+albu-mcp host next-action --format markdown --output docs/HOST_TRUST_DASHBOARD.md
 albu-mcp preview first-pack --dataset-path /absolute/path/to/images --allowed-root /absolute/path/to --artifact-root /absolute/path/to/albu-artifacts --format json
 albu-mcp intake bundle --output-dir docs/intake-bundle --format markdown
 albu-mcp activation command-center --format markdown
@@ -174,7 +175,7 @@ These commands write privacy-safe JSON records only for explicit `record-*`, `re
 `activation product-fix-closure-snapshot`, `activation product-fix-closure-runbook`,
 `activation product-fix-closure-pipeline`, `activation product-fix-closure-import` without `--confirm-import-ready`,
 `activation product-fix-closure-receipt`, `activation product-fix-closure-pack`, `activation product-fix-outcome`,
-`host setup-probe`,
+`host setup-probe`, `host next-action`,
 `preview first-pack`, `evidence collect`, `execution-packet`, `operator-packet`, `packet-bundle`,
 `replay-fixture-pack`, `session-folder`, `session-manifest`, `validate-manifest`, `proof-runner`, `import-wizard`
 without `--import-ready`, `close-host`, `proof-status`, `transition-pack`, `rc-unblock-preview`,

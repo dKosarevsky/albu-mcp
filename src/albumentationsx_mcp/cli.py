@@ -116,6 +116,7 @@ from albumentationsx_mcp.host_setup import (
     build_host_setup_probe,
     render_host_setup_probe_markdown,
 )
+from albumentationsx_mcp.host_trust import build_host_trust_dashboard, render_host_trust_dashboard_markdown
 from albumentationsx_mcp.intake import build_intake_bundle_artifacts
 from albumentationsx_mcp.product_cycle import (
     EvidenceFirstCycleRequest,
@@ -343,6 +344,12 @@ def _run_host_cli(argv: list[str]) -> None:
     setup_probe.add_argument("--format", choices=["text", "json", "markdown"], default="text")
     setup_probe.add_argument("--output", type=Path, default=None)
 
+    next_action = subparsers.add_parser("next-action", help="Show the next real evidence action per MCP host.")
+    next_action.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    next_action.add_argument("--host", choices=get_args(HostName), default=None)
+    next_action.add_argument("--format", choices=["text", "json", "markdown"], default="text")
+    next_action.add_argument("--output", type=Path, default=None)
+
     args = parser.parse_args(argv)
     try:
         sys.stdout.write(_handle_host_command(args))
@@ -352,6 +359,8 @@ def _run_host_cli(argv: list[str]) -> None:
 
 
 def _handle_host_command(args: argparse.Namespace) -> str:
+    if args.command == "next-action":
+        return _handle_host_next_action(args)
     if args.command != "setup-probe":
         msg = f"unsupported host command: {args.command}"
         raise ValueError(msg)
@@ -375,6 +384,24 @@ def _handle_host_command(args: argparse.Namespace) -> str:
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(content, encoding="utf-8")
     return f"wrote host setup-probe to {args.output}\n"
+
+
+def _handle_host_next_action(args: argparse.Namespace) -> str:
+    report = build_host_trust_dashboard(path=args.path, host=args.host)
+    if args.format == "json":
+        content = json.dumps(report, indent=2, sort_keys=True) + "\n"
+    elif args.format == "markdown":
+        content = render_host_trust_dashboard_markdown(report)
+    else:
+        content = (
+            f"host next-action {report['dashboard_status']} "
+            f"(next_host={report['next_host'] or 'none'}, next='{report['next_command']}')\n"
+        )
+    if args.output is None:
+        return content
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text(content, encoding="utf-8")
+    return f"wrote host trust dashboard to {args.output}\n"
 
 
 def _run_preview_cli(argv: list[str]) -> None:
