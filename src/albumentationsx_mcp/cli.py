@@ -347,6 +347,7 @@ def _run_host_cli(argv: list[str]) -> None:
     next_action = subparsers.add_parser("next-action", help="Show the next real evidence action per MCP host.")
     next_action.add_argument("--path", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
     next_action.add_argument("--host", choices=get_args(HostName), default=None)
+    next_action.add_argument("--include-session", action="store_true")
     next_action.add_argument("--format", choices=["text", "json", "markdown"], default="text")
     next_action.add_argument("--output", type=Path, default=None)
 
@@ -387,7 +388,7 @@ def _handle_host_command(args: argparse.Namespace) -> str:
 
 
 def _handle_host_next_action(args: argparse.Namespace) -> str:
-    report = build_host_trust_dashboard(path=args.path, host=args.host)
+    report = build_host_trust_dashboard(path=args.path, host=args.host, include_session=args.include_session)
     if args.format == "json":
         content = json.dumps(report, indent=2, sort_keys=True) + "\n"
     elif args.format == "markdown":

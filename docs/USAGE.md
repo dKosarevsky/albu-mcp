@@ -79,7 +79,7 @@ Use the package CLI for release evidence and beta records without importing repo
 
 ```bash
 albu-mcp host setup-probe --host Codex --live --format json
-albu-mcp host next-action --format markdown --output docs/HOST_TRUST_DASHBOARD.md
+albu-mcp host next-action --include-session --format markdown --output docs/HOST_TRUST_DASHBOARD.md
 albu-mcp preview first-pack --dataset-path /absolute/path/to/images --allowed-root /absolute/path/to --artifact-root /absolute/path/to/albu-artifacts --format json
 albu-mcp intake bundle --output-dir docs/intake-bundle --format markdown
 albu-mcp activation command-center --format markdown
