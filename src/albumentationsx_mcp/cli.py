@@ -1510,6 +1510,7 @@ def _add_evidence_recording_parsers(subparsers: Any) -> None:
     import_wizard.add_argument("--release-tag", default="v1.15.0-rc.1")
     import_wizard.add_argument("--import-ready", action="store_true")
     import_wizard.add_argument("--format", choices=["text", "json", "markdown"], default="text")
+    import_wizard.add_argument("--output", type=Path, default=None)
 
 
 def _add_evidence_packet_parsers(subparsers: Any) -> None:
@@ -1929,15 +1930,21 @@ def _handle_evidence_import_wizard(args: argparse.Namespace) -> str:
         )
     )
     if args.format == "json":
-        return render_evidence_import_wizard_json(report)
-    if args.format == "markdown":
-        return render_evidence_import_wizard_markdown(report)
-    return (
-        f"evidence import-wizard {report['wizard_status']} "
-        f"(host_manifests={report['host_manifest_count']}, "
-        f"beta_drafts={report['beta_draft_count']}, "
-        f"writes_records={str(report['writes_records']).lower()})\n"
-    )
+        content = render_evidence_import_wizard_json(report)
+    elif args.format == "markdown":
+        content = render_evidence_import_wizard_markdown(report)
+    else:
+        content = (
+            f"evidence import-wizard {report['wizard_status']} "
+            f"(host_manifests={report['host_manifest_count']}, "
+            f"beta_drafts={report['beta_draft_count']}, "
+            f"writes_records={str(report['writes_records']).lower()})\n"
+        )
+    if args.output is None:
+        return content
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text(content, encoding="utf-8")
+    return f"wrote evidence import-wizard to {args.output}\n"
 
 
 def _handle_evidence_import_checklist(args: argparse.Namespace) -> str:

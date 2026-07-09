@@ -1,0 +1,19 @@
+{
+  "artifacts": [
+    "docs/assets/demo/demo_report.md"
+  ],
+  "commands_used": [
+    "run_host_smoke_check",
+    "render_preview_batch",
+    "albu-mcp evidence import-checklist --host 'Claude Code' --format markdown",
+    "albu-mcp evidence validate-manifest --input evidence-session-manifest.json --format json"
+  ],
+  "confirm_real_host_observed": false,
+  "date": "2026-07-09",
+  "evidence": "TODO: replace with redacted reviewer-observed MCP host UI evidence before importing records.",
+  "host": "Claude Code",
+  "manifest_status": "template",
+  "private_data_included": false,
+  "reviewer": "Codex operator",
+  "status": "pending"
+}

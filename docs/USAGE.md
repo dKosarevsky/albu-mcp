@@ -122,7 +122,7 @@ albu-mcp evidence session-manifest --host Codex --date 2026-07-01 --reviewer "Re
 albu-mcp evidence validate-manifest --input docs/operator-packets/codex-evidence-session-manifest.json --format json
 albu-mcp evidence proof-runner --input docs/operator-packets/codex-evidence-session-manifest.json --format json
 albu-mcp evidence import-manifest --input docs/operator-packets/codex-evidence-session-manifest.json --format json
-albu-mcp evidence import-wizard --host-manifest docs/operator-packets/codex-evidence-session-manifest.json --host-manifest docs/operator-packets/claude-code-evidence-session-manifest.json --beta-dir docs/beta-response-templates --format json
+albu-mcp evidence import-wizard --host-manifest docs/operator-packets/codex-evidence-session-manifest.json --host-manifest docs/operator-packets/claude-code-evidence-session-manifest.json --beta-dir docs/beta-response-templates --format markdown --output docs/operator-packets/evidence-import-wizard-preflight.md
 albu-mcp evidence close-host --host Codex --format json
 albu-mcp evidence proof-status --format json
 albu-mcp evidence transition-pack --before-host-records docs/HOST_MANUAL_RUNS.json --after-host-records docs/HOST_MANUAL_RUNS.json --beta-records docs/BETA_VALIDATION_RECORDS.json --output-dir docs/operator-packets --format markdown

@@ -110,7 +110,8 @@ albu-mcp evidence import-wizard \
   --host-manifest docs/operator-packets/codex-evidence-session-manifest.json \
   --host-manifest docs/operator-packets/claude-code-evidence-session-manifest.json \
   --beta-dir docs/beta-response-templates \
-  --format json
+  --format markdown \
+  --output docs/operator-packets/evidence-import-wizard-preflight.md
 ```
 
 When the wizard reports `ready_to_import`, import the filled host manifests and beta directory:
