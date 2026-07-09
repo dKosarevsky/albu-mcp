@@ -80,6 +80,10 @@ from albumentationsx_mcp.evidence_cockpit import (
     build_evidence_cockpit_artifacts,
     render_evidence_cockpit_markdown,
 )
+from albumentationsx_mcp.evidence_execution_pack import (
+    EvidenceExecutionPackRequest,
+    build_evidence_execution_pack_artifacts,
+)
 from albumentationsx_mcp.evidence_import_wizard import (
     EvidenceImportWizardRequest,
     build_evidence_import_wizard,
@@ -1497,6 +1501,8 @@ def _add_evidence_recording_parsers(subparsers: Any) -> None:
     session_folder.add_argument("--output-dir", type=Path, required=True)
     session_folder.add_argument("--format", choices=["markdown", "json"], default="markdown")
 
+    _add_evidence_execution_pack_parser(subparsers)
+
     validate_manifest = subparsers.add_parser(
         "validate-manifest",
         help="Validate a filled evidence session manifest without writing records.",
@@ -1529,6 +1535,20 @@ def _add_evidence_recording_parsers(subparsers: Any) -> None:
 
     _add_evidence_template_guard_parser(subparsers)
     _add_evidence_preflight_parser(subparsers)
+
+
+def _add_evidence_execution_pack_parser(subparsers: Any) -> None:
+    execution_pack = subparsers.add_parser(
+        "execution-pack",
+        help="Write one no-write operator pack for real host and beta evidence capture.",
+    )
+    execution_pack.add_argument("--host", action="append", choices=get_args(HostName), default=[])
+    execution_pack.add_argument("--date", required=True, help="ISO date, for example 2026-07-09.")
+    execution_pack.add_argument("--reviewer", required=True)
+    execution_pack.add_argument("--output-dir", type=Path, required=True)
+    execution_pack.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    execution_pack.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    execution_pack.add_argument("--format", choices=["markdown"], default="markdown")
 
 
 def _add_evidence_template_guard_parser(subparsers: Any) -> None:
@@ -1712,6 +1732,7 @@ def _handle_evidence_command(args: argparse.Namespace) -> str:
         "validate-import": _handle_evidence_validate_import,
         "session-manifest": _handle_evidence_session_manifest,
         "session-folder": _handle_evidence_session_folder,
+        "execution-pack": _handle_evidence_execution_pack,
         "validate-manifest": _handle_evidence_validate_manifest,
         "import-manifest": _handle_evidence_import_manifest,
         "import-wizard": _handle_evidence_import_wizard,
@@ -1944,6 +1965,26 @@ def _handle_evidence_session_folder(args: argparse.Namespace) -> str:
     for artifact in folder["artifacts"]:
         (args.output_dir / artifact["filename"]).write_text(artifact["content"], encoding="utf-8")
     return f"wrote evidence session-folder with {folder['artifact_count']} artifacts to {args.output_dir}\n"
+
+
+def _handle_evidence_execution_pack(args: argparse.Namespace) -> str:
+    pack = build_evidence_execution_pack_artifacts(
+        EvidenceExecutionPackRequest(
+            run_date=args.date,
+            reviewer=args.reviewer,
+            output_dir=args.output_dir,
+            hosts=tuple(args.host),
+            host_records_path=args.host_records,
+            beta_records_path=args.beta_records,
+            output_format=args.format,
+        )
+    )
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    for artifact in pack["artifacts"]:
+        artifact_path = args.output_dir / artifact["filename"]
+        artifact_path.parent.mkdir(parents=True, exist_ok=True)
+        artifact_path.write_text(artifact["content"], encoding="utf-8")
+    return f"wrote evidence execution-pack with {pack['artifact_count']} artifacts to {args.output_dir}\n"
 
 
 def _handle_evidence_validate_manifest(args: argparse.Namespace) -> str:

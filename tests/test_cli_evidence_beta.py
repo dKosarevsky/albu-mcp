@@ -296,6 +296,10 @@ def test_readme_and_usage_document_operator_cli() -> None:
         "albu-mcp evidence operator-packet",
         "albu-mcp evidence packet-bundle",
         "albu-mcp evidence replay-fixture-pack",
+        (
+            "albu-mcp evidence execution-pack --date YYYY-MM-DD --reviewer "
+            '"Release operator" --output-dir evidence-session --format markdown'
+        ),
         "albu-mcp evidence session-manifest",
         "albu-mcp evidence validate-manifest",
         "albu-mcp evidence proof-runner",
