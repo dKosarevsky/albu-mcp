@@ -31,17 +31,42 @@ Post-import cycle status: `blocked`
 
 ## Beta Drafts
 
-- `docs/beta-response-templates/dataset-health-before-training-beta-response.json`: `ready_to_import`
-- `docs/beta-response-templates/noisy-preview-tuning-beta-response.json`: `ready_to_import`
-- `docs/beta-response-templates/robustness-distortion-variants-beta-response.json`: `ready_to_import`
+- `docs/beta-response-templates/dataset-health-before-training-beta-response.json`: `blocked`; validation=`template_requires_participant_evidence`
+- `docs/beta-response-templates/noisy-preview-tuning-beta-response.json`: `blocked`; validation=`template_requires_participant_evidence`
+- `docs/beta-response-templates/robustness-distortion-variants-beta-response.json`: `blocked`; validation=`template_requires_participant_evidence`
+
+## Beta Actions
+
+- `docs/beta-response-templates/dataset-health-before-training-beta-response.json`
+  - Replace the template summary with a concrete redacted participant outcome.
+  - Keep artifact_refs privacy-safe and tied to reviewed workflow artifacts.
+  - Keep private_data_included false.
+  - `albu-mcp beta response-validate --input docs/beta-response-templates/dataset-health-before-training-beta-response.json --format json`
+  - `albu-mcp beta response-import --input docs/beta-response-templates/dataset-health-before-training-beta-response.json --path docs/BETA_VALIDATION_RECORDS.json`
+
+- `docs/beta-response-templates/noisy-preview-tuning-beta-response.json`
+  - Replace the template summary with a concrete redacted participant outcome.
+  - Keep artifact_refs privacy-safe and tied to reviewed workflow artifacts.
+  - Keep private_data_included false.
+  - `albu-mcp beta response-validate --input docs/beta-response-templates/noisy-preview-tuning-beta-response.json --format json`
+  - `albu-mcp beta response-import --input docs/beta-response-templates/noisy-preview-tuning-beta-response.json --path docs/BETA_VALIDATION_RECORDS.json`
+
+- `docs/beta-response-templates/robustness-distortion-variants-beta-response.json`
+  - Replace the template summary with a concrete redacted participant outcome.
+  - Keep artifact_refs privacy-safe and tied to reviewed workflow artifacts.
+  - Keep private_data_included false.
+  - `albu-mcp beta response-validate --input docs/beta-response-templates/robustness-distortion-variants-beta-response.json --format json`
+  - `albu-mcp beta response-import --input docs/beta-response-templates/robustness-distortion-variants-beta-response.json --path docs/BETA_VALIDATION_RECORDS.json`
 
 ## Blocked Reasons
 
 - `host_manifest_not_ready`
+- `beta_draft_not_ready`
 
 ## Next Commands
 
 - `Fill reviewer-observed host manifests before import.`
+- `Fill privacy-safe beta response drafts before import.`
 
 ## Non-Fabrication Policy
 
