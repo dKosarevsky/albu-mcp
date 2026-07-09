@@ -102,6 +102,13 @@ from albumentationsx_mcp.evidence_proof import (
     build_operator_transcript_template_artifact,
     build_rc_unblock_preview,
 )
+from albumentationsx_mcp.evidence_template_guard import (
+    EvidenceTemplateGuardRequest,
+    build_evidence_template_guard,
+    render_evidence_template_guard_json,
+    render_evidence_template_guard_markdown,
+    strict_template_guard_error,
+)
 from albumentationsx_mcp.first_preview import build_first_preview_pack, render_first_preview_pack_markdown
 from albumentationsx_mcp.first_product_fix_selector import (
     FirstProductFixSelectorRequest,
@@ -1512,6 +1519,20 @@ def _add_evidence_recording_parsers(subparsers: Any) -> None:
     import_wizard.add_argument("--format", choices=["text", "json", "markdown"], default="text")
     import_wizard.add_argument("--output", type=Path, default=None)
 
+    _add_evidence_template_guard_parser(subparsers)
+
+
+def _add_evidence_template_guard_parser(subparsers: Any) -> None:
+    template_guard = subparsers.add_parser(
+        "template-guard",
+        help="Check that committed evidence templates are still blocked from import.",
+    )
+    template_guard.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    template_guard.add_argument("--host-manifest", action="append", type=Path, default=[])
+    template_guard.add_argument("--beta-dir", type=Path, required=True)
+    template_guard.add_argument("--strict", action="store_true")
+    template_guard.add_argument("--format", choices=["text", "json", "markdown"], default="text")
+
 
 def _add_evidence_packet_parsers(subparsers: Any) -> None:
     run_session = subparsers.add_parser("run-session", help="Print a guided real-host evidence session plan.")
@@ -1668,6 +1689,7 @@ def _handle_evidence_command(args: argparse.Namespace) -> str:
         "validate-manifest": _handle_evidence_validate_manifest,
         "import-manifest": _handle_evidence_import_manifest,
         "import-wizard": _handle_evidence_import_wizard,
+        "template-guard": _handle_evidence_template_guard,
         "import-checklist": _handle_evidence_import_checklist,
         "doctor": _handle_evidence_doctor,
         "artifact-doctor": _handle_evidence_artifact_doctor,
@@ -1945,6 +1967,26 @@ def _handle_evidence_import_wizard(args: argparse.Namespace) -> str:
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(content, encoding="utf-8")
     return f"wrote evidence import-wizard to {args.output}\n"
+
+
+def _handle_evidence_template_guard(args: argparse.Namespace) -> str:
+    report = build_evidence_template_guard(
+        EvidenceTemplateGuardRequest(
+            host_manifest_paths=tuple(args.host_manifest),
+            beta_dir_path=args.beta_dir,
+            host_records_path=args.host_records,
+        )
+    )
+    if args.strict and report["guard_status"] != "passed":
+        raise strict_template_guard_error(report)
+    if args.format == "json":
+        return render_evidence_template_guard_json(report)
+    if args.format == "markdown":
+        return render_evidence_template_guard_markdown(report)
+    return (
+        f"evidence template-guard {report['guard_status']} "
+        f"(violations={report['violation_count']}, writes_records=false)\n"
+    )
 
 
 def _handle_evidence_import_checklist(args: argparse.Namespace) -> str:
