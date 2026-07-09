@@ -118,6 +118,7 @@ albu-mcp evidence operator-packet --host Codex --output-dir docs/operator-packet
 albu-mcp evidence packet-bundle --output-dir docs/operator-packets --format markdown
 albu-mcp evidence replay-fixture-pack --output-dir docs/operator-packets --format markdown
 albu-mcp evidence session-folder --host Codex --date YYYY-MM-DD --reviewer "Release operator" --output-dir docs/operator-packets --format markdown
+albu-mcp evidence execution-pack --date YYYY-MM-DD --reviewer "Release operator" --output-dir evidence-session --format markdown
 albu-mcp evidence session-manifest --host Codex --date 2026-07-01 --reviewer "Release operator" --output-dir docs/operator-packets --format json
 albu-mcp evidence validate-manifest --input docs/operator-packets/codex-evidence-session-manifest.json --format json
 albu-mcp evidence proof-runner --input docs/operator-packets/codex-evidence-session-manifest.json --format json
@@ -179,7 +180,7 @@ These commands write privacy-safe JSON records only for explicit `record-*`, `re
 `activation product-fix-closure-receipt`, `activation product-fix-closure-pack`, `activation product-fix-outcome`,
 `host setup-probe`, `host next-action`,
 `preview first-pack`, `evidence collect`, `execution-packet`, `operator-packet`, `packet-bundle`,
-`replay-fixture-pack`, `session-folder`, `session-manifest`, `validate-manifest`, `proof-runner`, `preflight`,
+`replay-fixture-pack`, `session-folder`, `execution-pack`, `session-manifest`, `validate-manifest`, `proof-runner`, `preflight`,
 `import-wizard` without `--import-ready`, `template-guard`, `close-host`, `proof-status`, `transition-pack`, `rc-unblock-preview`,
 `transcript-template`, `import-checklist`, `validate-import`, `privacy-doctor`, `artifact-doctor`, `unblock-plan`,
 `doctor`, `campaign-plan`, `loop-pack`, `trial-pack`, `intake-wizard`, `response-template`, `response-validate`,

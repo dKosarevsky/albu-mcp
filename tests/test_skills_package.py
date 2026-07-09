@@ -41,6 +41,7 @@ def test_skills_sh_package_has_installable_agent_skill() -> None:
         "albumentationsx://diagnostics/guide",
         "albu-mcp activation real-adoption-cycle",
         "albu-mcp activation product-fix-closure-pipeline",
+        "albu-mcp evidence execution-pack --date YYYY-MM-DD",
         "albu-mcp evidence preflight",
         "albu-mcp evidence import-wizard",
     ]
