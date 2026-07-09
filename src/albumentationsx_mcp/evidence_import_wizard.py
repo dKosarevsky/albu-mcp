@@ -37,7 +37,7 @@ class EvidenceImportWizardRequest:
 def build_evidence_import_wizard(request: EvidenceImportWizardRequest) -> dict[str, Any]:
     """Validate host and beta inputs before optionally importing records."""
     host_manifests = [_host_manifest_status(path=path, request=request) for path in request.host_manifest_paths]
-    beta_drafts = _beta_draft_statuses(request.beta_dir_path)
+    beta_drafts = _beta_draft_statuses(request.beta_dir_path, request=request)
     blocked_reasons = _blocked_reasons(host_manifests=host_manifests, beta_drafts=beta_drafts, request=request)
     if request.import_ready and blocked_reasons:
         msg = f"evidence import-wizard cannot import blocked inputs: {', '.join(blocked_reasons)}"
@@ -83,9 +83,11 @@ def render_evidence_import_wizard_markdown(report: dict[str, Any]) -> str:
     host_actions = "\n\n".join(_render_host_action_markdown(item) for item in report["host_manifests"])
     beta_items = "\n".join(
         f"- `{item['path']}`: `{item['status']}`"
+        + (f"; validation=`{item['validation_status']}`" if "validation_status" in item else "")
         + (f"; reason=`{item['blocked_reason']}`" if "blocked_reason" in item else "")
         for item in report["beta_drafts"]
     )
+    beta_actions = "\n\n".join(_render_beta_action_markdown(item) for item in report["beta_drafts"])
     blockers = "\n".join(f"- `{reason}`" for reason in report["blocked_reasons"]) or "- none"
     commands = "\n".join(f"- `{command}`" for command in report["next_commands"]) or "- none"
     return (
@@ -99,6 +101,8 @@ def render_evidence_import_wizard_markdown(report: dict[str, Any]) -> str:
         f"{host_actions or '- none'}\n\n"
         "## Beta Drafts\n\n"
         f"{beta_items or '- none'}\n\n"
+        "## Beta Actions\n\n"
+        f"{beta_actions or '- none'}\n\n"
         "## Blocked Reasons\n\n"
         f"{blockers}\n\n"
         "## Next Commands\n\n"
@@ -122,6 +126,18 @@ def _render_host_action_markdown(item: dict[str, Any]) -> str:
         f"- `{item['path']}`\n"
         f"{updates or '  - No manifest updates required.'}\n"
         f"{commands or '  - No host-specific commands required.'}"
+    )
+
+
+def _render_beta_action_markdown(item: dict[str, Any]) -> str:
+    updates = "\n".join(f"  - {update}" for update in item.get("required_updates", []))
+    commands = "\n".join(f"  - `{command}`" for command in item.get("next_commands", []))
+    if not updates and not commands:
+        return f"- `{item['path']}`: no beta-specific remediation required."
+    return (
+        f"- `{item['path']}`\n"
+        f"{updates or '  - No draft updates required.'}\n"
+        f"{commands or '  - No beta-specific commands required.'}"
     )
 
 
@@ -157,14 +173,14 @@ def _host_manifest_status(*, path: Path, request: EvidenceImportWizardRequest) -
     return item
 
 
-def _beta_draft_statuses(beta_dir_path: Path) -> list[dict[str, Any]]:
+def _beta_draft_statuses(beta_dir_path: Path, *, request: EvidenceImportWizardRequest) -> list[dict[str, Any]]:
     if not beta_dir_path.exists():
         return []
     draft_paths = sorted(beta_dir_path.glob("*-beta-response.json"))
-    return [_beta_draft_status(path) for path in draft_paths]
+    return [_beta_draft_status(path, request=request) for path in draft_paths]
 
 
-def _beta_draft_status(path: Path) -> dict[str, Any]:
+def _beta_draft_status(path: Path, *, request: EvidenceImportWizardRequest) -> dict[str, Any]:
     try:
         report = validate_beta_response_draft(load_beta_response_draft(path))
     except ValueError as exc:
@@ -175,13 +191,18 @@ def _beta_draft_status(path: Path) -> dict[str, Any]:
             "error": str(exc),
         }
     record = report["record"]
-    return {
+    status = "ready_to_import" if report["validation_status"] == "ready_to_import" else "blocked"
+    item = {
         "path": str(path),
-        "status": "ready_to_import",
+        "status": status,
         "workflow_id": record["workflow_id"],
         "validation_status": report["validation_status"],
         "triage_bucket": record["triage_bucket"],
     }
+    if status != "ready_to_import":
+        item["required_updates"] = _beta_required_updates(validation_status=report["validation_status"])
+        item["next_commands"] = _beta_next_commands(path=path, request=request)
+    return item
 
 
 def _blocked_reasons(
@@ -256,6 +277,26 @@ def _host_next_commands(*, path: Path, request: EvidenceImportWizardRequest) -> 
             f"albu-mcp evidence proof-runner --input {path} --path {request.host_records_path} "
             f"--beta-records {request.beta_records_path} --format json"
         ),
+    ]
+
+
+def _beta_required_updates(*, validation_status: str) -> list[str]:
+    if validation_status == "template_requires_participant_evidence":
+        return [
+            "Replace the template summary with a concrete redacted participant outcome.",
+            "Keep artifact_refs privacy-safe and tied to reviewed workflow artifacts.",
+            "Keep private_data_included false.",
+        ]
+    return [
+        "Review the beta draft validation error and replace placeholder, private, or incomplete fields.",
+        "Rerun beta response-validate before attempting import.",
+    ]
+
+
+def _beta_next_commands(*, path: Path, request: EvidenceImportWizardRequest) -> list[str]:
+    return [
+        f"albu-mcp beta response-validate --input {path} --format json",
+        f"albu-mcp beta response-import --input {path} --path {request.beta_records_path}",
     ]
 
 

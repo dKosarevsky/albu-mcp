@@ -34,6 +34,7 @@ _PRODUCT_AREAS: dict[TriageBucket, str] = {
     "workflow_fit_gap": "workflow_templates",
 }
 _NON_BLOCKED_STATUSES = {"passed", "needs_followup"}
+_BETA_RESPONSE_TEMPLATE_MARKERS = ("replace with", "placeholder", "todo:")
 
 
 class BetaValidationRecord(BaseModel):
@@ -171,6 +172,17 @@ def load_beta_response_draft(path: Path) -> BetaResponseDraft:
 def validate_beta_response_draft(draft: BetaResponseDraft) -> dict[str, Any]:
     """Build a no-write validation report for a beta response draft."""
     record = draft.to_record()
+    if _looks_beta_response_template(draft.summary):
+        return {
+            "validation_status": "template_requires_participant_evidence",
+            "writes_records": False,
+            "privacy_status": "redacted",
+            "record": record.model_dump(mode="json"),
+            "next_actions": [
+                "Replace the template summary with a concrete redacted participant outcome.",
+                "Rerun albu-mcp beta response-validate before importing.",
+            ],
+        }
     return {
         "validation_status": "ready_to_import",
         "writes_records": False,
@@ -206,6 +218,10 @@ def import_beta_response_draft(
     draft: BetaResponseDraft,
 ) -> BetaValidationRecords:
     """Import one validated beta response draft into canonical beta validation records."""
+    report = validate_beta_response_draft(draft)
+    if report["validation_status"] != "ready_to_import":
+        msg = f"beta response draft is not ready to import: {report['validation_status']}"
+        raise ValueError(msg)
     return record_beta_validation(path=path, record=draft.to_record())
 
 
@@ -220,6 +236,15 @@ def import_beta_response_draft_dir(
         msg = f"{input_dir}: no *-beta-response.json files found"
         raise ValueError(msg)
     drafts = [load_beta_response_draft(draft_path) for draft_path in draft_paths]
+    validations = [validate_beta_response_draft(draft) for draft in drafts]
+    blocked = [
+        f"{draft_path}:{report['validation_status']}"
+        for draft_path, report in zip(draft_paths, validations, strict=True)
+        if report["validation_status"] != "ready_to_import"
+    ]
+    if blocked:
+        msg = f"beta response drafts are not ready to import: {', '.join(blocked)}"
+        raise ValueError(msg)
     records = validate_beta_validation_records(path) if path.exists() else BetaValidationRecords()
     for draft in drafts:
         by_key = {_record_key(item): item for item in records.records}
@@ -451,6 +476,11 @@ def _looks_private_response_text(value: str) -> bool:
     return (
         lowered.startswith(private_prefixes) or " /users/" in lowered or " /home/" in lowered or lowered[1:3] == ":\\"
     )
+
+
+def _looks_beta_response_template(value: str) -> bool:
+    lowered = value.lower()
+    return any(marker in lowered for marker in _BETA_RESPONSE_TEMPLATE_MARKERS)
 
 
 def _recommendation_status(*, signal_count: int, product_depth_allowed: bool) -> str:
