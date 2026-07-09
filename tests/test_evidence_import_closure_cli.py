@@ -5,6 +5,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 
 def _write_empty_host_records(path: Path) -> None:
     path.write_text('{"manual_host_ui": [], "first_10_minutes_replay": []}\n', encoding="utf-8")
@@ -60,6 +62,113 @@ def test_evidence_import_manifest_imports_validated_manifest_into_both_p0_gates(
     assert records["manual_host_ui"][0]["host"] == "Codex"
     assert records["manual_host_ui"][0]["status"] == "passed"
     assert records["first_10_minutes_replay"][0]["artifacts"] == ["docs/assets/demo/demo_report.md"]
+
+
+def test_evidence_import_manifest_rejects_template_manifest_without_writing(tmp_path: Path) -> None:
+    host_records = tmp_path / "HOST_MANUAL_RUNS.json"
+    manifest_path = tmp_path / "codex-evidence-session-manifest.json"
+    _write_empty_host_records(host_records)
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "manifest_status": "template",
+                "host": "Codex",
+                "status": "passed",
+                "date": "2026-07-02",
+                "reviewer": "Release operator",
+                "evidence": "Reviewer observed real Codex MCP host UI and first-10-minutes replay.",
+                "artifacts": ["docs/assets/demo/demo_report.md"],
+                "commands_used": ["run_host_smoke_check", "render_preview_batch"],
+                "confirm_real_host_observed": True,
+                "private_data_included": False,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    before = host_records.read_text(encoding="utf-8")
+
+    with pytest.raises(subprocess.CalledProcessError):
+        subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+            [
+                sys.executable,
+                "-m",
+                "albumentationsx_mcp",
+                "evidence",
+                "import-manifest",
+                "--input",
+                str(manifest_path),
+                "--path",
+                str(host_records),
+                "--format",
+                "json",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+    assert host_records.read_text(encoding="utf-8") == before
+
+
+def test_evidence_validate_manifest_reports_template_not_importable(tmp_path: Path) -> None:
+    host_records = tmp_path / "HOST_MANUAL_RUNS.json"
+    manifest_path = tmp_path / "codex-evidence-session-manifest.json"
+    _write_empty_host_records(host_records)
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "manifest_status": "template",
+                "host": "Codex",
+                "status": "pending",
+                "date": "2026-07-02",
+                "reviewer": "Release operator",
+                "evidence": (
+                    "TODO: replace with redacted reviewer-observed MCP host UI evidence before importing records."
+                ),
+                "artifacts": ["docs/assets/demo/demo_report.md"],
+                "commands_used": ["run_host_smoke_check", "render_preview_batch"],
+                "confirm_real_host_observed": False,
+                "private_data_included": False,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "evidence",
+            "validate-manifest",
+            "--input",
+            str(manifest_path),
+            "--path",
+            str(host_records),
+            "--format",
+            "json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(result.stdout)
+
+    assert payload["validation_status"] == "template_requires_real_evidence"
+    assert payload["manifest_status"] == "template"
+    assert payload["writes_records"] is False
+    assert payload["next_actions"] == [
+        "Fill manifest_status=filled only after reviewer-observed real MCP host UI evidence exists.",
+        "Replace TODO evidence with a redacted reviewer-observed evidence note.",
+        "Rerun albu-mcp evidence validate-manifest before importing records.",
+    ]
+    assert host_records.read_text(encoding="utf-8") == '{"manual_host_ui": [], "first_10_minutes_replay": []}\n'
 
 
 def test_evidence_session_folder_writes_no_write_closure_artifacts(tmp_path: Path) -> None:

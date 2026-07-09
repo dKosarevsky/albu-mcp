@@ -5,6 +5,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 
 def _write_empty_records(tmp_path: Path) -> tuple[Path, Path]:
     host_records = tmp_path / "HOST_MANUAL_RUNS.json"
@@ -92,8 +94,61 @@ def test_evidence_session_manifest_template_validates_without_writing_records(tm
     )
     manifest_path = output_dir / "codex-evidence-session-manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["evidence"].startswith("TODO:")
+    assert "reviewer observed real host ui" not in manifest["evidence"].lower()
+
+    template_validate_result = subprocess.run(  # noqa: S603
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "evidence",
+            "validate-manifest",
+            "--input",
+            str(manifest_path),
+            "--path",
+            str(host_records),
+            "--format",
+            "json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    template_payload = json.loads(template_validate_result.stdout)
+    assert template_payload["validation_status"] == "template_requires_real_evidence"
+    assert template_payload["writes_records"] is False
+
+    placeholder_manifest = {
+        **manifest,
+        "manifest_status": "filled",
+        "status": "passed",
+        "confirm_real_host_observed": True,
+    }
+    manifest_path.write_text(json.dumps(placeholder_manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    with pytest.raises(subprocess.CalledProcessError):
+        subprocess.run(  # noqa: S603
+            [
+                sys.executable,
+                "-m",
+                "albumentationsx_mcp",
+                "evidence",
+                "validate-manifest",
+                "--input",
+                str(manifest_path),
+                "--path",
+                str(host_records),
+                "--format",
+                "json",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
     manifest.update(
         {
+            "manifest_status": "filled",
             "status": "passed",
             "evidence": "Reviewer observed real Codex MCP host UI and first-10-minutes replay.",
             "artifacts": ["docs/assets/demo/demo_report.md"],
@@ -123,7 +178,7 @@ def test_evidence_session_manifest_template_validates_without_writing_records(tm
     payload = json.loads(validate_result.stdout)
 
     assert template_result.stdout == f"wrote evidence session-manifest for Codex to {manifest_path}\n"
-    assert manifest["manifest_status"] == "template"
+    assert manifest["manifest_status"] == "filled"
     assert "run_host_smoke_check" in manifest["commands_used"]
     assert any("albu-mcp evidence validate-manifest" in command for command in manifest["commands_used"])
     assert payload["validation_status"] == "ready_to_import"

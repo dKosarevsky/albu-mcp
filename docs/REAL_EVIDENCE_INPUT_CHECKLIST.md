@@ -58,6 +58,10 @@ albu-mcp evidence proof-runner \
   --format json
 ```
 
+If the file is still a template, validation must report `template_requires_real_evidence`. Continue only after
+`manifest_status` is `filled`, `confirm_real_host_observed` is `true`, and the evidence/artifact fields are replaced
+with redacted reviewer-observed details.
+
 Import only after validation passes and the reviewer confirms the run was real:
 
 ```bash
