@@ -19,6 +19,14 @@ albu-mcp evidence execution-pack \
 This writes host manifests, `beta-responses/`, an operator checklist, and `post-session-commands.md`.
 Generated execution packs are not evidence; only manually filled, validated, reviewed, and imported records count.
 
+Audit the generated folder before and after the real session:
+
+```bash
+albu-mcp evidence execution-pack-audit \
+  --input-dir evidence-session \
+  --format markdown
+```
+
 ## 1. Host Evidence
 
 The current P0 gate requires reviewer-observed runs for both hosts:
