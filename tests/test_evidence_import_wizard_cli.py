@@ -294,6 +294,56 @@ def test_evidence_import_wizard_markdown_explains_template_manifest_blockers(tmp
     assert "Wizard status: `blocked`" in result.stdout
     assert f"`{codex_manifest}`: `blocked`; validation=`template_requires_real_evidence`" in result.stdout
     assert f"`{claude_manifest}`: `blocked`; validation=`template_requires_real_evidence`" in result.stdout
+    assert f"albu-mcp evidence validate-manifest --input {codex_manifest} --path {host_records} --format json" in (
+        result.stdout
+    )
+    assert f"albu-mcp evidence proof-runner --input {claude_manifest} --path {host_records}" in result.stdout
+
+
+def test_evidence_import_wizard_json_includes_per_host_remediation(tmp_path: Path) -> None:
+    host_records, beta_records = _write_empty_records(tmp_path)
+    codex_manifest = _write_template_manifest(tmp_path, host="Codex")
+    beta_dir = _write_beta_drafts(tmp_path)
+
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "evidence",
+            "import-wizard",
+            "--host-records",
+            str(host_records),
+            "--beta-records",
+            str(beta_records),
+            "--host-manifest",
+            str(codex_manifest),
+            "--beta-dir",
+            str(beta_dir),
+            "--format",
+            "json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(result.stdout)
+    host_manifest = payload["host_manifests"][0]
+
+    assert host_manifest["validation_status"] == "template_requires_real_evidence"
+    assert host_manifest["required_updates"] == [
+        "Set manifest_status to filled only after reviewer-observed real MCP host UI evidence exists.",
+        "Replace TODO evidence with redacted reviewer-observed host UI and first-preview details.",
+        "Set confirm_real_host_observed to true only after reviewer confirmation.",
+        "Keep private_data_included false and artifact references privacy-safe.",
+    ]
+    assert host_manifest["next_commands"] == [
+        f"albu-mcp evidence validate-manifest --input {codex_manifest} --path {host_records} --format json",
+        (
+            f"albu-mcp evidence proof-runner --input {codex_manifest} --path {host_records} "
+            f"--beta-records {beta_records} --format json"
+        ),
+    ]
 
 
 def test_evidence_import_wizard_rejects_blocked_import_without_partial_writes(tmp_path: Path) -> None:
