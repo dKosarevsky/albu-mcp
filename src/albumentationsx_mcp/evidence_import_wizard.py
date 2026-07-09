@@ -80,6 +80,7 @@ def render_evidence_import_wizard_markdown(report: dict[str, Any]) -> str:
         + (f"; reason=`{item['blocked_reason']}`" if "blocked_reason" in item else "")
         for item in report["host_manifests"]
     )
+    host_actions = "\n\n".join(_render_host_action_markdown(item) for item in report["host_manifests"])
     beta_items = "\n".join(
         f"- `{item['path']}`: `{item['status']}`"
         + (f"; reason=`{item['blocked_reason']}`" if "blocked_reason" in item else "")
@@ -94,6 +95,8 @@ def render_evidence_import_wizard_markdown(report: dict[str, Any]) -> str:
         f"Post-import cycle status: `{report['post_import_cycle_status']}`\n\n"
         "## Host Manifests\n\n"
         f"{host_items or '- none'}\n\n"
+        "## Host Actions\n\n"
+        f"{host_actions or '- none'}\n\n"
         "## Beta Drafts\n\n"
         f"{beta_items or '- none'}\n\n"
         "## Blocked Reasons\n\n"
@@ -108,6 +111,18 @@ def render_evidence_import_wizard_markdown(report: dict[str, Any]) -> str:
 def render_evidence_import_wizard_json(report: dict[str, Any]) -> str:
     """Render an evidence import wizard report as JSON."""
     return json.dumps(report, indent=2, sort_keys=True) + "\n"
+
+
+def _render_host_action_markdown(item: dict[str, Any]) -> str:
+    updates = "\n".join(f"  - {update}" for update in item.get("required_updates", []))
+    commands = "\n".join(f"  - `{command}`" for command in item.get("next_commands", []))
+    if not updates and not commands:
+        return f"- `{item['path']}`: no host-specific remediation required."
+    return (
+        f"- `{item['path']}`\n"
+        f"{updates or '  - No manifest updates required.'}\n"
+        f"{commands or '  - No host-specific commands required.'}"
+    )
 
 
 def _host_manifest_status(*, path: Path, request: EvidenceImportWizardRequest) -> dict[str, Any]:
@@ -127,14 +142,19 @@ def _host_manifest_status(*, path: Path, request: EvidenceImportWizardRequest) -
             "blocked_reason": "host_manifest_invalid",
             "error": str(exc),
         }
-    return {
+    status = "ready_to_import" if validation["validation_status"] == "ready_to_import" else "blocked"
+    item = {
         "path": str(path),
-        "status": "ready_to_import" if validation["validation_status"] == "ready_to_import" else "blocked",
+        "status": status,
         "host": validation["host"],
         "validation_status": validation["validation_status"],
         "manifest_status": validation["manifest_status"],
         "artifact_count": validation["artifact_count"],
     }
+    if status != "ready_to_import":
+        item["required_updates"] = _host_required_updates(validation_status=validation["validation_status"])
+        item["next_commands"] = _host_next_commands(path=path, request=request)
+    return item
 
 
 def _beta_draft_statuses(beta_dir_path: Path) -> list[dict[str, Any]]:
@@ -213,6 +233,30 @@ def _next_commands(*, blocked_reasons: list[str], request: EvidenceImportWizardR
         commands.append("Rerun evidence import-wizard with --import-ready after reviewer approval.")
     commands.append(f"albu-mcp activation real-adoption-cycle --host {request.host} --format json")
     return commands[:-1] if blocked_reasons else commands
+
+
+def _host_required_updates(*, validation_status: str) -> list[str]:
+    if validation_status == "template_requires_real_evidence":
+        return [
+            "Set manifest_status to filled only after reviewer-observed real MCP host UI evidence exists.",
+            "Replace TODO evidence with redacted reviewer-observed host UI and first-preview details.",
+            "Set confirm_real_host_observed to true only after reviewer confirmation.",
+            "Keep private_data_included false and artifact references privacy-safe.",
+        ]
+    return [
+        "Review the manifest validation error and replace placeholder, private, or incomplete fields.",
+        "Rerun validate-manifest before attempting import.",
+    ]
+
+
+def _host_next_commands(*, path: Path, request: EvidenceImportWizardRequest) -> list[str]:
+    return [
+        f"albu-mcp evidence validate-manifest --input {path} --path {request.host_records_path} --format json",
+        (
+            f"albu-mcp evidence proof-runner --input {path} --path {request.host_records_path} "
+            f"--beta-records {request.beta_records_path} --format json"
+        ),
+    ]
 
 
 def _append_once(items: list[str], value: str) -> None:
