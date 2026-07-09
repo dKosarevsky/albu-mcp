@@ -120,6 +120,14 @@ albu-mcp evidence template-guard \
 This guard must pass while files are still templates. If it reports an importable template path, move that filled
 evidence draft out of the template area or import it through the reviewed workflow below.
 
+For one combined no-write view of template safety, import readiness, and remaining P0/RC blockers, run:
+
+```bash
+albu-mcp evidence preflight \
+  --format markdown \
+  --output docs/operator-packets/evidence-preflight.md
+```
+
 Before importing individual records, run the combined import wizard in no-write mode:
 
 ```bash

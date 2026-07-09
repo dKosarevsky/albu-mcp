@@ -122,6 +122,7 @@ albu-mcp evidence session-manifest --host Codex --date 2026-07-01 --reviewer "Re
 albu-mcp evidence validate-manifest --input docs/operator-packets/codex-evidence-session-manifest.json --format json
 albu-mcp evidence proof-runner --input docs/operator-packets/codex-evidence-session-manifest.json --format json
 albu-mcp evidence import-manifest --input docs/operator-packets/codex-evidence-session-manifest.json --format json
+albu-mcp evidence preflight --format markdown --output docs/operator-packets/evidence-preflight.md
 albu-mcp evidence import-wizard --host-manifest docs/operator-packets/codex-evidence-session-manifest.json --host-manifest docs/operator-packets/claude-code-evidence-session-manifest.json --beta-dir docs/beta-response-templates --format markdown --output docs/operator-packets/evidence-import-wizard-preflight.md
 albu-mcp evidence template-guard --host-manifest docs/operator-packets/codex-evidence-session-manifest.json --host-manifest docs/operator-packets/claude-code-evidence-session-manifest.json --beta-dir docs/beta-response-templates --strict --format json
 albu-mcp evidence close-host --host Codex --format json
@@ -178,8 +179,8 @@ These commands write privacy-safe JSON records only for explicit `record-*`, `re
 `activation product-fix-closure-receipt`, `activation product-fix-closure-pack`, `activation product-fix-outcome`,
 `host setup-probe`, `host next-action`,
 `preview first-pack`, `evidence collect`, `execution-packet`, `operator-packet`, `packet-bundle`,
-`replay-fixture-pack`, `session-folder`, `session-manifest`, `validate-manifest`, `proof-runner`, `import-wizard`
-without `--import-ready`, `template-guard`, `close-host`, `proof-status`, `transition-pack`, `rc-unblock-preview`,
+`replay-fixture-pack`, `session-folder`, `session-manifest`, `validate-manifest`, `proof-runner`, `preflight`,
+`import-wizard` without `--import-ready`, `template-guard`, `close-host`, `proof-status`, `transition-pack`, `rc-unblock-preview`,
 `transcript-template`, `import-checklist`, `validate-import`, `privacy-doctor`, `artifact-doctor`, `unblock-plan`,
 `doctor`, `campaign-plan`, `loop-pack`, `trial-pack`, `intake-wizard`, `response-template`, `response-validate`,
 `rc reopen`, `rc rehearse`,

@@ -70,6 +70,7 @@ Use operator commands only when the user is doing release, adoption, or product 
 
 - `albu-mcp activation real-adoption-cycle`
 - `albu-mcp activation product-fix-closure-pipeline`
+- `albu-mcp evidence preflight`
 - `albu-mcp evidence import-wizard`
 
 If a preview setup fails, read `albumentationsx://diagnostics/guide`, call `diagnose_environment`, and follow its remediation actions before attempting another render.

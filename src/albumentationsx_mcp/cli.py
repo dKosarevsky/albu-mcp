@@ -86,6 +86,14 @@ from albumentationsx_mcp.evidence_import_wizard import (
     render_evidence_import_wizard_json,
     render_evidence_import_wizard_markdown,
 )
+from albumentationsx_mcp.evidence_preflight import (
+    DEFAULT_TEMPLATE_BETA_DIR,
+    DEFAULT_TEMPLATE_HOST_MANIFEST_PATHS,
+    EvidencePreflightRequest,
+    build_evidence_preflight,
+    render_evidence_preflight_json,
+    render_evidence_preflight_markdown,
+)
 from albumentationsx_mcp.evidence_product_loop import (
     EvidenceProductLoopRequest,
     build_evidence_product_loop,
@@ -1520,6 +1528,7 @@ def _add_evidence_recording_parsers(subparsers: Any) -> None:
     import_wizard.add_argument("--output", type=Path, default=None)
 
     _add_evidence_template_guard_parser(subparsers)
+    _add_evidence_preflight_parser(subparsers)
 
 
 def _add_evidence_template_guard_parser(subparsers: Any) -> None:
@@ -1532,6 +1541,23 @@ def _add_evidence_template_guard_parser(subparsers: Any) -> None:
     template_guard.add_argument("--beta-dir", type=Path, required=True)
     template_guard.add_argument("--strict", action="store_true")
     template_guard.add_argument("--format", choices=["text", "json", "markdown"], default="text")
+
+
+def _add_evidence_preflight_parser(subparsers: Any) -> None:
+    preflight = subparsers.add_parser(
+        "preflight",
+        help="Build one no-write evidence preflight across templates, import readiness, and release blockers.",
+    )
+    preflight.add_argument("--host", choices=get_args(HostName), default="Codex")
+    preflight.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    preflight.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    preflight.add_argument("--host-manifest", action="append", type=Path, default=[])
+    preflight.add_argument("--beta-dir", type=Path, default=DEFAULT_TEMPLATE_BETA_DIR)
+    preflight.add_argument("--template-host-manifest", action="append", type=Path, default=[])
+    preflight.add_argument("--template-beta-dir", type=Path, default=DEFAULT_TEMPLATE_BETA_DIR)
+    preflight.add_argument("--release-tag", default="v1.15.0-rc.1")
+    preflight.add_argument("--format", choices=["text", "json", "markdown"], default="text")
+    preflight.add_argument("--output", type=Path, default=None)
 
 
 def _add_evidence_packet_parsers(subparsers: Any) -> None:
@@ -1690,6 +1716,7 @@ def _handle_evidence_command(args: argparse.Namespace) -> str:
         "import-manifest": _handle_evidence_import_manifest,
         "import-wizard": _handle_evidence_import_wizard,
         "template-guard": _handle_evidence_template_guard,
+        "preflight": _handle_evidence_preflight,
         "import-checklist": _handle_evidence_import_checklist,
         "doctor": _handle_evidence_doctor,
         "artifact-doctor": _handle_evidence_artifact_doctor,
@@ -1987,6 +2014,37 @@ def _handle_evidence_template_guard(args: argparse.Namespace) -> str:
         f"evidence template-guard {report['guard_status']} "
         f"(violations={report['violation_count']}, writes_records=false)\n"
     )
+
+
+def _handle_evidence_preflight(args: argparse.Namespace) -> str:
+    report = build_evidence_preflight(
+        EvidencePreflightRequest(
+            host_manifest_paths=tuple(args.host_manifest) or DEFAULT_TEMPLATE_HOST_MANIFEST_PATHS,
+            beta_dir_path=args.beta_dir,
+            template_host_manifest_paths=tuple(args.template_host_manifest) or DEFAULT_TEMPLATE_HOST_MANIFEST_PATHS,
+            template_beta_dir_path=args.template_beta_dir,
+            host_records_path=args.host_records,
+            beta_records_path=args.beta_records,
+            host=args.host,
+            release_tag=args.release_tag,
+        )
+    )
+    if args.format == "json":
+        content = render_evidence_preflight_json(report)
+    elif args.format == "markdown":
+        content = render_evidence_preflight_markdown(report)
+    else:
+        content = (
+            f"evidence preflight {report['preflight_status']} "
+            f"(template_guard={report['template_guard_status']}, "
+            f"import_wizard={report['import_wizard_status']}, "
+            f"writes_records=false)\n"
+        )
+    if args.output is None:
+        return content
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text(content, encoding="utf-8")
+    return f"wrote evidence preflight to {args.output}\n"
 
 
 def _handle_evidence_import_checklist(args: argparse.Namespace) -> str:
