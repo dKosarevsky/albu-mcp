@@ -123,6 +123,7 @@ albu-mcp evidence validate-manifest --input docs/operator-packets/codex-evidence
 albu-mcp evidence proof-runner --input docs/operator-packets/codex-evidence-session-manifest.json --format json
 albu-mcp evidence import-manifest --input docs/operator-packets/codex-evidence-session-manifest.json --format json
 albu-mcp evidence import-wizard --host-manifest docs/operator-packets/codex-evidence-session-manifest.json --host-manifest docs/operator-packets/claude-code-evidence-session-manifest.json --beta-dir docs/beta-response-templates --format markdown --output docs/operator-packets/evidence-import-wizard-preflight.md
+albu-mcp evidence template-guard --host-manifest docs/operator-packets/codex-evidence-session-manifest.json --host-manifest docs/operator-packets/claude-code-evidence-session-manifest.json --beta-dir docs/beta-response-templates --strict --format json
 albu-mcp evidence close-host --host Codex --format json
 albu-mcp evidence proof-status --format json
 albu-mcp evidence transition-pack --before-host-records docs/HOST_MANUAL_RUNS.json --after-host-records docs/HOST_MANUAL_RUNS.json --beta-records docs/BETA_VALIDATION_RECORDS.json --output-dir docs/operator-packets --format markdown
@@ -178,7 +179,7 @@ These commands write privacy-safe JSON records only for explicit `record-*`, `re
 `host setup-probe`, `host next-action`,
 `preview first-pack`, `evidence collect`, `execution-packet`, `operator-packet`, `packet-bundle`,
 `replay-fixture-pack`, `session-folder`, `session-manifest`, `validate-manifest`, `proof-runner`, `import-wizard`
-without `--import-ready`, `close-host`, `proof-status`, `transition-pack`, `rc-unblock-preview`,
+without `--import-ready`, `template-guard`, `close-host`, `proof-status`, `transition-pack`, `rc-unblock-preview`,
 `transcript-template`, `import-checklist`, `validate-import`, `privacy-doctor`, `artifact-doctor`, `unblock-plan`,
 `doctor`, `campaign-plan`, `loop-pack`, `trial-pack`, `intake-wizard`, `response-template`, `response-validate`,
 `rc reopen`, `rc rehearse`,

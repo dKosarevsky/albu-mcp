@@ -42,6 +42,15 @@ jobs:
       - name: Run ty
         run: uv run ty check
 
+      - name: Guard evidence templates
+        run: >
+          uv run albu-mcp evidence template-guard
+          --host-manifest docs/operator-packets/codex-evidence-session-manifest.json
+          --host-manifest docs/operator-packets/claude-code-evidence-session-manifest.json
+          --beta-dir docs/beta-response-templates
+          --strict
+          --format json
+
       - name: Validate host manual run records
         run: uv run python scripts/validate_host_manual_runs.py
 
