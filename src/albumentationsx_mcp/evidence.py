@@ -22,7 +22,18 @@ _NON_FABRICATION_POLICY = (
     "Record passed only after a reviewer observes the real MCP host UI flow with reviewer-observed real MCP host UI "
     "evidence; generated smoke output alone is not accepted as P0 evidence."
 )
-_SYNTHETIC_ONLY_MARKERS = ("generated smoke", "smoke output only", "synthetic", "no reviewer-observed")
+_MANIFEST_EVIDENCE_PLACEHOLDER = (
+    "TODO: replace with redacted reviewer-observed MCP host UI evidence before importing records."
+)
+_SYNTHETIC_ONLY_MARKERS = (
+    "generated smoke",
+    "smoke output only",
+    "synthetic",
+    "no reviewer-observed",
+    "todo:",
+    "placeholder",
+    "replace with",
+)
 
 
 class HostManualRun(BaseModel):
@@ -104,7 +115,7 @@ class EvidenceSessionManifest(BaseModel):
     status: HostStatus = "pending"
     date: date
     reviewer: str = Field(min_length=1)
-    evidence: str = "reviewer observed real host UI"
+    evidence: str = _MANIFEST_EVIDENCE_PLACEHOLDER
     artifacts: list[str] = Field(default_factory=list)
     commands_used: list[str] = Field(default_factory=list)
     confirm_real_host_observed: bool = False
@@ -334,6 +345,8 @@ def validate_evidence_session_manifest(
     records_path: Path = Path("docs/HOST_MANUAL_RUNS.json"),
 ) -> dict[str, Any]:
     """Validate a session manifest through the existing no-write import validator."""
+    if manifest.manifest_status != "filled":
+        return _template_manifest_validation_report(manifest=manifest, records_path=records_path)
     report = validate_evidence_artifact_import(
         EvidenceArtifactImport(
             path=records_path,
@@ -359,6 +372,12 @@ def import_evidence_session_manifest(
     records_path: Path = Path("docs/HOST_MANUAL_RUNS.json"),
 ) -> dict[str, Any]:
     """Import one validated reviewer-observed evidence session manifest into required P0 gates."""
+    if manifest.manifest_status != "filled":
+        msg = "evidence session manifest templates must be filled before import"
+        raise ValueError(msg)
+    if _looks_manifest_placeholder(manifest.evidence):
+        msg = "evidence session manifest placeholder evidence must be replaced before import"
+        raise ValueError(msg)
     validation = validate_evidence_session_manifest(manifest=manifest, records_path=records_path)
     updated = import_evidence_artifacts(
         EvidenceArtifactImport(
@@ -1260,6 +1279,37 @@ def _privacy_issue(*, host: HostName, gate: str, code: str, artifact_ref: str | 
 def _looks_synthetic_only(evidence: str) -> bool:
     lowered = evidence.lower()
     return any(marker in lowered for marker in _SYNTHETIC_ONLY_MARKERS)
+
+
+def _looks_manifest_placeholder(evidence: str) -> bool:
+    lowered = evidence.lower()
+    return any(marker in lowered for marker in ("todo:", "placeholder", "replace with"))
+
+
+def _template_manifest_validation_report(
+    *,
+    manifest: EvidenceSessionManifest,
+    records_path: Path,
+) -> dict[str, Any]:
+    return {
+        "validation_status": "template_requires_real_evidence",
+        "writes_records": False,
+        "records_path": str(records_path),
+        "host": manifest.host,
+        "status": manifest.status,
+        "run_date": manifest.date.isoformat(),
+        "artifact_count": len(manifest.artifacts),
+        "required_gate_writes": list(P0_REQUIRED_GATES),
+        "non_fabrication_policy": _NON_FABRICATION_POLICY,
+        "next_actions": [
+            "Fill manifest_status=filled only after reviewer-observed real MCP host UI evidence exists.",
+            "Replace TODO evidence with a redacted reviewer-observed evidence note.",
+            "Rerun albu-mcp evidence validate-manifest before importing records.",
+        ],
+        "manifest_status": manifest.manifest_status,
+        "reviewer": manifest.reviewer,
+        "commands_used": manifest.commands_used,
+    }
 
 
 def _looks_private_artifact_ref(artifact_ref: str) -> bool:
