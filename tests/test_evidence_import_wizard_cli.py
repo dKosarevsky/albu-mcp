@@ -346,6 +346,73 @@ def test_evidence_import_wizard_json_includes_per_host_remediation(tmp_path: Pat
     ]
 
 
+def test_evidence_import_wizard_json_includes_beta_template_remediation(tmp_path: Path) -> None:
+    host_records, beta_records = _write_empty_records(tmp_path)
+    codex_manifest = _write_filled_manifest(tmp_path, host="Codex")
+    beta_dir = tmp_path / "beta-response-templates"
+    beta_dir.mkdir()
+    beta_draft = beta_dir / "noisy-preview-tuning-beta-response.json"
+    beta_draft.write_text(
+        json.dumps(
+            {
+                "workflow_id": "noisy_preview_tuning",
+                "status": "needs_followup",
+                "attempt_date": "2026-07-05",
+                "participant_role": "ML practitioner",
+                "summary": (
+                    "redacted noisy_preview_tuning outcome; replace with the participant's safe workflow summary"
+                ),
+                "triage_bucket": "review_agent_v3_gap",
+                "artifact_refs": ["docs/assets/demo/demo_report.md"],
+                "private_data_included": False,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "evidence",
+            "import-wizard",
+            "--host-records",
+            str(host_records),
+            "--beta-records",
+            str(beta_records),
+            "--host-manifest",
+            str(codex_manifest),
+            "--beta-dir",
+            str(beta_dir),
+            "--format",
+            "json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(result.stdout)
+    draft = payload["beta_drafts"][0]
+
+    assert payload["wizard_status"] == "blocked"
+    assert payload["blocked_reasons"] == ["beta_draft_not_ready"]
+    assert draft["status"] == "blocked"
+    assert draft["validation_status"] == "template_requires_participant_evidence"
+    assert draft["required_updates"] == [
+        "Replace the template summary with a concrete redacted participant outcome.",
+        "Keep artifact_refs privacy-safe and tied to reviewed workflow artifacts.",
+        "Keep private_data_included false.",
+    ]
+    assert draft["next_commands"] == [
+        f"albu-mcp beta response-validate --input {beta_draft} --format json",
+        f"albu-mcp beta response-import --input {beta_draft} --path {beta_records}",
+    ]
+
+
 def test_evidence_import_wizard_rejects_blocked_import_without_partial_writes(tmp_path: Path) -> None:
     host_records, beta_records = _write_empty_records(tmp_path)
     codex_manifest = _write_filled_manifest(tmp_path, host="Codex")

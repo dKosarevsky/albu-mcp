@@ -187,7 +187,7 @@ def test_evidence_session_manifest_template_validates_without_writing_records(tm
     assert host_records.read_text(encoding="utf-8") == '{"manual_host_ui": [], "first_10_minutes_replay": []}\n'
 
 
-def test_beta_response_import_dir_imports_all_templates(tmp_path: Path) -> None:
+def test_beta_response_import_dir_rejects_templates_and_imports_filled_drafts(tmp_path: Path) -> None:
     records_path = tmp_path / "BETA_VALIDATION_RECORDS.json"
     records_path.write_text('{"records": []}\n', encoding="utf-8")
     template_dir = tmp_path / "beta-templates"
@@ -207,6 +207,54 @@ def test_beta_response_import_dir_imports_all_templates(tmp_path: Path) -> None:
         capture_output=True,
         text=True,
     )
+
+    template_validation = subprocess.run(  # noqa: S603
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "beta",
+            "response-validate",
+            "--input",
+            str(template_dir / "noisy-preview-tuning-beta-response.json"),
+            "--format",
+            "json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    template_payload = json.loads(template_validation.stdout)
+    rejected_import = subprocess.run(  # noqa: S603
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "beta",
+            "response-import-dir",
+            "--input-dir",
+            str(template_dir),
+            "--path",
+            str(records_path),
+            "--format",
+            "json",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert template_payload["validation_status"] == "template_requires_participant_evidence"
+    assert template_payload["writes_records"] is False
+    assert "Replace the template summary" in template_payload["next_actions"][0]
+    assert rejected_import.returncode == 1
+    assert "template_requires_participant_evidence" in rejected_import.stderr
+    assert records_path.read_text(encoding="utf-8") == '{"records": []}\n'
+
+    for path in template_dir.glob("*-beta-response.json"):
+        draft = json.loads(path.read_text(encoding="utf-8"))
+        draft["summary"] = f"Participant completed {draft['workflow_id']} and gave a redacted keep or change decision."
+        path.write_text(json.dumps(draft, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
     result = subprocess.run(  # noqa: S603
         [
