@@ -41,6 +41,30 @@ def _write_filled_manifest(tmp_path: Path, *, host: str) -> Path:
     return path
 
 
+def _write_template_manifest(tmp_path: Path, *, host: str) -> Path:
+    path = tmp_path / f"{host.lower().replace(' ', '-')}-evidence-session-manifest.json"
+    path.write_text(
+        json.dumps(
+            {
+                "manifest_status": "template",
+                "host": host,
+                "status": "pending",
+                "date": "2026-07-05",
+                "reviewer": "Release operator",
+                "evidence": (
+                    "TODO: replace with redacted reviewer-observed MCP host UI evidence before importing records."
+                ),
+                "artifacts": ["docs/assets/demo/demo_report.md"],
+                "commands_used": ["run_host_smoke_check", "render_preview_batch"],
+                "confirm_real_host_observed": False,
+                "private_data_included": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
 def _write_beta_drafts(tmp_path: Path) -> Path:
     beta_dir = tmp_path / "beta-response-templates"
     beta_dir.mkdir()
@@ -187,6 +211,89 @@ def test_evidence_import_wizard_imports_ready_inputs(tmp_path: Path) -> None:
         "noisy_preview_tuning",
         "robustness_distortion_variants",
     }
+
+
+def test_evidence_import_wizard_writes_no_write_preflight_report(tmp_path: Path) -> None:
+    host_records, beta_records = _write_empty_records(tmp_path)
+    codex_manifest = _write_filled_manifest(tmp_path, host="Codex")
+    claude_manifest = _write_filled_manifest(tmp_path, host="Claude Code")
+    beta_dir = _write_beta_drafts(tmp_path)
+    output = tmp_path / "preflight" / "evidence-import-wizard-preflight.md"
+    host_before = host_records.read_text(encoding="utf-8")
+    beta_before = beta_records.read_text(encoding="utf-8")
+
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "evidence",
+            "import-wizard",
+            "--host-records",
+            str(host_records),
+            "--beta-records",
+            str(beta_records),
+            "--host-manifest",
+            str(codex_manifest),
+            "--host-manifest",
+            str(claude_manifest),
+            "--beta-dir",
+            str(beta_dir),
+            "--format",
+            "markdown",
+            "--output",
+            str(output),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    report = output.read_text(encoding="utf-8")
+
+    assert result.stdout == f"wrote evidence import-wizard to {output}\n"
+    assert "# Evidence Import Wizard" in report
+    assert "Wizard status: `ready_to_import`" in report
+    assert "Writes records: `false`" in report
+    assert str(codex_manifest) in report
+    assert str(claude_manifest) in report
+    assert host_records.read_text(encoding="utf-8") == host_before
+    assert beta_records.read_text(encoding="utf-8") == beta_before
+
+
+def test_evidence_import_wizard_markdown_explains_template_manifest_blockers(tmp_path: Path) -> None:
+    host_records, beta_records = _write_empty_records(tmp_path)
+    codex_manifest = _write_template_manifest(tmp_path, host="Codex")
+    claude_manifest = _write_template_manifest(tmp_path, host="Claude Code")
+    beta_dir = _write_beta_drafts(tmp_path)
+
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "evidence",
+            "import-wizard",
+            "--host-records",
+            str(host_records),
+            "--beta-records",
+            str(beta_records),
+            "--host-manifest",
+            str(codex_manifest),
+            "--host-manifest",
+            str(claude_manifest),
+            "--beta-dir",
+            str(beta_dir),
+            "--format",
+            "markdown",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert "Wizard status: `blocked`" in result.stdout
+    assert f"`{codex_manifest}`: `blocked`; validation=`template_requires_real_evidence`" in result.stdout
+    assert f"`{claude_manifest}`: `blocked`; validation=`template_requires_real_evidence`" in result.stdout
 
 
 def test_evidence_import_wizard_rejects_blocked_import_without_partial_writes(tmp_path: Path) -> None:

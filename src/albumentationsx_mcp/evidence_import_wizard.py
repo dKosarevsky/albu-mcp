@@ -75,6 +75,8 @@ def render_evidence_import_wizard_markdown(report: dict[str, Any]) -> str:
     """Render an evidence import wizard report as Markdown."""
     host_items = "\n".join(
         f"- `{item['path']}`: `{item['status']}`"
+        + (f"; validation=`{item['validation_status']}`" if "validation_status" in item else "")
+        + (f"; manifest=`{item['manifest_status']}`" if "manifest_status" in item else "")
         + (f"; reason=`{item['blocked_reason']}`" if "blocked_reason" in item else "")
         for item in report["host_manifests"]
     )
