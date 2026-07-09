@@ -94,3 +94,100 @@ def test_evidence_execution_pack_can_target_one_host(tmp_path: Path) -> None:
     session_plan = (output_dir / "session-plan.md").read_text(encoding="utf-8")
     assert "Claude Code" in session_plan
     assert "Codex" not in session_plan
+
+
+def test_evidence_execution_pack_audit_reports_generated_pack_ready_for_session(tmp_path: Path) -> None:
+    output_dir = tmp_path / "evidence-execution"
+    subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "evidence",
+            "execution-pack",
+            "--date",
+            "2026-07-09",
+            "--reviewer",
+            "Release operator",
+            "--output-dir",
+            str(output_dir),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "evidence",
+            "execution-pack-audit",
+            "--input-dir",
+            str(output_dir),
+            "--format",
+            "json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(result.stdout)
+
+    assert payload["audit_status"] == "ready_for_real_session"
+    assert payload["writes_records"] is False
+    assert payload["missing_files"] == []
+    assert payload["blocking_reasons"] == []
+    assert payload["host_manifest_count"] == 2
+    assert payload["beta_draft_count"] == 3
+    assert {item["validation_status"] for item in payload["host_manifests"]} == {"template_requires_real_evidence"}
+    assert {item["validation_status"] for item in payload["beta_drafts"]} == {"template_requires_participant_evidence"}
+    assert "albu-mcp evidence import-wizard" in payload["next_commands"][-1]
+
+
+def test_evidence_execution_pack_audit_blocks_incomplete_pack(tmp_path: Path) -> None:
+    output_dir = tmp_path / "evidence-execution"
+    subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "evidence",
+            "execution-pack",
+            "--date",
+            "2026-07-09",
+            "--reviewer",
+            "Release operator",
+            "--output-dir",
+            str(output_dir),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    missing = output_dir / "beta-responses/noisy-preview-tuning-beta-response.json"
+    missing.unlink()
+
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "evidence",
+            "execution-pack-audit",
+            "--input-dir",
+            str(output_dir),
+            "--format",
+            "json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(result.stdout)
+
+    assert payload["audit_status"] == "blocked"
+    assert payload["writes_records"] is False
+    assert payload["missing_files"] == ["beta-responses/noisy-preview-tuning-beta-response.json"]
+    assert payload["blocking_reasons"] == ["missing_beta_response:noisy-preview-tuning-beta-response.json"]
