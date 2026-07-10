@@ -54,6 +54,15 @@ class EvidenceExecutionPackAuditRequest:
     beta_records_path: Path = Path("docs/BETA_VALIDATION_RECORDS.json")
 
 
+@dataclass(frozen=True)
+class EvidenceExecutionPackProgressRequest:
+    """Inputs for reporting fill progress for one generated execution pack."""
+
+    input_dir: Path
+    host_records_path: Path = Path("docs/HOST_MANUAL_RUNS.json")
+    beta_records_path: Path = Path("docs/BETA_VALIDATION_RECORDS.json")
+
+
 def build_evidence_execution_pack_artifacts(request: EvidenceExecutionPackRequest) -> dict[str, Any]:
     """Build a no-write folder of operator artifacts for real host and beta capture."""
     if request.output_format != "markdown":
@@ -154,6 +163,54 @@ def build_evidence_execution_pack_audit(request: EvidenceExecutionPackAuditReque
     }
 
 
+def build_evidence_execution_pack_progress(request: EvidenceExecutionPackProgressRequest) -> dict[str, Any]:
+    """Report operator fill progress for one generated execution pack without writing records."""
+    audit = build_evidence_execution_pack_audit(
+        EvidenceExecutionPackAuditRequest(
+            input_dir=request.input_dir,
+            host_records_path=request.host_records_path,
+            beta_records_path=request.beta_records_path,
+        )
+    )
+    if audit["audit_status"] == "blocked":
+        return {
+            "progress_status": "blocked",
+            "writes_records": False,
+            "input_dir": str(request.input_dir),
+            "blocking_reasons": audit["blocking_reasons"],
+            "required_item_count": 0,
+            "completed_item_count": 0,
+            "host_updates": [],
+            "beta_updates": [],
+            "next_commands": audit["next_commands"],
+            "audit": audit,
+        }
+
+    host_updates = [_host_progress_update(item) for item in audit["host_manifests"]]
+    beta_updates = [_beta_progress_update(item) for item in audit["beta_drafts"]]
+    pending_host_updates = [item for item in host_updates if item["required_fields"]]
+    pending_beta_updates = [item for item in beta_updates if item["required_fields"]]
+    required_item_count = len(host_updates) + len(beta_updates)
+    pending_item_count = len(pending_host_updates) + len(pending_beta_updates)
+    progress_status = "ready_for_import_review" if pending_item_count == 0 else "needs_real_session_input"
+    return {
+        "progress_status": progress_status,
+        "writes_records": False,
+        "input_dir": str(request.input_dir),
+        "blocking_reasons": [],
+        "required_item_count": required_item_count,
+        "completed_item_count": required_item_count - pending_item_count,
+        "host_updates": pending_host_updates,
+        "beta_updates": pending_beta_updates,
+        "next_commands": _execution_pack_progress_next_commands(
+            request=request,
+            progress_status=progress_status,
+            audit_next_commands=audit["next_commands"],
+        ),
+        "audit": audit,
+    }
+
+
 def render_evidence_execution_pack_audit_json(report: dict[str, Any]) -> str:
     """Render an execution pack audit report as JSON."""
     return json.dumps(report, indent=2, sort_keys=True) + "\n"
@@ -191,6 +248,33 @@ def render_evidence_execution_pack_audit_markdown(report: dict[str, Any]) -> str
         f"{hosts}\n\n"
         "## Beta Drafts\n\n"
         f"{beta}\n\n"
+        "## Next Commands\n\n"
+        f"{commands}\n"
+    )
+
+
+def render_evidence_execution_pack_progress_json(report: dict[str, Any]) -> str:
+    """Render an execution pack progress report as JSON."""
+    return json.dumps(report, indent=2, sort_keys=True) + "\n"
+
+
+def render_evidence_execution_pack_progress_markdown(report: dict[str, Any]) -> str:
+    """Render an execution pack progress report as Markdown."""
+    host_updates = _render_progress_updates(report["host_updates"])
+    beta_updates = _render_progress_updates(report["beta_updates"])
+    blockers = "\n".join(f"- `{reason}`" for reason in report["blocking_reasons"]) or "- none"
+    commands = "\n".join(f"- `{command}`" for command in report["next_commands"]) or "- none"
+    return (
+        "# Evidence Execution Pack Progress\n\n"
+        f"Progress status: `{report['progress_status']}`  \n"
+        f"Writes records: `{str(report['writes_records']).lower()}`  \n"
+        f"Completed: `{report['completed_item_count']}/{report['required_item_count']}`\n\n"
+        "## Blocking Reasons\n\n"
+        f"{blockers}\n\n"
+        "## Host Updates\n\n"
+        f"{host_updates}\n\n"
+        "## Beta Updates\n\n"
+        f"{beta_updates}\n\n"
         "## Next Commands\n\n"
         f"{commands}\n"
     )
@@ -472,3 +556,88 @@ def _execution_pack_audit_next_commands(
         "Rerun albu-mcp evidence execution-pack-audit after the session.",
         import_wizard_command,
     ]
+
+
+def _host_progress_update(item: dict[str, Any]) -> dict[str, Any]:
+    validation_status = item["validation_status"]
+    if validation_status == "ready_to_import":
+        required_fields: list[str] = []
+    elif validation_status == "invalid":
+        required_fields = ["fix_manifest_json"]
+    else:
+        required_fields = [
+            "manifest_status",
+            "status",
+            "evidence",
+            "artifacts",
+            "commands_used",
+            "confirm_real_host_observed",
+        ]
+    return {
+        "path": item["path"],
+        "host": item.get("host", "unknown"),
+        "validation_status": validation_status,
+        "required_fields": required_fields,
+        "instruction": _host_progress_instruction(required_fields),
+    }
+
+
+def _beta_progress_update(item: dict[str, Any]) -> dict[str, Any]:
+    validation_status = item["validation_status"]
+    if validation_status == "ready_to_import":
+        required_fields: list[str] = []
+    elif validation_status == "invalid":
+        required_fields = ["fix_beta_response_json"]
+    else:
+        required_fields = ["status", "triage_bucket", "artifact_refs", "summary"]
+    return {
+        "path": item["path"],
+        "workflow_id": item["workflow_id"],
+        "validation_status": validation_status,
+        "required_fields": required_fields,
+        "instruction": _beta_progress_instruction(required_fields),
+    }
+
+
+def _host_progress_instruction(required_fields: list[str]) -> str:
+    if not required_fields:
+        return "Host manifest is ready for import review."
+    if required_fields == ["fix_manifest_json"]:
+        return "Fix the host manifest JSON before continuing."
+    return "Replace template host evidence with redacted reviewer-observed real MCP host details."
+
+
+def _beta_progress_instruction(required_fields: list[str]) -> str:
+    if not required_fields:
+        return "Beta response is ready for import review."
+    if required_fields == ["fix_beta_response_json"]:
+        return "Fix the beta response JSON before continuing."
+    return "Replace template beta summary with a concrete redacted participant outcome."
+
+
+def _execution_pack_progress_next_commands(
+    *,
+    request: EvidenceExecutionPackProgressRequest,
+    progress_status: str,
+    audit_next_commands: list[str],
+) -> list[str]:
+    if progress_status == "blocked":
+        return audit_next_commands
+    if progress_status == "ready_for_import_review":
+        return audit_next_commands
+    return [
+        f"Open {_quote_path(request.input_dir / 'session-plan.md')} and run the real host session.",
+        "Fill every required field listed in this progress report.",
+        f"albu-mcp evidence execution-pack-progress --input-dir {_quote_path(request.input_dir)} --format markdown",
+        f"albu-mcp evidence execution-pack-audit --input-dir {_quote_path(request.input_dir)} --format markdown",
+    ]
+
+
+def _render_progress_updates(items: list[dict[str, Any]]) -> str:
+    if not items:
+        return "- none"
+    return "\n".join(
+        f"- `{item['path']}`: fields={', '.join(f'`{field}`' for field in item['required_fields'])}; "
+        f"{item['instruction']}"
+        for item in items
+    )

@@ -27,6 +27,14 @@ albu-mcp evidence execution-pack-audit \
   --format markdown
 ```
 
+Use the no-write progress report to see exactly which host and beta fields still need manual evidence:
+
+```bash
+albu-mcp evidence execution-pack-progress \
+  --input-dir evidence-session \
+  --format markdown
+```
+
 ## 1. Host Evidence
 
 The current P0 gate requires reviewer-observed runs for both hosts:
