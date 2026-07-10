@@ -301,6 +301,7 @@ def test_readme_and_usage_document_operator_cli() -> None:
             '"Release operator" --output-dir evidence-session --format markdown'
         ),
         "albu-mcp evidence execution-pack-audit --input-dir evidence-session --format markdown",
+        "albu-mcp evidence execution-pack-progress --input-dir evidence-session --format markdown",
         "albu-mcp evidence session-manifest",
         "albu-mcp evidence validate-manifest",
         "albu-mcp evidence proof-runner",

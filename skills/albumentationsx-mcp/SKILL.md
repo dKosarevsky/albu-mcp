@@ -7,7 +7,7 @@ description: Use when Codex needs to install, configure, or operate Albumentatio
 
 ## Overview
 
-AlbumentationsX MCP is the MCP server; this skill is the safe agent playbook. Keep previews local, bounded, and explicit about real evidence versus generated fixtures.
+AlbumentationsX MCP is the MCP server; this skill is the agent playbook. Keep previews local, bounded, and clear about real evidence versus generated fixtures.
 
 ## Install
 
@@ -72,7 +72,8 @@ Use operator commands only when the user is doing release, adoption, or product 
 - `albu-mcp activation product-fix-closure-pipeline`
 - `albu-mcp evidence execution-pack --date YYYY-MM-DD --reviewer "Release operator" --output-dir evidence-session --format markdown`
 - `albu-mcp evidence execution-pack-audit --input-dir evidence-session`
+- `albu-mcp evidence execution-pack-progress --input-dir evidence-session`
 - `albu-mcp evidence preflight`
 - `albu-mcp evidence import-wizard`
 
-If preview setup fails, read `albumentationsx://diagnostics/guide`, call `diagnose_environment`, and follow its remediation actions before another render.
+If preview setup fails, read `albumentationsx://diagnostics/guide`, call `diagnose_environment`, then remediate before rendering.

@@ -191,3 +191,103 @@ def test_evidence_execution_pack_audit_blocks_incomplete_pack(tmp_path: Path) ->
     assert payload["writes_records"] is False
     assert payload["missing_files"] == ["beta-responses/noisy-preview-tuning-beta-response.json"]
     assert payload["blocking_reasons"] == ["missing_beta_response:noisy-preview-tuning-beta-response.json"]
+
+
+def test_evidence_execution_pack_progress_lists_fields_for_unfilled_pack(tmp_path: Path) -> None:
+    output_dir = tmp_path / "evidence-execution"
+    subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "evidence",
+            "execution-pack",
+            "--date",
+            "2026-07-10",
+            "--reviewer",
+            "Release operator",
+            "--output-dir",
+            str(output_dir),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "evidence",
+            "execution-pack-progress",
+            "--input-dir",
+            str(output_dir),
+            "--format",
+            "json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(result.stdout)
+
+    assert payload["progress_status"] == "needs_real_session_input"
+    assert payload["writes_records"] is False
+    assert payload["required_item_count"] == 5
+    assert payload["completed_item_count"] == 0
+    assert payload["blocking_reasons"] == []
+    assert len(payload["host_updates"]) == 2
+    assert len(payload["beta_updates"]) == 3
+    assert {item["required_fields"][0] for item in payload["host_updates"]} == {"manifest_status"}
+    assert {"evidence", "confirm_real_host_observed"}.issubset(payload["host_updates"][0]["required_fields"])
+    assert {item["required_fields"][-1] for item in payload["beta_updates"]} == {"summary"}
+    assert payload["next_commands"][0].startswith("Open ")
+    assert "execution-pack-audit" in payload["next_commands"][-1]
+
+
+def test_evidence_execution_pack_progress_reports_audit_blockers(tmp_path: Path) -> None:
+    output_dir = tmp_path / "evidence-execution"
+    subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "evidence",
+            "execution-pack",
+            "--date",
+            "2026-07-10",
+            "--reviewer",
+            "Release operator",
+            "--output-dir",
+            str(output_dir),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    (output_dir / "operator-checklist.md").unlink()
+
+    result = subprocess.run(  # noqa: S603 - package CLI under test with controlled fixture paths.
+        [
+            sys.executable,
+            "-m",
+            "albumentationsx_mcp",
+            "evidence",
+            "execution-pack-progress",
+            "--input-dir",
+            str(output_dir),
+            "--format",
+            "json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(result.stdout)
+
+    assert payload["progress_status"] == "blocked"
+    assert payload["writes_records"] is False
+    assert payload["blocking_reasons"] == ["missing_pack_file:operator-checklist.md"]
+    assert payload["host_updates"] == []
+    assert payload["beta_updates"] == []
