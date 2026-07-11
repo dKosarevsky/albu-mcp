@@ -15,18 +15,17 @@ def test_host_evidence_sprint_board_prioritizes_real_host_replay() -> None:
     markdown = render_host_evidence_sprint_board_markdown(board)
 
     assert board["manual_evidence_policy"] == "Never mark a host passed until a reviewer runs the real host UI."
-    assert board["summary"]["passed_manual_host_ui"] == 0
-    assert board["summary"]["passed_first_10_minutes_replay"] == 0
+    assert board["summary"]["passed_manual_host_ui"] == 1
+    assert board["summary"]["passed_first_10_minutes_replay"] == 1
     assert [host["host"] for host in board["hosts"]] == ["Codex", "Claude Code", "Cursor", "Claude Desktop"]
     assert [host["priority"] for host in board["hosts"][:2]] == ["p0", "p0"]
     assert [host["next_gate"] for host in board["hosts"]] == [
-        "blocked",
+        "complete",
         "blocked",
         "first_10_minutes_replay",
         "first_10_minutes_replay",
     ]
-    assert "record_host_manual_run.py --kind first-10-minutes --host Codex" in markdown
-    assert "check_first_10_minutes_replay.py --host Codex" in markdown
+    assert "| Codex | `p0` | `recorded` | `recorded` | `complete` |" in markdown
     assert "Do not paste synthetic evidence" in markdown
 
 
@@ -34,17 +33,17 @@ def test_host_evidence_sprint_board_exports_run_queue_and_packets() -> None:
     board = build_host_evidence_sprint_board()
     markdown = render_host_evidence_sprint_board_markdown(board)
 
-    assert [item["host"] for item in board["run_queue"]] == ["Codex", "Claude Code", "Cursor", "Claude Desktop"]
+    assert [item["host"] for item in board["run_queue"]] == ["Claude Code", "Cursor", "Claude Desktop"]
     assert board["run_queue"][0]["run_order"] == 1
     assert board["run_queue"][0]["next_action"] == "triage_blocker"
     assert (
-        "export_manual_host_acceptance_packet.py --host Codex --output /tmp/albu-host-codex.md"
+        "export_manual_host_acceptance_packet.py --host 'Claude Code' --output /tmp/albu-host-claude-code.md"
         in board["run_queue"][0]["packet_command"]
     )
     assert "## Run Queue" in markdown
-    assert "| 1 | Codex | `p0` | `triage_blocker` |" in markdown
+    assert "| 1 | Claude Code | `p0` | `triage_blocker` |" in markdown
     assert "## Packet Commands" in markdown
-    assert "export_manual_host_acceptance_packet.py --host Codex --output /tmp/albu-host-codex.md" in markdown
+    assert "export_manual_host_acceptance_packet.py --host 'Claude Code'" in markdown
 
 
 def test_committed_host_evidence_sprint_board_is_current() -> None:

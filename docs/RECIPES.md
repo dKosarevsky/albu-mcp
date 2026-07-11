@@ -10,11 +10,11 @@ the dataset and review goal.
 
 Use profile `classification-robustness`.
 
-1. Call `plan_dataset_onboarding` when the user starts from a local dataset folder.
-2. Call `recommend_recipe` with task `classification` and intensity `medium` when no dataset folder is available yet.
+1. Call `plan_dataset_onboarding` when the user starts from one local image or an image directory.
+2. Call `recommend_recipe` with task `classification` and intensity `medium` when no image source is available yet.
 3. Render a small balanced preview batch.
 4. Use `compare_preview_runs` and inspect `quality_summary.findings` plus contact sheets.
-5. Ask the user to choose feedback tags such as `too_noisy`, `too_blurry`, or `object_unrecognizable`.
+5. Ask the user to choose tags such as `too_noisy`, `too_blurry`, `exposure_too_weak`, or `object_unrecognizable`.
 6. When the user points to a concrete preview, call `record_preview_feedback` with the image and variant index.
 7. Call `list_preview_feedback` and reuse `aggregated_feedback_tags` for the next adjustment.
 8. Render two or three candidates when feedback is ambiguous, then call `rank_preview_candidates`.
@@ -25,14 +25,14 @@ Use profile `classification-robustness`.
 
 ## Dataset Onboarding
 
-Use `albumentationsx://examples/dataset-onboarding` when the user provides a local folder and wants the first preview
-planned safely.
+Use `albumentationsx://examples/dataset-onboarding` when the user provides one local image or an image directory and
+wants the first preview planned safely.
 
-1. Read `albumentationsx://capabilities` and confirm the folder is under an allowed root.
+1. Read `albumentationsx://capabilities` and confirm the image source is under an allowed root.
 2. Call `plan_dataset_onboarding` with `dataset_path`, task, targets, and `max_images` between 1 and 32.
 3. Inspect `dataset_structure.detected_layouts` for class directories, split folders, YOLO labels, or COCO manifests.
 4. Use `dataset_structure.recipe_hints` and `balance_warnings` when asking the user which preview subset to start with.
-5. Follow `remediation_actions` if the folder is missing, outside allowed roots, or contains no supported images.
+5. Follow `remediation_actions` if the source is missing, outside allowed roots, unsupported, or contains no images.
 6. For detection datasets, keep the returned `annotations` aligned with `input_paths` and use the bbox-aware pipeline.
 7. For segmentation datasets, keep returned `mask_polygons` or `mask_rles` and use `["image", "mask"]` targets.
 8. Call `validate_preview_request` with the returned `preview_request_template.request`.

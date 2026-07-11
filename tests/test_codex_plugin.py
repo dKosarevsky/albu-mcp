@@ -7,11 +7,12 @@ from pathlib import Path
 
 import pytest
 
-from scripts.check_codex_plugin import validate_codex_plugin
+from scripts.check_codex_plugin import _read_project_version, validate_codex_plugin
 
 ROOT = Path(__file__).resolve().parents[1]
 PLUGIN_MANIFEST_PATH = ROOT / ".codex-plugin" / "plugin.json"
 MCP_MANIFEST_PATH = ROOT / ".mcp.json"
+PROJECT_VERSION = _read_project_version(ROOT / "pyproject.toml")
 
 
 def test_codex_plugin_bundle_exposes_canonical_skill_and_pinned_server() -> None:
@@ -22,7 +23,7 @@ def test_codex_plugin_bundle_exposes_canonical_skill_and_pinned_server() -> None
     mcp = json.loads(MCP_MANIFEST_PATH.read_text(encoding="utf-8"))
 
     assert plugin["name"] == "albumentationsx-mcp"
-    assert plugin["version"] == "1.15.0"
+    assert plugin["version"] == PROJECT_VERSION
     assert plugin["skills"] == "./skills/"
     assert plugin["mcpServers"] == "./.mcp.json"
     assert plugin["interface"]["displayName"] == "AlbumentationsX MCP"
@@ -37,7 +38,7 @@ def test_codex_plugin_bundle_exposes_canonical_skill_and_pinned_server() -> None
     assert server["cwd"] == "."
     assert server["args"] == [
         "--from",
-        "albumentationsx-mcp==1.15.0",
+        f"albumentationsx-mcp=={PROJECT_VERSION}",
         "albumentationsx-mcp",
     ]
     assert server["env_vars"] == [
@@ -60,7 +61,7 @@ def test_codex_plugin_validator_cli_accepts_repository_bundle() -> None:
     )
 
     assert result.returncode == 0, result.stderr
-    assert result.stdout == "Codex plugin bundle is valid: version 1.15.0, server albumentationsx\n"
+    assert result.stdout == f"Codex plugin bundle is valid: version {PROJECT_VERSION}, server albumentationsx\n"
 
 
 def test_codex_plugin_validator_accepts_matching_safe_bundle(tmp_path: Path) -> None:
@@ -72,19 +73,19 @@ def test_codex_plugin_validator_accepts_matching_safe_bundle(tmp_path: Path) -> 
         pyproject_path=pyproject_path,
     )
 
-    assert report.version == "1.15.0"
-    assert report.plugin_version == "1.15.0"
-    assert report.package_version == "1.15.0"
+    assert report.version == PROJECT_VERSION
+    assert report.plugin_version == PROJECT_VERSION
+    assert report.package_version == PROJECT_VERSION
     assert report.server_name == "albumentationsx"
 
 
 @pytest.mark.parametrize(
     ("case", "message"),
     [
-        ("plugin_version", "plugin version '1.14.0' does not match project version '1.15.0'"),
+        ("plugin_version", f"plugin version '0.0.0' does not match project version '{PROJECT_VERSION}'"),
         ("skill_path", "plugin skills path must be './skills/'"),
         ("mcp_path", "plugin MCP path must be './.mcp.json'"),
-        ("unpinned_package", "MCP package must be pinned to albumentationsx-mcp==1.15.0"),
+        ("unpinned_package", f"MCP package must be pinned to albumentationsx-mcp=={PROJECT_VERSION}"),
         ("extra_env_var", "MCP env_vars must match the documented allowlist"),
         ("implicit_root_arg", "MCP args must not grant implicit user dataset roots"),
         ("fixed_env", "MCP server must not define fixed environment values"),
@@ -112,7 +113,7 @@ def _write_bundle(tmp_path: Path, *, mutation: str | None = None) -> tuple[Path,
     server = mcp["mcpServers"]["albumentationsx"]
 
     if mutation == "plugin_version":
-        plugin["version"] = "1.14.0"
+        plugin["version"] = "0.0.0"
     elif mutation == "skill_path":
         plugin["skills"] = "./other-skills/"
     elif mutation == "mcp_path":
@@ -134,7 +135,7 @@ def _write_bundle(tmp_path: Path, *, mutation: str | None = None) -> tuple[Path,
     mcp_path = tmp_path / ".mcp.json"
     mcp_path.write_text(json.dumps(mcp), encoding="utf-8")
     pyproject_path = tmp_path / "pyproject.toml"
-    pyproject_path.write_text('[project]\nversion = "1.15.0"\n', encoding="utf-8")
+    pyproject_path.write_text(f'[project]\nversion = "{PROJECT_VERSION}"\n', encoding="utf-8")
     skill_path = tmp_path / "skills" / "albumentationsx-mcp" / "SKILL.md"
     skill_path.parent.mkdir(parents=True)
     skill_path.write_text("---\nname: albumentationsx-mcp\n---\n", encoding="utf-8")

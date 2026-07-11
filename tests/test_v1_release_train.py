@@ -12,9 +12,9 @@ def test_v1_release_train_blocks_until_trust_gates_pass() -> None:
     markdown = render_v1_release_train_markdown(train)
 
     assert train["package"] == "albumentationsx-mcp"
-    assert train["current_version"] == "1.15.0"
+    assert train["current_version"] == "1.16.0"
     assert train["release_allowed"] is False
-    assert train["manual_gate_count"] == 8
+    assert train["manual_gate_count"] == 6
     assert "Do not publish a stable v1 release" in markdown
     assert "uv run python scripts/export_v1_trust_gates.py --output docs/V1_TRUST_GATES.md" in markdown
     assert "uv build" in markdown

@@ -17,7 +17,8 @@ def test_v1_evidence_operator_packet_blocks_rc_without_real_host_evidence() -> N
     assert packet["rc_publish_allowed"] is False
     assert packet["required_hosts"] == ["Codex", "Claude Code"]
     assert packet["summary"]["missing_gate_count"] == 0
-    assert packet["summary"]["blocked_gate_count"] == 4
+    assert packet["summary"]["recorded_gate_count"] == 2
+    assert packet["summary"]["blocked_gate_count"] == 2
     assert packet["operator_policy"] == "Do not create an RC tag until all P0 host gates are passed in real host UI."
     assert [lane["host"] for lane in packet["operator_lanes"]] == ["Codex", "Claude Code"]
     assert all("run_host_smoke_check" in lane["host_prompt"] for lane in packet["operator_lanes"])

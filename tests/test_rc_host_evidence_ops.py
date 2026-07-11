@@ -18,7 +18,8 @@ def test_rc_host_evidence_ops_stays_blocked_until_real_host_runs() -> None:
     assert ops["rc_cutover_allowed"] is False
     assert ops["p0_summary"]["required_gate_count"] == 4
     assert ops["p0_summary"]["missing_gate_count"] == 0
-    assert ops["p0_summary"]["blocked_gate_count"] == 4
+    assert ops["p0_summary"]["recorded_gate_count"] == 2
+    assert ops["p0_summary"]["blocked_gate_count"] == 2
     assert "uv run python scripts/check_p0_host_run_preflight.py" in ops["run_commands"]
     assert (
         "uv run python scripts/verify_host_evidence_import.py --input /path/to/host-evidence-candidate.json"
@@ -33,7 +34,8 @@ def test_rc_host_evidence_ops_markdown_is_operator_focused() -> None:
     assert markdown.startswith("# RC Host Evidence Ops\n")
     assert "Ops status: `blocked_until_real_host_runs`" in markdown
     assert "Do not record passed evidence without a real host UI run." in markdown
-    assert "| Codex | `first_10_minutes_replay` | `blocked` |" in markdown
+    assert "| Codex | `first_10_minutes_replay` | `passed` |" in markdown
+    assert "| Claude Code | `first_10_minutes_replay` | `blocked` |" in markdown
     assert "`uv run python scripts/check_v1_rc_cutover_gate.py --require-open`" in markdown
 
 

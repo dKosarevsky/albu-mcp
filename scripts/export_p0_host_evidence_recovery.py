@@ -23,6 +23,28 @@ def build_p0_host_evidence_recovery() -> dict[str, Any]:
     codex = build_codex_cancellation_triage()
     claude = build_claude_code_setup_path()
     blocked_gate_count = status["summary"]["blocked_gate_count"]
+    candidate_lanes = [
+        _host_recovery_lane(
+            {
+                "host": "Codex",
+                "blocker": codex["failure_class"],
+                "status": codex["triage_status"],
+                "gates": codex["affected_gates"],
+                "next_doc": "docs/CODEX_CANCELLATION_TRIAGE.md",
+                "first_action": "Run Codex with visible MCP tool approval and complete run_host_smoke_check.",
+            }
+        ),
+        _host_recovery_lane(
+            {
+                "host": "Claude Code",
+                "blocker": claude["failure_class"],
+                "status": claude["setup_status"],
+                "gates": claude["affected_gates"],
+                "next_doc": "docs/CLAUDE_CODE_SETUP_PATH.md",
+                "first_action": "Install or expose the Claude Code CLI, then import the AlbumentationsX MCP config.",
+            }
+        ),
+    ]
     return {
         "recovery_status": "blocked_until_real_host_evidence" if blocked_gate_count else "ready_for_rc_gate_recheck",
         "rc_ready": status["rc_ready"],
@@ -35,33 +57,10 @@ def build_p0_host_evidence_recovery() -> dict[str, Any]:
             "missing_gate_count": status["summary"]["missing_gate_count"],
         },
         "recovery_policy": (
-            "Do not replace blocked P0 records until Codex and Claude Code complete the real MCP host flow and "
-            "leave dated reviewer-observed evidence."
+            "Do not replace a blocked P0 record until that host completes the real MCP flow and leaves dated "
+            "reviewer-observed evidence. Completed hosts are excluded from recovery lanes."
         ),
-        "host_recovery_lanes": [
-            _host_recovery_lane(
-                {
-                    "host": "Codex",
-                    "blocker": codex["failure_class"],
-                    "status": codex["triage_status"],
-                    "gates": codex["affected_gates"],
-                    "next_doc": "docs/CODEX_CANCELLATION_TRIAGE.md",
-                    "first_action": "Run Codex with visible MCP tool approval and complete run_host_smoke_check.",
-                }
-            ),
-            _host_recovery_lane(
-                {
-                    "host": "Claude Code",
-                    "blocker": claude["failure_class"],
-                    "status": claude["setup_status"],
-                    "gates": claude["affected_gates"],
-                    "next_doc": "docs/CLAUDE_CODE_SETUP_PATH.md",
-                    "first_action": (
-                        "Install or expose the Claude Code CLI, then import the AlbumentationsX MCP config."
-                    ),
-                }
-            ),
-        ],
+        "host_recovery_lanes": [lane for lane in candidate_lanes if lane["gates"]],
         "post_recovery_commands": [
             "uv run python scripts/validate_host_manual_runs.py",
             "uv run python scripts/export_p0_evidence_status.py --output docs/P0_EVIDENCE_STATUS.md",

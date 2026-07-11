@@ -1,6 +1,6 @@
 # Host Evidence Sprint Board
 
-Package: `albumentationsx-mcp==1.15.0`
+Package: `albumentationsx-mcp==1.16.0`
 Ready for v1: `false`
 
 ## Manual Evidence Policy
@@ -10,15 +10,15 @@ Never mark a host passed until a reviewer runs the real host UI. Do not paste sy
 ## Summary
 
 - Hosts: `4`
-- Passed manual Host UI: `0`
-- Passed First 10 Minutes replay: `0`
-- Blocked hosts: `2`
+- Passed manual Host UI: `1`
+- Passed First 10 Minutes replay: `1`
+- Blocked hosts: `1`
 
 ## Sprint Board
 
 | Host | Priority | Manual UI | First 10 Minutes | Next Gate |
 | --- | --- | --- | --- | --- |
-| Codex | `p0` | `blocked` | `blocked` | `blocked` |
+| Codex | `p0` | `recorded` | `recorded` | `complete` |
 | Claude Code | `p0` | `blocked` | `blocked` | `blocked` |
 | Cursor | `p1` | `missing` | `missing` | `first_10_minutes_replay` |
 | Claude Desktop | `p1` | `missing` | `missing` | `first_10_minutes_replay` |
@@ -27,18 +27,11 @@ Never mark a host passed until a reviewer runs the real host UI. Do not paste sy
 
 | Order | Host | Priority | Next Action |
 | --- | --- | --- | --- |
-| 1 | Codex | `p0` | `triage_blocker` |
-| 2 | Claude Code | `p0` | `triage_blocker` |
-| 3 | Cursor | `p1` | `run_first_10_minutes_replay` |
-| 4 | Claude Desktop | `p1` | `run_first_10_minutes_replay` |
+| 1 | Claude Code | `p0` | `triage_blocker` |
+| 2 | Cursor | `p1` | `run_first_10_minutes_replay` |
+| 3 | Claude Desktop | `p1` | `run_first_10_minutes_replay` |
 
 ## Packet Commands
-
-### Codex
-
-```bash
-uv run python scripts/export_manual_host_acceptance_packet.py --host Codex --output /tmp/albu-host-codex.md
-```
 
 ### Claude Code
 
@@ -60,15 +53,6 @@ uv run python scripts/export_manual_host_acceptance_packet.py --host 'Claude Des
 
 
 ## Host Commands
-
-### Codex
-
-```bash
-uv run python scripts/record_host_manual_run.py --kind first-10-minutes --host Codex --status passed --date YYYY-MM-DD --evidence 'Codex completed smoke check, preview validation, baseline and candidate render, comparison, and pipeline export.' --artifact docs/assets/demo/demo_report.md
-uv run python scripts/record_host_manual_run.py --host Codex --status passed --date YYYY-MM-DD --evidence 'Codex listed MCP tools and completed run_host_smoke_check in the host UI.'
-uv run python scripts/check_first_10_minutes_replay.py --host Codex
-uv run python scripts/check_manual_host_acceptance.py --host Codex
-```
 
 ### Claude Code
 

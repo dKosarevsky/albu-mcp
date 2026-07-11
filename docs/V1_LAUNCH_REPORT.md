@@ -2,8 +2,8 @@
 
 Package: `albumentationsx-mcp`
 MCP name: `io.github.dKosarevsky/albu-mcp`
-Package version: `1.15.0`
-Server version: `1.15.0`
+Package version: `1.16.0`
+Server version: `1.16.0`
 Ready for v1: `false`
 Host proof status: `docs/HOST_PROOF_STATUS.md`
 
@@ -22,8 +22,6 @@ Host proof status: `docs/HOST_PROOF_STATUS.md`
 | Claude Code | `p0` | `manual_host_ui` | `blocked` | `triage_blocker` |
 | Cursor | `p1` | `first_10_minutes_replay` | `missing` | `run_first_10_minutes_replay` |
 | Cursor | `p1` | `manual_host_ui` | `missing` | `run_manual_host_ui` |
-| Codex | `p0` | `first_10_minutes_replay` | `blocked` | `triage_blocker` |
-| Codex | `p0` | `manual_host_ui` | `blocked` | `triage_blocker` |
 
 Packet commands:
 - Claude Desktop / first_10_minutes_replay: `uv run python scripts/export_manual_host_acceptance_packet.py --host 'Claude Desktop' --output /tmp/albu-host-claude-desktop.md`
@@ -32,22 +30,20 @@ Packet commands:
 - Claude Code / manual_host_ui: `uv run python scripts/export_manual_host_acceptance_packet.py --host 'Claude Code' --output /tmp/albu-host-claude-code.md`
 - Cursor / first_10_minutes_replay: `uv run python scripts/export_manual_host_acceptance_packet.py --host Cursor --output /tmp/albu-host-cursor.md`
 - Cursor / manual_host_ui: `uv run python scripts/export_manual_host_acceptance_packet.py --host Cursor --output /tmp/albu-host-cursor.md`
-- Codex / first_10_minutes_replay: `uv run python scripts/export_manual_host_acceptance_packet.py --host Codex --output /tmp/albu-host-codex.md`
-- Codex / manual_host_ui: `uv run python scripts/export_manual_host_acceptance_packet.py --host Codex --output /tmp/albu-host-codex.md`
 
 ## Manual Host UI
 
 - Claude Desktop: `pending` — manual host UI evidence not recorded
 - Claude Code: `blocked` — Claude Code manual host UI evidence is blocked
 - Cursor: `pending` — manual host UI evidence not recorded
-- Codex: `blocked` — Codex manual host UI evidence is blocked
+- Codex: `passed` — Codex has dated manual host UI evidence
 
 ## First 10 Minutes Replay
 
 - Claude Desktop: `pending` — first 10 minutes replay not recorded
 - Claude Code: `blocked` — Claude Code first 10 minutes replay is blocked
 - Cursor: `pending` — first 10 minutes replay not recorded
-- Codex: `blocked` — Codex first 10 minutes replay is blocked
+- Codex: `passed` — Codex has dated passed first 10 minutes replay evidence
 
 ## Evidence Plan
 
@@ -60,7 +56,7 @@ Packet commands:
 - Cursor: manual UI `missing`, first 10 minutes `missing`
   - Manual UI: `uv run python scripts/record_host_manual_run.py --host Cursor --status passed --date YYYY-MM-DD --evidence 'Cursor listed MCP tools and completed run_host_smoke_check in the host UI.'`
   - First 10 Minutes: `uv run python scripts/record_host_manual_run.py --kind first-10-minutes --host Cursor --status passed --date YYYY-MM-DD --evidence 'Cursor completed smoke check, preview validation, baseline and candidate render, comparison, and pipeline export.' --artifact docs/assets/demo/demo_report.md`
-- Codex: manual UI `blocked`, first 10 minutes `blocked`
+- Codex: manual UI `recorded`, first 10 minutes `recorded`
   - Manual UI: `uv run python scripts/record_host_manual_run.py --host Codex --status passed --date YYYY-MM-DD --evidence 'Codex listed MCP tools and completed run_host_smoke_check in the host UI.'`
   - First 10 Minutes: `uv run python scripts/record_host_manual_run.py --kind first-10-minutes --host Codex --status passed --date YYYY-MM-DD --evidence 'Codex completed smoke check, preview validation, baseline and candidate render, comparison, and pipeline export.' --artifact docs/assets/demo/demo_report.md`
 

@@ -4,6 +4,9 @@ import sys
 from pathlib import Path
 
 from scripts.check_release_readiness import ReleaseReadinessConfig, check_release_readiness
+from scripts.check_release_version import _read_pyproject_version
+
+PROJECT_VERSION = _read_pyproject_version(Path("pyproject.toml"))
 
 EXPECTED_RELEASE_READINESS_CHECKS = [
     "manual_host_records",
@@ -142,11 +145,13 @@ def test_release_readiness_accepts_current_fast_guards(tmp_path: Path) -> None:
 
 
 def test_release_readiness_runs_optional_version_check(tmp_path: Path) -> None:
-    report = check_release_readiness(ReleaseReadinessConfig(tag="v1.15.0", contract_output_work_dir=tmp_path))
+    report = check_release_readiness(
+        ReleaseReadinessConfig(tag=f"v{PROJECT_VERSION}", contract_output_work_dir=tmp_path)
+    )
 
     assert report.ok is True
     assert report.checks[-1].name == "release_version"
-    assert report.checks[-1].message == "release version 1.15.0 is consistent"
+    assert report.checks[-1].message == f"release version {PROJECT_VERSION} is consistent"
 
 
 def test_release_readiness_reports_version_mismatch(tmp_path: Path) -> None:
@@ -177,7 +182,7 @@ def test_release_readiness_reports_codex_plugin_drift(tmp_path: Path) -> None:
     assert report.ok is False
     assert len(failed) == 1
     assert failed[0].name == "codex_plugin"
-    assert "plugin version '0.0.0' does not match project version '1.15.0'" in failed[0].message
+    assert f"plugin version '0.0.0' does not match project version '{PROJECT_VERSION}'" in failed[0].message
 
 
 def test_release_readiness_cli_passes_fast_guards(tmp_path: Path) -> None:

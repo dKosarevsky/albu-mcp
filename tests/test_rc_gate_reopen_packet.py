@@ -16,8 +16,8 @@ def test_rc_gate_reopen_packet_blocks_until_p0_and_beta_evidence() -> None:
     assert packet["dry_run_allowed"] is True
     assert packet["rc_decision"] == "hold_rc"
     assert packet["summary"] == {
-        "p0_blocked_gate_count": 4,
-        "p0_passed_gate_count": 0,
+        "p0_blocked_gate_count": 2,
+        "p0_passed_gate_count": 2,
         "beta_record_count": 0,
         "beta_missing_workflow_count": 3,
         "promoted_backlog_item_count": 0,

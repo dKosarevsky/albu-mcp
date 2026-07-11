@@ -15,7 +15,7 @@ def test_v1_rc_readiness_report_holds_until_p0_hosts_pass() -> None:
     assert report["rc_release_candidate_allowed"] is False
     assert report["stable_v1_allowed"] is False
     assert report["required_rc_hosts"] == ["Codex", "Claude Code"]
-    assert [item["host"] for item in report["rc_blockers"][:2]] == ["Codex", "Codex"]
+    assert [item["host"] for item in report["rc_blockers"][:2]] == ["Claude Code", "Claude Code"]
     assert {item["gate"] for item in report["rc_blockers"]} == {"first_10_minutes_replay", "manual_host_ui"}
     assert report["policy"] == "RC requires real P0 host evidence; stable v1 requires every supported host gate."
     assert (
@@ -32,7 +32,7 @@ def test_v1_rc_readiness_report_markdown_is_reviewable() -> None:
     assert "RC release candidate allowed: `false`" in markdown
     assert "Stable v1 allowed: `false`" in markdown
     assert "## RC Blockers" in markdown
-    assert "| Codex | `p0` | `first_10_minutes_replay` | `blocked` | `triage_blocker` |" in markdown
+    assert "| Claude Code | `p0` | `first_10_minutes_replay` | `blocked` | `triage_blocker` |" in markdown
     assert "## Promotion Rule" in markdown
     assert "Stable v1 requires all supported hosts to pass." in markdown
 

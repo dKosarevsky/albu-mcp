@@ -16,9 +16,9 @@ def test_real_host_evidence_execution_pack_tracks_run_queue_and_policy() -> None
     assert pack["decision"] == "hold_v1"
     assert pack["ready_for_v1"] is False
     assert pack["non_fabrication_policy"] == "Record passed only after a real MCP host UI completes the flow."
-    assert [item["host"] for item in pack["run_queue"]] == ["Codex", "Claude Code", "Cursor", "Claude Desktop"]
+    assert [item["host"] for item in pack["run_queue"]] == ["Claude Code", "Cursor", "Claude Desktop"]
     assert pack["run_queue"][0]["next_action"] == "triage_blocker"
-    assert "export_manual_host_acceptance_packet.py --host Codex" in pack["run_queue"][0]["packet_command"]
+    assert "export_manual_host_acceptance_packet.py --host 'Claude Code'" in pack["run_queue"][0]["packet_command"]
     assert pack["run_queue"][0]["worksheet"]["required_observations"] == [
         "Host shows AlbumentationsX MCP tools and resources.",
         "Host completes run_host_smoke_check.",
@@ -40,7 +40,7 @@ def test_real_host_evidence_execution_pack_markdown_is_actionable() -> None:
     assert "## Non-Fabrication Policy" in markdown
     assert "Record passed only after a real MCP host UI completes the flow." in markdown
     assert "## Execution Queue" in markdown
-    assert "| 1 | Codex | `p0` | `triage_blocker` |" in markdown
+    assert "| 1 | Claude Code | `p0` | `triage_blocker` |" in markdown
     assert "## Reviewer Worksheet" in markdown
     assert "Host shows AlbumentationsX MCP tools and resources." in markdown
     assert "## After Each Host Run" in markdown

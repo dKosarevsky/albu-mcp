@@ -13,10 +13,10 @@ def test_host_evidence_runner_builds_blocked_p0_lanes() -> None:
     assert runner["runner_status"] == "blocked_until_p0_evidence_passes"
     assert runner["preflight_status"] == "passed"
     assert runner["rc_reopen_allowed"] is False
-    assert runner["summary"]["target_host_count"] == 2
-    assert runner["summary"]["runner_lane_count"] == 4
-    assert runner["summary"]["blocked_lane_count"] == 4
-    assert [lane["host"] for lane in runner["host_lanes"]] == ["Codex", "Claude Code"]
+    assert runner["summary"]["target_host_count"] == 1
+    assert runner["summary"]["runner_lane_count"] == 2
+    assert runner["summary"]["blocked_lane_count"] == 2
+    assert [lane["host"] for lane in runner["host_lanes"]] == ["Claude Code"]
     assert all(lane["lane_status"] == "blocked_evidence_required" for lane in runner["host_lanes"])
     assert all("run_host_smoke_check" in lane["operator_prompt"] for lane in runner["host_lanes"])
     assert all(
@@ -33,7 +33,7 @@ def test_host_evidence_runner_markdown_is_operator_focused() -> None:
     assert "Runner status: `blocked_until_p0_evidence_passes`" in markdown
     assert "Preflight status: `passed`" in markdown
     assert "generated smoke output is not accepted as passed host evidence" in markdown
-    assert "| Codex | `blocked_evidence_required` | `first_10_minutes_replay`, `manual_host_ui` |" in markdown
+    assert "| Claude Code | `blocked_evidence_required` | `first_10_minutes_replay`, `manual_host_ui` |" in markdown
     assert "Passed evidence:" in markdown
     assert "Blocked evidence:" in markdown
 

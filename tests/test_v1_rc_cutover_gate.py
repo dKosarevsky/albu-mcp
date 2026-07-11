@@ -19,7 +19,7 @@ def test_v1_rc_cutover_gate_blocks_release_until_p0_evidence_passes() -> None:
     assert gate["release_tag"] == "v1.15.0-rc.1"
     assert gate["blocked_reason"] == "p0_host_evidence_missing_or_blocked"
     assert gate["p0_summary"]["required_gate_count"] == 4
-    assert len(gate["failed_gates"]) == 4
+    assert len(gate["failed_gates"]) == 2
     assert gate["publish_commands"] == []
     assert "git tag v1.15.0-rc.1" in gate["blocked_publish_commands"]
 
@@ -31,7 +31,7 @@ def test_v1_rc_cutover_gate_markdown_is_release_operator_focused() -> None:
     assert "Gate status: `blocked`" in markdown
     assert "Cutover allowed: `false`" in markdown
     assert "The RC cutover gate refuses release" in markdown
-    assert "| Codex | `first_10_minutes_replay` | `blocked` | `2026-06-28` |" in markdown
+    assert "| Claude Code | `first_10_minutes_replay` | `blocked` | `2026-06-28` |" in markdown
     assert "## Blocked Publish Commands" in markdown
     assert "`git tag vX.Y.Z-rc.1`" in markdown
 

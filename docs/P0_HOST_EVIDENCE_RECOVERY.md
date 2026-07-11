@@ -6,7 +6,7 @@ RC reopen allowed: `false`
 
 ## Recovery Policy
 
-Do not replace blocked P0 records until Codex and Claude Code complete the real MCP host flow and leave dated reviewer-observed evidence.
+Do not replace a blocked P0 record until that host completes the real MCP flow and leaves dated reviewer-observed evidence. Completed hosts are excluded from recovery lanes.
 
 ## Summary
 
@@ -20,16 +20,9 @@ Do not replace blocked P0 records until Codex and Claude Code complete the real 
 
 | Host | Status | Blocker | Gates | First Action | Next Doc |
 | --- | --- | --- | --- | --- | --- |
-| Codex | `codex_evidence_recorded` | `codex_tool_call_cancelled` |  | Run Codex with visible MCP tool approval and complete run_host_smoke_check. | `docs/CODEX_CANCELLATION_TRIAGE.md` |
 | Claude Code | `blocked_until_claude_cli_visible` | `claude_cli_missing` | `first_10_minutes_replay`, `manual_host_ui` | Install or expose the Claude Code CLI, then import the AlbumentationsX MCP config. | `docs/CLAUDE_CODE_SETUP_PATH.md` |
 
 ## Record Commands
-
-### Codex
-
-Passed evidence:
-
-Blocked evidence:
 
 ### Claude Code
 

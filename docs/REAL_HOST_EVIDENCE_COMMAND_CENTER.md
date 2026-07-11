@@ -19,14 +19,12 @@ Record only redacted, reviewer-observed host UI evidence.
 
 ## Blocked Hosts
 
-- `Codex`
 - `Claude Code`
 
 ## Host Lanes
 
 | Host | Status | Blocker | Gates | First Action | Next Doc |
 | --- | --- | --- | --- | --- | --- |
-| Codex | `codex_evidence_recorded` | `codex_tool_call_cancelled` |  | Run Codex with visible MCP tool approval and complete run_host_smoke_check. | `docs/CODEX_CANCELLATION_TRIAGE.md` |
 | Claude Code | `blocked_until_claude_cli_visible` | `claude_cli_missing` | `first_10_minutes_replay`, `manual_host_ui` | Install or expose the Claude Code CLI, then import the AlbumentationsX MCP config. | `docs/CLAUDE_CODE_SETUP_PATH.md` |
 
 ## Operator Commands

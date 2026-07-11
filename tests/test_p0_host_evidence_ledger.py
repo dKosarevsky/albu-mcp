@@ -18,15 +18,18 @@ def test_p0_host_evidence_ledger_tracks_required_gates_without_claiming_evidence
     assert ledger["non_fabrication_policy"] == "Only docs/HOST_MANUAL_RUNS.json can satisfy a P0 gate."
     assert ledger["summary"] == {
         "required_gate_count": 4,
-        "recorded_gate_count": 0,
+        "recorded_gate_count": 2,
         "missing_gate_count": 0,
-        "blocked_gate_count": 4,
+        "blocked_gate_count": 2,
     }
     assert [gate["gate"] for gate in ledger["host_gates"][0]["gates"]] == [
         "first_10_minutes_replay",
         "manual_host_ui",
     ]
-    assert all(gate["record_status"] == "blocked" for host in ledger["host_gates"] for gate in host["gates"])
+    statuses_by_host = {
+        host["host"]: {gate["record_status"] for gate in host["gates"]} for host in ledger["host_gates"]
+    }
+    assert statuses_by_host == {"Codex": {"passed"}, "Claude Code": {"blocked"}}
 
 
 def test_p0_host_evidence_ledger_markdown_is_operator_readable() -> None:
@@ -35,7 +38,7 @@ def test_p0_host_evidence_ledger_markdown_is_operator_readable() -> None:
     assert markdown.startswith("# P0 Host Evidence Ledger\n")
     assert "Ledger status: `manual_evidence_required`" in markdown
     assert "Only docs/HOST_MANUAL_RUNS.json can satisfy a P0 gate." in markdown
-    assert "| Codex | `first_10_minutes_replay` | `blocked` |" in markdown
+    assert "| Codex | `first_10_minutes_replay` | `passed` |" in markdown
     assert "| Claude Code | `manual_host_ui` | `blocked` |" in markdown
     assert "uv run python scripts/record_host_manual_run.py" in markdown
 

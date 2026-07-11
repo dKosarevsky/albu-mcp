@@ -17,15 +17,14 @@ def test_p0_host_evidence_recovery_keeps_gate_blocked_until_real_evidence() -> N
     assert recovery["rc_ready"] is False
     assert recovery["rc_reopen_allowed"] is False
     assert recovery["summary"] == {
-        "target_host_count": 2,
+        "target_host_count": 1,
         "required_gate_count": 4,
-        "passed_gate_count": 0,
-        "blocked_gate_count": 4,
+        "passed_gate_count": 2,
+        "blocked_gate_count": 2,
         "missing_gate_count": 0,
     }
-    assert [lane["host"] for lane in recovery["host_recovery_lanes"]] == ["Codex", "Claude Code"]
-    assert recovery["host_recovery_lanes"][0]["blocker"] == "codex_tool_call_cancelled"
-    assert recovery["host_recovery_lanes"][1]["blocker"] == "claude_cli_missing"
+    assert [lane["host"] for lane in recovery["host_recovery_lanes"]] == ["Claude Code"]
+    assert recovery["host_recovery_lanes"][0]["blocker"] == "claude_cli_missing"
     assert all(
         "record_host_manual_run.py" in command
         for lane in recovery["host_recovery_lanes"]
@@ -38,10 +37,9 @@ def test_p0_host_evidence_recovery_markdown_is_operator_focused() -> None:
 
     assert markdown.startswith("# P0 Host Evidence Recovery\n")
     assert "Recovery status: `blocked_until_real_host_evidence`" in markdown
-    assert "Do not replace blocked P0 records until Codex and Claude Code complete" in markdown
-    assert "| Codex | `blocked_tool_call_cancellation` | `codex_tool_call_cancelled` |" in markdown
+    assert "Completed hosts are excluded from recovery lanes." in markdown
+    assert "| Codex |" not in markdown
     assert "| Claude Code | `blocked_until_claude_cli_visible` | `claude_cli_missing` |" in markdown
-    assert "run_host_smoke_check" in markdown
     assert "docs/CLAUDE_CODE_SETUP_PATH.md" in markdown
 
 

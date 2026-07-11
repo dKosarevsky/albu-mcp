@@ -5,11 +5,11 @@ host proof, and release reproducibility.
 
 ## Current Status
 
-As of 2026-06-23, `v1.15.0` is the latest published pre-v1 release:
+As of 2026-07-11, `v1.16.0` is the current prepared release:
 
-- PyPI package: `albumentationsx-mcp==1.15.0`;
+- PyPI package: `albumentationsx-mcp==1.16.0`;
 - MCP Registry entry: active/latest for `io.github.dKosarevsky/albu-mcp`;
-- GitHub release and PyPI Trusted Publishing completed for `v1.15.0`;
+- GitHub Release, PyPI Trusted Publishing, and MCP Registry publication are automated from the `v1.16.0` tag;
 - machine-verifiable host proof status is tracked in `docs/HOST_PROOF_STATUS.md`;
 - the current launch blocker rollup is tracked in `docs/V1_LAUNCH_REPORT.md`;
 - v1 trust gates are separated in `docs/V1_TRUST_GATES.md`;
@@ -22,8 +22,8 @@ As of 2026-06-23, `v1.15.0` is the latest published pre-v1 release:
   `docs/CLAUDE_CODE_SETUP_PATH.md`, and `docs/HOST_SETUP_PROBE.md`;
 - beta workflow intake and backlog triage are tracked in `docs/BETA_VALIDATION_INTAKE.md`,
   `docs/BETA_VALIDATION_RECORDING_PACK.md`, and `docs/BETA_TO_BACKLOG_TRIAGE.md`;
-- Manual Host UI and First 10 Minutes evidence is still `blocked` or `pending` and must not be treated as passed until
-  dated real-host evidence is recorded through the host proof sprint runbook.
+- Manual Host UI and First 10 Minutes evidence is recorded for Codex; Claude Code remains blocked and must not be
+  treated as passed until dated real-host evidence is recorded through the host proof sprint runbook.
 
 The current product handoff for first real-dataset previews is `build_review_packet`. It combines dataset onboarding,
 safe preview request validation, the review tool sequence, and `albumentationsx://examples/report-handoff`.
@@ -78,8 +78,8 @@ Run `uv run python scripts/run_golden_evals.py` before every release.
 The release workflow builds the package, checks release metadata, runs tests, runs lint/type checks, executes golden MCP
 evals, publishes to PyPI through Trusted Publishing, creates a GitHub Release, and runs a post-release `uvx` smoke check.
 
-`uv run python scripts/check_release_readiness.py --tag v1.15.0` currently aggregates the fast release guards for the
-latest pre-v1 tag: version metadata, manual host evidence schema, generated host acceptance evidence, first-10-minutes
+`uv run python scripts/check_release_readiness.py --tag v1.16.0` aggregates the fast release guards for the current
+tag: version metadata, manual host evidence schema, generated host acceptance evidence, first-10-minutes
 entrypoints, host proof sprint entrypoints, and public contract snapshots.
 
 The MCP Registry workflow publishes `server.json` metadata through GitHub OIDC after the PyPI package is visible.

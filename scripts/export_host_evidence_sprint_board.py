@@ -22,7 +22,8 @@ def build_host_evidence_sprint_board() -> dict[str, Any]:
     report = build_v1_launch_report()
     evidence_by_host = {item["host"]: item for item in report["evidence_plan"]}
     hosts = [_host_row(evidence_by_host[host]) for host in _HOST_ORDER]
-    run_queue = [_run_queue_item(run_order=index, host=host) for index, host in enumerate(hosts, start=1)]
+    active_hosts = [host for host in hosts if host["next_gate"] != "complete"]
+    run_queue = [_run_queue_item(run_order=index, host=host) for index, host in enumerate(active_hosts, start=1)]
     return {
         "package": report["package"],
         "version": report["package_version"],
@@ -100,6 +101,8 @@ def render_host_evidence_sprint_board_markdown(board: dict[str, Any]) -> str:
         lines.extend([f"### {item['host']}", "", "```bash", item["packet_command"], "```", ""])
     lines.extend(["", "## Host Commands", ""])
     for host in board["hosts"]:
+        if host["next_gate"] == "complete":
+            continue
         lines.extend(
             [
                 f"### {host['host']}",

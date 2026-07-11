@@ -1,6 +1,6 @@
 # V1 Stabilization Plan
 
-Package: `albumentationsx-mcp==1.15.0`
+Package: `albumentationsx-mcp==1.16.0`
 Stabilization status: `blocked_until_trust_gates_pass`
 Ready for v1: `false`
 Stable v1 allowed: `false`

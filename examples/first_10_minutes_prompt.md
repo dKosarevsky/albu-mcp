@@ -11,7 +11,7 @@ Local image or dataset folder:
 First, read albumentationsx://examples/client-smoke and run run_host_smoke_check.
 Continue only if preview_ready is true. If it is not ready, explain the remediation actions and stop before rendering.
 
-Then call plan_dataset_onboarding for the local folder. Use the returned preview_request_template as the starting point.
+Then call plan_dataset_onboarding for the local image or directory. Use preview_request_template as the starting point.
 Do not render anything until validate_preview_request returns valid=true.
 
 Render a small preview with render_preview_batch:
@@ -32,6 +32,6 @@ When I accept the result, call export_pipeline and provide:
 - the seed and target assumptions;
 - a short note about the feedback that led to the final version.
 
-If my local folder is not ready, show me the reference demo report path instead:
+If my local image source is not ready, show me the reference demo report path instead:
 docs/assets/demo/demo_report.md
 ```

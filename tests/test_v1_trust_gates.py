@@ -19,17 +19,15 @@ def test_v1_trust_gates_separate_automated_and_manual_gates() -> None:
         "host_proof_sprint_docs",
         "v1_launch_report",
     }
-    assert len(report["manual_gates"]) == 8
+    assert len(report["manual_gates"]) == 6
     assert {gate["status"] for gate in report["manual_gates"]} == {"blocked", "pending"}
     assert {(gate["host"], gate["kind"]): gate["status"] for gate in report["manual_gates"]} == {
         ("Claude Desktop", "manual Host UI evidence"): "pending",
         ("Claude Code", "manual Host UI evidence"): "blocked",
         ("Cursor", "manual Host UI evidence"): "pending",
-        ("Codex", "manual Host UI evidence"): "blocked",
         ("Claude Desktop", "first 10 minutes replay"): "pending",
         ("Claude Code", "first 10 minutes replay"): "blocked",
         ("Cursor", "first 10 minutes replay"): "pending",
-        ("Codex", "first 10 minutes replay"): "blocked",
     }
     assert "Do not cut v1.0.0" in markdown
     assert "manual Host UI evidence" in markdown

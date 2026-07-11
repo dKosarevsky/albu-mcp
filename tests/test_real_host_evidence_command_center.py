@@ -15,10 +15,11 @@ def test_real_host_evidence_command_center_keeps_p0_manual_and_blocked() -> None
 
     assert center["command_center_status"] == "blocked_until_real_host_runs"
     assert center["non_fabrication_policy"] == "Only reviewer-observed real MCP host UI runs can satisfy P0 gates."
-    assert center["summary"]["blocked_gate_count"] == 4
-    assert center["summary"]["passed_gate_count"] == 0
+    assert center["summary"]["blocked_gate_count"] == 2
+    assert center["summary"]["passed_gate_count"] == 2
     assert center["next_operator_action"] == "Run the host setup probe live, then execute the first blocked host lane."
-    assert center["blocked_hosts"] == ["Codex", "Claude Code"]
+    assert center["blocked_hosts"] == ["Claude Code"]
+    assert [lane["host"] for lane in center["host_lanes"]] == ["Claude Code"]
     assert "uv run python scripts/check_host_setup_probe.py --live --format json" in center["operator_commands"]
 
 

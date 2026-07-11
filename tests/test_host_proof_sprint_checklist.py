@@ -22,8 +22,8 @@ def test_host_proof_sprint_checklist_contains_actionable_host_steps() -> None:
         "Codex",
     }
     status_by_host = {host["host"]: host for host in checklist["hosts"]}
-    assert status_by_host["Codex"]["manual_host_ui"]["status"] == "blocked"
-    assert status_by_host["Codex"]["first_10_minutes_replay"]["status"] == "blocked"
+    assert status_by_host["Codex"]["manual_host_ui"]["status"] == "recorded"
+    assert status_by_host["Codex"]["first_10_minutes_replay"]["status"] == "recorded"
     assert status_by_host["Claude Code"]["manual_host_ui"]["status"] == "blocked"
     assert status_by_host["Claude Code"]["first_10_minutes_replay"]["status"] == "blocked"
     assert status_by_host["Cursor"]["manual_host_ui"]["status"] == "missing"

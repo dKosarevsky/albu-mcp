@@ -14,9 +14,9 @@ After connecting a new host, read `albumentationsx://examples/client-smoke` for 
 local previews.
 When preview setup is unclear, read `albumentationsx://diagnostics/guide` and call `diagnose_environment` before
 changing augmentation pipelines.
-For a single read-only preflight, call `run_host_smoke_check` and continue only when `preview_ready` is true. For a
-real local dataset folder, read `albumentationsx://examples/dataset-onboarding` and call `plan_dataset_onboarding`
-before rendering.
+For a single read-only preflight, call `run_host_smoke_check` and continue only when `preview_ready` is true. For one
+real local image or an image directory, read `albumentationsx://examples/dataset-onboarding` and call
+`plan_dataset_onboarding` before rendering.
 
 Use `examples/claude_desktop_config.json` as a starting point and replace `/path/to/albu-mcp` with the repository path:
 
@@ -52,7 +52,7 @@ retention limit for long-running MCP hosts.
 5. Call `validate_pipeline` before rendering or exporting.
 6. Call `run_host_smoke_check`; when `preview_ready` is true, replace the placeholder path in
    `preview_request_template.request`.
-7. For a real folder, call `plan_dataset_onboarding` with `dataset_path`, task, targets, and a small `max_images`.
+7. For one real image or a directory, call `plan_dataset_onboarding` with `dataset_path`, task, targets, and `max_images`.
 8. Call `validate_preview_request` after filling or receiving local image paths and before rendering.
 9. Call `explain_pipeline` to identify likely preview risks and feedback tags.
 10. Call `render_preview_batch` on a small local image set.
@@ -220,12 +220,12 @@ root, call `validate_preview_request`, then call `render_preview_batch`. When `p
 
 ## Dataset Onboarding
 
-Use `plan_dataset_onboarding` when the user points the host at a real local dataset folder and asks for the first safe
-preview. The tool is read-only: it checks that `dataset_path` is under an allowed root, scans supported image extensions,
-selects a bounded deterministic sample, recommends a recipe, validates the pipeline, and returns a
-`preview_request_template`.
+Use `plan_dataset_onboarding` when the user points the host at one real local image or an image directory and asks for
+the first safe preview. The tool is read-only: it checks that `dataset_path` is under an allowed root, accepts one
+supported image or scans a directory, selects a bounded deterministic sample, recommends a recipe, validates the
+pipeline, and returns a `preview_request_template`.
 
-The response also includes `dataset_structure` when the folder is accessible. This best-effort profile detects common
+The response also includes `dataset_structure` when the source is accessible. This best-effort profile detects common
 class-directory layouts, `train`/`val`/`valid`/`validation`/`test` split folders, YOLO `labels/**/*.txt` files, and COCO
 JSON manifests with `images`, `annotations`, and `categories`. Hosts can use `detected_layouts`, `class_directories`,
 `splits`, `annotation_formats`, `balance_warnings`, and `recipe_hints` to ask better follow-up questions before rendering.
@@ -371,11 +371,13 @@ also includes their session timeline, reviewer notes, and links to exported Mark
 
 `adjust_pipeline` accepts the base tags from `list_feedback_tags` and optional severity suffixes:
 
-- `:low` applies a lighter reduction when only a few examples are slightly too strong.
+- `:low` applies a lighter adjustment.
 - `:medium` is the default and matches the base tag behavior.
-- `:high` applies a stronger reduction when previews are clearly unusable.
+- `:high` applies the strongest bounded adjustment.
 
-Examples: `too_noisy:low`, `too_blurry:medium`, `too_distorted:high`, and `object_unrecognizable:high`.
+Examples: `too_noisy:low`, `too_blurry:medium`, `too_distorted:high`, `object_unrecognizable:high`, and
+`exposure_too_weak:medium`. The last tag increases only brightness/contrast variation; `too_dark`, `too_bright`,
+`color_shift`, or `object_unrecognizable` takes precedence and prevents that increase when both are supplied.
 
 `compare_preview_runs` may return `suggested_feedback_tags` based on candidate transform names. Treat them as review
 candidates only; they are not an automatic verdict about image quality.
@@ -449,9 +451,9 @@ Preview manifests record annotation observations like this:
 
 ## Review Packet
 
-Use `build_review_packet` when the host needs one compact first-preview handoff for a real local dataset folder. It wraps
-dataset onboarding, the safe preview template, the recommended next tool, the full review tool sequence, and the report
-handoff resource:
+Use `build_review_packet` when the host needs one compact first-preview handoff for one real local image or an image
+directory. It wraps onboarding, the safe preview template, the recommended next tool, the full review tool sequence,
+and the report handoff resource:
 
 ```json
 {

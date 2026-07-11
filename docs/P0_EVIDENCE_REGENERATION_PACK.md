@@ -1,6 +1,6 @@
 # P0 Evidence Regeneration Pack
 
-Package: `albumentationsx-mcp==1.15.0`
+Package: `albumentationsx-mcp==1.16.0`
 Records path: `docs/HOST_MANUAL_RUNS.json`
 Target hosts: `Codex, Claude Code`
 Pack status: `blocked_until_p0_evidence`

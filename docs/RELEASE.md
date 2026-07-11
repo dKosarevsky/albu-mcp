@@ -32,7 +32,9 @@ The same name must match `server.json`.
 1. Update `CHANGELOG.md` with user-facing changes and the release date.
 2. Update `version` in `pyproject.toml`.
 3. Update `version` in `server.json` and `packages[0].version`.
-4. Run the local quality gate:
+4. Update `version` in `.codex-plugin/plugin.json` and the package pin in `.mcp.json`.
+5. Run `uv lock` so the local package version in `uv.lock` matches.
+6. Run the local quality gate:
 
 ```bash
 uv run pytest
@@ -57,10 +59,11 @@ machine-readable pre-release status. In GitHub Actions, the same guard writes a 
 This release readiness guard aggregates manual host records, generated evidence freshness, contract snapshots, and
 version consistency before tagging.
 
-5. Commit the version bump:
+7. Commit the version bump:
 
 ```bash
-git add pyproject.toml server.json uv.lock README.md CHANGELOG.md docs/INSTALL.md docs/V1_READINESS.md
+git add pyproject.toml server.json .codex-plugin/plugin.json .mcp.json uv.lock README.md CHANGELOG.md \
+  docs/INSTALL.md docs/V1_READINESS.md
 git commit -m "chore: release vX.Y.Z"
 ```
 
