@@ -302,7 +302,10 @@ def test_readme_and_usage_document_operator_cli() -> None:
         ),
         "albu-mcp evidence execution-pack-audit --input-dir evidence-session --format markdown",
         "albu-mcp evidence execution-pack-progress --input-dir evidence-session --format markdown",
-        "albu-mcp evidence execution-pack-status --input-dir evidence-session --format markdown",
+        (
+            "albu-mcp evidence execution-pack-status --input-dir evidence-session --format markdown "
+            "--output evidence-session/status.md"
+        ),
         "albu-mcp evidence session-manifest",
         "albu-mcp evidence validate-manifest",
         "albu-mcp evidence proof-runner",

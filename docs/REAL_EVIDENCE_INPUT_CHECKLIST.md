@@ -40,12 +40,14 @@ Use one no-write status view when you need the current decision and next actions
 ```bash
 albu-mcp evidence execution-pack-status \
   --input-dir evidence-session \
-  --format markdown
+  --format markdown \
+  --output evidence-session/status.md
 ```
 
 It summarizes pack structure, completed host/beta inputs, no-write import-wizard readiness, blockers, and at most three
-next commands. `import_ready_command_available=true` means the inputs passed no-write validation; a reviewer must still
-approve the explicit `import-wizard --import-ready` command that writes records.
+next commands. Generated packs include this copy-ready handoff in `README.md` and `post-session-commands.md`; refresh
+`status.md` after every evidence edit. `import_ready_command_available=true` means the inputs passed no-write validation;
+a reviewer must still approve the explicit `import-wizard --import-ready` command that writes records.
 
 ## 1. Host Evidence
 

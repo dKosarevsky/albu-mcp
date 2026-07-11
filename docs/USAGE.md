@@ -121,7 +121,7 @@ albu-mcp evidence session-folder --host Codex --date YYYY-MM-DD --reviewer "Rele
 albu-mcp evidence execution-pack --date YYYY-MM-DD --reviewer "Release operator" --output-dir evidence-session --format markdown
 albu-mcp evidence execution-pack-audit --input-dir evidence-session --format markdown
 albu-mcp evidence execution-pack-progress --input-dir evidence-session --format markdown
-albu-mcp evidence execution-pack-status --input-dir evidence-session --format markdown
+albu-mcp evidence execution-pack-status --input-dir evidence-session --format markdown --output evidence-session/status.md
 albu-mcp evidence session-manifest --host Codex --date 2026-07-01 --reviewer "Release operator" --output-dir docs/operator-packets --format json
 albu-mcp evidence validate-manifest --input docs/operator-packets/codex-evidence-session-manifest.json --format json
 albu-mcp evidence proof-runner --input docs/operator-packets/codex-evidence-session-manifest.json --format json
