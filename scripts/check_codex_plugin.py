@@ -175,9 +175,7 @@ def main() -> None:
     except (OSError, TypeError, ValueError) as exc:
         sys.stderr.write(f"Codex plugin validation failed: {exc}\n")
         raise SystemExit(1) from exc
-    sys.stdout.write(
-        f"Codex plugin bundle is valid: version {report.version}, server {report.server_name}\n"
-    )
+    sys.stdout.write(f"Codex plugin bundle is valid: version {report.version}, server {report.server_name}\n")
 
 
 if __name__ == "__main__":
