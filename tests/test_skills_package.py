@@ -80,9 +80,12 @@ def test_agent_skill_documents_host_config_hints_and_stop_conditions() -> None:
 
     expected_skill_text = [
         "## Host Config Hints",
-        "Claude Desktop, Cursor, Claude Code, and Codex configs should call the same `uvx --from` command.",
-        "Do not rely on the host process working directory for image access.",
-        "Restart the host after editing MCP config, then run `run_host_smoke_check`.",
+        (
+            "Codex plugin mode uses `.codex-plugin/plugin.json` and `.mcp.json`; "
+            "its pinned server grants no user dataset root."
+        ),
+        "Set `ALBU_MCP_ALLOWED_ROOTS` and `ALBU_MCP_ARTIFACT_ROOT`, or use explicit absolute host args.",
+        "stop unless `allowed_roots` contains the intended root and `preview_ready` is true.",
         "## Stop Conditions",
         "Missing real dataset path: ask for one.",
         "Path outside `--allowed-root`: refuse that path and ask for a bounded path.",
@@ -92,6 +95,22 @@ def test_agent_skill_documents_host_config_hints_and_stop_conditions() -> None:
         assert expected_text in skill
 
     assert "ask for dataset path, allowed root, and artifact root when they are missing" in openai_yaml
+
+
+def test_agent_skill_guards_codex_plugin_preview_roots() -> None:
+    skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+
+    expected = [
+        "Codex plugin mode",
+        "`.codex-plugin/plugin.json`",
+        "`.mcp.json`",
+        "`ALBU_MCP_ALLOWED_ROOTS`",
+        "`ALBU_MCP_ARTIFACT_ROOT`",
+        "grants no user dataset root",
+        "stop unless `allowed_roots` contains the intended root",
+    ]
+    for expected_text in expected:
+        assert expected_text in skill
 
 
 def test_skills_sh_display_config_groups_agent_skill() -> None:

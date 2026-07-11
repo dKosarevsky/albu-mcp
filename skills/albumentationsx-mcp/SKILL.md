@@ -35,9 +35,9 @@ Use AlbumentationsX MCP on `DATASET_PATH`. Use `ALLOWED_ROOT` for image access a
 
 ## Host Config Hints
 
-- Claude Desktop, Cursor, Claude Code, and Codex configs should call the same `uvx --from` command.
-- Keep `--allowed-root` and `--artifact-root` absolute. Do not rely on the host process working directory for image access.
-- Restart the host after editing MCP config, then run `run_host_smoke_check`.
+- Codex plugin mode uses `.codex-plugin/plugin.json` and `.mcp.json`; its pinned server grants no user dataset root.
+- Set `ALBU_MCP_ALLOWED_ROOTS` and `ALBU_MCP_ARTIFACT_ROOT`, or use explicit absolute host args. Never rely on the working directory.
+- Restart, run `run_host_smoke_check`, and stop unless `allowed_roots` contains the intended root and `preview_ready` is true.
 
 ## Host Workflow
 

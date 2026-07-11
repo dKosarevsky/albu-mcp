@@ -45,9 +45,9 @@ uvx --from albumentationsx-mcp albumentationsx-mcp \
   --artifact-root /absolute/path/to/albu-artifacts
 ```
 
-Copyable host snippets are in [examples](examples/). Full setup is in [docs/INSTALL.md](docs/INSTALL.md); the guided
-trial is [docs/FIRST_10_MINUTES.md](docs/FIRST_10_MINUTES.md). Agent skill:
-`npx skills add dKosarevsky/albu-mcp`; this installs agent guidance, not the MCP server; run the server with
+Copyable host snippets are in [examples](examples/). Full setup, including the native Codex plugin bundle, is in
+[docs/INSTALL.md](docs/INSTALL.md); the guided trial is [docs/FIRST_10_MINUTES.md](docs/FIRST_10_MINUTES.md).
+`npx skills add dKosarevsky/albu-mcp` installs agent guidance, not the MCP server. Portable server command:
 `uvx --from albumentationsx-mcp albumentationsx-mcp`.
 
 ## Operator CLI
