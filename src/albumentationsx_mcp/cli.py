@@ -92,6 +92,12 @@ from albumentationsx_mcp.evidence_execution_pack import (
     render_evidence_execution_pack_progress_json,
     render_evidence_execution_pack_progress_markdown,
 )
+from albumentationsx_mcp.evidence_execution_pack_status import (
+    EvidenceExecutionPackStatusRequest,
+    build_evidence_execution_pack_status,
+    render_evidence_execution_pack_status_json,
+    render_evidence_execution_pack_status_markdown,
+)
 from albumentationsx_mcp.evidence_import_wizard import (
     EvidenceImportWizardRequest,
     build_evidence_import_wizard,
@@ -1578,6 +1584,16 @@ def _add_evidence_execution_pack_parser(subparsers: Any) -> None:
     execution_pack_progress.add_argument("--format", choices=["json", "markdown"], default="json")
     execution_pack_progress.add_argument("--output", type=Path, default=None)
 
+    execution_pack_status = subparsers.add_parser(
+        "execution-pack-status",
+        help="Summarize execution-pack audit, progress, and import readiness without writing records.",
+    )
+    execution_pack_status.add_argument("--input-dir", type=Path, required=True)
+    execution_pack_status.add_argument("--host-records", type=Path, default=Path("docs/HOST_MANUAL_RUNS.json"))
+    execution_pack_status.add_argument("--beta-records", type=Path, default=Path("docs/BETA_VALIDATION_RECORDS.json"))
+    execution_pack_status.add_argument("--format", choices=["json", "markdown"], default="json")
+    execution_pack_status.add_argument("--output", type=Path, default=None)
+
 
 def _add_evidence_template_guard_parser(subparsers: Any) -> None:
     template_guard = subparsers.add_parser(
@@ -1763,6 +1779,7 @@ def _handle_evidence_command(args: argparse.Namespace) -> str:
         "execution-pack": _handle_evidence_execution_pack,
         "execution-pack-audit": _handle_evidence_execution_pack_audit,
         "execution-pack-progress": _handle_evidence_execution_pack_progress,
+        "execution-pack-status": _handle_evidence_execution_pack_status,
         "validate-manifest": _handle_evidence_validate_manifest,
         "import-manifest": _handle_evidence_import_manifest,
         "import-wizard": _handle_evidence_import_wizard,
@@ -2053,6 +2070,25 @@ def _handle_evidence_execution_pack_progress(args: argparse.Namespace) -> str:
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(content, encoding="utf-8")
     return f"wrote evidence execution-pack-progress to {args.output}\n"
+
+
+def _handle_evidence_execution_pack_status(args: argparse.Namespace) -> str:
+    report = build_evidence_execution_pack_status(
+        EvidenceExecutionPackStatusRequest(
+            input_dir=args.input_dir,
+            host_records_path=args.host_records,
+            beta_records_path=args.beta_records,
+        )
+    )
+    if args.format == "markdown":
+        content = render_evidence_execution_pack_status_markdown(report)
+    else:
+        content = render_evidence_execution_pack_status_json(report)
+    if args.output is None:
+        return content
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text(content, encoding="utf-8")
+    return f"wrote evidence execution-pack-status to {args.output}\n"
 
 
 def _handle_evidence_validate_manifest(args: argparse.Namespace) -> str:

@@ -44,6 +44,7 @@ def test_skills_sh_package_has_installable_agent_skill() -> None:
         "albu-mcp evidence execution-pack --date YYYY-MM-DD",
         "albu-mcp evidence execution-pack-audit --input-dir evidence-session",
         "albu-mcp evidence execution-pack-progress --input-dir evidence-session",
+        "albu-mcp evidence execution-pack-status --input-dir evidence-session",
         "albu-mcp evidence preflight",
         "albu-mcp evidence import-wizard",
     ]
