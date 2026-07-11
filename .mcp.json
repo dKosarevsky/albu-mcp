@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "albumentationsx": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "albumentationsx-mcp==1.15.0",
+        "albumentationsx-mcp"
+      ],
+      "env_vars": [
+        "ALBU_MCP_ALLOWED_ROOTS",
+        "ALBU_MCP_ARTIFACT_ROOT",
+        "ALBU_MCP_MAX_PREVIEW_RUNS"
+      ],
+      "tool_timeout_sec": 300
+    }
+  }
+}

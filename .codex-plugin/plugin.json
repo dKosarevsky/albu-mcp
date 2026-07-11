@@ -1,0 +1,38 @@
+{
+  "name": "albumentationsx-mcp",
+  "version": "1.15.0",
+  "description": "Preview, validate, and tune AlbumentationsX augmentation pipelines from Codex.",
+  "author": {
+    "name": "dKosarevsky",
+    "url": "https://github.com/dKosarevsky"
+  },
+  "homepage": "https://albumentations.ai/docs/integrations/mcp/",
+  "repository": "https://github.com/dKosarevsky/albu-mcp",
+  "license": "AGPL-3.0-or-later",
+  "keywords": [
+    "albumentationsx",
+    "computer-vision",
+    "augmentation",
+    "mcp"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "AlbumentationsX MCP",
+    "shortDescription": "Preview and tune CV augmentations",
+    "longDescription": "Use AlbumentationsX from Codex to discover transforms, validate pipelines, render bounded local previews, capture feedback, and export reviewed augmentation workflows.",
+    "developerName": "dKosarevsky",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://albumentations.ai/docs/integrations/mcp/",
+    "defaultPrompt": [
+      "Preview a bounded local image dataset and tune its augmentation pipeline.",
+      "Inspect this augmentation pipeline and explain risky transforms.",
+      "Build a small review packet for this computer-vision dataset."
+    ]
+  }
+}
