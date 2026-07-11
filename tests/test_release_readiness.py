@@ -69,6 +69,7 @@ EXPECTED_RELEASE_READINESS_CHECKS = [
     "evidence_first_cycle_report",
     "rc_release_decision_report",
     "governed_100_iteration_report",
+    "codex_plugin",
     "mcp_contract_snapshot",
     "output_contract_snapshot",
 ]
@@ -126,6 +127,7 @@ CLI_OUTPUT_CHECK_NAMES = [
     "evidence_first_cycle_report",
     "rc_release_decision_report",
     "governed_100_iteration_report",
+    "codex_plugin",
     "output_contract_snapshot",
 ]
 
@@ -155,6 +157,27 @@ def test_release_readiness_reports_version_mismatch(tmp_path: Path) -> None:
     assert len(failed) == 1
     assert failed[0].name == "release_version"
     assert "does not match tag version '0.0.0'" in failed[0].message
+
+
+def test_release_readiness_reports_codex_plugin_drift(tmp_path: Path) -> None:
+    plugin = json.loads(Path(".codex-plugin/plugin.json").read_text(encoding="utf-8"))
+    plugin["version"] = "0.0.0"
+    plugin_path = tmp_path / ".codex-plugin" / "plugin.json"
+    plugin_path.parent.mkdir()
+    plugin_path.write_text(json.dumps(plugin), encoding="utf-8")
+
+    report = check_release_readiness(
+        ReleaseReadinessConfig(
+            contract_output_work_dir=tmp_path / "contracts",
+            codex_plugin_manifest_path=plugin_path,
+        )
+    )
+
+    failed = [check for check in report.checks if not check.ok]
+    assert report.ok is False
+    assert len(failed) == 1
+    assert failed[0].name == "codex_plugin"
+    assert "plugin version '0.0.0' does not match project version '1.15.0'" in failed[0].message
 
 
 def test_release_readiness_cli_passes_fast_guards(tmp_path: Path) -> None:
