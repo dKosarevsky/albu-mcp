@@ -18,9 +18,9 @@ Run safe checks and local builds only. Do not create tags, GitHub Releases, publ
 ## P0 Summary
 
 - required_gate_count: `4`
-- recorded_gate_count: `0`
+- recorded_gate_count: `2`
 - missing_gate_count: `0`
-- blocked_gate_count: `4`
+- blocked_gate_count: `2`
 
 ## Safe Dry-Run Commands
 

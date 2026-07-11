@@ -12,8 +12,8 @@ Do not record `passed` from generated smoke output.
 
 - target_host_count: `2`
 - required_gate_count: `4`
-- blocked_gate_count: `4`
-- passed_gate_count: `0`
+- blocked_gate_count: `2`
+- passed_gate_count: `2`
 
 ## Pre-Capture Commands
 
@@ -25,7 +25,7 @@ Do not record `passed` from generated smoke output.
 
 | Host | Capture Status | Blocker | Gates | First Action | Next Doc |
 | --- | --- | --- | --- | --- | --- |
-| `Codex` | `blocked_until_operator_run` | `codex_tool_call_cancelled` | `first_10_minutes_replay`, `manual_host_ui` | Run Codex with visible MCP tool approval and complete run_host_smoke_check. | `docs/CODEX_CANCELLATION_TRIAGE.md` |
+| `Codex` | `blocked_until_operator_run` | `codex_tool_call_cancelled` |  | Run Codex with visible MCP tool approval and complete run_host_smoke_check. | `docs/CODEX_CANCELLATION_TRIAGE.md` |
 | `Claude Code` | `blocked_until_operator_run` | `claude_cli_missing` | `first_10_minutes_replay`, `manual_host_ui` | Install or expose the Claude Code CLI, then import the AlbumentationsX MCP config. | `docs/CLAUDE_CODE_SETUP_PATH.md` |
 
 ## Record Commands
@@ -34,12 +34,8 @@ Do not record `passed` from generated smoke output.
 ### Codex
 
 Passed evidence:
-- `uv run python scripts/record_host_manual_run.py --kind first-10-minutes --host Codex --status passed --date YYYY-MM-DD --evidence 'Codex completed first_10_minutes_replay in a real MCP host UI.' --artifact docs/assets/demo/demo_report.md`
-- `uv run python scripts/record_host_manual_run.py --host Codex --status passed --date YYYY-MM-DD --evidence 'Codex completed manual_host_ui in a real MCP host UI.'`
 
 Blocked evidence:
-- `uv run python scripts/record_host_manual_run.py --kind first-10-minutes --host Codex --status blocked --date YYYY-MM-DD --evidence 'Codex cancelled or blocked run_host_smoke_check before first_10_minutes_replay could pass in the real MCP host UI.'`
-- `uv run python scripts/record_host_manual_run.py --host Codex --status blocked --date YYYY-MM-DD --evidence 'Codex cancelled or blocked run_host_smoke_check before manual_host_ui could pass in the real MCP host UI.'`
 
 ### Claude Code
 

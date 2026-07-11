@@ -13,15 +13,12 @@ def test_p0_host_unblock_pack_maps_blocked_hosts_to_recovery_lanes() -> None:
     assert pack["pack_status"] == "blocked_evidence_triage_required"
     assert pack["rc_reopen_allowed"] is False
     assert pack["summary"] == {
-        "lane_count": 4,
-        "blocked_lane_count": 4,
+        "lane_count": 2,
+        "blocked_lane_count": 2,
         "missing_lane_count": 0,
     }
-    assert {lane["host"] for lane in pack["recovery_lanes"]} == {"Codex", "Claude Code"}
-    assert {lane["failure_class"] for lane in pack["recovery_lanes"]} == {
-        "codex_tool_call_cancelled",
-        "claude_cli_missing",
-    }
+    assert {lane["host"] for lane in pack["recovery_lanes"]} == {"Claude Code"}
+    assert {lane["failure_class"] for lane in pack["recovery_lanes"]} == {"claude_cli_missing"}
     assert all(
         lane["acceptance_criterion"].startswith("Replace this blocked record") for lane in pack["recovery_lanes"]
     )
@@ -34,7 +31,7 @@ def test_p0_host_unblock_pack_markdown_is_operator_focused() -> None:
     assert markdown.startswith("# P0 Host Evidence Unblock Pack\n")
     assert "Pack status: `blocked_evidence_triage_required`" in markdown
     assert "RC reopen allowed: `false`" in markdown
-    assert "| Codex | `first_10_minutes_replay` | `codex_tool_call_cancelled` |" in markdown
+    assert "| Codex | `first_10_minutes_replay` | `codex_tool_call_cancelled` |" not in markdown
     assert "| Claude Code | `manual_host_ui` | `claude_cli_missing` |" in markdown
     assert "Do not mark any P0 gate as passed until a real host run completes" in markdown
 

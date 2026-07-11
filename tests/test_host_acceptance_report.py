@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 
-def test_host_acceptance_report_tracks_blocked_p0_hosts() -> None:
+def test_host_acceptance_report_tracks_partial_p0_host_evidence() -> None:
     module = importlib.import_module("scripts.export_host_acceptance_report")
 
     report = module.build_host_acceptance_report(Path())
@@ -29,11 +29,11 @@ def test_host_acceptance_report_tracks_blocked_p0_hosts() -> None:
         "Cursor",
         "Codex",
     }
-    assert {item["status"] for item in report["manual_host_ui"]} == {"blocked", "pending"}
+    assert {item["status"] for item in report["manual_host_ui"]} == {"blocked", "passed", "pending"}
     assert {item["host"] for item in report["manual_host_ui"] if item["status"] == "blocked"} == {
         "Claude Code",
-        "Codex",
     }
+    assert {item["host"] for item in report["manual_host_ui"] if item["status"] == "passed"} == {"Codex"}
     assert {item["host"] for item in report["manual_host_ui"] if item["status"] == "pending"} == {
         "Claude Desktop",
         "Cursor",
@@ -44,7 +44,7 @@ def test_host_acceptance_report_tracks_blocked_p0_hosts() -> None:
         "Cursor",
         "Codex",
     }
-    assert {item["status"] for item in report["first_10_minutes_replay"]} == {"blocked", "pending"}
+    assert {item["status"] for item in report["first_10_minutes_replay"]} == {"blocked", "passed", "pending"}
 
 
 def test_host_acceptance_markdown_reports_pending_manual_status() -> None:
@@ -55,9 +55,9 @@ def test_host_acceptance_markdown_reports_pending_manual_status() -> None:
 
     assert "# Host Acceptance Evidence" in markdown
     assert "| Claude Desktop | pending | none | manual UI run not recorded |" in markdown
-    assert "| Codex | blocked | 2026-06-28 | Codex setup and P0 preflight passed" in markdown
+    assert "| Codex | passed | 2026-07-11 | Reviewer observed the interactive Codex TUI" in markdown
     assert "## First 10 Minutes Replay" in markdown
-    assert "| Codex | blocked | 2026-06-28 | Codex setup and preflight passed in this environment" in markdown
+    assert "| Codex | passed | 2026-07-11 | Reviewer-observed interactive Codex TUI replay" in markdown
     assert "| MCP Registry metadata publish check | automated |" in markdown
     assert "| host acceptance evidence freshness | automated |" in markdown
     assert "Manual Host UI: blocked" in markdown

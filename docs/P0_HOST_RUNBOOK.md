@@ -12,7 +12,7 @@ Never mark a host passed until a reviewer runs the real host UI. Keep hosts pend
 
 | Order | Host | Next Action | Packet |
 | --- | --- | --- | --- |
-| 1 | Codex | `triage_blocker` | `uv run python scripts/export_manual_host_acceptance_packet.py --host Codex --output /tmp/albu-host-codex.md` |
+| 1 | Codex | `no_action` | `uv run python scripts/export_manual_host_acceptance_packet.py --host Codex --output /tmp/albu-host-codex.md` |
 | 2 | Claude Code | `triage_blocker` | `uv run python scripts/export_manual_host_acceptance_packet.py --host 'Claude Code' --output /tmp/albu-host-claude-code.md` |
 
 ## Record Commands

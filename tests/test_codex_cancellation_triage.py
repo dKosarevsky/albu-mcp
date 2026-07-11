@@ -10,33 +10,30 @@ from scripts.export_codex_cancellation_triage import (
 )
 
 
-def test_codex_cancellation_triage_builds_blocked_codex_lanes() -> None:
+def test_codex_cancellation_triage_reports_recorded_codex_evidence() -> None:
     triage = build_codex_cancellation_triage()
 
-    assert triage["triage_status"] == "blocked_tool_call_cancellation"
+    assert triage["triage_status"] == "codex_evidence_recorded"
     assert triage["host"] == "Codex"
     assert triage["failure_class"] == "codex_tool_call_cancelled"
     assert triage["rc_reopen_allowed"] is False
     assert triage["summary"] == {
-        "affected_gate_count": 2,
-        "blocked_gate_count": 2,
+        "affected_gate_count": 0,
+        "blocked_gate_count": 0,
         "missing_gate_count": 0,
     }
-    assert [gate["gate"] for gate in triage["affected_gates"]] == [
-        "first_10_minutes_replay",
-        "manual_host_ui",
-    ]
-    assert all(gate["evidence_status"] == "blocked" for gate in triage["affected_gates"])
-    assert all("run_host_smoke_check" in command for command in triage["record_commands"]["blocked"])
+    assert triage["affected_gates"] == []
+    assert triage["record_commands"] == {"passed": [], "blocked": []}
+    assert "No Codex cancellation recovery lane remains" in triage["triage_policy"]
 
 
 def test_codex_cancellation_triage_markdown_is_operator_focused() -> None:
     markdown = render_codex_cancellation_triage_markdown(build_codex_cancellation_triage())
 
     assert markdown.startswith("# Codex Cancellation Triage\n")
-    assert "Triage status: `blocked_tool_call_cancellation`" in markdown
-    assert "A cancelled Codex MCP tool call is blocking evidence" in markdown
-    assert "| `first_10_minutes_replay` | `blocked` |" in markdown
+    assert "Triage status: `codex_evidence_recorded`" in markdown
+    assert "No Codex cancellation recovery lane remains" in markdown
+    assert "| `none` | `recorded` | `none` | `none` |" in markdown
     assert "run_host_smoke_check completes in Codex and reports preview_ready=true" in markdown
     assert "Do not use generated smoke output as real Codex UI evidence" in markdown
 

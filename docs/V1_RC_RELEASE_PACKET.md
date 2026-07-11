@@ -8,9 +8,9 @@ Release candidate allowed: `false`
 ## P0 Summary
 
 - host_count: `2`
-- passed_gate_count: `0`
+- passed_gate_count: `2`
 - required_gate_count: `4`
-- blocked_gate_count: `4`
+- blocked_gate_count: `2`
 - missing_gate_count: `0`
 
 ## Blocked Release Steps

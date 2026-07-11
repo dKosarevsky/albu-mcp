@@ -11,9 +11,9 @@ Do not create an RC tag until all P0 host gates are passed in real host UI.
 ## Summary
 
 - required_gate_count: `4`
-- recorded_gate_count: `0`
+- recorded_gate_count: `2`
 - missing_gate_count: `0`
-- blocked_gate_count: `4`
+- blocked_gate_count: `2`
 
 ## Operator Lanes
 
@@ -30,8 +30,8 @@ Record commands:
 
 Gate statuses:
 
-- `first_10_minutes_replay`: `blocked`
-- `manual_host_ui`: `blocked`
+- `first_10_minutes_replay`: `passed`
+- `manual_host_ui`: `passed`
 
 ## Claude Code
 

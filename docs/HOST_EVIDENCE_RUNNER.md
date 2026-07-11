@@ -10,9 +10,9 @@ Run this packet in real MCP host UI sessions only; generated smoke output is not
 
 ## Summary
 
-- target_host_count: `2`
-- runner_lane_count: `4`
-- blocked_lane_count: `4`
+- target_host_count: `1`
+- runner_lane_count: `2`
+- blocked_lane_count: `2`
 - preflight_check_count: `7`
 
 ## Preflight Commands
@@ -24,20 +24,9 @@ Run this packet in real MCP host UI sessions only; generated smoke output is not
 
 | Host | Lane Status | Gates | Prompt |
 | --- | --- | --- | --- |
-| Codex | `blocked_evidence_required` | `first_10_minutes_replay`, `manual_host_ui` | In Codex, list AlbumentationsX MCP tools, read albumentationsx://examples/client-smoke, call run_host_smoke_check, then run the First 10 Minutes workflow only if preview_ready is true. |
 | Claude Code | `blocked_evidence_required` | `first_10_minutes_replay`, `manual_host_ui` | In Claude Code, list AlbumentationsX MCP tools, read albumentationsx://examples/client-smoke, call run_host_smoke_check, then run the First 10 Minutes workflow only if preview_ready is true. |
 
 ## Record Commands
-
-### Codex
-
-Passed evidence:
-- `uv run python scripts/record_host_manual_run.py --kind first-10-minutes --host Codex --status passed --date YYYY-MM-DD --evidence 'Codex completed first_10_minutes_replay in a real MCP host UI.' --artifact docs/assets/demo/demo_report.md`
-- `uv run python scripts/record_host_manual_run.py --host Codex --status passed --date YYYY-MM-DD --evidence 'Codex completed manual_host_ui in a real MCP host UI.'`
-
-Blocked evidence:
-- `uv run python scripts/record_host_manual_run.py --kind first-10-minutes --host Codex --status blocked --date YYYY-MM-DD --evidence 'Codex could not complete first_10_minutes_replay; record the first reviewer-observed blocker only.'`
-- `uv run python scripts/record_host_manual_run.py --host Codex --status blocked --date YYYY-MM-DD --evidence 'Codex could not complete manual_host_ui; record the first reviewer-observed blocker only.'`
 
 ### Claude Code
 

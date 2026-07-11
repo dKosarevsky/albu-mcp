@@ -10,12 +10,12 @@ Record only redacted, reviewer-observed host UI evidence.
 
 ## Summary
 
-- target_host_count: `2`
+- target_host_count: `1`
 - required_gate_count: `4`
-- passed_gate_count: `0`
-- blocked_gate_count: `4`
+- passed_gate_count: `2`
+- blocked_gate_count: `2`
 - setup_probe_check_count: `6`
-- runner_lane_count: `4`
+- runner_lane_count: `2`
 
 ## Blocked Hosts
 
@@ -26,7 +26,7 @@ Record only redacted, reviewer-observed host UI evidence.
 
 | Host | Status | Blocker | Gates | First Action | Next Doc |
 | --- | --- | --- | --- | --- | --- |
-| Codex | `blocked_tool_call_cancellation` | `codex_tool_call_cancelled` | `first_10_minutes_replay`, `manual_host_ui` | Run Codex with visible MCP tool approval and complete run_host_smoke_check. | `docs/CODEX_CANCELLATION_TRIAGE.md` |
+| Codex | `codex_evidence_recorded` | `codex_tool_call_cancelled` |  | Run Codex with visible MCP tool approval and complete run_host_smoke_check. | `docs/CODEX_CANCELLATION_TRIAGE.md` |
 | Claude Code | `blocked_until_claude_cli_visible` | `claude_cli_missing` | `first_10_minutes_replay`, `manual_host_ui` | Install or expose the Claude Code CLI, then import the AlbumentationsX MCP config. | `docs/CLAUDE_CODE_SETUP_PATH.md` |
 
 ## Operator Commands

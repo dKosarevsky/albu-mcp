@@ -4,7 +4,7 @@ Package: `albumentationsx-mcp==1.15.0`
 Stabilization status: `blocked_until_trust_gates_pass`
 Ready for v1: `false`
 Stable v1 allowed: `false`
-Manual gate count: `8`
+Manual gate count: `6`
 Cutover status: `blocked_by_p0_evidence`
 
 ## Feature Freeze Policy

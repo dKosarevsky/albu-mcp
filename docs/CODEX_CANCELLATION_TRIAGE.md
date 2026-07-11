@@ -1,26 +1,25 @@
 # Codex Cancellation Triage
 
-Triage status: `blocked_tool_call_cancellation`
+Triage status: `codex_evidence_recorded`
 Host: `Codex`
 Failure class: `codex_tool_call_cancelled`
 RC reopen allowed: `false`
 
 ## Triage Policy
 
-A cancelled Codex MCP tool call is blocking evidence, not a passed host run. Keep the P0 gate closed until Codex completes the real host flow and records dated reviewer-observed evidence.
+Codex has dated reviewer-observed evidence for both required host gates. No Codex cancellation recovery lane remains; RC readiness may still be blocked by other hosts.
 
 ## Summary
 
-- affected_gate_count: `2`
-- blocked_gate_count: `2`
+- affected_gate_count: `0`
+- blocked_gate_count: `0`
 - missing_gate_count: `0`
 
 ## Affected Gates
 
 | Gate | Evidence Status | Passed Command | Blocked Command |
 | --- | --- | --- | --- |
-| `first_10_minutes_replay` | `blocked` | `uv run python scripts/record_host_manual_run.py --kind first-10-minutes --host Codex --status passed --date YYYY-MM-DD --evidence 'Codex completed first_10_minutes_replay in a real MCP host UI.' --artifact docs/assets/demo/demo_report.md` | `uv run python scripts/record_host_manual_run.py --kind first-10-minutes --host Codex --status blocked --date YYYY-MM-DD --evidence 'Codex cancelled or blocked run_host_smoke_check before first_10_minutes_replay could pass in the real MCP host UI.'` |
-| `manual_host_ui` | `blocked` | `uv run python scripts/record_host_manual_run.py --host Codex --status passed --date YYYY-MM-DD --evidence 'Codex completed manual_host_ui in a real MCP host UI.'` | `uv run python scripts/record_host_manual_run.py --host Codex --status blocked --date YYYY-MM-DD --evidence 'Codex cancelled or blocked run_host_smoke_check before manual_host_ui could pass in the real MCP host UI.'` |
+| `none` | `recorded` | `none` | `none` |
 
 ## Safe Diagnostics
 
@@ -46,12 +45,8 @@ A cancelled Codex MCP tool call is blocking evidence, not a passed host run. Kee
 ## Record Commands
 
 Passed evidence:
-- `uv run python scripts/record_host_manual_run.py --kind first-10-minutes --host Codex --status passed --date YYYY-MM-DD --evidence 'Codex completed first_10_minutes_replay in a real MCP host UI.' --artifact docs/assets/demo/demo_report.md`
-- `uv run python scripts/record_host_manual_run.py --host Codex --status passed --date YYYY-MM-DD --evidence 'Codex completed manual_host_ui in a real MCP host UI.'`
 
 Blocked evidence:
-- `uv run python scripts/record_host_manual_run.py --kind first-10-minutes --host Codex --status blocked --date YYYY-MM-DD --evidence 'Codex cancelled or blocked run_host_smoke_check before first_10_minutes_replay could pass in the real MCP host UI.'`
-- `uv run python scripts/record_host_manual_run.py --host Codex --status blocked --date YYYY-MM-DD --evidence 'Codex cancelled or blocked run_host_smoke_check before manual_host_ui could pass in the real MCP host UI.'`
 
 ## Non-Goals
 

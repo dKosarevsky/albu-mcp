@@ -5,7 +5,7 @@ Server version: `1.15.0`
 Ready for v1: `false`
 Decision: `hold_v1`
 Release candidate allowed: `false`
-Host blocker count: `8`
+Host blocker count: `6`
 
 ## Decision Policy
 

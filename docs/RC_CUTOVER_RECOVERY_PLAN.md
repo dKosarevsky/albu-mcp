@@ -15,9 +15,9 @@ Do not tag, create a GitHub Release, or publish to PyPI while recovery_status is
 ## P0 Summary
 
 - required_gate_count: `4`
-- recorded_gate_count: `0`
+- recorded_gate_count: `2`
 - missing_gate_count: `0`
-- blocked_gate_count: `4`
+- blocked_gate_count: `2`
 
 ## Recovery Steps
 
@@ -28,8 +28,6 @@ Do not tag, create a GitHub Release, or publish to PyPI while recovery_status is
 
 ## Failed Gates
 
-- Codex / `first_10_minutes_replay`: `blocked` on `2026-06-28`
-- Codex / `manual_host_ui`: `blocked` on `2026-06-28`
 - Claude Code / `first_10_minutes_replay`: `blocked` on `2026-06-28`
 - Claude Code / `manual_host_ui`: `blocked` on `2026-06-28`
 

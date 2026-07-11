@@ -11,16 +11,16 @@ Only docs/HOST_MANUAL_RUNS.json can satisfy a P0 gate.
 ## Summary
 
 - required_gate_count: `4`
-- recorded_gate_count: `0`
+- recorded_gate_count: `2`
 - missing_gate_count: `0`
-- blocked_gate_count: `4`
+- blocked_gate_count: `2`
 
 ## Gate Records
 
 | Host | Gate | Record Status | Date | Evidence | Record Command |
 | --- | --- | --- | --- | --- | --- |
-| Codex | `first_10_minutes_replay` | `blocked` | `2026-06-28` | Codex setup and preflight passed in this environment, but this Codex API session did not expose a reviewer-observed real MCP host UI flow; first-10-minutes replay was not executed. | `uv run python scripts/record_host_manual_run.py --kind first-10-minutes --host Codex --status passed --date YYYY-MM-DD --evidence '<redacted evidence>' --artifact docs/assets/demo/demo_report.md` |
-| Codex | `manual_host_ui` | `blocked` | `2026-06-28` | Codex setup and P0 preflight passed, but no reviewer-observed real MCP host UI completed run_host_smoke_check or preview_ready confirmation in this session. | `uv run python scripts/record_host_manual_run.py --host Codex --status passed --date YYYY-MM-DD --evidence '<redacted evidence>'` |
+| Codex | `first_10_minutes_replay` | `passed` | `2026-07-11` | Reviewer-observed interactive Codex TUI replay loaded the installed plugin and completed smoke check, onboarding, baseline and candidate previews, visual review, tuning decision, and export over one local fixture; sanitized receipt and contact sheets are committed. | `uv run python scripts/record_host_manual_run.py --kind first-10-minutes --host Codex --status passed --date YYYY-MM-DD --evidence '<redacted evidence>' --artifact docs/assets/demo/demo_report.md` |
+| Codex | `manual_host_ui` | `passed` | `2026-07-11` | Reviewer observed the interactive Codex TUI discover AlbumentationsX MCP tools; run_host_smoke_check returned status=ok, preview_ready=true, six passing diagnostics, and no warnings. Receipt: docs/host-evidence/codex-2026-07-11.md. | `uv run python scripts/record_host_manual_run.py --host Codex --status passed --date YYYY-MM-DD --evidence '<redacted evidence>'` |
 | Claude Code | `first_10_minutes_replay` | `blocked` | `2026-06-28` | Claude Code host run could not start in this environment because claude CLI was not found in PATH during live setup probe; first-10-minutes replay was not executed. | `uv run python scripts/record_host_manual_run.py --kind first-10-minutes --host 'Claude Code' --status passed --date YYYY-MM-DD --evidence '<redacted evidence>' --artifact docs/assets/demo/demo_report.md` |
 | Claude Code | `manual_host_ui` | `blocked` | `2026-06-28` | Claude Code manual host UI run could not start in this environment because claude CLI was not found in PATH during live setup probe; MCP tools/resources were not observed in Claude Code. | `uv run python scripts/record_host_manual_run.py --host 'Claude Code' --status passed --date YYYY-MM-DD --evidence '<redacted evidence>'` |
 

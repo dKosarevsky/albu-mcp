@@ -15,13 +15,14 @@ def test_p0_evidence_status_tracks_rc_hosts_and_blocked_gates() -> None:
     assert status["rc_ready"] is False
     assert status["summary"] == {
         "host_count": 2,
-        "passed_gate_count": 0,
+        "passed_gate_count": 2,
         "required_gate_count": 4,
-        "blocked_gate_count": 4,
+        "blocked_gate_count": 2,
         "missing_gate_count": 0,
     }
     assert [item["host"] for item in status["host_statuses"]] == ["Codex", "Claude Code"]
-    assert all(gate["status"] == "blocked" for item in status["host_statuses"] for gate in item["gates"])
+    status_by_host = {item["host"]: {gate["status"] for gate in item["gates"]} for item in status["host_statuses"]}
+    assert status_by_host == {"Codex": {"recorded"}, "Claude Code": {"blocked"}}
     assert status["next_action"] == "Run P0 host runbook and record real UI evidence."
 
 
@@ -31,7 +32,7 @@ def test_p0_evidence_status_markdown_is_reviewable() -> None:
     assert markdown.startswith("# P0 Evidence Status\n")
     assert "RC decision: `hold_rc`" in markdown
     assert "RC ready: `false`" in markdown
-    assert "| Codex | `first_10_minutes_replay` | `blocked` |" in markdown
+    assert "| Codex | `first_10_minutes_replay` | `recorded` | `no_action` |" in markdown
     assert "| Claude Code | `manual_host_ui` | `blocked` |" in markdown
     assert "Run P0 host runbook and record real UI evidence." in markdown
 
