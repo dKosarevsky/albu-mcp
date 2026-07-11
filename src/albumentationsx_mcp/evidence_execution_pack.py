@@ -287,6 +287,7 @@ def _render_readme(
     manifest_filenames: list[str],
     beta_filenames: list[str],
 ) -> str:
+    status_command = _execution_pack_status_command(request)
     filenames = [
         "README.md",
         "session-plan.md",
@@ -312,7 +313,11 @@ def _render_readme(
         "## Evidence Boundary\n\n"
         "Only manually filled manifests and beta responses that pass validation can be imported as real evidence. "
         "Do not commit private screenshots, full host logs, local paths, dataset contents, credentials, "
-        "or raw user data.\n"
+        "or raw user data.\n\n"
+        "## Operator Status\n\n"
+        "Run this no-write status command after generating the pack and after every evidence edit:\n\n"
+        f"- `{status_command}`\n\n"
+        "`status.md` is an operator report, not evidence. This command does not change host or beta records.\n"
     )
 
 
@@ -367,6 +372,7 @@ def _render_post_session_commands(
     manifest_filenames: list[str],
     beta_filenames: list[str],
 ) -> str:
+    status_command = _execution_pack_status_command(request)
     manifest_paths = [_quote_path(request.output_dir / filename) for filename in manifest_filenames]
     beta_paths = [_quote_path(request.output_dir / filename) for filename in beta_filenames]
     beta_dir = _quote_path(request.output_dir / _BETA_RESPONSE_DIR)
@@ -389,6 +395,10 @@ def _render_post_session_commands(
     return (
         "# Post-Session Commands\n\n"
         "Run these only after the real session artifacts are manually filled and reviewed.\n\n"
+        "## Pack Status\n\n"
+        f"- `{status_command}`\n\n"
+        "Refresh `status.md` after every evidence edit. Continue to import review only when it reports "
+        "`ready_for_import_review`.\n\n"
         "## Validate Host Manifests\n\n"
         f"{validate_manifest_commands}\n\n"
         "## Validate Beta Responses\n\n"
@@ -396,16 +406,27 @@ def _render_post_session_commands(
         "## Preflight\n\n"
         f"- `{import_wizard_base.replace('import-wizard', 'preflight')} --format markdown "
         f"--output {preflight_path}`\n\n"
-        "## Import Wizard\n\n"
-        f"- `{import_wizard_base} --format markdown --output {import_wizard_path}`\n"
+        "## Import Wizard (No Write)\n\n"
+        f"- `{import_wizard_base} --format markdown --output {import_wizard_path}`\n\n"
+        "## Reviewed Import (Writes Records)\n\n"
         f"- `{import_wizard_base} --import-ready --format json`\n\n"
-        "The `--import-ready` command writes records. Run it only when the wizard reports ready-to-import inputs "
-        "and the reviewer approves the import.\n"
+        "Run the reviewed import only when `status.md` reports `ready_for_import_review`, `import-wizard.md` reports "
+        "ready-to-import inputs, and the reviewer explicitly approves the import.\n"
     )
 
 
 def _quote_path(path: Path) -> str:
     return shlex.quote(str(path))
+
+
+def _execution_pack_status_command(request: EvidenceExecutionPackRequest) -> str:
+    return (
+        "albu-mcp evidence execution-pack-status "
+        f"--input-dir {_quote_path(request.output_dir)} "
+        f"--host-records {_quote_path(request.host_records_path)} "
+        f"--beta-records {_quote_path(request.beta_records_path)} "
+        f"--format markdown --output {_quote_path(request.output_dir / 'status.md')}"
+    )
 
 
 def _pack_missing_files(input_dir: Path) -> tuple[list[str], list[str]]:
