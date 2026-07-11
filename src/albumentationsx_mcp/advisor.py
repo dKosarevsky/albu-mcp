@@ -80,6 +80,15 @@ _FEEDBACK_TAGS = [
         ),
     ),
     FeedbackTagInfo(
+        name="exposure_too_weak",
+        description="Brightness and contrast variation is too subtle to improve robustness.",
+        applies_to=["color"],
+        mitigation=(
+            "Increase brightness and contrast probability and ranges conservatively; "
+            "append :low, :medium, or :high for severity. Safety-reduction tags take precedence."
+        ),
+    ),
+    FeedbackTagInfo(
         name="color_shift",
         description="Hue, saturation, RGB, or color jitter changes make samples look unrealistic.",
         applies_to=["color"],

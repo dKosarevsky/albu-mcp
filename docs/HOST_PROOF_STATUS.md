@@ -1,25 +1,25 @@
 # Host Proof Status
 
-Current release: `v1.15.0`
+Current release: `v1.16.0`
 
 This status separates machine-verifiable MCP proof from real host UI evidence. Do not mark manual host runs as passed
 until a reviewer completes the flow in the actual host UI.
 
 ## Machine Proof
 
-- Release workflow: `28049320843`
-- Manual MCP Registry verification workflow: `28049831952`
-- PyPI package: `albumentationsx-mcp==1.15.0`
-- MCP Registry: `io.github.dKosarevsky/albu-mcp` active/latest for `1.15.0`
+- Release workflow: tag-triggered through `.github/workflows/release.yml`
+- MCP Registry verification: automated after the published-package smoke check
+- PyPI package: `albumentationsx-mcp==1.16.0`
+- MCP Registry target: `io.github.dKosarevsky/albu-mcp` version `1.16.0`
 - Host proof packet generated for Codex and Claude Code with
   `scripts/export_manual_host_acceptance_packet.py --host Codex --host "Claude Code"`.
 
 Verified commands:
 
 ```bash
-uv run python scripts/check_release_readiness.py --tag v1.15.0
+uv run python scripts/check_release_readiness.py --tag v1.16.0
 uv run python scripts/check_mcp_registry_status.py --retries 6 --retry-delay 10 --timeout 30
-uv run python scripts/check_published_package_smoke.py --version 1.15.0
+uv run python scripts/check_published_package_smoke.py --version 1.16.0
 uv run python scripts/export_manual_host_acceptance_packet.py --host Codex --host "Claude Code"
 uv run python scripts/run_golden_evals.py --work-dir /private/tmp/albu-mcp-host-proof-golden
 ```
@@ -44,8 +44,10 @@ interactive_tuning_session_flow: ok
 
 ## Manual Host Evidence
 
-- Manual Host UI: pending
-- First 10 Minutes Replay: pending
+- Codex Manual Host UI: passed on 2026-07-11
+- Codex First 10 Minutes Replay: passed on 2026-07-11
+- Claude Code Manual Host UI: blocked
+- Claude Code First 10 Minutes Replay: blocked
 
 Current replay gate:
 
@@ -53,5 +55,6 @@ Current replay gate:
 uv run python scripts/check_first_10_minutes_replay.py --host Codex --host "Claude Code"
 ```
 
-Result: pending for both Codex and Claude Code because no real host UI replay has been recorded in
-`docs/HOST_MANUAL_RUNS.json`.
+Result: Codex is recorded; Claude Code remains blocked because the CLI was unavailable in the observed environment.
+Canonical evidence and the sanitized Codex receipt are in `docs/HOST_MANUAL_RUNS.json` and
+`docs/host-evidence/codex-2026-07-11.md`.

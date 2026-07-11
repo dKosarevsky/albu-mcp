@@ -11,20 +11,20 @@ def test_p0_host_runbook_contains_only_p0_hosts() -> None:
     runbook = build_p0_host_runbook()
 
     assert runbook["target_hosts"] == ["Codex", "Claude Code"]
-    assert [item["host"] for item in runbook["run_queue"]] == ["Codex", "Claude Code"]
+    assert [item["host"] for item in runbook["run_queue"]] == ["Claude Code"]
     assert all(item["priority"] == "p0" for item in runbook["run_queue"])
     assert all(item["next_action"] == "triage_blocker" for item in runbook["run_queue"])
     assert "Cursor" not in {item["host"] for item in runbook["run_queue"]}
     assert "Claude Desktop" not in {item["host"] for item in runbook["run_queue"]}
     assert (
-        "uv run python scripts/export_manual_host_acceptance_packet.py --host Codex"
+        "uv run python scripts/export_manual_host_acceptance_packet.py --host 'Claude Code'"
         in runbook["run_queue"][0]["packet_command"]
     )
     assert (
-        "uv run python scripts/record_host_manual_run.py --host Codex"
+        "uv run python scripts/record_host_manual_run.py --host 'Claude Code'"
         in runbook["run_queue"][0]["manual_record_command"]
     )
-    assert "--kind first-10-minutes --host Codex" in runbook["run_queue"][0]["first_10_minutes_record_command"]
+    assert "--kind first-10-minutes --host 'Claude Code'" in runbook["run_queue"][0]["first_10_minutes_record_command"]
 
 
 def test_p0_host_runbook_markdown_is_short_and_actionable() -> None:
@@ -33,11 +33,11 @@ def test_p0_host_runbook_markdown_is_short_and_actionable() -> None:
     assert markdown.startswith("# P0 Host Runbook\n")
     assert "Target hosts: `Codex, Claude Code`" in markdown
     assert "## P0 Queue" in markdown
-    assert "| 1 | Codex | `triage_blocker` |" in markdown
-    assert "| 2 | Claude Code | `triage_blocker` |" in markdown
+    assert "| 1 | Claude Code | `triage_blocker` |" in markdown
     assert "## Record Commands" in markdown
-    assert "record_host_manual_run.py --host Codex" in markdown
-    assert "record_host_manual_run.py --kind first-10-minutes --host Codex" in markdown
+    assert "record_host_manual_run.py --host 'Claude Code'" in markdown
+    assert "record_host_manual_run.py --kind first-10-minutes --host 'Claude Code'" in markdown
+    assert "### Codex" not in markdown
     assert "Cursor" not in markdown
     assert "Claude Desktop" not in markdown
 

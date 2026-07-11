@@ -360,7 +360,7 @@ _HOST_EXAMPLES = {
     ),
     "dataset-onboarding": HostExample(
         name="dataset-onboarding",
-        goal="Plan a first safe AlbumentationsX preview from a local image dataset folder.",
+        goal="Plan a first safe AlbumentationsX preview from one local image or an image directory.",
         trigger_phrase="plan the first AlbumentationsX dataset preview",
         steps=[
             HostExampleStep(
@@ -394,7 +394,7 @@ _HOST_EXAMPLES = {
             ),
         ],
         success_criteria=[
-            "The dataset path is under an allowed root and contains supported image files.",
+            "The image source is under an allowed root and is a supported image or contains supported images.",
             "The recommended recipe and pipeline validate for the selected targets.",
             "The host validates the generated preview request before calling render_preview_batch.",
             "The first contact sheet is reviewed before increasing sample size or intensity.",

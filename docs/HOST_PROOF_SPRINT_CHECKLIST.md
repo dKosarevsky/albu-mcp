@@ -1,6 +1,6 @@
 # Host Proof Sprint Checklist
 
-Package: `albumentationsx-mcp==1.15.0`
+Package: `albumentationsx-mcp==1.16.0`
 Ready for v1: `false`
 
 ## Current Blockers
@@ -41,8 +41,8 @@ Ready for v1: `false`
 
 ### Codex
 
-- Manual UI status: `blocked`
-- First 10 Minutes status: `blocked`
+- Manual UI status: `recorded`
+- First 10 Minutes status: `recorded`
 - Run the packet prompt in the real host UI before recording evidence.
 - Manual UI record command: `uv run python scripts/record_host_manual_run.py --host Codex --status passed --date YYYY-MM-DD --evidence 'Codex listed MCP tools and completed run_host_smoke_check in the host UI.'`
 - First 10 Minutes record command: `uv run python scripts/record_host_manual_run.py --kind first-10-minutes --host Codex --status passed --date YYYY-MM-DD --evidence 'Codex completed smoke check, preview validation, baseline and candidate render, comparison, and pipeline export.' --artifact docs/assets/demo/demo_report.md`

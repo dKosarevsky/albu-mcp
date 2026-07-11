@@ -17,7 +17,7 @@ AlbumentationsX MCP is a thin, typed MCP layer around existing AlbumentationsX p
 - discover transforms and schemas from `albu-spec`;
 - recommend and validate augmentation pipelines;
 - render local batch previews and compare preview runs;
-- record concrete feedback such as `too_noisy:high`;
+- record concrete feedback such as `too_noisy:high` or `exposure_too_weak:medium`;
 - export accepted pipelines and review reports.
 
 The server does not execute arbitrary Python, fetch remote images, overwrite datasets, or train models. Local preview access is bounded by `--allowed-root`, and generated artifacts are written under `--artifact-root`.
@@ -73,7 +73,7 @@ After connecting an MCP host:
 1. Read `albumentationsx://examples/client-smoke`.
 2. Call `run_host_smoke_check`.
 3. Continue only when `preview_ready` is true.
-4. For a real folder, call `build_review_packet` to sample local images and get one first-preview handoff.
+4. For one real image or a folder, call `build_review_packet` to get a bounded first-preview handoff.
 5. Replace or reuse the paths in `preview_request_template.request`.
 6. Call `validate_preview_request` before rendering user-provided paths.
 7. Call `render_preview_batch` on a small local image set.
@@ -89,7 +89,7 @@ details and `remediation_actions` are documented in [docs/USAGE.md](docs/USAGE.m
 - Pipeline validation and explanation before rendering.
 - Preview request validation for missing files, outside-root paths, masks, and annotation counts.
 - Read-only dataset quality inspection before rendering previews.
-- Read-only dataset onboarding and review packets that build bbox/mask-aware first-preview templates.
+- Read-only image/directory onboarding and review packets that build bbox/mask-aware first-preview templates.
 - Deterministic single-image and batch previews with contact sheets.
 - Preview comparison with `quality_summary` and suggested feedback tags.
 - Concrete preview feedback, interactive tuning sessions, ranking, dataset scoring, and visual reports.

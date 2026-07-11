@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from albumentationsx_mcp.models import (
     ImageQualityAggregate,
     PreviewManifestSummary,
@@ -9,6 +11,26 @@ from albumentationsx_mcp.models import (
     QualityFinding,
 )
 from albumentationsx_mcp.review_agent import build_review_agent_plan, interpret_preview_feedback
+
+
+@pytest.mark.parametrize(
+    ("note", "expected_severity"),
+    [
+        ("The candidate is visually unchanged from the baseline.", "medium"),
+        ("The exposure change is too subtle.", "high"),
+        ("Use stronger brightness and contrast variation.", "medium"),
+    ],
+)
+def test_review_agent_interprets_weak_exposure_feedback(note: str, expected_severity: str) -> None:
+    interpretation = interpret_preview_feedback(note)
+
+    assert interpretation.feedback_tags == [f"exposure_too_weak:{expected_severity}"]
+    assert interpretation.feedback_intents == ["increase_exposure_variation"]
+    assert interpretation.transform_guidance == [
+        "Increase brightness/contrast probability or numeric ranges within safe bounds."
+    ]
+    assert interpretation.recommended_next_tool == "adjust_pipeline"
+    assert any("highlights" in item for item in interpretation.safety_checks)
 
 
 def test_review_agent_interprets_free_form_negative_feedback() -> None:

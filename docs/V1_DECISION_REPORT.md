@@ -1,11 +1,11 @@
 # V1 Decision Report
 
-Package: `albumentationsx-mcp==1.15.0`
-Server version: `1.15.0`
+Package: `albumentationsx-mcp==1.16.0`
+Server version: `1.16.0`
 Ready for v1: `false`
 Decision: `hold_v1`
 Release candidate allowed: `false`
-Host blocker count: `8`
+Host blocker count: `6`
 
 ## Decision Policy
 

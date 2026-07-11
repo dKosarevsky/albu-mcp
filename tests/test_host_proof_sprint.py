@@ -57,13 +57,13 @@ def test_host_proof_sprint_cli_outputs_json() -> None:
     assert payload["checks"][0]["name"] == "runbook"
 
 
-def test_host_proof_status_records_v115_machine_proof_without_claiming_manual_ui() -> None:
+def test_host_proof_status_records_v116_machine_and_codex_host_proof() -> None:
     status = Path("docs/HOST_PROOF_STATUS.md").read_text(encoding="utf-8")
 
-    assert "v1.15.0" in status
-    assert "28049831952" in status
-    assert "Manual Host UI: pending" in status
-    assert "First 10 Minutes Replay: pending" in status
+    assert "v1.16.0" in status
+    assert "Codex Manual Host UI: passed on 2026-07-11" in status
+    assert "Codex First 10 Minutes Replay: passed on 2026-07-11" in status
+    assert "Claude Code Manual Host UI: blocked" in status
     assert 'scripts/check_first_10_minutes_replay.py --host Codex --host "Claude Code"' in status
     assert "client_smoke_resource_flow: ok" in status
 

@@ -39,11 +39,12 @@
             "allowed_roots": [
               "<OUTPUT_CONTRACT_ROOT>/review-packet/images"
             ],
-            "path": "<OUTPUT_CONTRACT_ROOT>/review-packet/images"
+            "path": "<OUTPUT_CONTRACT_ROOT>/review-packet/images",
+            "path_kind": "directory"
           },
           "severity": "info",
           "status": "ok",
-          "summary": "Dataset path is accessible: <OUTPUT_CONTRACT_ROOT>/review-packet/images"
+          "summary": "Image source is accessible: <OUTPUT_CONTRACT_ROOT>/review-packet/images"
         },
         {
           "code": "dataset_images_found",
@@ -168,6 +169,7 @@
             "selected": [
               "too_noisy",
               "too_blurry",
+              "exposure_too_weak",
               "object_unrecognizable"
             ]
           },
@@ -190,6 +192,7 @@
         "feedback_tags": [
           "too_noisy",
           "too_blurry",
+          "exposure_too_weak",
           "object_unrecognizable"
         ],
         "intensity": "low",
@@ -1074,11 +1077,12 @@
           "allowed_roots": [
             "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding"
           ],
-          "path": "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding"
+          "path": "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding",
+          "path_kind": "directory"
         },
         "severity": "info",
         "status": "ok",
-        "summary": "Dataset path is accessible: <OUTPUT_CONTRACT_ROOT>/dataset-onboarding"
+        "summary": "Image source is accessible: <OUTPUT_CONTRACT_ROOT>/dataset-onboarding"
       },
       {
         "code": "dataset_images_found",
@@ -1301,6 +1305,7 @@
           "rationale": "These feedback tags match the transforms and failure modes most likely to matter for this task.",
           "selected": [
             "too_distorted",
+            "exposure_too_weak",
             "object_unrecognizable"
           ]
         },
@@ -1322,6 +1327,7 @@
       ],
       "feedback_tags": [
         "too_distorted",
+        "exposure_too_weak",
         "object_unrecognizable"
       ],
       "intensity": "low",
@@ -1652,6 +1658,7 @@
           "feedback_tags": [
             "too_noisy",
             "too_blurry",
+            "exposure_too_weak",
             "object_unrecognizable"
           ],
           "intensity": "low",
@@ -1851,6 +1858,7 @@
           "feedback_tags": [
             "too_noisy",
             "too_blurry",
+            "exposure_too_weak",
             "object_unrecognizable"
           ],
           "intensity": "low",

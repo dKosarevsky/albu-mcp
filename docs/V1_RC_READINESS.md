@@ -1,6 +1,6 @@
 # V1 RC Readiness Report
 
-Package: `albumentationsx-mcp==1.15.0`
+Package: `albumentationsx-mcp==1.16.0`
 Required RC hosts: `Codex, Claude Code`
 RC decision: `hold_rc`
 RC release candidate allowed: `false`
@@ -14,8 +14,6 @@ RC requires real P0 host evidence; stable v1 requires every supported host gate.
 
 | Host | Priority | Gate | Evidence Status | Next Action |
 | --- | --- | --- | --- | --- |
-| Codex | `p0` | `first_10_minutes_replay` | `blocked` | `triage_blocker` |
-| Codex | `p0` | `manual_host_ui` | `blocked` | `triage_blocker` |
 | Claude Code | `p0` | `first_10_minutes_replay` | `blocked` | `triage_blocker` |
 | Claude Code | `p0` | `manual_host_ui` | `blocked` | `triage_blocker` |
 

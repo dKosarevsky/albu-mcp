@@ -4,10 +4,20 @@ from __future__ import annotations
 
 from typing import Literal
 
-from albumentationsx_mcp.feedback import normalize_feedback_tags, severity_scaled_factor
+from albumentationsx_mcp.feedback import (
+    FeedbackSeverity,
+    normalize_feedback_tags,
+    severity_scaled_factor,
+    severity_scaled_growth,
+)
 from albumentationsx_mcp.models import ComposeSpec, TransformSpec
 
 Intensity = Literal["low", "medium", "high"]
+
+_EXPOSURE_PROBABILITY_FLOOR: dict[FeedbackSeverity, float] = {"low": 0.4, "medium": 0.65, "high": 1.0}
+_EXPOSURE_DEFAULT_LIMIT: dict[FeedbackSeverity, float] = {"low": 0.2, "medium": 0.3, "high": 0.4}
+_EXPOSURE_LIMIT_CAP = 1.0
+_EXPOSURE_SAFETY_TAGS = frozenset({"too_dark", "too_bright", "color_shift", "object_unrecognizable"})
 
 
 def recommend_pipeline(task: str, intensity: Intensity = "medium", targets: list[str] | None = None) -> ComposeSpec:
@@ -63,9 +73,12 @@ def adjust_pipeline(pipeline: ComposeSpec, feedback_tags: list[str]) -> ComposeS
     """Adjust a pipeline using structured preview feedback tags."""
     adjusted = pipeline.model_copy(deep=True)
     tags = normalize_feedback_tags(feedback_tags)
+    strengthen_exposure = "exposure_too_weak" in tags and not _EXPOSURE_SAFETY_TAGS.intersection(tags)
 
     for transform in adjusted.transforms:
         name = transform.name.lower()
+        if strengthen_exposure and _is_exposure_transform(name):
+            _strengthen_exposure(transform, tags["exposure_too_weak"])
         if "too_noisy" in tags and "noise" in name:
             severity = tags["too_noisy"]
             _scale_probability(transform, severity_scaled_factor(0.5, severity))
@@ -106,6 +119,34 @@ def _is_exposure_transform(name: str) -> bool:
 
 def _is_color_shift_transform(name: str) -> bool:
     return any(token in name for token in ["hue", "saturation", "rgb", "color"])
+
+
+def _strengthen_exposure(transform: TransformSpec, severity: FeedbackSeverity) -> None:
+    current_probability = 0.5 if transform.p is None else transform.p
+    transform.p = round(max(current_probability, _EXPOSURE_PROBABILITY_FLOOR[severity]), 4)
+    if not transform.name.lower().endswith("randombrightnesscontrast"):
+        return
+    default_limit = _EXPOSURE_DEFAULT_LIMIT[severity]
+    growth = severity_scaled_growth(severity)
+    for key in ("brightness_limit", "contrast_limit"):
+        current = transform.params.get(key)
+        transform.params[key] = (
+            (-default_limit, default_limit) if current is None else _grow_exposure_limit(current, growth)
+        )
+
+
+def _grow_exposure_limit(value: object, factor: float) -> object:
+    if isinstance(value, tuple):
+        return tuple(_grow_exposure_value(item, factor) for item in value)
+    if isinstance(value, list):
+        return [_grow_exposure_value(item, factor) for item in value]
+    return _grow_exposure_value(value, factor)
+
+
+def _grow_exposure_value(value: object, factor: float) -> object:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return value
+    return round(max(-_EXPOSURE_LIMIT_CAP, min(_EXPOSURE_LIMIT_CAP, float(value) * factor)), 6)
 
 
 def _scale_numeric_ranges(transform: TransformSpec, factor: float) -> None:

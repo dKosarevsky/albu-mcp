@@ -12,13 +12,14 @@
     },
     {
       "artifacts": [
-        "/tmp/albu-host-setup-probe-live.json",
-        "/tmp/albu-host-Codex.md"
+        "docs/host-evidence/codex-2026-07-11.md",
+        "docs/assets/host-evidence/codex-2026-07-11-baseline.png",
+        "docs/assets/host-evidence/codex-2026-07-11-accepted.png"
       ],
-      "date": "2026-06-28",
-      "evidence": "Codex setup and preflight passed in this environment, but this Codex API session did not expose a reviewer-observed real MCP host UI flow; first-10-minutes replay was not executed.",
+      "date": "2026-07-11",
+      "evidence": "Reviewer-observed interactive Codex TUI replay loaded the installed plugin and completed smoke check, onboarding, baseline and candidate previews, visual review, tuning decision, and export over one local fixture; sanitized receipt and contact sheets are committed.",
       "host": "Codex",
-      "status": "blocked"
+      "status": "passed"
     }
   ],
   "manual_host_ui": [
@@ -29,10 +30,10 @@
       "status": "blocked"
     },
     {
-      "date": "2026-06-28",
-      "evidence": "Codex setup and P0 preflight passed, but no reviewer-observed real MCP host UI completed run_host_smoke_check or preview_ready confirmation in this session.",
+      "date": "2026-07-11",
+      "evidence": "Reviewer observed the interactive Codex TUI discover AlbumentationsX MCP tools; run_host_smoke_check returned status=ok, preview_ready=true, six passing diagnostics, and no warnings. Receipt: docs/host-evidence/codex-2026-07-11.md.",
       "host": "Codex",
-      "status": "blocked"
+      "status": "passed"
     }
   ]
 }

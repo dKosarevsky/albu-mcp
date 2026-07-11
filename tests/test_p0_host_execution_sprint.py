@@ -16,6 +16,7 @@ def test_p0_host_execution_sprint_tracks_real_ui_gates() -> None:
     assert sprint["target_hosts"] == ["Codex", "Claude Code"]
     assert sprint["execution_status"] == "manual_evidence_required"
     assert sprint["non_fabrication_policy"] == "Never mark a host passed without reviewer-observed real UI evidence."
+    assert [item["host"] for item in sprint["gate_matrix"]] == ["Claude Code"]
     assert [item["gate"] for item in sprint["gate_matrix"][0]["gates"]] == [
         "first_10_minutes_replay",
         "manual_host_ui",
@@ -37,7 +38,7 @@ def test_p0_host_execution_sprint_markdown_is_operator_focused() -> None:
     assert "Execution status: `manual_evidence_required`" in markdown
     assert "## Non-Fabrication Policy" in markdown
     assert "Never mark a host passed without reviewer-observed real UI evidence." in markdown
-    assert "| Codex | `first_10_minutes_replay` | `blocked` |" in markdown
+    assert "| Codex |" not in markdown
     assert "| Claude Code | `manual_host_ui` | `blocked` |" in markdown
     assert "## Stop Conditions" in markdown
     assert "Do not tag v1 RC while any P0 gate is missing or blocked." in markdown

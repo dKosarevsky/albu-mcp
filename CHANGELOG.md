@@ -4,6 +4,15 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 ## Unreleased
 
+## 1.16.0 - 2026-07-11
+
+- Added direct single-image onboarding to `plan_dataset_onboarding` and `build_review_packet`, while preserving bounded
+  roots and parent-directory annotation context.
+- Added `exposure_too_weak` for deterministic, severity-aware brightness/contrast strengthening with bounded ranges
+  and safety-reduction tag precedence.
+- Recorded reviewer-observed Codex host acceptance and First 10 Minutes replay evidence over a generated fixture,
+  without counting it as beta or adoption evidence.
+- Removed completed hosts from recovery and execution queues while retaining them in the canonical evidence ledger.
 - Added a validated native Codex plugin bundle that loads the canonical agent skill and pinned MCP server without
   an implicit user dataset root.
 - Generated evidence execution packs now include a copy-ready no-write status handoff before reviewer-approved import.
@@ -13,10 +22,10 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 - Added `build_review_packet` for one compact host-facing first-preview handoff that combines dataset onboarding,
   preview request validation, the tuning tool sequence, and report handoff guidance.
 - Added Review Packet golden stdio coverage and representative output contract snapshots.
-- Updated the v1 readiness audit with the current v1.15.0 publication state, Review Packet coverage, and remaining manual
-  host UI evidence gate.
+- Updated the v1 readiness audit with Review Packet coverage and the remaining Claude Code host evidence gate.
 - Hardened MCP Registry release verification so transient read timeouts are retryable and duplicate-version reruns can
   continue to metadata verification.
+- Prepared the complete compatible tool surface, Codex plugin pin, PyPI package, and MCP Registry metadata for v1.16.0.
 
 ## 1.15.0 - 2026-06-23
 

@@ -19,7 +19,13 @@ _RECOMMENDED_TOOLS = [
     "record_tuning_decision",
     "export_pipeline",
 ]
-_COMMON_FEEDBACK_TAGS = ["too_noisy", "too_blurry", "too_distorted", "object_unrecognizable"]
+_COMMON_FEEDBACK_TAGS = [
+    "too_noisy",
+    "too_blurry",
+    "too_distorted",
+    "exposure_too_weak",
+    "object_unrecognizable",
+]
 
 
 class RecipeDefinition(NamedTuple):
@@ -41,7 +47,7 @@ _RECIPES: tuple[RecipeDefinition, ...] = (
         task_aliases=("classification", "image_classification", "classifier"),
         quality_profile="classification",
         default_targets=("image",),
-        feedback_tags=("too_noisy", "too_blurry", "object_unrecognizable"),
+        feedback_tags=("too_noisy", "too_blurry", "exposure_too_weak", "object_unrecognizable"),
         preset_task="classification",
     ),
     RecipeDefinition(
@@ -50,7 +56,7 @@ _RECIPES: tuple[RecipeDefinition, ...] = (
         task_aliases=("detection", "object_detection", "bboxes", "bbox"),
         quality_profile="detection",
         default_targets=("image", "bboxes"),
-        feedback_tags=("too_distorted", "object_unrecognizable"),
+        feedback_tags=("too_distorted", "exposure_too_weak", "object_unrecognizable"),
         preset_task="object_detection",
     ),
     RecipeDefinition(
@@ -59,7 +65,7 @@ _RECIPES: tuple[RecipeDefinition, ...] = (
         task_aliases=("segmentation", "semantic_segmentation", "instance_segmentation", "mask"),
         quality_profile="segmentation",
         default_targets=("image", "mask"),
-        feedback_tags=("too_distorted", "too_noisy", "object_unrecognizable"),
+        feedback_tags=("too_distorted", "too_noisy", "exposure_too_weak", "object_unrecognizable"),
         preset_task="segmentation",
     ),
     RecipeDefinition(

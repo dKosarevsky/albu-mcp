@@ -1,6 +1,6 @@
 # P0 Host Runbook
 
-Package: `albumentationsx-mcp==1.15.0`
+Package: `albumentationsx-mcp==1.16.0`
 Target hosts: `Codex, Claude Code`
 Ready for v1: `false`
 
@@ -12,17 +12,9 @@ Never mark a host passed until a reviewer runs the real host UI. Keep hosts pend
 
 | Order | Host | Next Action | Packet |
 | --- | --- | --- | --- |
-| 1 | Codex | `triage_blocker` | `uv run python scripts/export_manual_host_acceptance_packet.py --host Codex --output /tmp/albu-host-codex.md` |
-| 2 | Claude Code | `triage_blocker` | `uv run python scripts/export_manual_host_acceptance_packet.py --host 'Claude Code' --output /tmp/albu-host-claude-code.md` |
+| 1 | Claude Code | `triage_blocker` | `uv run python scripts/export_manual_host_acceptance_packet.py --host 'Claude Code' --output /tmp/albu-host-claude-code.md` |
 
 ## Record Commands
-
-### Codex
-
-```bash
-uv run python scripts/record_host_manual_run.py --kind first-10-minutes --host Codex --status passed --date YYYY-MM-DD --evidence 'Codex completed First 10 Minutes smoke, validation, baseline/candidate render, comparison, and export in the real host UI.' --artifact docs/assets/demo/demo_report.md
-uv run python scripts/record_host_manual_run.py --host Codex --status passed --date YYYY-MM-DD --evidence 'Codex listed AlbumentationsX MCP tools/resources and completed run_host_smoke_check in the real host UI.'
-```
 
 ### Claude Code
 

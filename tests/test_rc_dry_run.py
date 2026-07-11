@@ -16,7 +16,8 @@ def test_rc_dry_run_blocks_publish_but_allows_preflight() -> None:
     assert dry_run["dry_run_allowed"] is True
     assert dry_run["publish_allowed"] is False
     assert dry_run["rc_cutover_allowed"] is False
-    assert dry_run["p0_summary"]["blocked_gate_count"] == 4
+    assert dry_run["p0_summary"]["recorded_gate_count"] == 2
+    assert dry_run["p0_summary"]["blocked_gate_count"] == 2
     assert "uv build" in dry_run["safe_dry_run_commands"]
     assert "uv run python scripts/check_v1_rc_cutover_gate.py --format json" in dry_run["safe_dry_run_commands"]
     assert "git tag vX.Y.Z-rc.1" in dry_run["blocked_publish_commands"]

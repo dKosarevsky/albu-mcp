@@ -1,6 +1,6 @@
 {
   "name": "albumentationsx-mcp",
-  "version": "1.15.0",
+  "version": "1.16.0",
   "description": "Preview, validate, and tune AlbumentationsX augmentation pipelines from Codex.",
   "author": {
     "name": "dKosarevsky",

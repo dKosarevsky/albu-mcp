@@ -16,7 +16,8 @@ def test_rc_cutover_recovery_plan_blocks_publish_until_p0_passes() -> None:
     assert plan["recovery_status"] == "blocked_by_p0_evidence"
     assert plan["rc_cutover_allowed"] is False
     assert plan["publish_allowed"] is False
-    assert plan["p0_summary"]["blocked_gate_count"] == 4
+    assert plan["p0_summary"]["recorded_gate_count"] == 2
+    assert plan["p0_summary"]["blocked_gate_count"] == 2
     assert plan["safe_preflight_allowed"] is True
     assert plan["publish_commands"] == []
     assert "git tag vX.Y.Z-rc.1" in plan["blocked_publish_commands"]

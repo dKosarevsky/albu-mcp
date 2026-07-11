@@ -112,14 +112,14 @@ def test_v1_readiness_tracks_current_product_gate() -> None:
     readiness = Path("docs/V1_READINESS.md").read_text(encoding="utf-8")
 
     for term in [
-        "v1.15.0",
-        "albumentationsx-mcp==1.15.0",
+        "v1.16.0",
+        "albumentationsx-mcp==1.16.0",
         "MCP Registry",
         "build_review_packet",
         "review_packet_flow",
         "docs/HOST_PROOF_STATUS.md",
         "Manual Host UI",
-        "pending",
+        "Claude Code remains blocked",
     ]:
         assert term in readiness
 
@@ -464,6 +464,8 @@ def test_public_docs_describe_current_preview_workflow() -> None:
     assert "quality_summary" in usage
     assert "too_noisy:high" in readme
     assert "suggested_feedback_tags" in usage
+    assert "exposure_too_weak:medium" in readme
+    assert "one real local image or an image directory" in usage
     assert "validate_preview_request" in readme
     assert "validate_preview_request" in usage
     assert "docs/RECIPES.md" in readme

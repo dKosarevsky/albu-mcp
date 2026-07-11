@@ -22,6 +22,7 @@ def test_list_feedback_tags_documents_adjustment_contract() -> None:
         "too_distorted",
         "too_dark",
         "too_bright",
+        "exposure_too_weak",
         "color_shift",
         "object_unrecognizable",
     }.issubset(tags)
@@ -29,6 +30,8 @@ def test_list_feedback_tags_documents_adjustment_contract() -> None:
     assert "noise" in tags["too_noisy"].applies_to
     assert ":high" in tags["too_noisy"].mitigation
     assert "color" in tags["color_shift"].applies_to
+    assert "color" in tags["exposure_too_weak"].applies_to
+    assert "Increase" in tags["exposure_too_weak"].mitigation
 
 
 def test_explain_pipeline_flags_high_noise_and_suggests_feedback_tag() -> None:

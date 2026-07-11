@@ -1,6 +1,6 @@
 # V1 RC Release Packet
 
-Package: `albumentationsx-mcp==1.15.0`
+Package: `albumentationsx-mcp==1.16.0`
 Required hosts: `Codex, Claude Code`
 RC decision: `hold_rc`
 Release candidate allowed: `false`
@@ -8,9 +8,9 @@ Release candidate allowed: `false`
 ## P0 Summary
 
 - host_count: `2`
-- passed_gate_count: `0`
+- passed_gate_count: `2`
 - required_gate_count: `4`
-- blocked_gate_count: `4`
+- blocked_gate_count: `2`
 - missing_gate_count: `0`
 
 ## Blocked Release Steps

@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+import pytest
 from PIL import Image
 
 from albumentationsx_mcp.catalog import TransformCatalog
@@ -65,6 +66,92 @@ def test_dataset_onboarding_report_blocks_empty_dataset(tmp_path: Path) -> None:
     assert report.image_count == 0
     assert report.preview_request_template is None
     assert report.remediation_actions[0].code == "add_dataset_images"
+
+
+@pytest.mark.parametrize("suffix", [".png", ".jpg", ".webp"])
+def test_dataset_onboarding_report_accepts_one_supported_image(tmp_path: Path, suffix: str) -> None:
+    image_path = _write_image(tmp_path / f"sample{suffix}")
+
+    report = build_dataset_onboarding_report(
+        dataset_path=image_path,
+        task="classification",
+        intensity="low",
+        targets=["image"],
+        max_images=8,
+        path_policy=PathPolicy([tmp_path]),
+        pipeline_service=PipelineService(TransformCatalog()),
+        recipe_builder=recommend_recipe,
+    )
+
+    assert report.status == "ok"
+    assert report.preview_ready is True
+    assert report.dataset_path == str(image_path.resolve())
+    assert report.image_count == 1
+    assert report.sampled_image_count == 1
+    assert report.ignored_file_count == 0
+    assert report.sample_paths == [str(image_path.resolve())]
+    assert report.checks[0].code == "dataset_path_accessible"
+    assert report.checks[0].details["path_kind"] == "file"
+    assert report.preview_request_template is not None
+    assert report.preview_request_template.request["input_paths"] == [str(image_path.resolve())]
+
+
+def test_dataset_onboarding_report_rejects_unsupported_file(tmp_path: Path) -> None:
+    source_path = tmp_path / "notes.txt"
+    source_path.write_text("not an image", encoding="utf-8")
+
+    report = build_dataset_onboarding_report(
+        dataset_path=source_path,
+        task="classification",
+        intensity="low",
+        targets=["image"],
+        path_policy=PathPolicy([tmp_path]),
+        pipeline_service=PipelineService(TransformCatalog()),
+        recipe_builder=recommend_recipe,
+    )
+
+    assert report.status == "error"
+    assert report.preview_ready is False
+    assert report.checks[0].code == "dataset_path_unsupported_file"
+    assert report.checks[0].details["path_kind"] == "file"
+    assert report.checks[0].details["supported_extensions"]
+    assert report.remediation_actions[0].code == "fix_dataset_path"
+    assert report.remediation_actions[0].check_codes == ["dataset_path_unsupported_file"]
+
+
+def test_single_image_onboarding_uses_parent_for_annotation_context(tmp_path: Path) -> None:
+    dataset_dir = tmp_path / "dataset"
+    image_path = _write_image(dataset_dir / "sample.png")
+    annotations_dir = dataset_dir / "annotations"
+    annotations_dir.mkdir()
+    (annotations_dir / "instances.json").write_text(
+        json.dumps(
+            {
+                "images": [{"id": 1, "file_name": "sample.png"}],
+                "annotations": [{"id": 1, "image_id": 1, "bbox": [2, 3, 10, 8], "category_id": 7}],
+                "categories": [{"id": 7, "name": "car"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = build_dataset_onboarding_report(
+        dataset_path=image_path,
+        task="object_detection",
+        intensity="low",
+        targets=["image", "bboxes"],
+        path_policy=PathPolicy([tmp_path]),
+        pipeline_service=PipelineService(TransformCatalog()),
+        recipe_builder=recommend_recipe,
+    )
+
+    assert report.preview_ready is True
+    assert report.dataset_structure is not None
+    assert "coco_manifest" in report.dataset_structure.detected_layouts
+    assert report.preview_request_template is not None
+    assert report.preview_request_template.request["annotations"] == [
+        {"bboxes": [[2.0, 3.0, 12.0, 11.0]], "bbox_labels": ["car"]}
+    ]
 
 
 def test_dataset_onboarding_report_rejects_outside_allowed_root(tmp_path: Path) -> None:

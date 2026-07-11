@@ -63,7 +63,7 @@ def test_agent_skill_contains_first_run_playbook() -> None:
 
     expected = [
         "## First Run Prompt",
-        "Use AlbumentationsX MCP on `DATASET_PATH`.",
+        "Use AlbumentationsX MCP on image or directory `DATASET_PATH`.",
         "`ALLOWED_ROOT`",
         "`ARTIFACT_ROOT`",
         "If `preview_ready` is false, call `diagnose_environment` and stop before rendering.",
@@ -87,12 +87,14 @@ def test_agent_skill_documents_host_config_hints_and_stop_conditions() -> None:
         "Set `ALBU_MCP_ALLOWED_ROOTS` and `ALBU_MCP_ARTIFACT_ROOT`, or use explicit absolute host args.",
         "stop unless `allowed_roots` contains the intended root and `preview_ready` is true.",
         "## Stop Conditions",
-        "Missing real dataset path: ask for one.",
+        "Missing real image or dataset-directory path: ask for one.",
         "Path outside `--allowed-root`: refuse that path and ask for a bounded path.",
         "User asks for many variants: render a small first batch before expanding.",
     ]
     for expected_text in expected_skill_text:
         assert expected_text in skill
+
+    assert "exposure_too_weak" in skill
 
     assert "ask for dataset path, allowed root, and artifact root when they are missing" in openai_yaml
 

@@ -1,6 +1,6 @@
 # V1 RC Cutover Gate
 
-Package: `albumentationsx-mcp==1.15.0`
+Package: `albumentationsx-mcp==1.16.0`
 Release tag: `vX.Y.Z-rc.1`
 Required hosts: `Codex, Claude Code`
 Gate status: `blocked`
@@ -15,16 +15,14 @@ The RC cutover gate refuses release while any P0 real-host evidence gate is not 
 ## P0 Summary
 
 - required_gate_count: `4`
-- recorded_gate_count: `0`
+- recorded_gate_count: `2`
 - missing_gate_count: `0`
-- blocked_gate_count: `4`
+- blocked_gate_count: `2`
 
 ## Failed Gates
 
 | Host | Gate | Record Status | Date | Evidence |
 | --- | --- | --- | --- | --- |
-| Codex | `first_10_minutes_replay` | `blocked` | `2026-06-28` | Codex setup and preflight passed in this environment, but this Codex API session did not expose a reviewer-observed real MCP host UI flow; first-10-minutes replay was not executed. |
-| Codex | `manual_host_ui` | `blocked` | `2026-06-28` | Codex setup and P0 preflight passed, but no reviewer-observed real MCP host UI completed run_host_smoke_check or preview_ready confirmation in this session. |
 | Claude Code | `first_10_minutes_replay` | `blocked` | `2026-06-28` | Claude Code host run could not start in this environment because claude CLI was not found in PATH during live setup probe; first-10-minutes replay was not executed. |
 | Claude Code | `manual_host_ui` | `blocked` | `2026-06-28` | Claude Code manual host UI run could not start in this environment because claude CLI was not found in PATH during live setup probe; MCP tools/resources were not observed in Claude Code. |
 

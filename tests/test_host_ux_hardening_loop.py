@@ -15,7 +15,7 @@ def test_host_ux_hardening_loop_prioritizes_host_blockers() -> None:
         "docs/HOST_FAILURE_COOKBOOK.md",
         "docs/HOST_MANUAL_RUNS.json",
     ]
-    assert [item["host"] for item in loop["hardening_queue"][:2]] == ["Codex", "Codex"]
+    assert [item["host"] for item in loop["hardening_queue"][:2]] == ["Claude Code", "Claude Code"]
     assert loop["hardening_queue"][0]["priority"] == "p0"
     assert loop["hardening_queue"][0]["gate"] == "first_10_minutes_replay"
     assert loop["hardening_queue"][0]["triage_entrypoints"] == [
@@ -37,7 +37,7 @@ def test_host_ux_hardening_loop_markdown_is_actionable() -> None:
 
     assert markdown.startswith("# Host UX Hardening Loop\n")
     assert "## Hardening Queue" in markdown
-    assert "| Codex | `p0` | `first_10_minutes_replay` | `blocked` |" in markdown
+    assert "| Claude Code | `p0` | `first_10_minutes_replay` | `blocked` |" in markdown
     assert "## Loop Steps" in markdown
     assert "Classify the failure with the host failure cookbook." in markdown
     assert "## Regression Targets" in markdown

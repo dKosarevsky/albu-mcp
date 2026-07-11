@@ -22,7 +22,7 @@ def build_codex_cancellation_triage() -> dict[str, Any]:
     unblock_pack = build_p0_host_unblock_pack()
     lanes = [lane for lane in unblock_pack["recovery_lanes"] if lane["host"] == _HOST]
     return {
-        "triage_status": "blocked_tool_call_cancellation" if lanes else "ready_for_codex_recheck",
+        "triage_status": "blocked_tool_call_cancellation" if lanes else "codex_evidence_recorded",
         "host": _HOST,
         "failure_class": _FAILURE_CLASS,
         "rc_reopen_allowed": unblock_pack["rc_reopen_allowed"] and not lanes,
@@ -31,10 +31,7 @@ def build_codex_cancellation_triage() -> dict[str, Any]:
             "blocked_gate_count": sum(lane["evidence_status"] == "blocked" for lane in lanes),
             "missing_gate_count": sum(lane["evidence_status"] == "missing" for lane in lanes),
         },
-        "triage_policy": (
-            "A cancelled Codex MCP tool call is blocking evidence, not a passed host run. Keep the P0 gate closed "
-            "until Codex completes the real host flow and records dated reviewer-observed evidence."
-        ),
+        "triage_policy": _triage_policy(has_active_lanes=bool(lanes)),
         "affected_gates": [_affected_gate(lane) for lane in lanes],
         "safe_diagnostics": [
             "Open an interactive Codex session where MCP tool approval prompts are visible.",
@@ -148,6 +145,18 @@ def _affected_gate(lane: dict[str, Any]) -> dict[str, str]:
         "passed_record_command": lane["record_command"],
         "blocked_record_command": _blocked_record_command(gate=lane["gate"]),
     }
+
+
+def _triage_policy(*, has_active_lanes: bool) -> str:
+    if not has_active_lanes:
+        return (
+            "Codex has dated reviewer-observed evidence for both required host gates. "
+            "No Codex cancellation recovery lane remains; RC readiness may still be blocked by other hosts."
+        )
+    return (
+        "A cancelled Codex MCP tool call is blocking evidence, not a passed host run. Keep the P0 gate closed "
+        "until Codex completes the real host flow and records dated reviewer-observed evidence."
+    )
 
 
 def _blocked_record_command(*, gate: str) -> str:

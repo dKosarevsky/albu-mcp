@@ -1,6 +1,6 @@
 # V1 RC Rehearsal Plan
 
-Package: `albumentationsx-mcp==1.15.0`
+Package: `albumentationsx-mcp==1.16.0`
 Release tag: `vX.Y.Z-rc.1`
 Rehearsal status: `preflight_only`
 RC cutover allowed: `false`
@@ -14,9 +14,9 @@ Do not create tags, GitHub Releases, or PyPI uploads during rehearsal.
 ## P0 Summary
 
 - required_gate_count: `4`
-- recorded_gate_count: `0`
+- recorded_gate_count: `2`
 - missing_gate_count: `0`
-- blocked_gate_count: `4`
+- blocked_gate_count: `2`
 
 ## Dry-Run Commands
 

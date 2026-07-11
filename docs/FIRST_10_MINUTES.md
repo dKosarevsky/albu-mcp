@@ -16,7 +16,7 @@ For full installation details, see [docs/INSTALL.md](INSTALL.md). For the comple
 
 - a working MCP server process;
 - a host-visible `run_host_smoke_check` result;
-- a validated preview request for a small local image folder;
+- a validated preview request for one local image or a small image directory;
 - a contact sheet or a reference demo report;
 - one feedback-driven candidate pipeline;
 - an exported Python or JSON pipeline.

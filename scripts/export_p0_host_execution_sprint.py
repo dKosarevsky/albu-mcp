@@ -19,6 +19,9 @@ def build_p0_host_execution_sprint() -> dict[str, Any]:
     runbook = build_p0_host_runbook()
     status = build_p0_evidence_status()
     packet_by_host = {item["host"]: item["packet_command"] for item in runbook["run_queue"]}
+    active_host_statuses = [
+        item for item in status["host_statuses"] if any(gate["status"] != "recorded" for gate in item["gates"])
+    ]
     return {
         "target_hosts": status["target_hosts"],
         "execution_status": "ready_for_rc" if status["rc_ready"] else "manual_evidence_required",
@@ -42,7 +45,7 @@ def build_p0_host_execution_sprint() -> dict[str, Any]:
                     for gate in item["gates"]
                 ],
             }
-            for item in status["host_statuses"]
+            for item in active_host_statuses
         ],
         "stop_conditions": [
             "Do not tag v1 RC while any P0 gate is missing or blocked.",

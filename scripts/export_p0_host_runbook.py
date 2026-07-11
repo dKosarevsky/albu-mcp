@@ -19,7 +19,8 @@ _P0_HOSTS = ("Codex", "Claude Code")
 def build_p0_host_runbook() -> dict[str, Any]:
     """Build a P0-only host runbook without claiming host evidence."""
     board = build_host_evidence_sprint_board()
-    run_queue = [_runbook_item(item) for item in board["run_queue"] if item["host"] in _P0_HOSTS]
+    active_p0_items = [item for item in board["run_queue"] if item["host"] in _P0_HOSTS]
+    run_queue = [_runbook_item(item, run_order=index) for index, item in enumerate(active_p0_items, start=1)]
     return {
         "package": board["package"],
         "version": board["version"],
@@ -90,10 +91,10 @@ def main() -> None:
     args.output.write_text(content, encoding="utf-8")
 
 
-def _runbook_item(item: dict[str, Any]) -> dict[str, Any]:
+def _runbook_item(item: dict[str, Any], *, run_order: int) -> dict[str, Any]:
     host = item["host"]
     return {
-        "run_order": len([candidate for candidate in _P0_HOSTS if _P0_HOSTS.index(candidate) <= _P0_HOSTS.index(host)]),
+        "run_order": run_order,
         "host": host,
         "priority": item["priority"],
         "next_action": item["next_action"],

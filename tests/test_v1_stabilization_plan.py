@@ -16,7 +16,7 @@ def test_v1_stabilization_plan_blocks_stable_v1_until_trust_gates_pass() -> None
     assert plan["stabilization_status"] == "blocked_until_trust_gates_pass"
     assert plan["ready_for_v1"] is False
     assert plan["stable_v1_allowed"] is False
-    assert plan["manual_gate_count"] == 8
+    assert plan["manual_gate_count"] == 6
     assert plan["cutover_status"] == "blocked_by_p0_evidence"
     assert plan["selected_depth_item"] == "host_onboarding"
     assert plan["feature_freeze_policy"] == (

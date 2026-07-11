@@ -37,8 +37,6 @@ Do not implement host-onboarding depth work until RC and beta gates open.
 
 ## Active P0 Blockers
 
-- Codex / `first_10_minutes_replay`: `codex_tool_call_cancelled`
-- Codex / `manual_host_ui`: `codex_tool_call_cancelled`
 - Claude Code / `first_10_minutes_replay`: `claude_cli_missing`
 - Claude Code / `manual_host_ui`: `claude_cli_missing`
 
