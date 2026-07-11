@@ -35,6 +35,18 @@ albu-mcp evidence execution-pack-progress \
   --format markdown
 ```
 
+Use one no-write status view when you need the current decision and next actions instead of separate reports:
+
+```bash
+albu-mcp evidence execution-pack-status \
+  --input-dir evidence-session \
+  --format markdown
+```
+
+It summarizes pack structure, completed host/beta inputs, no-write import-wizard readiness, blockers, and at most three
+next commands. `import_ready_command_available=true` means the inputs passed no-write validation; a reviewer must still
+approve the explicit `import-wizard --import-ready` command that writes records.
+
 ## 1. Host Evidence
 
 The current P0 gate requires reviewer-observed runs for both hosts:

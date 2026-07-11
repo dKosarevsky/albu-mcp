@@ -7,7 +7,7 @@ description: Use when Codex needs to install, configure, or operate Albumentatio
 
 ## Overview
 
-AlbumentationsX MCP is the MCP server; this skill is the agent playbook. Keep previews local, bounded, and clear about real evidence versus generated fixtures.
+Use this playbook to keep AlbumentationsX MCP previews bounded and distinguish real evidence from generated fixtures.
 
 ## Install
 
@@ -73,6 +73,7 @@ Use operator commands only when the user is doing release, adoption, or product 
 - `albu-mcp evidence execution-pack --date YYYY-MM-DD --reviewer "Release operator" --output-dir evidence-session --format markdown`
 - `albu-mcp evidence execution-pack-audit --input-dir evidence-session`
 - `albu-mcp evidence execution-pack-progress --input-dir evidence-session`
+- `albu-mcp evidence execution-pack-status --input-dir evidence-session`
 - `albu-mcp evidence preflight`
 - `albu-mcp evidence import-wizard`
 
