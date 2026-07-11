@@ -2,6 +2,7 @@
   "mcpServers": {
     "albumentationsx": {
       "command": "uvx",
+      "cwd": ".",
       "args": [
         "--from",
         "albumentationsx-mcp==1.15.0",

@@ -82,10 +82,10 @@ def test_agent_skill_documents_host_config_hints_and_stop_conditions() -> None:
         "## Host Config Hints",
         (
             "Codex plugin mode uses `.codex-plugin/plugin.json` and `.mcp.json`; "
-            "it starts the pinned server but grants no roots."
+            "its pinned server grants no user dataset root."
         ),
         "Set `ALBU_MCP_ALLOWED_ROOTS` and `ALBU_MCP_ARTIFACT_ROOT`, or use explicit absolute host args.",
-        "Restart the host, run `run_host_smoke_check`, and stop before rendering when `preview_ready` is false.",
+        "stop unless `allowed_roots` contains the intended root and `preview_ready` is true.",
         "## Stop Conditions",
         "Missing real dataset path: ask for one.",
         "Path outside `--allowed-root`: refuse that path and ask for a bounded path.",
@@ -106,8 +106,8 @@ def test_agent_skill_guards_codex_plugin_preview_roots() -> None:
         "`.mcp.json`",
         "`ALBU_MCP_ALLOWED_ROOTS`",
         "`ALBU_MCP_ARTIFACT_ROOT`",
-        "grants no roots",
-        "stop before rendering",
+        "grants no user dataset root",
+        "stop unless `allowed_roots` contains the intended root",
     ]
     for expected_text in expected:
         assert expected_text in skill

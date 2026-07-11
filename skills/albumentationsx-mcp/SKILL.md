@@ -35,9 +35,9 @@ Use AlbumentationsX MCP on `DATASET_PATH`. Use `ALLOWED_ROOT` for image access a
 
 ## Host Config Hints
 
-- Codex plugin mode uses `.codex-plugin/plugin.json` and `.mcp.json`; it starts the pinned server but grants no roots.
+- Codex plugin mode uses `.codex-plugin/plugin.json` and `.mcp.json`; its pinned server grants no user dataset root.
 - Set `ALBU_MCP_ALLOWED_ROOTS` and `ALBU_MCP_ARTIFACT_ROOT`, or use explicit absolute host args. Never rely on the working directory.
-- Restart the host, run `run_host_smoke_check`, and stop before rendering when `preview_ready` is false.
+- Restart, run `run_host_smoke_check`, and stop unless `allowed_roots` contains the intended root and `preview_ready` is true.
 
 ## Host Workflow
 

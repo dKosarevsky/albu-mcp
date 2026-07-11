@@ -59,13 +59,17 @@ non-secret environment variables when the host provides them:
 - `ALBU_MCP_ARTIFACT_ROOT`
 - `ALBU_MCP_MAX_PREVIEW_RUNS`
 
-No allowed root or artifact root is supplied implicitly. Without explicit roots, discovery and planning remain
-available while preview readiness stays blocked by the server's existing safety checks.
+The MCP process sets `cwd` to `.` so the host resolves the fallback working directory inside the installed plugin,
+never the user's workspace. Without explicit environment values, the current server therefore limits its fallback
+allowed root and artifact directory to plugin-owned files. It does not receive a user dataset root. Operators must
+confirm that smoke-check `allowed_roots` contains their intended dataset root before any preview, even when
+`preview_ready` is true.
 
 ### Validation boundary
 
 A focused `scripts/check_codex_plugin.py` owns the repository contract. It validates structural metadata, canonical
-paths, the pinned command, allowed environment pass-through, safe absence of implicit roots, and version consistency.
+paths, the pinned command, plugin-root working directory, environment pass-through, absence of implicit user dataset
+roots, and version consistency.
 The existing release-readiness aggregate invokes this guard, so CI and tagged releases cannot silently drift.
 
 The project test suite also checks the public documentation and canonical skill relationship. Local development may
@@ -78,7 +82,7 @@ README keeps `uvx` as the universal quick start and adds one short Codex plugin 
 1. what the bundle includes;
 2. that plugin installation loads both the skill and base MCP server;
 3. how bounded preview roots are supplied through documented environment variables;
-4. that the host must be restarted and `run_host_smoke_check` must confirm `preview_ready` before rendering;
+4. that the host must be restarted and `run_host_smoke_check` must confirm both the intended root and `preview_ready`;
 5. that direct TOML configuration remains the explicit fallback and the route for per-project roots.
 
 Documentation must not claim a public Codex marketplace listing until one exists.
@@ -86,8 +90,8 @@ Documentation must not claim a public Codex marketplace listing until one exists
 ## Testing
 
 - Contract tests parse both JSON files and assert their exact security-sensitive fields.
-- Parametrized tests reject plugin-version drift, unpinned packages, extra environment variables, implicit root args,
-  and missing canonical skill/MCP paths.
+- Parametrized tests reject plugin-version drift, unpinned packages, extra environment variables, workspace cwd,
+  implicit dataset-root args, and missing canonical skill/MCP paths.
 - Release-readiness tests require the new guard and verify failures are surfaced without hiding other checks.
 - The existing skill, documentation, full pytest, Ruff, formatting, ty, build, MCP smoke, and release gates remain green.
 - The official local Codex plugin validator is run against the repository root as an additional integration check.
@@ -96,6 +100,6 @@ Documentation must not claim a public Codex marketplace listing until one exists
 
 - Publishing to a public Codex marketplace.
 - Editing user-level Codex configuration.
-- Granting filesystem access automatically.
+- Granting a user dataset root automatically.
 - Replacing PyPI, MCP Registry, `skills.sh`, or non-Codex host instructions.
 - Counting plugin validation or local MCP smoke output as real host or beta evidence.

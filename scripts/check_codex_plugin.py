@@ -104,7 +104,7 @@ def _validate_mcp_manifest(mcp: dict[str, Any], *, project_version: str) -> tupl
         raise ValueError(msg)
     args = _require_string_list(server, "args", source="AlbumentationsX MCP server")
     if any(arg in _ROOT_ARGS for arg in args):
-        msg = "MCP args must not grant implicit filesystem roots"
+        msg = "MCP args must not grant implicit user dataset roots"
         raise ValueError(msg)
 
     expected_package = f"albumentationsx-mcp=={project_version}"
@@ -114,6 +114,9 @@ def _validate_mcp_manifest(mcp: dict[str, Any], *, project_version: str) -> tupl
         raise ValueError(msg)
     if server.get("command") != "uvx":
         msg = "MCP server command must be 'uvx'"
+        raise ValueError(msg)
+    if server.get("cwd") != ".":
+        msg = "MCP server cwd must stay inside the plugin root"
         raise ValueError(msg)
     if server.get("env_vars") != _EXPECTED_ENV_VARS:
         msg = "MCP env_vars must match the documented allowlist"

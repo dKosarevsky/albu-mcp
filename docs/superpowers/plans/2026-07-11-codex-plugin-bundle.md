@@ -50,8 +50,8 @@ Expected: failure because `.codex-plugin/plugin.json` and `.mcp.json` do not exi
 
 - [ ] **Step 3: Add the minimal plugin files**
 
-Use project version `1.15.0`. Keep `skills` canonical and pin the MCP package to
-`albumentationsx-mcp==1.15.0`. Do not add default allowed or artifact roots.
+Use project version `1.15.0`. Keep `skills` canonical, pin the MCP package to
+`albumentationsx-mcp==1.15.0`, and set `cwd` to the plugin root. Do not add user dataset roots.
 
 - [ ] **Step 4: Run the focused test and verify GREEN**
 
@@ -78,6 +78,7 @@ Add a successful report test and parametrized mutations for:
 - unpinned or wrong package args;
 - extra environment variables;
 - implicit `--allowed-root`/`--artifact-root` args;
+- a cwd outside the plugin root;
 - wrong skill or MCP companion paths.
 
 Add a CLI test that expects a concise success line.
@@ -209,7 +210,7 @@ git commit -m "docs: explain Codex plugin setup"
 
 - [ ] **Step 1: Review the diff against the design**
 
-Check for implicit filesystem grants, unpinned runtime dependencies, duplicate skill sources, unsupported plugin
+Check for implicit user dataset grants, unpinned runtime dependencies, duplicate skill sources, unsupported plugin
 fields, public marketplace claims, and README/skill bloat. Fix findings through a focused RED→GREEN cycle.
 
 - [ ] **Step 2: Run the complete verification matrix**

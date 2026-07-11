@@ -34,6 +34,7 @@ def test_codex_plugin_bundle_exposes_canonical_skill_and_pinned_server() -> None
     assert list(mcp["mcpServers"]) == ["albumentationsx"]
     server = mcp["mcpServers"]["albumentationsx"]
     assert server["command"] == "uvx"
+    assert server["cwd"] == "."
     assert server["args"] == [
         "--from",
         "albumentationsx-mcp==1.15.0",
@@ -85,8 +86,9 @@ def test_codex_plugin_validator_accepts_matching_safe_bundle(tmp_path: Path) -> 
         ("mcp_path", "plugin MCP path must be './.mcp.json'"),
         ("unpinned_package", "MCP package must be pinned to albumentationsx-mcp==1.15.0"),
         ("extra_env_var", "MCP env_vars must match the documented allowlist"),
-        ("implicit_root_arg", "MCP args must not grant implicit filesystem roots"),
+        ("implicit_root_arg", "MCP args must not grant implicit user dataset roots"),
         ("fixed_env", "MCP server must not define fixed environment values"),
+        ("workspace_cwd", "MCP server cwd must stay inside the plugin root"),
     ],
 )
 def test_codex_plugin_validator_rejects_unsafe_or_drifted_bundle(
@@ -123,6 +125,8 @@ def _write_bundle(tmp_path: Path, *, mutation: str | None = None) -> tuple[Path,
         server["args"].extend(["--allowed-root", "/example/images"])
     elif mutation == "fixed_env":
         server["env"] = {"ALBU_MCP_ALLOWED_ROOTS": "/example/images"}
+    elif mutation == "workspace_cwd":
+        server["cwd"] = "${workspace}"
 
     plugin_path = tmp_path / ".codex-plugin" / "plugin.json"
     plugin_path.parent.mkdir()
