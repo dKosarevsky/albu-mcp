@@ -4,6 +4,9 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 ## Unreleased
 
+- Changed GitHub Release publishing to use the exact matching `CHANGELOG.md` version section instead of unbounded
+  automatically generated pull-request notes.
+
 ## 1.16.0 - 2026-07-11
 
 - Added direct single-image onboarding to `plan_dataset_onboarding` and `build_review_packet`, while preserving bounded

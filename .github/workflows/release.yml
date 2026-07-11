@@ -31,6 +31,9 @@ jobs:
       - name: Check release version metadata
         run: uv run python scripts/check_release_version.py "${GITHUB_REF_NAME}"
 
+      - name: Validate release notes
+        run: python scripts/extract_release_notes.py --tag "${GITHUB_REF_NAME}" --output release-notes.md
+
       - name: Run tests
         run: uv run pytest
 
@@ -69,6 +72,13 @@ jobs:
         with:
           name: dist
           path: dist/*
+          if-no-files-found: error
+
+      - name: Upload release notes
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-notes
+          path: release-notes.md
           if-no-files-found: error
 
   publish-pypi:
@@ -115,10 +125,18 @@ jobs:
           name: dist
           path: dist
 
+      - name: Download release notes
+        uses: actions/download-artifact@v8
+        with:
+          name: release-notes
+          path: .
+
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "${GITHUB_REF_NAME}" dist/* --verify-tag --generate-notes
+        run: >-
+          gh release create "${GITHUB_REF_NAME}" dist/* --verify-tag
+          --notes-file release-notes.md
 
   post-release-smoke:
     needs: github-release

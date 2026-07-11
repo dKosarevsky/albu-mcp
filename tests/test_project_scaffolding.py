@@ -368,15 +368,30 @@ def test_release_workflow_and_readme_publish_instructions_are_present() -> None:
 
     assert release_workflow.exists()
     workflow = yaml.safe_load(release_workflow.read_text(encoding="utf-8"))
-    build_commands = "\n".join(step.get("run", "") for step in workflow["jobs"]["build"]["steps"])
-    release_commands = "\n".join(step.get("run", "") for step in workflow["jobs"]["github-release"]["steps"])
+    build_steps = workflow["jobs"]["build"]["steps"]
+    release_steps = workflow["jobs"]["github-release"]["steps"]
+    build_commands = "\n".join(step.get("run", "") for step in build_steps)
+    release_commands = "\n".join(step.get("run", "") for step in release_steps)
     mcp_registry_commands = "\n".join(step.get("run", "") for step in workflow["jobs"]["publish-mcp-registry"]["steps"])
     assert "uv build" in build_commands
+    assert (
+        'python scripts/extract_release_notes.py --tag "${GITHUB_REF_NAME}" --output release-notes.md' in build_commands
+    )
+    assert any(
+        "actions/upload-artifact" in step.get("uses", "") and step.get("with", {}).get("name") == "release-notes"
+        for step in build_steps
+    )
+    assert any(
+        "actions/download-artifact" in step.get("uses", "") and step.get("with", {}).get("name") == "release-notes"
+        for step in release_steps
+    )
     assert "uv run python scripts/validate_host_manual_runs.py" in build_commands
     assert "uv run python scripts/check_host_acceptance_report.py" in build_commands
     assert "uv run python scripts/check_contract_snapshots.py" in build_commands
     assert "uv run python scripts/check_demo_assets.py --output-dir docs/assets/demo --check" in build_commands
     assert 'uv run python scripts/check_release_readiness.py --tag "${GITHUB_REF_NAME}"' in build_commands
+    assert "--notes-file" in release_commands
+    assert "--generate-notes" not in release_commands
     assert "gh release create" in release_commands
     assert workflow["jobs"]["publish-mcp-registry"]["needs"] == "post-release-smoke"
     assert "mcp-publisher publish" in mcp_registry_commands
