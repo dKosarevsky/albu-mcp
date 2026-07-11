@@ -4,6 +4,8 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 ## Unreleased
 
+- Added a validated native Codex plugin bundle that loads the canonical agent skill and pinned MCP server without
+  implicit filesystem roots.
 - Generated evidence execution packs now include a copy-ready no-write status handoff before reviewer-approved import.
 - Added a generated adoption packet with install commands, public links, host coverage, first-dataset workflow, and launch
   copy.

@@ -163,6 +163,34 @@ For preview work, use
 
 ## Codex
 
+### Native plugin bundle
+
+The repository root is a native Codex plugin source through [`.codex-plugin/plugin.json`](../.codex-plugin/plugin.json)
+and [`.mcp.json`](../.mcp.json). Adding that trusted checkout through the local or team plugin controls supported by
+your Codex installation loads the canonical skill and the pinned base MCP server together. This is a source bundle,
+not a public Codex marketplace listing.
+
+The bundle starts the published package but does not grant filesystem roots by default. For preview work, set these in
+the environment that launches Codex:
+
+```bash
+export ALBU_MCP_ALLOWED_ROOTS=/absolute/path/to/images
+export ALBU_MCP_ARTIFACT_ROOT=/absolute/path/to/albu-artifacts
+export ALBU_MCP_MAX_PREVIEW_RUNS=100
+```
+
+Restart Codex after installing the plugin or changing these values, then call `run_host_smoke_check`. Do not render
+until it reports `preview_ready: true`. Direct TOML configuration remains the fallback for Codex builds without local
+plugin sources and for project-specific root arguments.
+
+Maintainers can validate bundle structure, permissions, and version pinning with:
+
+```bash
+uv run python scripts/check_codex_plugin.py
+```
+
+### Direct TOML
+
 Codex-style TOML configs can use [examples/codex_mcp_config.toml](../examples/codex_mcp_config.toml):
 
 ```toml

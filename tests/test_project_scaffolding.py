@@ -491,6 +491,28 @@ def test_readme_operator_cli_section_stays_concise() -> None:
     assert "albu-mcp evidence import-artifacts" in usage
 
 
+def test_codex_plugin_bundle_has_concise_public_setup_guidance() -> None:
+    readme = Path("README.md").read_text(encoding="utf-8")
+    install = Path("docs/INSTALL.md").read_text(encoding="utf-8")
+
+    assert "native Codex plugin bundle" in readme
+    expected_install_text = [
+        ".codex-plugin/plugin.json",
+        ".mcp.json",
+        "loads the canonical skill and the pinned base MCP server together",
+        "does not grant filesystem roots by default",
+        "ALBU_MCP_ALLOWED_ROOTS",
+        "ALBU_MCP_ARTIFACT_ROOT",
+        "ALBU_MCP_MAX_PREVIEW_RUNS",
+        "Restart Codex",
+        "run_host_smoke_check",
+        "Direct TOML configuration remains the fallback",
+        "not a public Codex marketplace listing",
+    ]
+    for expected_text in expected_install_text:
+        assert expected_text in install
+
+
 def test_release_workflow_checks_versions_and_smokes_published_package() -> None:
     workflow = yaml.safe_load(Path(".github/workflows/release.yml").read_text(encoding="utf-8"))
     build_commands = "\n".join(step.get("run", "") for step in workflow["jobs"]["build"]["steps"])
