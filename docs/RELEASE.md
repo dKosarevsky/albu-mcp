@@ -46,6 +46,7 @@ uv run python scripts/check_host_acceptance_report.py
 uv run python scripts/check_contract_snapshots.py
 uv run python scripts/check_demo_assets.py --output-dir docs/assets/demo --check
 uv run python scripts/check_release_readiness.py --tag vX.Y.Z
+uv run python scripts/extract_release_notes.py --tag vX.Y.Z
 uv run python scripts/run_golden_evals.py
 uv build
 ```
@@ -82,7 +83,9 @@ The `Release` workflow runs in five stages:
 1. `build`: runs the quality gate, builds the wheel/source distribution, and uploads `dist/*` as a workflow artifact.
 2. `publish-pypi`: waits for the protected GitHub environment `pypi`, then publishes the same artifact to PyPI through
    Trusted Publishing.
-3. `github-release`: creates the GitHub Release and attaches the same `dist/*` artifact.
+3. `github-release`: uses the exact tag section extracted and validated from `CHANGELOG.md` during `build`, creates the
+   GitHub Release with those notes, and attaches the same `dist/*` artifact. A missing or empty version section fails
+   before package publication instead of generating unrelated repository-wide notes.
 4. `post-release-smoke`: checks PyPI's direct version JSON endpoint, then runs the published package with `uvx`.
 5. `publish-mcp-registry`: publishes and verifies the MCP Registry metadata.
 
