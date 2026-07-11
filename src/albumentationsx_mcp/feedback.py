@@ -10,6 +10,7 @@ FeedbackSeverity = Literal["low", "medium", "high"]
 _DEFAULT_SEVERITY: FeedbackSeverity = "medium"
 _SEVERITY_ORDER: dict[FeedbackSeverity, int] = {"low": 0, "medium": 1, "high": 2}
 _SEVERITY_MULTIPLIER: dict[FeedbackSeverity, float] = {"low": 1.5, "medium": 1.0, "high": 0.5}
+_SEVERITY_GROWTH: dict[FeedbackSeverity, float] = {"low": 1.25, "medium": 1.5, "high": 2.0}
 _MAX_REDUCTION_FACTOR = 0.95
 _TAG_PRIORITY = [
     "too_noisy",
@@ -46,6 +47,11 @@ def normalize_feedback_tags(feedback_tags: Iterable[str]) -> dict[str, FeedbackS
 def severity_scaled_factor(base_factor: float, severity: FeedbackSeverity) -> float:
     """Return a reduction factor adjusted by feedback severity."""
     return round(min(_MAX_REDUCTION_FACTOR, max(0.0, base_factor * _SEVERITY_MULTIPLIER[severity])), 6)
+
+
+def severity_scaled_growth(severity: FeedbackSeverity) -> float:
+    """Return the bounded growth multiplier for constructive feedback."""
+    return _SEVERITY_GROWTH[severity]
 
 
 def suggested_feedback_tags_for_transform_names(

@@ -77,3 +77,16 @@ def test_list_recipe_catalog_is_agent_legible_and_deterministic() -> None:
     assert catalog[1].quality_profile == "detection"
     assert "object_detection" in catalog[1].task_aliases
     assert "too_distorted" in catalog[1].feedback_tags
+
+
+@pytest.mark.parametrize("task", ["classification", "object_detection", "segmentation", "unknown task"])
+def test_exposure_recipes_offer_weak_exposure_feedback(task: str) -> None:
+    recipe = recommend_recipe(task, intensity="low")
+
+    assert "exposure_too_weak" in recipe.feedback_tags
+
+
+def test_ocr_recipe_does_not_offer_weak_exposure_feedback_without_exposure_transform() -> None:
+    recipe = recommend_recipe("ocr", intensity="low")
+
+    assert "exposure_too_weak" not in recipe.feedback_tags

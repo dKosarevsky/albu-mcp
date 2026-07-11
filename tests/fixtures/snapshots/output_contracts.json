@@ -169,6 +169,7 @@
             "selected": [
               "too_noisy",
               "too_blurry",
+              "exposure_too_weak",
               "object_unrecognizable"
             ]
           },
@@ -191,6 +192,7 @@
         "feedback_tags": [
           "too_noisy",
           "too_blurry",
+          "exposure_too_weak",
           "object_unrecognizable"
         ],
         "intensity": "low",
@@ -1303,6 +1305,7 @@
           "rationale": "These feedback tags match the transforms and failure modes most likely to matter for this task.",
           "selected": [
             "too_distorted",
+            "exposure_too_weak",
             "object_unrecognizable"
           ]
         },
@@ -1324,6 +1327,7 @@
       ],
       "feedback_tags": [
         "too_distorted",
+        "exposure_too_weak",
         "object_unrecognizable"
       ],
       "intensity": "low",
@@ -1654,6 +1658,7 @@
           "feedback_tags": [
             "too_noisy",
             "too_blurry",
+            "exposure_too_weak",
             "object_unrecognizable"
           ],
           "intensity": "low",
@@ -1853,6 +1858,7 @@
           "feedback_tags": [
             "too_noisy",
             "too_blurry",
+            "exposure_too_weak",
             "object_unrecognizable"
           ],
           "intensity": "low",

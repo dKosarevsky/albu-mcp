@@ -43,7 +43,22 @@ _LOW_SEVERITY_PATTERNS = ("maybe", "slightly", "a bit", "bit ", "minor")
 _SIGNAL_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("too_noisy", ("noise", "noisy", "speckle", "speckled", "grain", "grainy")),
     ("too_blurry", ("blur", "blurry", "soft", "smeared")),
-    ("too_distorted", ("distort", "distorted", "skew", "skewed", "warp", "warped", "bent")),
+    ("too_distorted", ("distort", "distorted", "distortion", "skew", "skewed", "warp", "warped", "bent")),
+    (
+        "exposure_too_weak",
+        (
+            "almost indistinguishable",
+            "visually unchanged",
+            "looks unchanged",
+            "no visible change",
+            "too subtle",
+            "not enough variation",
+            "not enough brightness",
+            "not enough contrast",
+            "stronger brightness",
+            "stronger contrast",
+        ),
+    ),
     ("too_dark", ("too dark", "dark", "underexposed", "dim", "shadow")),
     ("too_bright", ("too bright", "bright", "overexposed", "washed out", "blown out")),
     (
@@ -71,6 +86,7 @@ _INTENT_BY_TAG = {
     "too_distorted": "reduce_geometric_distortion",
     "too_dark": "fix_exposure",
     "too_bright": "fix_exposure",
+    "exposure_too_weak": "increase_exposure_variation",
     "color_shift": "reduce_color_shift",
     "object_unrecognizable": "protect_object_readability",
 }
@@ -80,6 +96,7 @@ _TRANSFORM_GUIDANCE_BY_TAG = {
     "too_distorted": "Reduce affine, perspective, rotation, or distortion strength.",
     "too_dark": "Reduce brightness/contrast transform probability or numeric ranges.",
     "too_bright": "Reduce brightness/contrast transform probability or numeric ranges.",
+    "exposure_too_weak": "Increase brightness/contrast probability or numeric ranges within safe bounds.",
     "color_shift": "Reduce hue, saturation, RGB shift, or color jitter strength.",
     "object_unrecognizable": "Reduce destructive transforms until labeled objects remain readable.",
 }
@@ -89,6 +106,7 @@ _ADJUSTMENT_STRATEGY_BY_TAG = {
     "too_distorted": "Reduce geometric distortion strength before adding more spatial transforms.",
     "too_dark": "Move exposure settings toward the baseline before changing color transforms.",
     "too_bright": "Move exposure settings toward the baseline before changing color transforms.",
+    "exposure_too_weak": "Increase exposure variation conservatively, then rerender the same reviewed inputs.",
     "color_shift": "Reduce color-shift transforms before changing geometric or noise transforms.",
     "object_unrecognizable": "Prioritize object readability before adding more augmentation variety.",
 }
@@ -98,6 +116,9 @@ _SAFETY_CHECKS_BY_TAG = {
     "too_distorted": "Confirm labels still match the visible object geometry after the next render.",
     "too_dark": "Confirm low-light regions still expose the target object after the next render.",
     "too_bright": "Confirm highlights do not hide the target object after the next render.",
+    "exposure_too_weak": (
+        "Confirm highlights, shadows, and labeled objects remain readable after the stronger exposure render."
+    ),
     "color_shift": "Confirm class or label evidence is not changed by color after the next render.",
     "object_unrecognizable": "Do not add additional destructive transforms until readability is restored.",
 }
@@ -254,11 +275,17 @@ def _severity(normalized_note: str) -> Literal["low", "medium", "high"]:
 
 
 def _matches_signal(feedback_tag: str, tokens: tuple[str, ...], normalized_note: str) -> bool:
-    if any(token in normalized_note for token in tokens):
+    if any(_contains_signal_token(token, normalized_note) for token in tokens):
         return True
     if feedback_tag == "object_unrecognizable" and "recognize" in normalized_note:
         return any(pattern in normalized_note for pattern in ("can't", "cannot", "cant"))
     return False
+
+
+def _contains_signal_token(token: str, normalized_note: str) -> bool:
+    if " " in token:
+        return token in normalized_note
+    return re.search(rf"\b{re.escape(token)}\b", normalized_note) is not None
 
 
 def _signal_evidence(feedback_tag: str, normalized_note: str) -> str:
