@@ -43,6 +43,25 @@ def test_review_packet_builds_first_preview_handoff(tmp_path: Path) -> None:
     assert packet.report_handoff["resource"] == "albumentationsx://examples/report-handoff"
 
 
+def test_review_packet_accepts_one_supported_image(tmp_path: Path) -> None:
+    image_path = _write_image(tmp_path / "sample.png")
+
+    packet = build_review_packet(
+        dataset_path=image_path,
+        task="classification",
+        intensity="low",
+        targets=["image"],
+        path_policy=PathPolicy([tmp_path]),
+        pipeline_service=PipelineService(TransformCatalog()),
+        recipe_builder=recommend_recipe,
+    )
+
+    assert packet.preview_ready is True
+    assert packet.dataset_path == str(image_path.resolve())
+    assert packet.preview_request_template is not None
+    assert packet.preview_request_template["request"]["input_paths"] == [str(image_path.resolve())]
+
+
 def test_review_packet_blocks_unready_dataset_with_remediation(tmp_path: Path) -> None:
     dataset_dir = tmp_path / "empty"
     dataset_dir.mkdir()

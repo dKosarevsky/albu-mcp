@@ -51,7 +51,7 @@ class DatasetPreviewRequestTemplate(StrictModel):
 
 
 class DatasetOnboardingReport(StrictModel):
-    """Agent-legible first-preview plan for a local image dataset folder."""
+    """Agent-legible first-preview plan for a local image or image directory."""
 
     status: DiagnosticStatus
     preview_ready: bool
@@ -85,7 +85,7 @@ def build_dataset_onboarding_report(  # noqa: PLR0913
     recipe_builder: RecipeBuilder,
     max_images: int = _DEFAULT_MAX_IMAGES,
 ) -> DatasetOnboardingReport:
-    """Build a safe first-preview plan for a local dataset folder without rendering."""
+    """Build a safe first-preview plan for a local image source without rendering."""
     resolved = dataset_path.expanduser().resolve()
     recipe = recipe_builder(task=task, intensity=intensity, targets=targets)
     validation = pipeline_service.validate_pipeline(recipe.pipeline, TargetSpec(targets=recipe.targets))
@@ -95,7 +95,7 @@ def build_dataset_onboarding_report(  # noqa: PLR0913
     dataset_structure: DatasetStructureProfile | None = None
     if all(check.status == "ok" for check in checks):
         image_paths, ignored_file_count = _scan_images(resolved)
-        dataset_structure = build_dataset_structure_profile(resolved, image_paths)
+        dataset_structure = build_dataset_structure_profile(_dataset_context_root(resolved), image_paths)
         checks.append(_image_inventory_check(image_paths, ignored_file_count))
     checks.append(_validation_check(validation))
 
@@ -104,7 +104,11 @@ def build_dataset_onboarding_report(  # noqa: PLR0913
     status = _aggregate_status(checks)
     preview_ready = status == "ok" and bool(sample_paths) and validation.valid
     template = (
-        _preview_request_template(dataset_path=resolved, sample_paths=sample_image_paths, recipe=recipe)
+        _preview_request_template(
+            dataset_path=_dataset_context_root(resolved),
+            sample_paths=sample_image_paths,
+            recipe=recipe,
+        )
         if preview_ready
         else None
     )
@@ -135,7 +139,11 @@ def build_dataset_onboarding_report(  # noqa: PLR0913
 
 
 def _dataset_path_checks(path: Path, path_policy: PathPolicy) -> list[DatasetOnboardingCheck]:
-    details = {"path": str(path), "allowed_roots": [str(root) for root in path_policy.allowed_roots]}
+    details = {
+        "path": str(path),
+        "allowed_roots": [str(root) for root in path_policy.allowed_roots],
+        "path_kind": _path_kind(path),
+    }
     if not _is_allowed(path, path_policy):
         return [
             DatasetOnboardingCheck(
@@ -156,13 +164,23 @@ def _dataset_path_checks(path: Path, path_policy: PathPolicy) -> list[DatasetOnb
                 details=details,
             )
         ]
-    if not path.is_dir():
+    if path.is_file() and path.suffix.lower() not in _IMAGE_EXTENSIONS:
         return [
             DatasetOnboardingCheck(
-                code="dataset_path_not_directory",
+                code="dataset_path_unsupported_file",
                 status="error",
                 severity="high",
-                summary=f"Dataset path is not a directory: {path}",
+                summary=f"Image source is not a supported image file: {path}",
+                details={**details, "supported_extensions": sorted(_IMAGE_EXTENSIONS)},
+            )
+        ]
+    if not path.is_dir() and not path.is_file():
+        return [
+            DatasetOnboardingCheck(
+                code="dataset_path_unsupported_type",
+                status="error",
+                severity="high",
+                summary=f"Image source is neither a regular file nor a directory: {path}",
                 details=details,
             )
         ]
@@ -170,13 +188,15 @@ def _dataset_path_checks(path: Path, path_policy: PathPolicy) -> list[DatasetOnb
         DatasetOnboardingCheck(
             code="dataset_path_accessible",
             status="ok",
-            summary=f"Dataset path is accessible: {path}",
+            summary=f"Image source is accessible: {path}",
             details=details,
         )
     ]
 
 
 def _scan_images(dataset_path: Path) -> tuple[list[Path], int]:
+    if dataset_path.is_file():
+        return [dataset_path.resolve()], 0
     files = sorted(path.resolve() for path in dataset_path.rglob("*") if path.is_file())
     image_paths = [path for path in files if path.suffix.lower() in _IMAGE_EXTENSIONS]
     return image_paths, len(files) - len(image_paths)
@@ -443,19 +463,23 @@ def _remediation_actions(checks: list[DatasetOnboardingCheck]) -> list[DatasetOn
                 code="move_dataset_under_allowed_root",
                 severity="high",
                 check_codes=["dataset_path_outside_allowed_root"],
-                summary="Move the dataset folder under an allowed root or restart the server with a correct root.",
+                summary="Move the image source under an allowed root or restart the server with a correct root.",
                 command_hint="--allowed-root /absolute/path/to/images",
                 docs_uri="albumentationsx://diagnostics/guide",
             )
         )
-    missing_or_not_dir = [code for code in ("dataset_path_missing", "dataset_path_not_directory") if code in codes]
-    if missing_or_not_dir:
+    invalid_source = [
+        code
+        for code in ("dataset_path_missing", "dataset_path_unsupported_file", "dataset_path_unsupported_type")
+        if code in codes
+    ]
+    if invalid_source:
         actions.append(
             DatasetOnboardingRemediationAction(
                 code="fix_dataset_path",
                 severity="high",
-                check_codes=missing_or_not_dir,
-                summary="Use an existing local image directory as dataset_path.",
+                check_codes=invalid_source,
+                summary="Use an existing supported image or a directory containing supported images as dataset_path.",
             )
         )
     if "dataset_images_missing" in codes:
@@ -464,7 +488,7 @@ def _remediation_actions(checks: list[DatasetOnboardingCheck]) -> list[DatasetOn
                 code="add_dataset_images",
                 severity="medium",
                 check_codes=["dataset_images_missing"],
-                summary="Add supported image files or point dataset_path at a folder containing images.",
+                summary="Add supported image files or point dataset_path at a supported image.",
             )
         )
     if "recommended_pipeline_invalid" in codes:
@@ -490,6 +514,20 @@ def _aggregate_status(checks: list[DatasetOnboardingCheck]) -> DiagnosticStatus:
 
 def _is_allowed(path: Path, path_policy: PathPolicy) -> bool:
     return any(path == root or root in path.parents for root in path_policy.allowed_roots)
+
+
+def _dataset_context_root(path: Path) -> Path:
+    return path if path.is_dir() else path.parent
+
+
+def _path_kind(path: Path) -> str:
+    if not path.exists():
+        return "missing"
+    if path.is_dir():
+        return "directory"
+    if path.is_file():
+        return "file"
+    return "other"
 
 
 def _bounded_max_images(max_images: int) -> int:

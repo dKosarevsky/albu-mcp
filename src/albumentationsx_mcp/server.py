@@ -514,7 +514,7 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
         targets: list[str] | None = None,
         max_images: int = 8,
     ) -> dict[str, Any]:
-        """Plan the first safe preview for a local image dataset folder."""
+        """Plan the first safe preview for one local image or an image directory."""
         return build_dataset_onboarding_report(
             dataset_path=Path(dataset_path),
             task=task,
@@ -534,7 +534,7 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
         targets: list[str] | None = None,
         max_images: int = 8,
     ) -> dict[str, Any]:
-        """Build one host-facing first-preview handoff packet for a local dataset."""
+        """Build one host-facing first-preview handoff for one image or an image directory."""
         return build_review_packet(
             dataset_path=Path(dataset_path),
             task=task,

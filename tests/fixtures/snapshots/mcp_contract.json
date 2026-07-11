@@ -288,7 +288,7 @@
       }
     },
     {
-      "description": "Build one host-facing first-preview handoff packet for a local dataset.",
+      "description": "Build one host-facing first-preview handoff for one image or an image directory.",
       "name": "build_review_packet",
       "parameters": {
         "properties": {
@@ -1016,7 +1016,7 @@
       }
     },
     {
-      "description": "Plan the first safe preview for a local image dataset folder.",
+      "description": "Plan the first safe preview for one local image or an image directory.",
       "name": "plan_dataset_onboarding",
       "parameters": {
         "properties": {

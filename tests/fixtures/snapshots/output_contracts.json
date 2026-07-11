@@ -39,11 +39,12 @@
             "allowed_roots": [
               "<OUTPUT_CONTRACT_ROOT>/review-packet/images"
             ],
-            "path": "<OUTPUT_CONTRACT_ROOT>/review-packet/images"
+            "path": "<OUTPUT_CONTRACT_ROOT>/review-packet/images",
+            "path_kind": "directory"
           },
           "severity": "info",
           "status": "ok",
-          "summary": "Dataset path is accessible: <OUTPUT_CONTRACT_ROOT>/review-packet/images"
+          "summary": "Image source is accessible: <OUTPUT_CONTRACT_ROOT>/review-packet/images"
         },
         {
           "code": "dataset_images_found",
@@ -1074,11 +1075,12 @@
           "allowed_roots": [
             "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding"
           ],
-          "path": "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding"
+          "path": "<OUTPUT_CONTRACT_ROOT>/dataset-onboarding",
+          "path_kind": "directory"
         },
         "severity": "info",
         "status": "ok",
-        "summary": "Dataset path is accessible: <OUTPUT_CONTRACT_ROOT>/dataset-onboarding"
+        "summary": "Image source is accessible: <OUTPUT_CONTRACT_ROOT>/dataset-onboarding"
       },
       {
         "code": "dataset_images_found",

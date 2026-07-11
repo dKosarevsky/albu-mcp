@@ -54,7 +54,7 @@ def build_review_packet(  # noqa: PLR0913
     recipe_builder: RecipeBuilder,
     max_images: int = 8,
 ) -> ReviewPacket:
-    """Build a single agent-legible packet for first-preview review."""
+    """Build a single agent-legible packet for first-preview image-source review."""
     onboarding = build_dataset_onboarding_report(
         dataset_path=dataset_path,
         task=task,
