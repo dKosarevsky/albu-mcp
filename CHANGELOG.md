@@ -4,6 +4,7 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 ## Unreleased
 
+- Generated evidence execution packs now include a copy-ready no-write status handoff before reviewer-approved import.
 - Added a generated adoption packet with install commands, public links, host coverage, first-dataset workflow, and launch
   copy.
 - Added `inspect_dataset_quality` for read-only local dataset quality preflight before first preview rendering.

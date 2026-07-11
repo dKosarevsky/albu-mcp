@@ -11,13 +11,13 @@ Use this playbook to keep AlbumentationsX MCP previews bounded and distinguish r
 
 ## Install
 
-Install the server with:
+Install:
 
 ```bash
 uvx --from albumentationsx-mcp albumentationsx-mcp
 ```
 
-For real preview work, require bounded roots:
+Require bounded roots:
 
 ```bash
 uvx --from albumentationsx-mcp albumentationsx-mcp \
@@ -66,14 +66,14 @@ Use AlbumentationsX MCP on `DATASET_PATH`. Use `ALLOWED_ROOT` for image access a
 
 ## Evidence Workflows
 
-Use operator commands only when the user is doing release, adoption, or product evidence work:
+For release, adoption, or product evidence, follow the generated pack README and use:
 
 - `albu-mcp activation real-adoption-cycle`
 - `albu-mcp activation product-fix-closure-pipeline`
 - `albu-mcp evidence execution-pack --date YYYY-MM-DD --reviewer "Release operator" --output-dir evidence-session --format markdown`
 - `albu-mcp evidence execution-pack-audit --input-dir evidence-session`
 - `albu-mcp evidence execution-pack-progress --input-dir evidence-session`
-- `albu-mcp evidence execution-pack-status --input-dir evidence-session`
+- `albu-mcp evidence execution-pack-status --input-dir evidence-session --format markdown --output evidence-session/status.md`
 - `albu-mcp evidence preflight`
 - `albu-mcp evidence import-wizard`
 

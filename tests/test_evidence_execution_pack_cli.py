@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -188,6 +189,62 @@ def test_evidence_execution_pack_writes_no_record_session_artifacts(tmp_path: Pa
     assert str(output_dir / "codex-evidence-session-manifest.json") in commands
     assert str(output_dir / "claude-code-evidence-session-manifest.json") in commands
     assert str(output_dir / "beta-responses") in commands
+
+
+def test_evidence_execution_pack_embeds_runnable_status_handoff_for_quoted_paths(tmp_path: Path) -> None:
+    records_dir = tmp_path / "record files"
+    records_dir.mkdir()
+    host_records, beta_records = _write_empty_records(records_dir)
+    output_dir = tmp_path / "evidence session"
+    status_path = output_dir / "status.md"
+    host_before = host_records.read_text(encoding="utf-8")
+    beta_before = beta_records.read_text(encoding="utf-8")
+
+    _generate_execution_pack(output_dir, host_records=host_records, beta_records=beta_records)
+
+    expected_command = shlex.join(
+        [
+            "albu-mcp",
+            "evidence",
+            "execution-pack-status",
+            "--input-dir",
+            str(output_dir),
+            "--host-records",
+            str(host_records),
+            "--beta-records",
+            str(beta_records),
+            "--format",
+            "markdown",
+            "--output",
+            str(status_path),
+        ]
+    )
+    readme = (output_dir / "README.md").read_text(encoding="utf-8")
+    commands = (output_dir / "post-session-commands.md").read_text(encoding="utf-8")
+
+    assert "## Operator Status" in readme
+    assert f"`{expected_command}`" in readme
+    assert f"`{expected_command}`" in commands
+    assert "Run Pack Status at any time." in commands
+    assert not status_path.exists()
+    assert commands.index("## Pack Status") < commands.index("## Validate Host Manifests")
+    assert commands.index("## Validate Beta Responses") < commands.index("## Import Wizard (No Write)")
+    assert commands.index("## Import Wizard (No Write)") < commands.index("## Reviewed Import (Writes Records)")
+
+    command_parts = shlex.split(expected_command)
+    result = subprocess.run(  # noqa: S603 - rendered package CLI command with controlled fixture paths.
+        [sys.executable, "-m", "albumentationsx_mcp", *command_parts[1:]],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    status_report = status_path.read_text(encoding="utf-8")
+
+    assert result.stdout == f"wrote evidence execution-pack-status to {status_path}\n"
+    assert "Status: `needs_real_session_input`" in status_report
+    assert "Writes records: `false`" in status_report
+    assert host_records.read_text(encoding="utf-8") == host_before
+    assert beta_records.read_text(encoding="utf-8") == beta_before
 
 
 def test_evidence_execution_pack_can_target_one_host(tmp_path: Path) -> None:
