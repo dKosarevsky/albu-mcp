@@ -394,7 +394,8 @@ def _render_post_session_commands(
     )
     return (
         "# Post-Session Commands\n\n"
-        "Run these only after the real session artifacts are manually filled and reviewed.\n\n"
+        "Run Pack Status at any time. Run the reviewed import only after real session artifacts are manually filled, "
+        "validated, and approved.\n\n"
         "## Pack Status\n\n"
         f"- `{status_command}`\n\n"
         "Refresh `status.md` after every evidence edit. Continue to import review only when it reports "

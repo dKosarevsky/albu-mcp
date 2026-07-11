@@ -225,6 +225,7 @@ def test_evidence_execution_pack_embeds_runnable_status_handoff_for_quoted_paths
     assert "## Operator Status" in readme
     assert f"`{expected_command}`" in readme
     assert f"`{expected_command}`" in commands
+    assert "Run Pack Status at any time." in commands
     assert not status_path.exists()
     assert commands.index("## Pack Status") < commands.index("## Validate Host Manifests")
     assert commands.index("## Validate Beta Responses") < commands.index("## Import Wizard (No Write)")
