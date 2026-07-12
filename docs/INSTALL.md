@@ -73,45 +73,38 @@ Use `ALBU_MCP_MAX_PREVIEW_RUNS` to adjust preview index retention. The default k
 
 ## Claude Desktop
 
-Claude Desktop-style hosts use a JSON `mcpServers` object. Start with
-[examples/claude_desktop_pypi_config.json](../examples/claude_desktop_pypi_config.json):
+Use the versioned release artifact rather than editing Claude's JSON configuration:
 
-```json
-{
-  "mcpServers": {
-    "albumentationsx": {
-      "command": "uvx",
-      "args": ["--from", "albumentationsx-mcp", "albumentationsx-mcp"]
-    }
-  }
-}
+1. Download `albumentationsx-mcp-<version>.mcpb` from the matching
+   [GitHub Release](https://github.com/dKosarevsky/albu-mcp/releases).
+2. In Claude Desktop, open **Settings → Extensions → Advanced settings**.
+3. Under **Extension Developer**, choose **Install Extension…** and select the `.mcpb` file.
+4. Select the smallest useful image/annotation directory for **Allowed image directory**.
+5. Select a separate output directory for **Preview artifact directory** and keep the default retention unless a bounded
+   value from 1 to 500 is needed.
+6. Open **+ → Connectors** in a chat and confirm that **AlbumentationsX MCP** and its tools are available.
+
+The extension runs locally through Claude Desktop's managed UV runtime and delegates to the matching published PyPI
+package. It does not require Claude Code or a manual Python installation. It has no implicit home-directory access: the
+two selected directories become the only read and write roots passed to the server.
+
+Privately distributed extensions must be updated by installing the newer `.mcpb` release. If installation is disabled by
+an organization policy, ask the administrator to allow the extension; do not work around the policy with broader roots.
+
+### Portable JSON fallback
+
+Other desktop hosts that support a Claude-style `mcpServers` object can still use
+[examples/claude_desktop_pypi_config.json](../examples/claude_desktop_pypi_config.json). For bounded previews, use
+[examples/claude_desktop_preview_config.json](../examples/claude_desktop_preview_config.json), replace both placeholder
+paths, and restart that host after editing its MCP configuration. Current Claude Desktop users should prefer the MCPB
+extension above.
+
+Maintainers can validate and build the same release artifact with Node.js 20 or newer:
+
+```bash
+uv run python scripts/check_desktop_extension.py
+uv run python -m scripts.build_desktop_extension --output-dir dist/mcpb
 ```
-
-For preview work, add bounded roots:
-
-```json
-{
-  "mcpServers": {
-    "albumentationsx": {
-      "command": "uvx",
-      "args": [
-        "--from",
-        "albumentationsx-mcp",
-        "albumentationsx-mcp",
-        "--allowed-root",
-        "/absolute/path/to/images",
-        "--artifact-root",
-        "/absolute/path/to/albu-artifacts"
-      ]
-    }
-  }
-}
-```
-
-The same preview-ready shape is available in
-[examples/claude_desktop_preview_config.json](../examples/claude_desktop_preview_config.json).
-
-Restart the host after editing its MCP configuration.
 
 ## Claude Code
 

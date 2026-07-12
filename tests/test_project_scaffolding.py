@@ -426,6 +426,64 @@ def test_release_workflow_publishes_to_pypi_with_trusted_publishing() -> None:
     assert release_job["permissions"]["contents"] == "write"
 
 
+def test_release_workflow_publishes_isolated_mcpb_artifact() -> None:
+    workflow = yaml.safe_load(Path(".github/workflows/release.yml").read_text(encoding="utf-8"))
+    build_steps = workflow["jobs"]["build"]["steps"]
+    publish_steps = workflow["jobs"]["publish-pypi"]["steps"]
+    release_steps = workflow["jobs"]["github-release"]["steps"]
+    build_commands = "\n".join(step.get("run", "") for step in build_steps)
+    publish_commands = "\n".join(step.get("run", "") for step in publish_steps)
+    release_commands = "\n".join(step.get("run", "") for step in release_steps)
+
+    setup_node = next(step for step in build_steps if step.get("uses", "").startswith("actions/setup-node@"))
+    python_upload = next(
+        step
+        for step in build_steps
+        if step.get("uses", "").startswith("actions/upload-artifact@") and step.get("with", {}).get("name") == "dist"
+    )
+    mcpb_upload = next(
+        step
+        for step in build_steps
+        if step.get("uses", "").startswith("actions/upload-artifact@") and step.get("with", {}).get("name") == "mcpb"
+    )
+    release_downloads = [
+        step for step in release_steps if step.get("uses", "").startswith("actions/download-artifact@")
+    ]
+
+    assert setup_node["with"]["node-version"] == "24"
+    assert "uv run python scripts/check_desktop_extension.py" in build_commands
+    assert "uv run python -m scripts.build_desktop_extension --output-dir dist/mcpb" in build_commands
+    assert "cd dist/mcpb && sha256sum *.mcpb > SHA256SUMS" in build_commands
+    assert python_upload["with"]["path"] == "dist/*.whl\ndist/*.tar.gz\n"
+    assert mcpb_upload["with"]["path"] == "dist/mcpb/*"
+    assert "uv publish --trusted-publishing automatic dist/*" in publish_commands
+    assert ".mcpb" not in publish_commands
+    assert any(
+        step.get("with", {}).get("name") == "dist" and step.get("with", {}).get("path") == "dist/python"
+        for step in release_downloads
+    )
+    assert any(
+        step.get("with", {}).get("name") == "mcpb" and step.get("with", {}).get("path") == "dist/mcpb"
+        for step in release_downloads
+    )
+    assert "dist/python/* dist/mcpb/*" in release_commands
+
+
+def test_release_docs_cover_mcpb_artifact_flow() -> None:
+    release_docs = Path("docs/RELEASE.md").read_text(encoding="utf-8")
+
+    for term in [
+        "desktop-extension/manifest.json",
+        "scripts/check_desktop_extension.py",
+        "scripts.build_desktop_extension",
+        "albumentationsx-mcp-<version>.mcpb",
+        "SHA256SUMS",
+        "separate workflow artifact",
+        "never published to PyPI",
+    ]:
+        assert term in release_docs
+
+
 def test_public_package_metadata_is_polished() -> None:
     pyproject = Path("pyproject.toml").read_text(encoding="utf-8")
     readme = Path("README.md").read_text(encoding="utf-8")
