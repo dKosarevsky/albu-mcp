@@ -79,7 +79,7 @@ jobs:
         run: uv run python -m scripts.build_desktop_extension --output-dir dist/mcpb
 
       - name: Write MCPB checksum
-        run: sha256sum dist/mcpb/*.mcpb > dist/mcpb/SHA256SUMS
+        run: cd dist/mcpb && sha256sum *.mcpb > SHA256SUMS
 
       - name: Upload package artifacts
         uses: actions/upload-artifact@v7

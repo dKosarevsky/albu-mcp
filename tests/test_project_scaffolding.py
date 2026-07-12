@@ -453,7 +453,7 @@ def test_release_workflow_publishes_isolated_mcpb_artifact() -> None:
     assert setup_node["with"]["node-version"] == "24"
     assert "uv run python scripts/check_desktop_extension.py" in build_commands
     assert "uv run python -m scripts.build_desktop_extension --output-dir dist/mcpb" in build_commands
-    assert "sha256sum dist/mcpb/*.mcpb > dist/mcpb/SHA256SUMS" in build_commands
+    assert "cd dist/mcpb && sha256sum *.mcpb > SHA256SUMS" in build_commands
     assert python_upload["with"]["path"] == "dist/*.whl\ndist/*.tar.gz\n"
     assert mcpb_upload["with"]["path"] == "dist/mcpb/*"
     assert "uv publish --trusted-publishing automatic dist/*" in publish_commands
