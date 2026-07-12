@@ -96,8 +96,7 @@ def test_desktop_extension_validator_cli_accepts_repository_bundle() -> None:
 
     assert result.returncode == 0, result.stderr
     assert result.stdout == (
-        f"Claude Desktop MCP bundle is valid: version {PROJECT_VERSION}, "
-        f"dependency {EXPECTED_PACKAGE_PIN}\n"
+        f"Claude Desktop MCP bundle is valid: version {PROJECT_VERSION}, dependency {EXPECTED_PACKAGE_PIN}\n"
     )
 
 

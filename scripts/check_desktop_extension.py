@@ -231,9 +231,7 @@ def main() -> None:
     except (OSError, TypeError, ValueError) as exc:
         sys.stderr.write(f"Claude Desktop MCP bundle validation failed: {exc}\n")
         raise SystemExit(1) from exc
-    sys.stdout.write(
-        f"Claude Desktop MCP bundle is valid: version {report.version}, dependency {report.package_pin}\n"
-    )
+    sys.stdout.write(f"Claude Desktop MCP bundle is valid: version {report.version}, dependency {report.package_pin}\n")
 
 
 if __name__ == "__main__":
