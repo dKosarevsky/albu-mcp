@@ -81,6 +81,7 @@ dev = [
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "ruff" },
+    { name = "tomli" },
     { name = "ty" },
 ]
 
@@ -100,6 +101,7 @@ dev = [
     { name = "pytest", specifier = ">=9.0.2" },
     { name = "pytest-cov", specifier = ">=5.0.0" },
     { name = "ruff", specifier = ">=0.15.12" },
+    { name = "tomli", specifier = ">=2.0.0" },
     { name = "ty", specifier = ">=0.0.1a21" },
 ]
 
