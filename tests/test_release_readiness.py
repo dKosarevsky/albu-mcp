@@ -1,4 +1,5 @@
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -73,6 +74,7 @@ EXPECTED_RELEASE_READINESS_CHECKS = [
     "rc_release_decision_report",
     "governed_100_iteration_report",
     "codex_plugin",
+    "desktop_extension",
     "mcp_contract_snapshot",
     "output_contract_snapshot",
 ]
@@ -131,6 +133,7 @@ CLI_OUTPUT_CHECK_NAMES = [
     "rc_release_decision_report",
     "governed_100_iteration_report",
     "codex_plugin",
+    "desktop_extension",
     "output_contract_snapshot",
 ]
 
@@ -183,6 +186,28 @@ def test_release_readiness_reports_codex_plugin_drift(tmp_path: Path) -> None:
     assert len(failed) == 1
     assert failed[0].name == "codex_plugin"
     assert f"plugin version '0.0.0' does not match project version '{PROJECT_VERSION}'" in failed[0].message
+
+
+def test_release_readiness_reports_desktop_extension_drift(tmp_path: Path) -> None:
+    extension_root = tmp_path / "desktop-extension"
+    shutil.copytree(Path("desktop-extension"), extension_root)
+    manifest_path = extension_root / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["version"] = "0.0.0"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    report = check_release_readiness(
+        ReleaseReadinessConfig(
+            contract_output_work_dir=tmp_path / "contracts",
+            desktop_extension_root=extension_root,
+        )
+    )
+
+    failed = [check for check in report.checks if not check.ok]
+    assert report.ok is False
+    assert len(failed) == 1
+    assert failed[0].name == "desktop_extension"
+    assert f"manifest version '0.0.0' does not match project version '{PROJECT_VERSION}'" in failed[0].message
 
 
 def test_release_readiness_cli_passes_fast_guards(tmp_path: Path) -> None:

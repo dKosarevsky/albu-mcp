@@ -25,11 +25,19 @@ jobs:
         with:
           python-version: "3.13"
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
       - name: Install dependencies
         run: uv sync --all-extras --dev
 
       - name: Check release version metadata
         run: uv run python scripts/check_release_version.py "${GITHUB_REF_NAME}"
+
+      - name: Validate Claude Desktop extension
+        run: uv run python scripts/check_desktop_extension.py
 
       - name: Validate release notes
         run: python scripts/extract_release_notes.py --tag "${GITHUB_REF_NAME}" --output release-notes.md
@@ -67,11 +75,26 @@ jobs:
       - name: Build package
         run: uv build
 
+      - name: Build Claude Desktop extension
+        run: uv run python -m scripts.build_desktop_extension --output-dir dist/mcpb
+
+      - name: Write MCPB checksum
+        run: sha256sum dist/mcpb/*.mcpb > dist/mcpb/SHA256SUMS
+
       - name: Upload package artifacts
         uses: actions/upload-artifact@v7
         with:
           name: dist
-          path: dist/*
+          path: |
+            dist/*.whl
+            dist/*.tar.gz
+          if-no-files-found: error
+
+      - name: Upload Claude Desktop extension
+        uses: actions/upload-artifact@v7
+        with:
+          name: mcpb
+          path: dist/mcpb/*
           if-no-files-found: error
 
       - name: Upload release notes
@@ -123,7 +146,13 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: dist
-          path: dist
+          path: dist/python
+
+      - name: Download Claude Desktop extension
+        uses: actions/download-artifact@v8
+        with:
+          name: mcpb
+          path: dist/mcpb
 
       - name: Download release notes
         uses: actions/download-artifact@v8
@@ -135,7 +164,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: >-
-          gh release create "${GITHUB_REF_NAME}" dist/* --verify-tag
+          gh release create "${GITHUB_REF_NAME}" dist/python/* dist/mcpb/* --verify-tag
           --notes-file release-notes.md
 
   post-release-smoke:

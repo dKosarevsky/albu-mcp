@@ -1,10 +1,11 @@
 # Release and MCP Registry Publishing
 
-This project is a Python MCP stdio server. The community publishing model has two distinct layers:
+This project is a Python MCP stdio server with three distribution layers:
 
 - **PyPI** hosts the installable Python package with the server code.
 - **MCP Registry** hosts `server.json` metadata that tells MCP clients and downstream registries where the package lives
   and how to run it.
+- **GitHub Releases** host the installable Claude Desktop MCPB and its checksum.
 
 Tools are not published separately. They are runtime capabilities exposed by the server after an MCP host starts it.
 
@@ -33,8 +34,10 @@ The same name must match `server.json`.
 2. Update `version` in `pyproject.toml`.
 3. Update `version` in `server.json` and `packages[0].version`.
 4. Update `version` in `.codex-plugin/plugin.json` and the package pin in `.mcp.json`.
-5. Run `uv lock` so the local package version in `uv.lock` matches.
-6. Run the local quality gate:
+5. Update `version` in `desktop-extension/manifest.json`, `desktop-extension/pyproject.toml`, and the exact package pin in
+   the desktop extension project.
+6. Run `uv lock` so the local package version in `uv.lock` matches.
+7. Run the local quality gate. Building the MCPB additionally requires Node.js 20 or newer:
 
 ```bash
 uv run pytest
@@ -45,10 +48,12 @@ uv run python scripts/validate_host_manual_runs.py
 uv run python scripts/check_host_acceptance_report.py
 uv run python scripts/check_contract_snapshots.py
 uv run python scripts/check_demo_assets.py --output-dir docs/assets/demo --check
+uv run python scripts/check_desktop_extension.py
 uv run python scripts/check_release_readiness.py --tag vX.Y.Z
 uv run python scripts/extract_release_notes.py --tag vX.Y.Z
 uv run python scripts/run_golden_evals.py
 uv build
+uv run python -m scripts.build_desktop_extension --output-dir dist/mcpb
 ```
 
 If `check_contract_snapshots.py` reports drift, review its classification before updating fixtures. Use
@@ -60,11 +65,11 @@ machine-readable pre-release status. In GitHub Actions, the same guard writes a 
 This release readiness guard aggregates manual host records, generated evidence freshness, contract snapshots, and
 version consistency before tagging.
 
-7. Commit the version bump:
+8. Commit the version bump:
 
 ```bash
-git add pyproject.toml server.json .codex-plugin/plugin.json .mcp.json uv.lock README.md CHANGELOG.md \
-  docs/INSTALL.md docs/V1_READINESS.md
+git add pyproject.toml server.json .codex-plugin/plugin.json .mcp.json desktop-extension/manifest.json \
+  desktop-extension/pyproject.toml uv.lock README.md CHANGELOG.md docs/INSTALL.md docs/V1_READINESS.md
 git commit -m "chore: release vX.Y.Z"
 ```
 
@@ -80,12 +85,14 @@ git push origin vX.Y.Z
 
 The `Release` workflow runs in five stages:
 
-1. `build`: runs the quality gate, builds the wheel/source distribution, and uploads `dist/*` as a workflow artifact.
+1. `build`: runs the quality gate, builds the wheel/source distribution and
+   `albumentationsx-mcp-<version>.mcpb`, writes `SHA256SUMS`, and uploads Python and MCPB files as separate workflow
+   artifacts.
 2. `publish-pypi`: waits for the protected GitHub environment `pypi`, then publishes the same artifact to PyPI through
-   Trusted Publishing.
+   Trusted Publishing. The MCPB is never published to PyPI.
 3. `github-release`: uses the exact tag section extracted and validated from `CHANGELOG.md` during `build`, creates the
-   GitHub Release with those notes, and attaches the same `dist/*` artifact. A missing or empty version section fails
-   before package publication instead of generating unrelated repository-wide notes.
+   GitHub Release with those notes, and attaches the Python package, MCPB, and checksum. A missing or empty version
+   section fails before package publication instead of generating unrelated repository-wide notes.
 4. `post-release-smoke`: checks PyPI's direct version JSON endpoint, then runs the published package with `uvx`.
 5. `publish-mcp-registry`: publishes and verifies the MCP Registry metadata.
 
@@ -104,6 +111,17 @@ Once the package is published, users can run the server package with:
 ```bash
 uvx --from albumentationsx-mcp albumentationsx-mcp
 ```
+
+## Claude Desktop MCPB
+
+The MCPB is a thin UV wrapper around the exact release version on PyPI. Source validation is owned by
+`scripts/check_desktop_extension.py`; schema validation and packing are owned by the pinned official MCPB CLI through
+`scripts.build_desktop_extension`. The release pipeline keeps this bundle in a separate workflow artifact so a wildcard
+PyPI upload can never include it.
+
+Before attaching the bundle, confirm that the build output contains only the five expected source files and verify the
+published digest against `SHA256SUMS`. Users install the `.mcpb` from Claude Desktop's extension settings and select
+explicit read and write directories; no home-directory default is shipped.
 
 ## MCP Registry Publishing
 

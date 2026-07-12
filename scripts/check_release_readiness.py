@@ -14,6 +14,7 @@ if not __package__:
 
 from scripts.check_codex_plugin import validate_codex_plugin
 from scripts.check_contract_snapshots import check_contract_snapshots
+from scripts.check_desktop_extension import validate_desktop_extension
 from scripts.check_first_10_minutes import check_first_10_minutes
 from scripts.check_host_acceptance_report import check_host_acceptance_report
 from scripts.check_host_proof_sprint import check_host_proof_sprint
@@ -241,6 +242,7 @@ _DEFAULT_PYPROJECT_PATH = Path("pyproject.toml")
 _DEFAULT_SERVER_JSON_PATH = Path("server.json")
 _DEFAULT_CODEX_PLUGIN_MANIFEST_PATH = Path(".codex-plugin/plugin.json")
 _DEFAULT_CODEX_MCP_MANIFEST_PATH = Path(".mcp.json")
+_DEFAULT_DESKTOP_EXTENSION_ROOT = Path("desktop-extension")
 
 
 @dataclass(frozen=True)
@@ -316,6 +318,7 @@ class ReleaseReadinessConfig:
     server_json_path: Path = _DEFAULT_SERVER_JSON_PATH
     codex_plugin_manifest_path: Path = _DEFAULT_CODEX_PLUGIN_MANIFEST_PATH
     codex_mcp_manifest_path: Path = _DEFAULT_CODEX_MCP_MANIFEST_PATH
+    desktop_extension_root: Path = _DEFAULT_DESKTOP_EXTENSION_ROOT
 
 
 @dataclass(frozen=True)
@@ -697,6 +700,10 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             mcp_manifest_path=config.codex_mcp_manifest_path,
             pyproject_path=config.pyproject_path,
         ),
+        _check_desktop_extension(
+            extension_root=config.desktop_extension_root,
+            pyproject_path=config.pyproject_path,
+        ),
         *_check_contract_snapshot_freshness(
             mcp_snapshot_path=config.mcp_snapshot_path,
             output_snapshot_path=config.output_snapshot_path,
@@ -1006,6 +1013,21 @@ def _check_codex_plugin(
         name="codex_plugin",
         ok=True,
         message=f"Codex plugin {report.version} is valid ({report.server_name})",
+    )
+
+
+def _check_desktop_extension(*, extension_root: Path, pyproject_path: Path) -> ReleaseReadinessCheck:
+    try:
+        report = validate_desktop_extension(
+            extension_root=extension_root,
+            pyproject_path=pyproject_path,
+        )
+    except (OSError, TypeError, ValueError) as exc:
+        return ReleaseReadinessCheck(name="desktop_extension", ok=False, message=str(exc))
+    return ReleaseReadinessCheck(
+        name="desktop_extension",
+        ok=True,
+        message=f"Claude Desktop extension {report.version} is valid ({report.package_pin})",
     )
 
 
