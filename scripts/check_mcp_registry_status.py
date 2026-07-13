@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 _DEFAULT_REGISTRY_BASE_URL = "https://registry.modelcontextprotocol.io/v0.1/servers"
+_DEFAULT_TIMEOUT_SECONDS = 90.0
 _OFFICIAL_META_KEY = "io.modelcontextprotocol.registry/official"
 
 
@@ -46,7 +47,7 @@ def validate_mcp_registry_status(
     server_json_path: Path = Path("server.json"),
     registry_response_path: Path | None = None,
     registry_url: str | None = None,
-    timeout: float = 30,
+    timeout: float = _DEFAULT_TIMEOUT_SECONDS,
 ) -> McpRegistryStatusReport:
     """Return a Registry status report or raise ValueError with an actionable mismatch."""
     server = _read_json_object(server_json_path)
@@ -108,7 +109,7 @@ def main() -> None:
     parser.add_argument("--server-json", type=Path, default=Path("server.json"))
     parser.add_argument("--registry-response", type=Path, help="Optional saved Registry response JSON for tests.")
     parser.add_argument("--registry-url", help="Optional Registry search URL override.")
-    parser.add_argument("--timeout", type=float, default=30)
+    parser.add_argument("--timeout", type=float, default=_DEFAULT_TIMEOUT_SECONDS)
     parser.add_argument("--retries", type=int, default=1)
     parser.add_argument("--retry-delay", type=float, default=10)
     args = parser.parse_args()
@@ -143,6 +144,10 @@ def _validate_with_retries(options: McpRegistryCheckOptions) -> McpRegistryStatu
             return result
         last_error = result
         if attempt < attempts:
+            sys.stderr.write(
+                f"MCP Registry status check attempt {attempt}/{attempts} failed: {result}; "
+                f"retrying in {options.retry_delay:g} seconds\n"
+            )
             time.sleep(options.retry_delay)
     if last_error is None:
         msg = "MCP Registry status check did not run"
