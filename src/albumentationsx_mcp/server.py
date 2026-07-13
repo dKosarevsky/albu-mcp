@@ -490,7 +490,7 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
         intensity: Intensity = "low",
         targets: list[str] | None = None,
     ) -> dict[str, Any]:
-        """Run a read-only host preflight before rendering local previews."""
+        """Run a read-only host preflight; reading the client-smoke resource is optional."""
         diagnostics = diagnostics_service.diagnose(include_write_probe=include_write_probe)
         recipe = recommend_recipe(task=task, intensity=intensity, targets=targets)
         validation = pipeline_service.validate_pipeline(recipe.pipeline, TargetSpec(targets=recipe.targets))

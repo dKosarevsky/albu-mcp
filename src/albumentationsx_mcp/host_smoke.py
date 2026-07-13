@@ -36,11 +36,20 @@ class HostPreviewRequestTemplate(StrictModel):
     instructions: list[str] = Field(default_factory=list)
 
 
+class HostWorkflowGuidance(StrictModel):
+    """Host-neutral instructions that do not require model-visible MCP resources."""
+
+    resource_uri: str = "albumentationsx://examples/client-smoke"
+    resource_access: Literal["optional"] = "optional"
+    instructions: list[str]
+
+
 class HostSmokeReport(StrictModel):
     """Machine-readable host preflight report."""
 
     status: DiagnosticStatus
     preview_ready: bool
+    workflow_guidance: HostWorkflowGuidance
     checks: list[HostSmokeCheck]
     diagnostics: DiagnosticsReport
     next_actions: list[str]
@@ -70,6 +79,7 @@ def build_host_smoke_report(
     return HostSmokeReport(
         status=_aggregate_status(checks),
         preview_ready=preview_ready,
+        workflow_guidance=_workflow_guidance(),
         checks=checks,
         diagnostics=diagnostics,
         next_actions=_next_actions(
@@ -79,6 +89,20 @@ def build_host_smoke_report(
         ),
         remediation_actions=diagnostics.remediation_actions,
         preview_request_template=preview_request_template,
+    )
+
+
+def _workflow_guidance() -> HostWorkflowGuidance:
+    return HostWorkflowGuidance(
+        instructions=[
+            (
+                "Read albumentationsx://examples/client-smoke when the host exposes resource reads; "
+                "otherwise use this report directly."
+            ),
+            "Continue to preview validation and rendering only when preview_ready is true.",
+            "Call validate_preview_request before render_preview_batch.",
+            "Keep the first preview bounded to one small image and one variant.",
+        ]
     )
 
 
