@@ -1,6 +1,6 @@
 # V1 RC Automation Pack
 
-Package: `albumentationsx-mcp==1.17.0`
+Package: `albumentationsx-mcp==1.17.1`
 Required hosts: `Codex, Claude Code`
 RC decision: `hold_rc`
 Release candidate allowed: `false`

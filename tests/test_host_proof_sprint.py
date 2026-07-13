@@ -60,7 +60,9 @@ def test_host_proof_sprint_cli_outputs_json() -> None:
 def test_host_proof_status_records_v116_machine_and_codex_host_proof() -> None:
     status = Path("docs/HOST_PROOF_STATUS.md").read_text(encoding="utf-8")
 
-    assert "v1.17.0" in status
+    assert "v1.17.1" in status
+    assert "review_packet_flow: ok" in status
+    assert "dataset_quality_inspection_flow: ok" in status
     assert "Codex Manual Host UI: passed on 2026-07-11" in status
     assert "Codex First 10 Minutes Replay: passed on 2026-07-11" in status
     assert "Claude Code Manual Host UI: blocked" in status

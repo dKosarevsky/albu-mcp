@@ -12,7 +12,7 @@ def test_launch_kit_contains_public_distribution_assets() -> None:
     markdown = render_launch_kit_markdown(kit)
 
     assert kit["package"] == "albumentationsx-mcp"
-    assert kit["version"] == "1.17.0"
+    assert kit["version"] == "1.17.1"
     assert "https://pypi.org/project/albumentationsx-mcp/" in markdown
     assert "registry.modelcontextprotocol.io" in markdown
     assert "AlbumentationsX#289" in markdown

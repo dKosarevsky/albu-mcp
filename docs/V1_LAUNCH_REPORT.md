@@ -2,8 +2,8 @@
 
 Package: `albumentationsx-mcp`
 MCP name: `io.github.dKosarevsky/albu-mcp`
-Package version: `1.17.0`
-Server version: `1.17.0`
+Package version: `1.17.1`
+Server version: `1.17.1`
 Ready for v1: `false`
 Host proof status: `docs/HOST_PROOF_STATUS.md`
 

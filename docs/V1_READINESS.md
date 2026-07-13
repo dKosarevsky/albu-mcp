@@ -5,12 +5,12 @@ host proof, and release reproducibility.
 
 ## Current Status
 
-As of 2026-07-13, `v1.17.0` is the current prepared release:
+As of 2026-07-13, `v1.17.1` is the current prepared release:
 
-- PyPI package target: `albumentationsx-mcp==1.17.0`;
+- PyPI package target: `albumentationsx-mcp==1.17.1`;
 - MCP Registry entry: active/latest for `io.github.dKosarevsky/albu-mcp`;
 - GitHub Release, PyPI Trusted Publishing, MCP Registry publication, and the Claude Desktop MCPB are automated from
-  the `v1.17.0` tag;
+  the `v1.17.1` tag;
 - machine-verifiable host proof status is tracked in `docs/HOST_PROOF_STATUS.md`;
 - the current launch blocker rollup is tracked in `docs/V1_LAUNCH_REPORT.md`;
 - v1 trust gates are separated in `docs/V1_TRUST_GATES.md`;
@@ -80,7 +80,7 @@ Run `uv run python scripts/run_golden_evals.py` before every release.
 The release workflow builds the package, checks release metadata, runs tests, runs lint/type checks, executes golden MCP
 evals, publishes to PyPI through Trusted Publishing, creates a GitHub Release, and runs a post-release `uvx` smoke check.
 
-`uv run python scripts/check_release_readiness.py --tag v1.17.0` aggregates the fast release guards for the current
+`uv run python scripts/check_release_readiness.py --tag v1.17.1` aggregates the fast release guards for the current
 tag: version metadata, manual host evidence schema, generated host acceptance evidence, first-10-minutes
 entrypoints, host proof sprint entrypoints, and public contract snapshots.
 

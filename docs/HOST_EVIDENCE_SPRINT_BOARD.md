@@ -1,6 +1,6 @@
 # Host Evidence Sprint Board
 
-Package: `albumentationsx-mcp==1.17.0`
+Package: `albumentationsx-mcp==1.17.1`
 Ready for v1: `false`
 
 ## Manual Evidence Policy

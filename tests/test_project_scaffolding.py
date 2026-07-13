@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+import tomli
 import yaml
 
 
@@ -62,6 +63,13 @@ def test_ci_workflow_uses_node24_ready_actions() -> None:
     assert setup_uv["with"]["enable-cache"] is False
 
 
+def test_runtime_dependency_keeps_mcp_sdk_on_v1() -> None:
+    project = tomli.loads(Path("pyproject.toml").read_text(encoding="utf-8"))["project"]
+    mcp_requirements = [requirement for requirement in project["dependencies"] if requirement.startswith("mcp[")]
+
+    assert mcp_requirements == ["mcp[cli]>=1.24.0,<2"]
+
+
 def test_usage_docs_and_examples_are_present() -> None:
     assert Path("docs/USAGE.md").exists()
     assert Path("docs/INSTALL.md").exists()
@@ -112,8 +120,8 @@ def test_v1_readiness_tracks_current_product_gate() -> None:
     readiness = Path("docs/V1_READINESS.md").read_text(encoding="utf-8")
 
     for term in [
-        "v1.17.0",
-        "albumentationsx-mcp==1.17.0",
+        "v1.17.1",
+        "albumentationsx-mcp==1.17.1",
         "MCP Registry",
         "build_review_packet",
         "review_packet_flow",

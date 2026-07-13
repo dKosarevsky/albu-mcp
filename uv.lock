@@ -63,7 +63,7 @@ headless = [
 
 [[package]]
 name = "albumentationsx-mcp"
-version = "1.17.0"
+version = "1.17.1"
 source = { editable = "." }
 dependencies = [
     { name = "albu-spec" },
@@ -89,7 +89,7 @@ dev = [
 requires-dist = [
     { name = "albu-spec", specifier = ">=0.0.6" },
     { name = "albumentationsx", extras = ["headless"], specifier = ">=2.3.1" },
-    { name = "mcp", extras = ["cli"], specifier = ">=1.24.0" },
+    { name = "mcp", extras = ["cli"], specifier = ">=1.24.0,<2" },
     { name = "numpy", specifier = ">=1.24.4" },
     { name = "pillow", specifier = ">=10.0.0" },
     { name = "pydantic", specifier = ">=2.12.4" },

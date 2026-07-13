@@ -4,6 +4,11 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 ## Unreleased
 
+## 1.17.1 - 2026-07-13
+
+- Bounded the MCP Python SDK dependency to `mcp[cli]>=1.24.0,<2` so fresh installs remain on the compatible v1 API
+  when the breaking v2 release becomes generally available.
+
 ## 1.17.0 - 2026-07-13
 
 - Added an official UV-based Claude Desktop MCPB with explicit user-selected read and artifact roots, bounded preview

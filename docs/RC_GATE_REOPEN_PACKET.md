@@ -1,6 +1,6 @@
 # RC Gate Reopen Packet
 
-Package: `albumentationsx-mcp==1.17.0`
+Package: `albumentationsx-mcp==1.17.1`
 Release tag: `vX.Y.Z-rc.1`
 Reopen status: `blocked_until_p0_and_beta_evidence`
 Cutover allowed: `false`
