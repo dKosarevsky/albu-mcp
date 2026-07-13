@@ -107,7 +107,7 @@ def test_mcp_registry_status_reports_retryable_failures(
         is_latest=True,
     )
     outcomes: list[McpRegistryStatusReport | ValueError] = [
-        ValueError("The read operation timed out"),
+        registry_status.McpRegistryFetchError("The read operation timed out"),
         expected,
     ]
     delays: list[float] = []
@@ -133,18 +133,23 @@ def test_mcp_registry_status_reports_retryable_failures(
     assert "retrying in 15 seconds" in captured.err
 
 
-def test_mcp_registry_status_preserves_final_semantic_mismatch(
+def test_mcp_registry_status_does_not_retry_or_mask_semantic_mismatch(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    attempts = 0
-
-    def fail_with_mismatch(_options: McpRegistryCheckOptions) -> ValueError:
-        nonlocal attempts
-        attempts += 1
-        return ValueError("MCP Registry icons does not match server.json")
-
-    monkeypatch.setattr(registry_status, "_validate_once", fail_with_mismatch)
+    expected = McpRegistryStatusReport(
+        name="io.github.dKosarevsky/albu-mcp",
+        version="1.14.0",
+        package="albumentationsx-mcp",
+        package_version="1.14.0",
+        status="active",
+        is_latest=True,
+    )
+    outcomes: list[McpRegistryStatusReport | ValueError] = [
+        ValueError("MCP Registry icons does not match server.json"),
+        expected,
+    ]
+    monkeypatch.setattr(registry_status, "_validate_once", lambda _options: outcomes.pop(0))
     monkeypatch.setattr(registry_status.time, "sleep", lambda _delay: None)
 
     with pytest.raises(ValueError, match="icons does not match"):
@@ -159,7 +164,7 @@ def test_mcp_registry_status_preserves_final_semantic_mismatch(
             )
         )
 
-    assert attempts == 3
+    assert outcomes == [expected]
 
 
 @pytest.mark.parametrize(

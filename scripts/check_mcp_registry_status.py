@@ -18,6 +18,10 @@ _DEFAULT_TIMEOUT_SECONDS = 90.0
 _OFFICIAL_META_KEY = "io.modelcontextprotocol.registry/official"
 
 
+class McpRegistryFetchError(ValueError):
+    """Raised when remote Registry metadata could not be read reliably."""
+
+
 @dataclass(frozen=True)
 class McpRegistryStatusReport:
     """Public Registry status for the local server metadata version."""
@@ -137,11 +141,13 @@ def main() -> None:
 
 def _validate_with_retries(options: McpRegistryCheckOptions) -> McpRegistryStatusReport:
     attempts = max(options.retries, 1)
-    last_error: TypeError | ValueError | None = None
+    last_error: McpRegistryFetchError | None = None
     for attempt in range(1, attempts + 1):
         result = _validate_once(options)
         if isinstance(result, McpRegistryStatusReport):
             return result
+        if not isinstance(result, McpRegistryFetchError):
+            raise result
         last_error = result
         if attempt < attempts:
             sys.stderr.write(
@@ -155,7 +161,7 @@ def _validate_with_retries(options: McpRegistryCheckOptions) -> McpRegistryStatu
     raise last_error
 
 
-def _validate_once(options: McpRegistryCheckOptions) -> McpRegistryStatusReport | TypeError | ValueError:
+def _validate_once(options: McpRegistryCheckOptions) -> McpRegistryStatusReport | McpRegistryFetchError:
     try:
         return validate_mcp_registry_status(
             server_json_path=options.server_json_path,
@@ -163,7 +169,7 @@ def _validate_once(options: McpRegistryCheckOptions) -> McpRegistryStatusReport 
             registry_url=options.registry_url,
             timeout=options.timeout,
         )
-    except (TypeError, ValueError) as exc:
+    except McpRegistryFetchError as exc:
         return exc
 
 
@@ -193,13 +199,13 @@ def _fetch_registry_response(registry_url: str, *, timeout: float) -> dict[str, 
             payload = json.loads(response.read().decode("utf-8"))
     except (TimeoutError, urllib.error.URLError) as exc:
         msg = f"Could not fetch MCP Registry metadata from {registry_url}: {exc}"
-        raise ValueError(msg) from exc
+        raise McpRegistryFetchError(msg) from exc
     except json.JSONDecodeError as exc:
         msg = f"MCP Registry response from {registry_url} is not valid JSON: {exc.msg}"
-        raise ValueError(msg) from exc
+        raise McpRegistryFetchError(msg) from exc
     if not isinstance(payload, dict):
         msg = f"MCP Registry response from {registry_url} must be a JSON object"
-        raise TypeError(msg)
+        raise McpRegistryFetchError(msg)
     return payload
 
 
