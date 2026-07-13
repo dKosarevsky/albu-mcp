@@ -22,6 +22,7 @@ import {
 import {
   buildReviewItems,
   composeFeedbackTags,
+  feedbackNoticeForItem,
   findContactSheetUris,
   moveSelection,
   parseFeedbackTagCatalog,
@@ -29,6 +30,7 @@ import {
   publicRunLabel,
   sanitizeNote,
   type ContactSheetUris,
+  type FeedbackNotice,
   type FeedbackSeverity,
   type FeedbackTagDefinition,
   type PreviewToolResult,
@@ -239,6 +241,7 @@ const resourceUrls = new Map<string, string>();
 const resourceLoads = new Map<string, Promise<string>>();
 const drafts = new Map<string, ReviewDraft>();
 const feedbackByItem = new Map<string, FeedbackStatus>();
+let feedbackNotice: FeedbackNotice | undefined;
 
 renderIcons(root);
 renderFeedbackTagOptions();
@@ -422,6 +425,7 @@ function acceptPreviewResult(result: PreviewToolResult): void {
   reviewMode = "image";
   drafts.clear();
   feedbackByItem.clear();
+  feedbackNotice = undefined;
 
   if (reviewItems.length === 0) {
     showAppState(
@@ -459,6 +463,9 @@ function showAppState(
 }
 
 function selectItem(index: number): void {
+  if (saving) {
+    return;
+  }
   const nextIndex = moveSelection(index, 0, reviewItems.length);
   if (nextIndex === selectedIndex && getSelectedItem()) {
     return;
@@ -494,6 +501,7 @@ function renderSelection(): void {
   renderFeedbackTagOptions();
   renderSeverity();
   renderDecisionBadge();
+  renderFeedbackNotice();
   updateActionState();
 }
 
@@ -570,6 +578,16 @@ function renderDecisionBadge(): void {
         ? "Issue recorded"
         : "";
   decisionBadge.dataset.status = status ?? "";
+}
+
+function renderFeedbackNotice(): void {
+  const notice = feedbackNoticeForItem(feedbackNotice, getCurrentItemKey());
+  feedbackStatus.textContent = notice?.message ?? "";
+  if (notice) {
+    feedbackStatus.dataset.kind = notice.kind;
+  } else {
+    delete feedbackStatus.dataset.kind;
+  }
 }
 
 function updateActionState(): void {
@@ -729,9 +747,14 @@ async function saveFeedback(accepted: boolean): Promise<void> {
     return;
   }
   const draft = getCurrentDraft();
+  const itemKey = getCurrentItemKey();
   saving = true;
-  feedbackStatus.textContent = "Saving decision";
-  feedbackStatus.dataset.kind = "loading";
+  feedbackNotice = {
+    itemKey,
+    message: "Saving decision",
+    kind: "loading",
+  };
+  renderFeedbackNotice();
   updateActionState();
 
   try {
@@ -749,15 +772,21 @@ async function saveFeedback(accepted: boolean): Promise<void> {
     if (result.isError) {
       throw new Error("Feedback call failed");
     }
-    feedbackByItem.set(getCurrentItemKey(), accepted ? "accepted" : "recorded");
-    feedbackStatus.textContent = accepted
-      ? "Variant accepted"
-      : "Issue recorded";
-    feedbackStatus.dataset.kind = "success";
+    feedbackByItem.set(itemKey, accepted ? "accepted" : "recorded");
+    feedbackNotice = {
+      itemKey,
+      message: accepted ? "Variant accepted" : "Issue recorded",
+      kind: "success",
+    };
+    renderFeedbackNotice();
     renderDecisionBadge();
   } catch {
-    feedbackStatus.textContent = "Decision could not be saved";
-    feedbackStatus.dataset.kind = "error";
+    feedbackNotice = {
+      itemKey,
+      message: "Decision could not be saved",
+      kind: "error",
+    };
+    renderFeedbackNotice();
   } finally {
     saving = false;
     updateActionState();
@@ -775,8 +804,12 @@ async function toggleDisplayMode(): Promise<void> {
     displayMode = result.mode;
     renderDisplayModeButton();
   } catch {
-    feedbackStatus.textContent = "Display mode is unavailable";
-    feedbackStatus.dataset.kind = "error";
+    feedbackNotice = {
+      itemKey: getCurrentItemKey(),
+      message: "Display mode is unavailable",
+      kind: "error",
+    };
+    renderFeedbackNotice();
   }
 }
 

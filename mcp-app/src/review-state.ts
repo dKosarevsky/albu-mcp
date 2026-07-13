@@ -1,6 +1,12 @@
 export type FeedbackSeverity = "low" | "medium" | "high";
 export type ReviewMode = "image" | "overlay";
 
+export interface FeedbackNotice {
+  itemKey: string;
+  message: string;
+  kind: "loading" | "success" | "error";
+}
+
 export interface PreviewArtifact {
   kind: string;
   uri: string;
@@ -208,6 +214,13 @@ export function composeFeedbackTags(
     }
   }
   return [...unique].sort().map((tag) => `${tag}:${severity}`);
+}
+
+export function feedbackNoticeForItem(
+  notice: FeedbackNotice | undefined,
+  currentItemKey: string,
+): FeedbackNotice | undefined {
+  return notice?.itemKey === currentItemKey ? notice : undefined;
 }
 
 export function publicRunLabel(runId: string): string {

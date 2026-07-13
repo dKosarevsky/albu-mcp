@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildReviewItems,
   composeFeedbackTags,
+  feedbackNoticeForItem,
   findContactSheetUris,
   moveSelection,
   parseFeedbackTagCatalog,
@@ -118,6 +119,24 @@ it("composes canonical severity-aware feedback tags", () => {
     ),
   ).toEqual(["object_unrecognizable:high", "too_noisy:high"]);
 });
+
+it.each([
+  ["0:1", "Issue recorded"],
+  ["0:2", undefined],
+] as const)(
+  "shows a feedback notice only for its review item (%s)",
+  (currentItemKey, expectedMessage) => {
+    const notice = {
+      itemKey: "0:1",
+      message: "Issue recorded",
+      kind: "success" as const,
+    };
+
+    expect(feedbackNoticeForItem(notice, currentItemKey)?.message).toBe(
+      expectedMessage,
+    );
+  },
+);
 
 it("uses a short public run label and clamps notes to the server limit", () => {
   expect(publicRunLabel(result.run_id)).toBe("Run 01234567");
