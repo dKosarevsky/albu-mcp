@@ -70,8 +70,8 @@ Inside MCP hosts, use `plan_augmentation_policy`, `plan_augmentation_policy_cand
 
 After connecting an MCP host:
 
-1. Read `albumentationsx://examples/client-smoke`.
-2. Call `run_host_smoke_check`.
+1. When the host exposes resource reads, read `albumentationsx://examples/client-smoke`; otherwise call `run_host_smoke_check` directly.
+2. If the resource was read, call `run_host_smoke_check` next.
 3. Continue only when `preview_ready` is true.
 4. For one real image or a folder, call `build_review_packet` to get a bounded first-preview handoff.
 5. Replace or reuse the paths in `preview_request_template.request`.

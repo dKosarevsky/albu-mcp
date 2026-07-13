@@ -74,6 +74,14 @@ def test_agent_skill_contains_first_run_playbook() -> None:
         assert expected_text in skill
 
 
+def test_agent_skill_treats_client_smoke_resource_as_optional() -> None:
+    skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+
+    assert "resource reads" in skill
+    assert "otherwise call `run_host_smoke_check` directly" in skill
+    assert "continue only when `preview_ready` is true" in skill
+
+
 def test_agent_skill_documents_host_config_hints_and_stop_conditions() -> None:
     skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
     openai_yaml = (SKILL_DIR / "agents" / "openai.yaml").read_text(encoding="utf-8")
