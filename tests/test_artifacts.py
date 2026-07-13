@@ -1,3 +1,4 @@
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -114,6 +115,68 @@ def test_artifact_store_rejects_unrecorded_image_artifacts(tmp_path: Path) -> No
 
     with pytest.raises(FileNotFoundError, match="not recorded"):
         store.read_image_artifact(result.run_id, "unknown.png")
+
+
+@pytest.mark.parametrize("content", [b"not a PNG payload", b"\x89PNG\r\n\x1a\nbroken"])
+def test_artifact_store_rejects_coherently_tampered_non_png_payload(tmp_path: Path, content: bytes) -> None:
+    store, result = _render_preview_fixture(tmp_path)
+    manifest_path = store.root / result.run_id / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    artifact = next(item for item in manifest["artifacts"] if item["kind"] == "image")
+    artifact_path = Path(artifact["path"])
+    artifact_path.write_bytes(content)
+    artifact["size_bytes"] = len(content)
+    artifact["sha256"] = hashlib.sha256(content).hexdigest()
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="valid PNG"):
+        store.read_image_artifact(result.run_id, artifact_path.name)
+
+
+def test_artifact_store_rejects_symlinked_image_payload(tmp_path: Path) -> None:
+    store, result = _render_preview_fixture(tmp_path)
+    artifact = next(item for item in result.artifacts if item.kind == "image")
+    artifact_path = Path(artifact.path)
+    replacement_path = artifact_path.with_name("replacement.png")
+    replacement_path.write_bytes(artifact_path.read_bytes())
+    artifact_path.unlink()
+    _symlink_or_skip(artifact_path, replacement_path)
+
+    with pytest.raises(ValueError, match="regular stored file"):
+        store.read_image_artifact(result.run_id, artifact_path.name)
+
+
+def test_artifact_store_rejects_symlinked_manifest(tmp_path: Path) -> None:
+    store, result = _render_preview_fixture(tmp_path)
+    manifest_path = store.root / result.run_id / "manifest.json"
+    replacement_path = tmp_path / "replacement-manifest.json"
+    replacement_path.write_bytes(manifest_path.read_bytes())
+    manifest_path.unlink()
+    _symlink_or_skip(manifest_path, replacement_path)
+
+    with pytest.raises(ValueError, match="regular stored file"):
+        store.read_manifest(result.run_id)
+
+
+def test_artifact_store_rejects_symlinked_run_directory(tmp_path: Path) -> None:
+    store = ArtifactStore(tmp_path / "artifacts")
+    run_id = "0" * 32
+    outside_run = tmp_path / "outside-run"
+    outside_run.mkdir()
+    (outside_run / "manifest.json").write_text("{}", encoding="utf-8")
+    _symlink_or_skip(store.root / run_id, outside_run, target_is_directory=True)
+
+    with pytest.raises(ValueError, match="regular stored directory"):
+        store.read_manifest(run_id)
+
+
+def test_artifact_store_missing_manifest_error_does_not_disclose_root(tmp_path: Path) -> None:
+    store = ArtifactStore(tmp_path / "private-artifacts")
+
+    with pytest.raises(FileNotFoundError) as exc_info:
+        store.read_manifest("0" * 32)
+
+    assert str(store.root) not in str(exc_info.value)
 
 
 @pytest.mark.parametrize(
@@ -262,3 +325,10 @@ def _render_preview_fixture(tmp_path: Path) -> tuple[ArtifactStore, PreviewResul
         ),
     )
     return store, result
+
+
+def _symlink_or_skip(link: Path, target: Path, *, target_is_directory: bool = False) -> None:
+    try:
+        link.symlink_to(target, target_is_directory=target_is_directory)
+    except (NotImplementedError, OSError) as exc:
+        pytest.skip(f"symlinks are unavailable: {exc}")
