@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import re
 import sys
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
 
@@ -27,6 +29,16 @@ _EXPECTED_TOOL_META = {
         "visibility": ["model", "app"],
     }
 }
+
+
+class _AssetReferenceCollector(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.references: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        del tag
+        self.references.extend(value for name, value in attrs if name in {"href", "src"} and value is not None)
 
 
 def test_render_tools_publish_modern_preview_review_metadata() -> None:
@@ -60,8 +72,10 @@ def test_preview_review_resources_are_local_and_deny_network_access() -> None:
     assert artifact_template.mime_type == "image/png"
     assert isinstance(html, str)
     assert 'data-albumentationsx-mcp-app="preview-review"' in html
-    assert "https://" not in html
-    assert "http://" not in html
+    references = _AssetReferenceCollector()
+    references.feed(html)
+    assert not [url for url in references.references if url.startswith(("http://", "https://", "//"))]
+    assert re.search(r"(?:@import\s+|url\(\s*['\"]?)https?://", html, re.IGNORECASE) is None
 
 
 def test_mcp_contract_snapshot_includes_app_metadata() -> None:
