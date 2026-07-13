@@ -39,6 +39,8 @@ first_preview_resource_prompt_flow: ok
 distortion_review_resource_flow: ok
 dataset_onboarding_flow: ok
 segmentation_onboarding_flow: ok
+review_packet_flow: ok
+dataset_quality_inspection_flow: ok
 classification_recommend_validate_explain_export: ok
 preview_lifecycle: ok
 preview_batch_compare: ok

@@ -63,7 +63,7 @@ def test_ci_workflow_uses_node24_ready_actions() -> None:
     assert setup_uv["with"]["enable-cache"] is False
 
 
-def test_runtime_dependency_keeps_mcp_python_sdk_on_v1() -> None:
+def test_runtime_dependency_keeps_mcp_sdk_on_v1() -> None:
     project = tomli.loads(Path("pyproject.toml").read_text(encoding="utf-8"))["project"]
     mcp_requirements = [requirement for requirement in project["dependencies"] if requirement.startswith("mcp[")]
 
