@@ -29,9 +29,29 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: "24"
+          cache: npm
+          cache-dependency-path: mcp-app/package-lock.json
 
       - name: Install dependencies
         run: uv sync --all-extras --dev
+
+      - name: Install MCP App dependencies
+        run: npm --prefix mcp-app ci
+
+      - name: Run MCP App tests
+        run: npm --prefix mcp-app run test
+
+      - name: Check MCP App types
+        run: npm --prefix mcp-app run typecheck
+
+      - name: Check MCP App formatting
+        run: npm --prefix mcp-app run format:check
+
+      - name: Build MCP App
+        run: npm --prefix mcp-app run build
+
+      - name: Check committed MCP App bundle
+        run: git diff --exit-code -- src/albumentationsx_mcp/ui/preview-review.html
 
       - name: Check release version metadata
         run: uv run python scripts/check_release_version.py "${GITHUB_REF_NAME}"
@@ -74,6 +94,9 @@ jobs:
 
       - name: Build package
         run: uv build
+
+      - name: Check packaged MCP App
+        run: uv run python scripts/check_mcp_app_bundle.py --dist-dir dist
 
       - name: Build Claude Desktop extension
         run: uv run python -m scripts.build_desktop_extension --output-dir dist/mcpb

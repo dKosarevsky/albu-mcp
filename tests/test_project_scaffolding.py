@@ -36,6 +36,41 @@ def test_ci_workflow_runs_core_quality_gates() -> None:
     assert "ClientSession" in commands
 
 
+def test_ci_workflow_builds_and_verifies_the_mcp_app() -> None:
+    workflow = yaml.safe_load(Path(".github/workflows/ci.yml").read_text(encoding="utf-8"))
+    ui_job = workflow["jobs"]["ui"]
+    steps = ui_job["steps"]
+    commands = "\n".join(step.get("run", "") for step in steps)
+    setup_node = next(step for step in steps if step.get("name") == "Set up Node.js")
+
+    assert setup_node["uses"] == "actions/setup-node@v6"
+    assert setup_node["with"] == {
+        "node-version": "24",
+        "cache": "npm",
+        "cache-dependency-path": "mcp-app/package-lock.json",
+    }
+    for command in [
+        "npm --prefix mcp-app ci",
+        "npm --prefix mcp-app run test",
+        "npm --prefix mcp-app run typecheck",
+        "npm --prefix mcp-app run format:check",
+        "npm --prefix mcp-app run build",
+        "git diff --exit-code -- src/albumentationsx_mcp/ui/preview-review.html",
+    ]:
+        assert command in commands
+
+
+def test_release_workflow_builds_ui_before_python_distributions() -> None:
+    workflow = yaml.safe_load(Path(".github/workflows/release.yml").read_text(encoding="utf-8"))
+    steps = workflow["jobs"]["build"]["steps"]
+    commands = "\n".join(step.get("run", "") for step in steps)
+
+    ui_build = commands.index("npm --prefix mcp-app run build")
+    python_build = commands.index("uv build")
+    bundle_check = commands.index("scripts/check_mcp_app_bundle.py --dist-dir dist")
+    assert ui_build < python_build < bundle_check
+
+
 def test_mcp_registry_watchdog_workflow_checks_latest_registry_entry() -> None:
     workflow_path = Path(".github/workflows/mcp-registry-watchdog.yml")
     workflow_text = workflow_path.read_text(encoding="utf-8")
