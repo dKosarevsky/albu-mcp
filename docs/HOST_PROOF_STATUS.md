@@ -50,6 +50,16 @@ preview_request_troubleshooting: ok
 interactive_tuning_session_flow: ok
 ```
 
+## MCP Apps Machine Proof
+
+The `v1.18.0` candidate interactive review surface passed the official `@modelcontextprotocol/ext-apps` `1.7.4`
+basic-host replay on 2026-07-13. The generated-fixture run covered verified artifact reads, image and overlay review,
+feedback persistence, accept decisions, fullscreen, desktop/mobile layout, and the non-MCP-Apps fallback contract.
+
+The exact reference commit, bounded loopback harness, measured results, and evidence classification are in
+[MCP_APPS_BASIC_HOST_PROOF.md](MCP_APPS_BASIC_HOST_PROOF.md). This is machine proof, not a new manual production-host,
+beta, or adoption record.
+
 ## Manual Host Evidence
 
 - Codex Manual Host UI: passed on 2026-07-11

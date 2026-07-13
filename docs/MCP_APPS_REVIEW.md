@@ -88,6 +88,22 @@ This fallback is intentional. MCP Apps support must not be required for renderin
   manifest. The server rejects feedback for unknown targets.
 - **Fullscreen is absent:** the host did not advertise fullscreen as an available display mode.
 
+## Verification Status
+
+The official `@modelcontextprotocol/ext-apps` basic-host replay, exact upstream revision, reproduction commands, measured
+desktop/mobile results, and evidence limits are recorded in
+[MCP_APPS_BASIC_HOST_PROOF.md](MCP_APPS_BASIC_HOST_PROOF.md).
+
+| Evidence level | Current status |
+| --- | --- |
+| Unit, package, stdio, and integrity checks | Automated in CI |
+| Official basic-host with a generated fixture | Passed on 2026-07-13 |
+| Named external host MCP Apps review | Not recorded |
+| Real beta/adoption evidence for the UI | Not recorded |
+
+Generated fixtures and basic-host runs are machine proof only. They are not beta or adoption evidence; real host and
+user claims require dated reviewer records under the existing evidence process.
+
 ## Development Checks
 
 The frontend source lives under `mcp-app/`; the generated single-file resource is committed under
@@ -106,7 +122,3 @@ uv run python scripts/check_mcp_app_bundle.py --dist-dir dist
 
 The frontend build requires Node.js 24 for development and release automation. Node.js is not a runtime dependency of
 the installed Python MCP server.
-
-Automated unit, stdio, resource-integrity, package-content, and host-harness checks are machine proof only. Generated
-fixtures and basic-host runs are not beta or adoption evidence; real host and user claims still require dated reviewer
-records under the existing evidence process.

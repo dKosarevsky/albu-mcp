@@ -157,6 +157,29 @@ def test_mcp_apps_review_guide_documents_progressive_enhancement() -> None:
     assert "MCP Apps" in changelog
 
 
+def test_mcp_apps_basic_host_proof_is_linked_and_honest() -> None:
+    guide = Path("docs/MCP_APPS_REVIEW.md").read_text(encoding="utf-8")
+    host_status = Path("docs/HOST_PROOF_STATUS.md").read_text(encoding="utf-8")
+    proof_path = Path("docs/MCP_APPS_BASIC_HOST_PROOF.md")
+
+    assert proof_path.exists()
+    proof = proof_path.read_text(encoding="utf-8")
+    assert "[MCP_APPS_BASIC_HOST_PROOF.md](MCP_APPS_BASIC_HOST_PROOF.md)" in guide
+    assert "[MCP_APPS_BASIC_HOST_PROOF.md](MCP_APPS_BASIC_HOST_PROOF.md)" in host_status
+    for term in [
+        "2026-07-13",
+        "@modelcontextprotocol/ext-apps` `1.7.4",
+        "ca1d29894fabbd1558885a9ec8620dcb01d7457e",
+        "generated-fixture machine evidence",
+        "not real beta or adoption evidence",
+        "desktop",
+        "mobile",
+        "record_preview_feedback",
+        "no external application dependency",
+    ]:
+        assert term.lower() in proof.lower()
+
+
 def test_adoption_packet_is_linked_and_actionable() -> None:
     readme = Path("README.md").read_text(encoding="utf-8")
     adoption = Path("docs/ADOPTION.md").read_text(encoding="utf-8")
