@@ -61,30 +61,39 @@ def main() -> None:
 
 
 def _tool_entry(tool: Any) -> dict[str, Any]:
-    return {
-        "name": tool.name,
-        "description": tool.description,
-        "parameters": _json_safe(tool.parameters),
-    }
+    return _with_meta(
+        {
+            "name": tool.name,
+            "description": tool.description,
+            "parameters": _json_safe(tool.parameters),
+        },
+        tool.meta,
+    )
 
 
 def _resource_entry(resource: Any) -> dict[str, Any]:
-    return {
-        "uri": str(resource.uri),
-        "name": resource.name,
-        "description": resource.description,
-        "mime_type": resource.mime_type,
-    }
+    return _with_meta(
+        {
+            "uri": str(resource.uri),
+            "name": resource.name,
+            "description": resource.description,
+            "mime_type": resource.mime_type,
+        },
+        resource.meta,
+    )
 
 
 def _resource_template_entry(template: Any) -> dict[str, Any]:
-    return {
-        "uri_template": template.uri_template,
-        "name": template.name,
-        "description": template.description,
-        "mime_type": template.mime_type,
-        "parameters": _json_safe(template.parameters),
-    }
+    return _with_meta(
+        {
+            "uri_template": template.uri_template,
+            "name": template.name,
+            "description": template.description,
+            "mime_type": template.mime_type,
+            "parameters": _json_safe(template.parameters),
+        },
+        template.meta,
+    )
 
 
 def _prompt_entry(prompt: Any) -> dict[str, Any]:
@@ -104,6 +113,12 @@ def _prompt_entry(prompt: Any) -> dict[str, Any]:
 
 def _json_safe(value: Any) -> Any:
     return json.loads(json.dumps(value, sort_keys=True, default=str))
+
+
+def _with_meta(entry: dict[str, Any], meta: Any) -> dict[str, Any]:
+    if meta is not None:
+        entry["meta"] = _json_safe(meta)
+    return entry
 
 
 if __name__ == "__main__":

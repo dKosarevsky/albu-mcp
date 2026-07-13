@@ -16,6 +16,7 @@ from albumentationsx_mcp.dataset import score_dataset_preview_candidates as scor
 from albumentationsx_mcp.dataset_quality import inspect_dataset_quality
 from albumentationsx_mcp.diagnostics import DiagnosticsService, PublicSurface, build_diagnostics_guide
 from albumentationsx_mcp.host_smoke import build_host_smoke_report
+from albumentationsx_mcp.mcp_app import preview_review_tool_meta, register_preview_review_resources
 from albumentationsx_mcp.models import (
     ArtifactRef,
     ComposeSpec,
@@ -170,10 +171,11 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
     settings = settings or settings_from_environment()
     catalog = TransformCatalog()
     pipeline_service = PipelineService(catalog)
+    artifact_store = ArtifactStore(settings.artifact_root, max_runs=settings.max_preview_runs)
     preview_service = PreviewService(
         pipeline_service,
         PathPolicy(settings.allowed_roots),
-        ArtifactStore(settings.artifact_root, max_runs=settings.max_preview_runs),
+        artifact_store,
     )
     preview_validator = PreviewRequestValidator(
         pipeline_service=pipeline_service,
@@ -195,6 +197,7 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
         public_surface=public_surface,
     )
     mcp = FastMCP("AlbumentationsX MCP")
+    register_preview_review_resources(mcp, artifact_store)
 
     @mcp.resource("albumentationsx://transforms/catalog")
     def transforms_catalog() -> str:
@@ -555,13 +558,13 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:  # noq
             path_policy=PathPolicy(settings.allowed_roots),
         ).model_dump(mode="json", exclude_none=True)
 
-    @mcp.tool()
+    @mcp.tool(meta=preview_review_tool_meta())
     def render_preview(request: dict[str, Any]) -> dict[str, Any]:
         """Render deterministic preview artifacts for local input images."""
         preview_request = PreviewRequest.model_validate(request)
         return preview_service.render_preview(preview_request).model_dump(mode="json")
 
-    @mcp.tool()
+    @mcp.tool(meta=preview_review_tool_meta())
     def render_preview_batch(request: dict[str, Any]) -> dict[str, Any]:
         """Render deterministic batch preview artifacts and contact sheets for local input images."""
         preview_request = PreviewRequest.model_validate(request)

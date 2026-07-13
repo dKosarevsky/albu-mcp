@@ -110,6 +110,30 @@
         "type": "object"
       },
       "uri_template": "albumentationsx://transforms/{name}"
+    },
+    {
+      "description": "Read one manifest-recorded PNG from a bounded preview run.",
+      "mime_type": "image/png",
+      "name": "Verified preview image",
+      "parameters": {
+        "properties": {
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "filename"
+        ],
+        "title": "preview_image_artifactArguments",
+        "type": "object"
+      },
+      "uri_template": "artifact://{run_id}/{filename}"
     }
   ],
   "resources": [
@@ -226,6 +250,23 @@
       "mime_type": "text/plain",
       "name": "task_profiles_resource",
       "uri": "albumentationsx://workflows/task-profiles"
+    },
+    {
+      "description": "Interactive review surface for rendered AlbumentationsX preview batches.",
+      "meta": {
+        "ui": {
+          "csp": {
+            "baseUriDomains": [],
+            "connectDomains": [],
+            "frameDomains": [],
+            "resourceDomains": []
+          },
+          "prefersBorder": true
+        }
+      },
+      "mime_type": "text/html;profile=mcp-app",
+      "name": "AlbumentationsX Preview Review",
+      "uri": "ui://albumentationsx/preview-review.html"
     }
   ],
   "server": {
@@ -1573,6 +1614,15 @@
     },
     {
       "description": "Render deterministic preview artifacts for local input images.",
+      "meta": {
+        "ui": {
+          "resourceUri": "ui://albumentationsx/preview-review.html",
+          "visibility": [
+            "model",
+            "app"
+          ]
+        }
+      },
       "name": "render_preview",
       "parameters": {
         "properties": {
@@ -1591,6 +1641,15 @@
     },
     {
       "description": "Render deterministic batch preview artifacts and contact sheets for local input images.",
+      "meta": {
+        "ui": {
+          "resourceUri": "ui://albumentationsx/preview-review.html",
+          "visibility": [
+            "model",
+            "app"
+          ]
+        }
+      },
       "name": "render_preview_batch",
       "parameters": {
         "properties": {
