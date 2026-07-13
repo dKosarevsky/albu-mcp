@@ -5,10 +5,12 @@ import {
   composeFeedbackTags,
   feedbackNoticeForItem,
   findContactSheetUris,
+  isCurrentReviewSession,
   moveSelection,
   parseFeedbackTagCatalog,
   parsePreviewToolResult,
   publicRunLabel,
+  reviewItemKey,
   sanitizeNote,
   type PreviewToolResult,
 } from "./review-state";
@@ -121,13 +123,13 @@ it("composes canonical severity-aware feedback tags", () => {
 });
 
 it.each([
-  ["0:1", "Issue recorded"],
-  ["0:2", undefined],
+  [`${result.run_id}:0:1`, "Issue recorded"],
+  [`${result.run_id}:0:2`, undefined],
 ] as const)(
   "shows a feedback notice only for its review item (%s)",
   (currentItemKey, expectedMessage) => {
     const notice = {
-      itemKey: "0:1",
+      itemKey: `${result.run_id}:0:1`,
       message: "Issue recorded",
       kind: "success" as const,
     };
@@ -137,6 +139,35 @@ it.each([
     );
   },
 );
+
+it("scopes review state and pending saves to one preview run", () => {
+  const nextRunId = "fedcba9876543210fedcba9876543210";
+
+  expect(reviewItemKey(result.run_id, 0, 1)).not.toBe(
+    reviewItemKey(nextRunId, 0, 1),
+  );
+  expect(
+    isCurrentReviewSession(
+      { generation: 4, runId: result.run_id },
+      4,
+      result.run_id,
+    ),
+  ).toBe(true);
+  expect(
+    isCurrentReviewSession(
+      { generation: 4, runId: result.run_id },
+      5,
+      result.run_id,
+    ),
+  ).toBe(false);
+  expect(
+    isCurrentReviewSession(
+      { generation: 4, runId: result.run_id },
+      4,
+      nextRunId,
+    ),
+  ).toBe(false);
+});
 
 it("uses a short public run label and clamps notes to the server limit", () => {
   expect(publicRunLabel(result.run_id)).toBe("Run 01234567");

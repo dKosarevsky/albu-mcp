@@ -24,10 +24,12 @@ import {
   composeFeedbackTags,
   feedbackNoticeForItem,
   findContactSheetUris,
+  isCurrentReviewSession,
   moveSelection,
   parseFeedbackTagCatalog,
   parsePreviewToolResult,
   publicRunLabel,
+  reviewItemKey,
   sanitizeNote,
   type ContactSheetUris,
   type FeedbackNotice,
@@ -36,6 +38,7 @@ import {
   type PreviewToolResult,
   type ReviewItem,
   type ReviewMode,
+  type ReviewSessionScope,
 } from "./review-state";
 import "./styles.css";
 
@@ -235,6 +238,7 @@ let selectedIndex = 0;
 let reviewMode: ReviewMode = "image";
 let displayMode: "inline" | "fullscreen" | "pip" = "inline";
 let saving = false;
+let previewGeneration = 0;
 let mediaEpoch = 0;
 let resourceGeneration = 0;
 const resourceUrls = new Map<string, string>();
@@ -418,6 +422,8 @@ async function connect(): Promise<void> {
 
 function acceptPreviewResult(result: PreviewToolResult): void {
   releaseResourceUrls();
+  previewGeneration += 1;
+  saving = false;
   previewResult = result;
   reviewItems = buildReviewItems(result);
   contactSheetUris = findContactSheetUris(result);
@@ -748,6 +754,10 @@ async function saveFeedback(accepted: boolean): Promise<void> {
   }
   const draft = getCurrentDraft();
   const itemKey = getCurrentItemKey();
+  const scope = {
+    generation: previewGeneration,
+    runId: previewResult.run_id,
+  };
   saving = true;
   feedbackNotice = {
     itemKey,
@@ -761,7 +771,7 @@ async function saveFeedback(accepted: boolean): Promise<void> {
     const result = await app.callServerTool({
       name: "record_preview_feedback",
       arguments: {
-        run_id: previewResult.run_id,
+        run_id: scope.runId,
         image_index: item.imageIndex,
         variant_index: item.variantIndex,
         feedback_tags: composeFeedbackTags(draft.tags, draft.severity),
@@ -772,6 +782,9 @@ async function saveFeedback(accepted: boolean): Promise<void> {
     if (result.isError) {
       throw new Error("Feedback call failed");
     }
+    if (!isActiveReviewSession(scope)) {
+      return;
+    }
     feedbackByItem.set(itemKey, accepted ? "accepted" : "recorded");
     feedbackNotice = {
       itemKey,
@@ -781,6 +794,9 @@ async function saveFeedback(accepted: boolean): Promise<void> {
     renderFeedbackNotice();
     renderDecisionBadge();
   } catch {
+    if (!isActiveReviewSession(scope)) {
+      return;
+    }
     feedbackNotice = {
       itemKey,
       message: "Decision could not be saved",
@@ -788,9 +804,19 @@ async function saveFeedback(accepted: boolean): Promise<void> {
     };
     renderFeedbackNotice();
   } finally {
-    saving = false;
-    updateActionState();
+    if (isActiveReviewSession(scope)) {
+      saving = false;
+      updateActionState();
+    }
   }
+}
+
+function isActiveReviewSession(scope: ReviewSessionScope): boolean {
+  return isCurrentReviewSession(
+    scope,
+    previewGeneration,
+    previewResult?.run_id,
+  );
 }
 
 async function toggleDisplayMode(): Promise<void> {
@@ -863,7 +889,9 @@ function getSelectedItem(): ReviewItem | undefined {
 
 function getCurrentItemKey(): string {
   const item = getSelectedItem();
-  return item ? `${item.imageIndex}:${item.variantIndex}` : "none";
+  return item && previewResult
+    ? reviewItemKey(previewResult.run_id, item.imageIndex, item.variantIndex)
+    : "none";
 }
 
 function getCurrentDraft(): ReviewDraft {

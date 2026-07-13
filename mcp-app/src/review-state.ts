@@ -7,6 +7,11 @@ export interface FeedbackNotice {
   kind: "loading" | "success" | "error";
 }
 
+export interface ReviewSessionScope {
+  generation: number;
+  runId: string;
+}
+
 export interface PreviewArtifact {
   kind: string;
   uri: string;
@@ -221,6 +226,22 @@ export function feedbackNoticeForItem(
   currentItemKey: string,
 ): FeedbackNotice | undefined {
   return notice?.itemKey === currentItemKey ? notice : undefined;
+}
+
+export function reviewItemKey(
+  runId: string,
+  imageIndex: number,
+  variantIndex: number,
+): string {
+  return `${runId}:${imageIndex}:${variantIndex}`;
+}
+
+export function isCurrentReviewSession(
+  scope: ReviewSessionScope,
+  currentGeneration: number,
+  currentRunId: string | undefined,
+): boolean {
+  return scope.generation === currentGeneration && scope.runId === currentRunId;
 }
 
 export function publicRunLabel(runId: string): string {
