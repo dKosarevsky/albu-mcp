@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+import tomli
 import yaml
 
 
@@ -60,6 +61,13 @@ def test_ci_workflow_uses_node24_ready_actions() -> None:
     assert actions["Install uv"] == "astral-sh/setup-uv@v7"
     assert actions["Set up Python"] == "actions/setup-python@v6"
     assert setup_uv["with"]["enable-cache"] is False
+
+
+def test_runtime_dependency_keeps_mcp_python_sdk_on_v1() -> None:
+    project = tomli.loads(Path("pyproject.toml").read_text(encoding="utf-8"))["project"]
+    mcp_requirements = [requirement for requirement in project["dependencies"] if requirement.startswith("mcp[")]
+
+    assert mcp_requirements == ["mcp[cli]>=1.24.0,<2"]
 
 
 def test_usage_docs_and_examples_are_present() -> None:
