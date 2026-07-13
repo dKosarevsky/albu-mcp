@@ -132,6 +132,31 @@ def test_usage_docs_and_examples_are_present() -> None:
     assert Path("docs/assets/demo/demo_report.md").exists()
 
 
+def test_mcp_apps_review_guide_documents_progressive_enhancement() -> None:
+    readme = Path("README.md").read_text(encoding="utf-8")
+    install = Path("docs/INSTALL.md").read_text(encoding="utf-8")
+    usage = Path("docs/USAGE.md").read_text(encoding="utf-8")
+    guide = Path("docs/MCP_APPS_REVIEW.md").read_text(encoding="utf-8")
+    changelog = Path("CHANGELOG.md").read_text(encoding="utf-8").split("## 1.17.1", 1)[0]
+
+    for content in [readme, install, usage]:
+        assert "[docs/MCP_APPS_REVIEW.md](docs/MCP_APPS_REVIEW.md)" in content or (
+            "[MCP_APPS_REVIEW.md](MCP_APPS_REVIEW.md)" in content
+        )
+    for term in [
+        "ui://albumentationsx/preview-review.html",
+        "artifact://{run_id}/{filename}",
+        "record_preview_feedback",
+        "progressive enhancement",
+        "no outgoing network dependency",
+        "manifest-recorded PNG",
+        "non-MCP-Apps host",
+        "not beta or adoption evidence",
+    ]:
+        assert term in guide
+    assert "MCP Apps" in changelog
+
+
 def test_adoption_packet_is_linked_and_actionable() -> None:
     readme = Path("README.md").read_text(encoding="utf-8")
     adoption = Path("docs/ADOPTION.md").read_text(encoding="utf-8")

@@ -4,6 +4,12 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 ## Unreleased
 
+- Added a self-contained MCP Apps review surface for `render_preview` and `render_preview_batch`, with image/overlay
+  navigation, structured issue severity, notes, accepted variants, host theming, and fullscreen support.
+- Added manifest-bound `artifact://` PNG reads with path, size, and SHA-256 verification; the app has an empty network
+  CSP and keeps local source paths out of visible review state.
+- Added a reproducible Node 24 frontend build, package-content verifier, and CI/release guards for wheel and sdist output.
+
 ## 1.17.1 - 2026-07-13
 
 - Bounded the MCP Python SDK dependency to `mcp[cli]>=1.24.0,<2` so fresh installs remain on the compatible v1 API

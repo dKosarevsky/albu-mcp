@@ -16,7 +16,7 @@ AlbumentationsX MCP is a thin, typed MCP layer around existing AlbumentationsX p
 
 - discover transforms and schemas from `albu-spec`;
 - recommend and validate augmentation pipelines;
-- render local batch previews and compare preview runs;
+- render local batch previews, compare preview runs, and review variants in compatible MCP Apps hosts ([guide](docs/MCP_APPS_REVIEW.md));
 - record concrete feedback such as `too_noisy:high` or `exposure_too_weak:medium`;
 - export accepted pipelines and review reports.
 
@@ -104,7 +104,7 @@ from [AlbumentationsX#289](https://github.com/albumentations-team/Albumentations
 
 ## Documentation
 
-- [docs/INSTALL.md](docs/INSTALL.md): PyPI, MCP Registry, Claude Desktop, Claude Code, Cursor, Codex, bounded roots.
+- [docs/INSTALL.md](docs/INSTALL.md) and [docs/MCP_APPS_REVIEW.md](docs/MCP_APPS_REVIEW.md): host setup, bounded roots, interactive review, and fallback behavior.
 - [docs/FIRST_10_MINUTES.md](docs/FIRST_10_MINUTES.md): shortest path from install to preview, feedback, and export.
 - [docs/HOST_TRUST_DASHBOARD.md](docs/HOST_TRUST_DASHBOARD.md), [docs/HOST_PROOF_SPRINT.md](docs/HOST_PROOF_SPRINT.md), [docs/HOST_PROOF_SPRINT_CHECKLIST.md](docs/HOST_PROOF_SPRINT_CHECKLIST.md), [docs/HOST_EVIDENCE_SPRINT_BOARD.md](docs/HOST_EVIDENCE_SPRINT_BOARD.md), [docs/P0_HOST_RUNBOOK.md](docs/P0_HOST_RUNBOOK.md), [docs/P0_HOST_RUN_SESSION.md](docs/P0_HOST_RUN_SESSION.md), [docs/P0_HOST_RUN_PREFLIGHT.md](docs/P0_HOST_RUN_PREFLIGHT.md), [docs/P0_EVIDENCE_RECORDER.md](docs/P0_EVIDENCE_RECORDER.md), [docs/P0_EVIDENCE_IMPORT_GUIDE.md](docs/P0_EVIDENCE_IMPORT_GUIDE.md), [docs/P0_EVIDENCE_REGENERATION_PACK.md](docs/P0_EVIDENCE_REGENERATION_PACK.md), [docs/P0_HOST_UNBLOCK_PACK.md](docs/P0_HOST_UNBLOCK_PACK.md), [docs/P0_HOST_EVIDENCE_RECOVERY.md](docs/P0_HOST_EVIDENCE_RECOVERY.md), [docs/HOST_EVIDENCE_RUNNER.md](docs/HOST_EVIDENCE_RUNNER.md), [docs/CODEX_CANCELLATION_TRIAGE.md](docs/CODEX_CANCELLATION_TRIAGE.md), [docs/CLAUDE_CODE_SETUP_PATH.md](docs/CLAUDE_CODE_SETUP_PATH.md), [docs/HOST_SETUP_PROBE.md](docs/HOST_SETUP_PROBE.md), [docs/HOST_EVIDENCE_CAPTURE_KIT.md](docs/HOST_EVIDENCE_CAPTURE_KIT.md), [docs/RC_HOST_EVIDENCE_OPS.md](docs/RC_HOST_EVIDENCE_OPS.md), [docs/P0_HOST_EXECUTION_SPRINT.md](docs/P0_HOST_EXECUTION_SPRINT.md), [docs/P0_HOST_EVIDENCE_LEDGER.md](docs/P0_HOST_EVIDENCE_LEDGER.md), [docs/P0_BLOCKER_TRIAGE.md](docs/P0_BLOCKER_TRIAGE.md), [docs/REAL_HOST_EVIDENCE_EXECUTION.md](docs/REAL_HOST_EVIDENCE_EXECUTION.md), [docs/REAL_HOST_EVIDENCE_COMMAND_CENTER.md](docs/REAL_HOST_EVIDENCE_COMMAND_CENTER.md), [docs/HOST_UX_HARDENING_LOOP.md](docs/HOST_UX_HARDENING_LOOP.md), and [docs/HOST_FAILURE_COOKBOOK.md](docs/HOST_FAILURE_COOKBOOK.md): host trust dashboard, real host replay runbooks, focused P0 operator packets, setup probes, evidence ledgers, blocker triage, execution packs, hardening loop, and failure triage.
 - [docs/USAGE.md](docs/USAGE.md): end-to-end MCP host workflow and tool details.
