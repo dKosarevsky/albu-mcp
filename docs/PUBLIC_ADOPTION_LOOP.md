@@ -1,6 +1,6 @@
 # Public Adoption Loop
 
-Package: `albumentationsx-mcp==1.17.0`
+Package: `albumentationsx-mcp==1.17.1`
 Telemetry policy: No automatic telemetry; collect explicit, privacy-safe feedback only.
 
 ## Loop Stages

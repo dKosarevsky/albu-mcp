@@ -120,8 +120,8 @@ def test_v1_readiness_tracks_current_product_gate() -> None:
     readiness = Path("docs/V1_READINESS.md").read_text(encoding="utf-8")
 
     for term in [
-        "v1.17.0",
-        "albumentationsx-mcp==1.17.0",
+        "v1.17.1",
+        "albumentationsx-mcp==1.17.1",
         "MCP Registry",
         "build_review_packet",
         "review_packet_flow",

@@ -1,6 +1,6 @@
 # RC Cutover Recovery Plan
 
-Package: `albumentationsx-mcp==1.17.0`
+Package: `albumentationsx-mcp==1.17.1`
 Release tag: `vX.Y.Z-rc.1`
 Recovery status: `blocked_by_p0_evidence`
 RC cutover allowed: `false`

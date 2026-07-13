@@ -5,7 +5,7 @@
       "cwd": ".",
       "args": [
         "--from",
-        "albumentationsx-mcp==1.17.0",
+        "albumentationsx-mcp==1.17.1",
         "albumentationsx-mcp"
       ],
       "env_vars": [
