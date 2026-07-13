@@ -33,9 +33,11 @@ def test_host_acceptance_report_tracks_partial_p0_host_evidence() -> None:
     assert {item["host"] for item in report["manual_host_ui"] if item["status"] == "blocked"} == {
         "Claude Code",
     }
-    assert {item["host"] for item in report["manual_host_ui"] if item["status"] == "passed"} == {"Codex"}
-    assert {item["host"] for item in report["manual_host_ui"] if item["status"] == "pending"} == {
+    assert {item["host"] for item in report["manual_host_ui"] if item["status"] == "passed"} == {
         "Claude Desktop",
+        "Codex",
+    }
+    assert {item["host"] for item in report["manual_host_ui"] if item["status"] == "pending"} == {
         "Cursor",
     }
     assert {item["host"] for item in report["first_10_minutes_replay"]} == {
@@ -54,7 +56,7 @@ def test_host_acceptance_markdown_reports_pending_manual_status() -> None:
     markdown = module.dump_host_acceptance_markdown(report)
 
     assert "# Host Acceptance Evidence" in markdown
-    assert "| Claude Desktop | pending | none | manual UI run not recorded |" in markdown
+    assert "| Claude Desktop | passed | 2026-07-13 | Reviewer observed Claude Desktop Free" in markdown
     assert "| Codex | passed | 2026-07-11 | Reviewer observed the interactive Codex TUI" in markdown
     assert "## First 10 Minutes Replay" in markdown
     assert "| Codex | passed | 2026-07-11 | Reviewer-observed interactive Codex TUI replay" in markdown

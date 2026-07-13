@@ -13,6 +13,19 @@ from scripts.record_host_manual_run import (
 from scripts.validate_host_manual_runs import validate_host_manual_runs
 
 
+def test_repository_records_claude_desktop_manual_acceptance() -> None:
+    report = validate_host_manual_runs()
+
+    record = next(item for item in report.manual_host_ui if item.host == "Claude Desktop")
+    receipt = Path("docs/host-evidence/claude-desktop-2026-07-13.md")
+
+    assert record.status == "passed"
+    assert record.model_dump(mode="json")["date"] == "2026-07-13"
+    assert "preview_ready=true" in record.evidence
+    assert receipt.is_file()
+    assert "resource reads" in receipt.read_text(encoding="utf-8")
+
+
 def test_host_manual_runs_validator_accepts_dated_records(tmp_path: Path) -> None:
     manual_runs_path = tmp_path / "HOST_MANUAL_RUNS.json"
     manual_runs_path.write_text(
