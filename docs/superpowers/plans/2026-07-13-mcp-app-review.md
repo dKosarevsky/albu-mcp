@@ -130,4 +130,3 @@ application actions.
 5. Push a PR, wait for all CI jobs, merge, tag `v1.18.0`, and watch the complete release pipeline.
 6. Independently verify PyPI metadata, GitHub assets/checksums, published-package smoke, and MCP Registry state.
 7. Do not mark real beta/adoption evidence complete unless an external reviewer has actually supplied it.
-

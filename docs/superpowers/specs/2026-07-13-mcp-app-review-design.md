@@ -1,7 +1,7 @@
 # MCP Apps Preview Review Design
 
-**Date:** 2026-07-13  
-**Target:** AlbumentationsX MCP v1.18.0  
+**Date:** 2026-07-13
+**Target:** AlbumentationsX MCP v1.18.0
 **Status:** Approved for implementation
 
 ## Problem
@@ -142,4 +142,3 @@ used with neutral fallbacks; no external fonts, images, scripts, analytics, or f
 Automated and generated-fixture runs are machine verification only. The release documentation will record them as such.
 A real beta signal requires an actual external reviewer using their own image or dataset and providing attributable
 feedback; v1.18 readiness must not fabricate that evidence.
-
