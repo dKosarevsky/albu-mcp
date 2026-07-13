@@ -11,8 +11,8 @@ from scripts.export_v1_launch_report import build_v1_launch_report, render_v1_la
 def test_v1_launch_report_tracks_manual_host_blockers() -> None:
     report = build_v1_launch_report()
 
-    assert report["package_version"] == "1.16.0"
-    assert report["server_version"] == "1.16.0"
+    assert report["package_version"] == "1.17.0"
+    assert report["server_version"] == "1.17.0"
     assert report["ready_for_v1"] is False
     assert {blocker["code"] for blocker in report["blockers"]} == {
         "manual_host_ui_pending",
@@ -33,7 +33,7 @@ def test_v1_launch_report_tracks_manual_host_blockers() -> None:
         "Codex",
     }
     assert {item["host"]: item["manual_host_ui"]["status"] for item in report["evidence_plan"]} == {
-        "Claude Desktop": "missing",
+        "Claude Desktop": "recorded",
         "Claude Code": "blocked",
         "Cursor": "missing",
         "Codex": "recorded",
@@ -56,7 +56,7 @@ def test_v1_launch_report_tracks_manual_host_blockers() -> None:
 def test_v1_launch_report_exposes_host_level_blockers() -> None:
     report = build_v1_launch_report()
 
-    assert len(report["host_blockers"]) == 6
+    assert len(report["host_blockers"]) == 5
     claude_code_blockers = [item for item in report["host_blockers"] if item["host"] == "Claude Code"]
     assert {item["code"] for item in claude_code_blockers} == {
         "first_10_minutes_replay_blocked",
@@ -83,7 +83,7 @@ def test_v1_launch_report_markdown_is_reviewable() -> None:
     markdown = render_v1_launch_report_markdown(build_v1_launch_report())
 
     assert markdown.startswith("# V1 Launch Report\n")
-    assert "Package version: `1.16.0`" in markdown
+    assert "Package version: `1.17.0`" in markdown
     assert "Ready for v1: `false`" in markdown
     assert "manual_host_ui_pending" in markdown
     assert "first_10_minutes_replay_pending" in markdown

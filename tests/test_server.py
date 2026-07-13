@@ -63,6 +63,16 @@ def test_server_exposes_documented_tool_names() -> None:
     }.issubset(tool_names)
 
 
+def test_host_smoke_tool_allows_direct_call_without_resource_read() -> None:
+    server = create_mcp_server()
+
+    description = server._tool_manager._tools["run_host_smoke_check"].description
+
+    assert description is not None
+    assert "resource" in description.lower()
+    assert "optional" in description.lower()
+
+
 def test_server_exposes_agent_workflow_prompts() -> None:
     server = create_mcp_server()
 

@@ -1,6 +1,6 @@
 # Host UX Packets
 
-Package: `albumentationsx-mcp==1.16.0`
+Package: `albumentationsx-mcp==1.17.0`
 Allowed root placeholder: `/absolute/path/to/images`
 Artifact root placeholder: `/absolute/path/to/albu-artifacts`
 
@@ -33,7 +33,7 @@ Edit the Claude Desktop MCP config, then restart Claude Desktop.
       "command": "uvx",
       "args": [
         "--from",
-        "albumentationsx-mcp==1.16.0",
+        "albumentationsx-mcp==1.17.0",
         "albumentationsx-mcp",
         "--allowed-root",
         "/absolute/path/to/images",
@@ -70,7 +70,7 @@ Troubleshooting:
 Run the command in a shell where Claude Code is authenticated.
 
 ```bash
-claude mcp add-json albumentationsx '{"type":"stdio","command":"uvx","args":["--from","albumentationsx-mcp==1.16.0","albumentationsx-mcp","--allowed-root","/absolute/path/to/images","--artifact-root","/absolute/path/to/albu-artifacts"]}'
+claude mcp add-json albumentationsx '{"type":"stdio","command":"uvx","args":["--from","albumentationsx-mcp==1.17.0","albumentationsx-mcp","--allowed-root","/absolute/path/to/images","--artifact-root","/absolute/path/to/albu-artifacts"]}'
 ```
 
 Expected tools:
@@ -104,7 +104,7 @@ Edit the Cursor MCP config, then Refresh MCP discovery.
       "command": "uvx",
       "args": [
         "--from",
-        "albumentationsx-mcp==1.16.0",
+        "albumentationsx-mcp==1.17.0",
         "albumentationsx-mcp",
         "--allowed-root",
         "/absolute/path/to/images",
@@ -145,7 +145,7 @@ Edit the Codex MCP config, then restart or reload the Codex session.
 command = "uvx"
 args = [
   "--from",
-  "albumentationsx-mcp==1.16.0",
+  "albumentationsx-mcp==1.17.0",
   "albumentationsx-mcp",
   "--allowed-root",
   "/absolute/path/to/images",

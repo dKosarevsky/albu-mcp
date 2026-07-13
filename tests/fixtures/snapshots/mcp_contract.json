@@ -1608,7 +1608,7 @@
       }
     },
     {
-      "description": "Run a read-only host preflight before rendering local previews.",
+      "description": "Run a read-only host preflight; reading the client-smoke resource is optional.",
       "name": "run_host_smoke_check",
       "parameters": {
         "properties": {

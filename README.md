@@ -45,8 +45,9 @@ uvx --from albumentationsx-mcp albumentationsx-mcp \
   --artifact-root /absolute/path/to/albu-artifacts
 ```
 
-Copyable host snippets are in [examples](examples/). Full setup, including the native Codex plugin bundle, is in
-[docs/INSTALL.md](docs/INSTALL.md); the guided trial is [docs/FIRST_10_MINUTES.md](docs/FIRST_10_MINUTES.md).
+Claude Desktop users can install the matching `.mcpb` from [GitHub Releases](https://github.com/dKosarevsky/albu-mcp/releases).
+Copyable host snippets and the native Codex plugin bundle are in [docs/INSTALL.md](docs/INSTALL.md); the guided trial is
+[docs/FIRST_10_MINUTES.md](docs/FIRST_10_MINUTES.md).
 `npx skills add dKosarevsky/albu-mcp` installs agent guidance, not the MCP server. Portable server command:
 `uvx --from albumentationsx-mcp albumentationsx-mcp`.
 
@@ -70,8 +71,8 @@ Inside MCP hosts, use `plan_augmentation_policy`, `plan_augmentation_policy_cand
 
 After connecting an MCP host:
 
-1. Read `albumentationsx://examples/client-smoke`.
-2. Call `run_host_smoke_check`.
+1. When the host exposes resource reads, read `albumentationsx://examples/client-smoke`; otherwise call `run_host_smoke_check` directly.
+2. If the resource was read, call `run_host_smoke_check` next.
 3. Continue only when `preview_ready` is true.
 4. For one real image or a folder, call `build_review_packet` to get a bounded first-preview handoff.
 5. Replace or reuse the paths in `preview_request_template.request`.

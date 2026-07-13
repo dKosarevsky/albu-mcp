@@ -15,7 +15,7 @@ def test_host_evidence_sprint_board_prioritizes_real_host_replay() -> None:
     markdown = render_host_evidence_sprint_board_markdown(board)
 
     assert board["manual_evidence_policy"] == "Never mark a host passed until a reviewer runs the real host UI."
-    assert board["summary"]["passed_manual_host_ui"] == 1
+    assert board["summary"]["passed_manual_host_ui"] == 2
     assert board["summary"]["passed_first_10_minutes_replay"] == 1
     assert [host["host"] for host in board["hosts"]] == ["Codex", "Claude Code", "Cursor", "Claude Desktop"]
     assert [host["priority"] for host in board["hosts"][:2]] == ["p0", "p0"]

@@ -1,6 +1,6 @@
 # Host Proof Sprint Checklist
 
-Package: `albumentationsx-mcp==1.16.0`
+Package: `albumentationsx-mcp==1.17.0`
 Ready for v1: `false`
 
 ## Current Blockers
@@ -17,7 +17,7 @@ Ready for v1: `false`
 
 ### Claude Desktop
 
-- Manual UI status: `missing`
+- Manual UI status: `recorded`
 - First 10 Minutes status: `missing`
 - Run the packet prompt in the real host UI before recording evidence.
 - Manual UI record command: `uv run python scripts/record_host_manual_run.py --host 'Claude Desktop' --status passed --date YYYY-MM-DD --evidence 'Claude Desktop listed MCP tools and completed run_host_smoke_check in the host UI.'`

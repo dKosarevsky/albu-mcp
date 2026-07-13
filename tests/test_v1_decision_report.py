@@ -14,7 +14,7 @@ def test_v1_decision_report_holds_v1_until_host_evidence_passes() -> None:
     assert report["decision"] == "hold_v1"
     assert report["release_candidate_allowed"] is False
     assert report["ready_for_v1"] is False
-    assert report["host_blocker_count"] == 6
+    assert report["host_blocker_count"] == 5
     assert "manual_host_ui_pending" in report["blocking_codes"]
     assert "first_10_minutes_replay_pending" in report["blocking_codes"]
     assert "Do not cut v1 from synthetic or generated host evidence." in report["decision_policy"]
@@ -31,7 +31,7 @@ def test_v1_decision_report_markdown_is_clear() -> None:
     assert markdown.startswith("# V1 Decision Report\n")
     assert "Decision: `hold_v1`" in markdown
     assert "Release candidate allowed: `false`" in markdown
-    assert "Host blocker count: `6`" in markdown
+    assert "Host blocker count: `5`" in markdown
     assert "## Required Before V1" in markdown
     assert "Run host evidence sprint queue and record real host UI evidence." in markdown
     assert "## Non-Goals" in markdown

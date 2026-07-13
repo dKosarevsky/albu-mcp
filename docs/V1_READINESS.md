@@ -5,11 +5,12 @@ host proof, and release reproducibility.
 
 ## Current Status
 
-As of 2026-07-11, `v1.16.0` is the current prepared release:
+As of 2026-07-13, `v1.17.0` is the current prepared release:
 
-- PyPI package: `albumentationsx-mcp==1.16.0`;
+- PyPI package target: `albumentationsx-mcp==1.17.0`;
 - MCP Registry entry: active/latest for `io.github.dKosarevsky/albu-mcp`;
-- GitHub Release, PyPI Trusted Publishing, and MCP Registry publication are automated from the `v1.16.0` tag;
+- GitHub Release, PyPI Trusted Publishing, MCP Registry publication, and the Claude Desktop MCPB are automated from
+  the `v1.17.0` tag;
 - machine-verifiable host proof status is tracked in `docs/HOST_PROOF_STATUS.md`;
 - the current launch blocker rollup is tracked in `docs/V1_LAUNCH_REPORT.md`;
 - v1 trust gates are separated in `docs/V1_TRUST_GATES.md`;
@@ -22,8 +23,9 @@ As of 2026-07-11, `v1.16.0` is the current prepared release:
   `docs/CLAUDE_CODE_SETUP_PATH.md`, and `docs/HOST_SETUP_PROBE.md`;
 - beta workflow intake and backlog triage are tracked in `docs/BETA_VALIDATION_INTAKE.md`,
   `docs/BETA_VALIDATION_RECORDING_PACK.md`, and `docs/BETA_TO_BACKLOG_TRIAGE.md`;
-- Manual Host UI and First 10 Minutes evidence is recorded for Codex; Claude Code remains blocked and must not be
-  treated as passed until dated real-host evidence is recorded through the host proof sprint runbook.
+- Manual Host UI evidence is recorded for Codex and Claude Desktop; First 10 Minutes evidence is recorded for Codex.
+  Claude Code remains blocked and Cursor remains pending, so neither may be treated as passed without dated real-host
+  evidence.
 
 The current product handoff for first real-dataset previews is `build_review_packet`. It combines dataset onboarding,
 safe preview request validation, the review tool sequence, and `albumentationsx://examples/report-handoff`.
@@ -78,7 +80,7 @@ Run `uv run python scripts/run_golden_evals.py` before every release.
 The release workflow builds the package, checks release metadata, runs tests, runs lint/type checks, executes golden MCP
 evals, publishes to PyPI through Trusted Publishing, creates a GitHub Release, and runs a post-release `uvx` smoke check.
 
-`uv run python scripts/check_release_readiness.py --tag v1.16.0` aggregates the fast release guards for the current
+`uv run python scripts/check_release_readiness.py --tag v1.17.0` aggregates the fast release guards for the current
 tag: version metadata, manual host evidence schema, generated host acceptance evidence, first-10-minutes
 entrypoints, host proof sprint entrypoints, and public contract snapshots.
 

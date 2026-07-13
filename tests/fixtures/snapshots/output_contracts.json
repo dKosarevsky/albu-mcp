@@ -1835,7 +1835,17 @@
         "summary": "Restart the MCP host with `--allowed-root /absolute/path/to/images`."
       }
     ],
-    "status": "warning"
+    "status": "warning",
+    "workflow_guidance": {
+      "instructions": [
+        "Read albumentationsx://examples/client-smoke when the host exposes resource reads; otherwise use this report directly.",
+        "Continue to preview validation and rendering only when preview_ready is true.",
+        "Call validate_preview_request before render_preview_batch.",
+        "Keep the first preview bounded to one small image and one variant."
+      ],
+      "resource_access": "optional",
+      "resource_uri": "albumentationsx://examples/client-smoke"
+    }
   },
   "run_host_smoke_check_ready": {
     "checks": [
@@ -2092,7 +2102,17 @@
         "summary": "Proceed with `recommend_recipe`, `validate_pipeline`, and a small `render_preview_batch`."
       }
     ],
-    "status": "ok"
+    "status": "ok",
+    "workflow_guidance": {
+      "instructions": [
+        "Read albumentationsx://examples/client-smoke when the host exposes resource reads; otherwise use this report directly.",
+        "Continue to preview validation and rendering only when preview_ready is true.",
+        "Call validate_preview_request before render_preview_batch.",
+        "Keep the first preview bounded to one small image and one variant."
+      ],
+      "resource_access": "optional",
+      "resource_uri": "albumentationsx://examples/client-smoke"
+    }
   },
   "score_dataset_preview_candidates": {
     "baseline_run_id": "baseline",

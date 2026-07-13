@@ -36,6 +36,11 @@ def test_host_smoke_report_is_preview_ready_when_diagnostics_and_validation_pass
     assert report.preview_request_template.request["variants_per_image"] == 1
     assert report.preview_request_template.request["seed"] == 0
     assert report.preview_request_template.request["input_paths"] == [str(tmp_path.resolve() / "example.jpg")]
+    assert report.workflow_guidance.resource_uri == "albumentationsx://examples/client-smoke"
+    assert report.workflow_guidance.resource_access == "optional"
+    assert any("otherwise" in instruction.lower() for instruction in report.workflow_guidance.instructions)
+    assert any("preview_ready" in instruction for instruction in report.workflow_guidance.instructions)
+    assert any("validate_preview_request" in instruction for instruction in report.workflow_guidance.instructions)
     assert any("validate_preview_request" in action for action in report.next_actions)
     assert any(
         "validate_preview_request" in instruction for instruction in report.preview_request_template.instructions
@@ -64,6 +69,24 @@ def test_host_smoke_report_blocks_preview_when_diagnostics_warn(tmp_path: Path) 
     template_check = next(check for check in report.checks if check.code == "preview_request_template")
     assert template_check.status == "warning"
     assert template_check.severity == "medium"
+
+
+def test_host_smoke_report_keeps_resource_read_optional_when_preview_is_blocked(tmp_path: Path) -> None:
+    catalog = TransformCatalog()
+    pipeline_service = PipelineService(catalog)
+    recipe = recommend_recipe("classification", intensity="low", targets=["image"])
+    validation = pipeline_service.validate_pipeline(recipe.pipeline)
+    diagnostics = DiagnosticsService(
+        allowed_roots=[tmp_path / "missing"],
+        artifact_root=tmp_path / "artifacts",
+        max_preview_runs=100,
+        public_surface=_complete_public_surface_with_host_smoke(),
+    ).diagnose(include_write_probe=False)
+
+    report = build_host_smoke_report(diagnostics=diagnostics, recipe=recipe, validation=validation)
+
+    assert report.workflow_guidance.resource_access == "optional"
+    assert any("preview_ready" in instruction for instruction in report.workflow_guidance.instructions)
 
 
 def _complete_public_surface_with_host_smoke() -> PublicSurface:

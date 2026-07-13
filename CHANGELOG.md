@@ -4,6 +4,15 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 ## Unreleased
 
+## 1.17.0 - 2026-07-13
+
+- Added an official UV-based Claude Desktop MCPB with explicit user-selected read and artifact roots, bounded preview
+  retention, project validation, and release packaging.
+- Recorded reviewer-observed Claude Desktop Free installation, MCP discovery, and a successful
+  `run_host_smoke_check`, plus a separate bounded generated-fixture replay through the installed bundle command.
+- Made `albumentationsx://examples/client-smoke` optional for hosts that list resources without exposing resource reads
+  to the model; `run_host_smoke_check` now returns complete typed workflow guidance.
+- Added the MCPB and portable `SHA256SUMS` to GitHub Release automation while keeping non-Python artifacts out of PyPI.
 - Changed GitHub Release publishing to use the exact matching `CHANGELOG.md` version section instead of unbounded
   automatically generated pull-request notes.
 

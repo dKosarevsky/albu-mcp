@@ -112,8 +112,8 @@ def test_v1_readiness_tracks_current_product_gate() -> None:
     readiness = Path("docs/V1_READINESS.md").read_text(encoding="utf-8")
 
     for term in [
-        "v1.16.0",
-        "albumentationsx-mcp==1.16.0",
+        "v1.17.0",
+        "albumentationsx-mcp==1.17.0",
         "MCP Registry",
         "build_review_packet",
         "review_packet_flow",
@@ -189,6 +189,9 @@ def test_docs_link_client_smoke_playbook_resource() -> None:
         assert "run_host_smoke_check" in content
         assert "preview_ready" in content
         assert "preview_request_template" in content
+    for content in [readme, install, usage]:
+        assert "when the host exposes resource reads" in content.lower()
+        assert "otherwise call `run_host_smoke_check` directly" in content.lower()
     assert "client smoke" in install.lower()
     assert "client-smoke" in usage
     assert "client-smoke" in recipes

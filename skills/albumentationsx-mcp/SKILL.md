@@ -5,17 +5,11 @@ description: Use when Codex needs to install, configure, or operate Albumentatio
 
 # AlbumentationsX MCP
 
-## Overview
-
-Use this playbook for bounded AlbumentationsX MCP previews and honest evidence.
-
 ## Install
 
 ```bash
 uvx --from albumentationsx-mcp albumentationsx-mcp
 ```
-
-Bound roots:
 
 ```bash
 uvx --from albumentationsx-mcp albumentationsx-mcp \
@@ -28,7 +22,7 @@ uvx --from albumentationsx-mcp albumentationsx-mcp \
 Use this as the first host task:
 
 ```text
-Use AlbumentationsX MCP on image or directory `DATASET_PATH`. Use `ALLOWED_ROOT` for image access and `ARTIFACT_ROOT` for generated outputs. Read `albumentationsx://examples/client-smoke`, call `run_host_smoke_check`, and continue only when `preview_ready` is true. If `preview_ready` is false, call `diagnose_environment` and stop before rendering. Then call `plan_dataset_onboarding`, `build_review_packet`, `validate_preview_request`, and `render_preview_batch`. Render at most 6 images on the first pass. Show the contact sheet path and ask for concrete feedback before `adjust_pipeline` or `export_pipeline`.
+Use AlbumentationsX MCP on image or directory `DATASET_PATH`. Read from `ALLOWED_ROOT` and write to `ARTIFACT_ROOT`. When the host exposes resource reads, read `albumentationsx://examples/client-smoke` and call `run_host_smoke_check`; otherwise call `run_host_smoke_check` directly. Continue only when `preview_ready` is true. If `preview_ready` is false, call `diagnose_environment` and stop before rendering. Then call `plan_dataset_onboarding`, `build_review_packet`, `validate_preview_request`, and `render_preview_batch`. Render at most 6 images on the first pass. Show the contact sheet path and ask for concrete feedback before `adjust_pipeline` or `export_pipeline`.
 ```
 
 ## Host Config Hints
@@ -39,21 +33,21 @@ Use AlbumentationsX MCP on image or directory `DATASET_PATH`. Use `ALLOWED_ROOT`
 
 ## Host Workflow
 
-1. Read `albumentationsx://examples/client-smoke`.
-2. Call `run_host_smoke_check`; continue only when `preview_ready` is true.
-3. For one real image or an image folder, call `plan_dataset_onboarding`, then `build_review_packet` for a bounded handoff.
+1. Read `albumentationsx://examples/client-smoke` when supported; otherwise call `run_host_smoke_check` directly.
+2. Call `run_host_smoke_check` after reading; continue only when `preview_ready` is true.
+3. Call `plan_dataset_onboarding`, then `build_review_packet` for one image or folder.
 4. Validate user paths with `validate_preview_request` before rendering.
-5. Call `render_preview_batch` on a small local sample and inspect the contact sheet.
-6. Capture concrete feedback with `record_preview_feedback`; use tags such as `too_noisy:high` or `exposure_too_weak`.
-7. Call `adjust_pipeline`, re-render, and compare before accepting changes.
-8. Export only reviewed work with `export_pipeline` or the report/export tools requested by the user.
+5. Render a small sample with `render_preview_batch`; inspect the contact sheet.
+6. Record feedback with `record_preview_feedback`, such as `too_noisy:high` or `exposure_too_weak`.
+7. `adjust_pipeline`, re-render, and compare before acceptance.
+8. Export only reviewed work with `export_pipeline` or requested report tools.
 
 ## Safety Rules
 
-- Do not train models, overwrite datasets, or fetch remote images.
-- Do not expose private local paths, filenames, or image contents in public reports.
-- Do not treat generated fixtures, contact sheets, or rehearsals as real beta evidence.
-- Keep all image reads under `--allowed-root` and all generated files under `--artifact-root`.
+- Do not train, overwrite datasets, or fetch remote images.
+- Keep private paths, filenames, and image contents out of public reports.
+- Generated fixtures, contact sheets, and rehearsals are not beta evidence.
+- Read only under `--allowed-root`; write only under `--artifact-root`.
 - Re-run validation after changing paths, masks, bboxes, labels, or annotation formats.
 
 ## Stop Conditions
@@ -64,7 +58,7 @@ Use AlbumentationsX MCP on image or directory `DATASET_PATH`. Use `ALLOWED_ROOT`
 
 ## Evidence Workflows
 
-For release, adoption, or product evidence, follow the generated pack README and use:
+For evidence work, follow the generated pack README and use:
 
 - `albu-mcp activation real-adoption-cycle`
 - `albu-mcp activation product-fix-closure-pipeline`

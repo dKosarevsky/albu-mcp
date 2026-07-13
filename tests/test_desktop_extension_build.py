@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_build_desktop_extension_uses_pinned_official_cli_and_stable_name(tmp_path: Path) -> None:
     extension_root, pyproject_path = _copy_bundle(tmp_path)
     output_dir = tmp_path / "dist"
-    stale_artifact = output_dir / "albumentationsx-mcp-1.16.0.mcpb"
+    stale_artifact = output_dir / "albumentationsx-mcp-1.17.0.mcpb"
     output_dir.mkdir()
     stale_artifact.write_bytes(b"stale")
     commands: list[tuple[list[str], Path]] = []
@@ -42,7 +42,7 @@ def test_build_desktop_extension_uses_pinned_official_cli_and_stable_name(tmp_pa
     )
 
     assert report.artifact_path == stale_artifact.resolve()
-    assert report.version == "1.16.0"
+    assert report.version == "1.17.0"
     assert report.sha256
     assert report.size_bytes > 0
     assert report.files == (
@@ -124,7 +124,7 @@ def _copy_bundle(tmp_path: Path) -> tuple[Path, Path]:
     extension_root = tmp_path / "desktop-extension"
     shutil.copytree(ROOT / "desktop-extension", extension_root)
     pyproject_path = tmp_path / "pyproject.toml"
-    pyproject_path.write_text('[project]\nversion = "1.16.0"\n', encoding="utf-8")
+    pyproject_path.write_text('[project]\nversion = "1.17.0"\n', encoding="utf-8")
     return extension_root, pyproject_path
 
 

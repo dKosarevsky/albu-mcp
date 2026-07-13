@@ -32,7 +32,8 @@ def run_first_preview_review(
     """Guide an assistant through the first local preview with pre-render validation."""
     return (
         "Use AlbumentationsX MCP to run the first local preview safely. "
-        "Read albumentationsx://examples/client-smoke, then call run_host_smoke_check "
+        "Read albumentationsx://examples/client-smoke when the host exposes resource reads, then call "
+        "run_host_smoke_check; otherwise call run_host_smoke_check directly "
         f"for task {task!r} with targets {targets!r}. Continue only when preview_ready is true. "
         "Copy preview_request_template.request, replace its input_paths value with "
         f"{input_path!r}, call validate_preview_request, and call render_preview_batch only when "
