@@ -1,6 +1,6 @@
 # V1 RC Readiness Report
 
-Package: `albumentationsx-mcp==1.16.0`
+Package: `albumentationsx-mcp==1.17.0`
 Required RC hosts: `Codex, Claude Code`
 RC decision: `hold_rc`
 RC release candidate allowed: `false`

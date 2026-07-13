@@ -1,6 +1,6 @@
 # Host Evidence Sprint Board
 
-Package: `albumentationsx-mcp==1.16.0`
+Package: `albumentationsx-mcp==1.17.0`
 Ready for v1: `false`
 
 ## Manual Evidence Policy
@@ -10,7 +10,7 @@ Never mark a host passed until a reviewer runs the real host UI. Do not paste sy
 ## Summary
 
 - Hosts: `4`
-- Passed manual Host UI: `1`
+- Passed manual Host UI: `2`
 - Passed First 10 Minutes replay: `1`
 - Blocked hosts: `1`
 
@@ -21,7 +21,7 @@ Never mark a host passed until a reviewer runs the real host UI. Do not paste sy
 | Codex | `p0` | `recorded` | `recorded` | `complete` |
 | Claude Code | `p0` | `blocked` | `blocked` | `blocked` |
 | Cursor | `p1` | `missing` | `missing` | `first_10_minutes_replay` |
-| Claude Desktop | `p1` | `missing` | `missing` | `first_10_minutes_replay` |
+| Claude Desktop | `p1` | `recorded` | `missing` | `first_10_minutes_replay` |
 
 ## Run Queue
 

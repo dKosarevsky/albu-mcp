@@ -45,8 +45,9 @@ uvx --from albumentationsx-mcp albumentationsx-mcp \
   --artifact-root /absolute/path/to/albu-artifacts
 ```
 
-Copyable host snippets are in [examples](examples/). Full setup, including the native Codex plugin bundle, is in
-[docs/INSTALL.md](docs/INSTALL.md); the guided trial is [docs/FIRST_10_MINUTES.md](docs/FIRST_10_MINUTES.md).
+Claude Desktop users can install the matching `.mcpb` from [GitHub Releases](https://github.com/dKosarevsky/albu-mcp/releases).
+Copyable host snippets and the native Codex plugin bundle are in [docs/INSTALL.md](docs/INSTALL.md); the guided trial is
+[docs/FIRST_10_MINUTES.md](docs/FIRST_10_MINUTES.md).
 `npx skills add dKosarevsky/albu-mcp` installs agent guidance, not the MCP server. Portable server command:
 `uvx --from albumentationsx-mcp albumentationsx-mcp`.
 

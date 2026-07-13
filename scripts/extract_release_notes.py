@@ -44,7 +44,7 @@ def write_release_notes(
 def main() -> None:
     """CLI entrypoint used by the release workflow."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--tag", required=True, help="Release tag, for example v1.16.0")
+    parser.add_argument("--tag", required=True, help="Release tag, for example v1.2.3")
     parser.add_argument("--changelog", type=Path, default=Path("CHANGELOG.md"))
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()

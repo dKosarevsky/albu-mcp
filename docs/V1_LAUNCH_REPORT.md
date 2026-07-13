@@ -2,8 +2,8 @@
 
 Package: `albumentationsx-mcp`
 MCP name: `io.github.dKosarevsky/albu-mcp`
-Package version: `1.16.0`
-Server version: `1.16.0`
+Package version: `1.17.0`
+Server version: `1.17.0`
 Ready for v1: `false`
 Host proof status: `docs/HOST_PROOF_STATUS.md`
 
@@ -17,7 +17,6 @@ Host proof status: `docs/HOST_PROOF_STATUS.md`
 | Host | Priority | Gate | Status | Next Action |
 | --- | --- | --- | --- | --- |
 | Claude Desktop | `p1` | `first_10_minutes_replay` | `missing` | `run_first_10_minutes_replay` |
-| Claude Desktop | `p1` | `manual_host_ui` | `missing` | `run_manual_host_ui` |
 | Claude Code | `p0` | `first_10_minutes_replay` | `blocked` | `triage_blocker` |
 | Claude Code | `p0` | `manual_host_ui` | `blocked` | `triage_blocker` |
 | Cursor | `p1` | `first_10_minutes_replay` | `missing` | `run_first_10_minutes_replay` |
@@ -25,7 +24,6 @@ Host proof status: `docs/HOST_PROOF_STATUS.md`
 
 Packet commands:
 - Claude Desktop / first_10_minutes_replay: `uv run python scripts/export_manual_host_acceptance_packet.py --host 'Claude Desktop' --output /tmp/albu-host-claude-desktop.md`
-- Claude Desktop / manual_host_ui: `uv run python scripts/export_manual_host_acceptance_packet.py --host 'Claude Desktop' --output /tmp/albu-host-claude-desktop.md`
 - Claude Code / first_10_minutes_replay: `uv run python scripts/export_manual_host_acceptance_packet.py --host 'Claude Code' --output /tmp/albu-host-claude-code.md`
 - Claude Code / manual_host_ui: `uv run python scripts/export_manual_host_acceptance_packet.py --host 'Claude Code' --output /tmp/albu-host-claude-code.md`
 - Cursor / first_10_minutes_replay: `uv run python scripts/export_manual_host_acceptance_packet.py --host Cursor --output /tmp/albu-host-cursor.md`
@@ -33,7 +31,7 @@ Packet commands:
 
 ## Manual Host UI
 
-- Claude Desktop: `pending` — manual host UI evidence not recorded
+- Claude Desktop: `passed` — Claude Desktop has dated manual host UI evidence
 - Claude Code: `blocked` — Claude Code manual host UI evidence is blocked
 - Cursor: `pending` — manual host UI evidence not recorded
 - Codex: `passed` — Codex has dated manual host UI evidence
@@ -47,7 +45,7 @@ Packet commands:
 
 ## Evidence Plan
 
-- Claude Desktop: manual UI `missing`, first 10 minutes `missing`
+- Claude Desktop: manual UI `recorded`, first 10 minutes `missing`
   - Manual UI: `uv run python scripts/record_host_manual_run.py --host 'Claude Desktop' --status passed --date YYYY-MM-DD --evidence 'Claude Desktop listed MCP tools and completed run_host_smoke_check in the host UI.'`
   - First 10 Minutes: `uv run python scripts/record_host_manual_run.py --kind first-10-minutes --host 'Claude Desktop' --status passed --date YYYY-MM-DD --evidence 'Claude Desktop completed smoke check, preview validation, baseline and candidate render, comparison, and pipeline export.' --artifact docs/assets/demo/demo_report.md`
 - Claude Code: manual UI `blocked`, first 10 minutes `blocked`
