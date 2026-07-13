@@ -33,7 +33,7 @@ The Python package is published as
 Pin a version when debugging or reproducing a release:
 
 ```bash
-uvx --from albumentationsx-mcp==1.17.1 albumentationsx-mcp --help
+uvx --from albumentationsx-mcp==1.18.0 albumentationsx-mcp --help
 ```
 
 ## MCP Registry
@@ -229,6 +229,11 @@ MCP-native hosts can also read `albumentationsx://examples/first-preview` or use
 For the common robustness loop where a user rejects one noisy preview, read
 `albumentationsx://examples/distortion-review` or copy [examples/distortion_review_workflow.md](../examples/distortion_review_workflow.md).
 
+Compatible MCP Apps hosts open an interactive review surface after `render_preview` or `render_preview_batch`. It reads
+verified preview PNGs, lets the reviewer select structured issues and severity, and persists the decision through
+`record_preview_feedback`. No extra package or command is required. See [MCP_APPS_REVIEW.md](MCP_APPS_REVIEW.md) for
+the host contract, privacy boundary, and the unchanged workflow for hosts without MCP Apps support.
+
 ## Local Checkout
 
 Use a checkout only when changing or testing the server:
@@ -265,7 +270,7 @@ uvx --from albumentationsx-mcp albumentationsx-mcp --help
 For a pinned release:
 
 ```bash
-uvx --from albumentationsx-mcp==1.17.1 albumentationsx-mcp --help
+uvx --from albumentationsx-mcp==1.18.0 albumentationsx-mcp --help
 ```
 
 For local development:

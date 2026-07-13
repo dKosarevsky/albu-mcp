@@ -291,6 +291,10 @@ prune older runs.
 For multi-image review, call `render_preview_batch` with the same request schema as `render_preview`. It writes per-image
 variants plus a shared contact sheet for quick side-by-side review.
 
+In compatible MCP Apps hosts, both render tools can open the packaged interactive review surface. The ordinary tool
+result remains the source of truth, so non-supporting hosts keep the same artifact and feedback workflow. See
+[MCP_APPS_REVIEW.md](MCP_APPS_REVIEW.md) for UI actions, resource verification, privacy, and fallback behavior.
+
 `compare_preview_runs` includes `quality_summary` when preview image artifacts are still available locally. It reports
 brightness, contrast, sharpness, saturation, colorfulness, entropy, clipping, candidate-minus-baseline deltas, and
 structured `findings`. Missing or unreadable local artifacts are reported as `quality_warnings` instead of failing the

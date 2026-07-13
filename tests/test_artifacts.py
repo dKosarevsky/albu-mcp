@@ -1,3 +1,5 @@
+import hashlib
+import json
 from pathlib import Path
 from typing import Any
 
@@ -5,7 +7,7 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from albumentationsx_mcp.models import ComposeSpec, PreviewRequest, TransformSpec
+from albumentationsx_mcp.models import ComposeSpec, PreviewRequest, PreviewResult, TransformSpec
 from albumentationsx_mcp.preview import ArtifactStore, PathPolicy, PreviewService
 
 
@@ -87,6 +89,122 @@ def test_artifact_store_rejects_manifest_path_traversal(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="Invalid preview run id"):
         store.read_manifest("../outside")
+
+
+@pytest.mark.parametrize("artifact_kind", ["image", "contact_sheet"])
+def test_artifact_store_reads_verified_preview_images(tmp_path: Path, artifact_kind: str) -> None:
+    store, result = _render_preview_fixture(tmp_path)
+    artifact = next(item for item in result.artifacts if item.kind == artifact_kind)
+
+    content = store.read_image_artifact(result.run_id, Path(artifact.path).name)
+
+    assert content.startswith(b"\x89PNG\r\n\x1a\n")
+    assert len(content) == artifact.size_bytes
+
+
+@pytest.mark.parametrize("filename", ["../input.png", "sub/input.png", "/outside/input.png", ".."])
+def test_artifact_store_rejects_invalid_image_filenames(tmp_path: Path, filename: str) -> None:
+    store, result = _render_preview_fixture(tmp_path)
+
+    with pytest.raises(ValueError, match="Invalid artifact filename"):
+        store.read_image_artifact(result.run_id, filename)
+
+
+def test_artifact_store_rejects_unrecorded_image_artifacts(tmp_path: Path) -> None:
+    store, result = _render_preview_fixture(tmp_path)
+
+    with pytest.raises(FileNotFoundError, match="not recorded"):
+        store.read_image_artifact(result.run_id, "unknown.png")
+
+
+@pytest.mark.parametrize("content", [b"not a PNG payload", b"\x89PNG\r\n\x1a\nbroken"])
+def test_artifact_store_rejects_coherently_tampered_non_png_payload(tmp_path: Path, content: bytes) -> None:
+    store, result = _render_preview_fixture(tmp_path)
+    manifest_path = store.root / result.run_id / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    artifact = next(item for item in manifest["artifacts"] if item["kind"] == "image")
+    artifact_path = Path(artifact["path"])
+    artifact_path.write_bytes(content)
+    artifact["size_bytes"] = len(content)
+    artifact["sha256"] = hashlib.sha256(content).hexdigest()
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="valid PNG"):
+        store.read_image_artifact(result.run_id, artifact_path.name)
+
+
+def test_artifact_store_rejects_symlinked_image_payload(tmp_path: Path) -> None:
+    store, result = _render_preview_fixture(tmp_path)
+    artifact = next(item for item in result.artifacts if item.kind == "image")
+    artifact_path = Path(artifact.path)
+    replacement_path = artifact_path.with_name("replacement.png")
+    replacement_path.write_bytes(artifact_path.read_bytes())
+    artifact_path.unlink()
+    _symlink_or_skip(artifact_path, replacement_path)
+
+    with pytest.raises(ValueError, match="regular stored file"):
+        store.read_image_artifact(result.run_id, artifact_path.name)
+
+
+def test_artifact_store_rejects_symlinked_manifest(tmp_path: Path) -> None:
+    store, result = _render_preview_fixture(tmp_path)
+    manifest_path = store.root / result.run_id / "manifest.json"
+    replacement_path = tmp_path / "replacement-manifest.json"
+    replacement_path.write_bytes(manifest_path.read_bytes())
+    manifest_path.unlink()
+    _symlink_or_skip(manifest_path, replacement_path)
+
+    with pytest.raises(ValueError, match="regular stored file"):
+        store.read_manifest(result.run_id)
+
+
+def test_artifact_store_rejects_symlinked_run_directory(tmp_path: Path) -> None:
+    store = ArtifactStore(tmp_path / "artifacts")
+    run_id = "0" * 32
+    outside_run = tmp_path / "outside-run"
+    outside_run.mkdir()
+    (outside_run / "manifest.json").write_text("{}", encoding="utf-8")
+    _symlink_or_skip(store.root / run_id, outside_run, target_is_directory=True)
+
+    with pytest.raises(ValueError, match="regular stored directory"):
+        store.read_manifest(run_id)
+
+
+def test_artifact_store_missing_manifest_error_does_not_disclose_root(tmp_path: Path) -> None:
+    store = ArtifactStore(tmp_path / "private-artifacts")
+
+    with pytest.raises(FileNotFoundError) as exc_info:
+        store.read_manifest("0" * 32)
+
+    assert str(store.root) not in str(exc_info.value)
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("kind", "manifest", "not a readable preview image"),
+        ("mime_type", "application/json", "not a readable preview image"),
+        ("path", "/outside/unrelated.png", "path does not match"),
+        ("size_bytes", 1, "size does not match"),
+        ("sha256", "0" * 64, "digest does not match"),
+    ],
+)
+def test_artifact_store_rejects_tampered_image_manifest_entries(
+    tmp_path: Path,
+    field: str,
+    value: object,
+    message: str,
+) -> None:
+    store, result = _render_preview_fixture(tmp_path)
+    manifest_path = store.root / result.run_id / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    artifact = next(item for item in manifest["artifacts"] if item["kind"] == "image")
+    filename = Path(artifact["path"]).name
+    artifact[field] = value
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(ValueError, match=message):
+        store.read_image_artifact(result.run_id, filename)
 
 
 def test_artifact_store_can_delete_preview_run_and_update_index(tmp_path: Path) -> None:
@@ -193,3 +311,24 @@ def test_preview_service_compare_includes_quality_summary(tmp_path: Path) -> Non
     assert comparison.quality_summary.candidate.image_count == 1
     assert comparison.quality_summary.deltas["brightness_mean"] == 60.0
     assert comparison.quality_warnings == []
+
+
+def _render_preview_fixture(tmp_path: Path) -> tuple[ArtifactStore, PreviewResult]:
+    image_path = tmp_path / "input.png"
+    Image.fromarray(np.full((16, 16, 3), 128, dtype=np.uint8)).save(image_path)
+    store = ArtifactStore(tmp_path / "artifacts")
+    service = PreviewService(IdentityPipelineService(), PathPolicy([tmp_path]), store)
+    result = service.render_preview(
+        PreviewRequest(
+            input_paths=[image_path],
+            pipeline=ComposeSpec(transforms=[TransformSpec(name="HorizontalFlip", p=1.0)]),
+        ),
+    )
+    return store, result
+
+
+def _symlink_or_skip(link: Path, target: Path, *, target_is_directory: bool = False) -> None:
+    try:
+        link.symlink_to(target, target_is_directory=target_is_directory)
+    except (NotImplementedError, OSError) as exc:
+        pytest.skip(f"symlinks are unavailable: {exc}")

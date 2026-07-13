@@ -36,6 +36,41 @@ def test_ci_workflow_runs_core_quality_gates() -> None:
     assert "ClientSession" in commands
 
 
+def test_ci_workflow_builds_and_verifies_the_mcp_app() -> None:
+    workflow = yaml.safe_load(Path(".github/workflows/ci.yml").read_text(encoding="utf-8"))
+    ui_job = workflow["jobs"]["ui"]
+    steps = ui_job["steps"]
+    commands = "\n".join(step.get("run", "") for step in steps)
+    setup_node = next(step for step in steps if step.get("name") == "Set up Node.js")
+
+    assert setup_node["uses"] == "actions/setup-node@v6"
+    assert setup_node["with"] == {
+        "node-version": "24",
+        "cache": "npm",
+        "cache-dependency-path": "mcp-app/package-lock.json",
+    }
+    for command in [
+        "npm --prefix mcp-app ci",
+        "npm --prefix mcp-app run test",
+        "npm --prefix mcp-app run typecheck",
+        "npm --prefix mcp-app run format:check",
+        "npm --prefix mcp-app run build",
+        "git diff --exit-code -- src/albumentationsx_mcp/ui/preview-review.html",
+    ]:
+        assert command in commands
+
+
+def test_release_workflow_builds_ui_before_python_distributions() -> None:
+    workflow = yaml.safe_load(Path(".github/workflows/release.yml").read_text(encoding="utf-8"))
+    steps = workflow["jobs"]["build"]["steps"]
+    commands = "\n".join(step.get("run", "") for step in steps)
+
+    ui_build = commands.index("npm --prefix mcp-app run build")
+    python_build = commands.index("uv build")
+    bundle_check = commands.index("scripts/check_mcp_app_bundle.py --dist-dir dist")
+    assert ui_build < python_build < bundle_check
+
+
 def test_mcp_registry_watchdog_workflow_checks_latest_registry_entry() -> None:
     workflow_path = Path(".github/workflows/mcp-registry-watchdog.yml")
     workflow_text = workflow_path.read_text(encoding="utf-8")
@@ -97,6 +132,54 @@ def test_usage_docs_and_examples_are_present() -> None:
     assert Path("docs/assets/demo/demo_report.md").exists()
 
 
+def test_mcp_apps_review_guide_documents_progressive_enhancement() -> None:
+    readme = Path("README.md").read_text(encoding="utf-8")
+    install = Path("docs/INSTALL.md").read_text(encoding="utf-8")
+    usage = Path("docs/USAGE.md").read_text(encoding="utf-8")
+    guide = Path("docs/MCP_APPS_REVIEW.md").read_text(encoding="utf-8")
+    changelog = Path("CHANGELOG.md").read_text(encoding="utf-8").split("## 1.18.0", 1)[1].split("## 1.17.1", 1)[0]
+
+    for content in [readme, install, usage]:
+        assert "[docs/MCP_APPS_REVIEW.md](docs/MCP_APPS_REVIEW.md)" in content or (
+            "[MCP_APPS_REVIEW.md](MCP_APPS_REVIEW.md)" in content
+        )
+    for term in [
+        "ui://albumentationsx/preview-review.html",
+        "artifact://{run_id}/{filename}",
+        "record_preview_feedback",
+        "progressive enhancement",
+        "no outgoing network dependency",
+        "manifest-recorded PNG",
+        "non-MCP-Apps host",
+        "not beta or adoption evidence",
+    ]:
+        assert term in guide
+    assert "MCP Apps" in changelog
+
+
+def test_mcp_apps_basic_host_proof_is_linked_and_honest() -> None:
+    guide = Path("docs/MCP_APPS_REVIEW.md").read_text(encoding="utf-8")
+    host_status = Path("docs/HOST_PROOF_STATUS.md").read_text(encoding="utf-8")
+    proof_path = Path("docs/MCP_APPS_BASIC_HOST_PROOF.md")
+
+    assert proof_path.exists()
+    proof = proof_path.read_text(encoding="utf-8")
+    assert "[MCP_APPS_BASIC_HOST_PROOF.md](MCP_APPS_BASIC_HOST_PROOF.md)" in guide
+    assert "[MCP_APPS_BASIC_HOST_PROOF.md](MCP_APPS_BASIC_HOST_PROOF.md)" in host_status
+    for term in [
+        "2026-07-13",
+        "@modelcontextprotocol/ext-apps` `1.7.4",
+        "ca1d29894fabbd1558885a9ec8620dcb01d7457e",
+        "generated-fixture machine evidence",
+        "not real beta or adoption evidence",
+        "desktop",
+        "mobile",
+        "record_preview_feedback",
+        "no external application dependency",
+    ]:
+        assert term.lower() in proof.lower()
+
+
 def test_adoption_packet_is_linked_and_actionable() -> None:
     readme = Path("README.md").read_text(encoding="utf-8")
     adoption = Path("docs/ADOPTION.md").read_text(encoding="utf-8")
@@ -120,8 +203,8 @@ def test_v1_readiness_tracks_current_product_gate() -> None:
     readiness = Path("docs/V1_READINESS.md").read_text(encoding="utf-8")
 
     for term in [
-        "v1.17.1",
-        "albumentationsx-mcp==1.17.1",
+        "v1.18.0",
+        "albumentationsx-mcp==1.18.0",
         "MCP Registry",
         "build_review_packet",
         "review_packet_flow",

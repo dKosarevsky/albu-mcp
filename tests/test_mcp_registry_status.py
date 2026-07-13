@@ -6,7 +6,12 @@ from pathlib import Path
 
 import pytest
 
-from scripts.check_mcp_registry_status import validate_mcp_registry_status
+from scripts import check_mcp_registry_status as registry_status
+from scripts.check_mcp_registry_status import (
+    McpRegistryCheckOptions,
+    McpRegistryStatusReport,
+    validate_mcp_registry_status,
+)
 
 _DESCRIPTION = "AlbumentationsX MCP for batch previews, compare preview runs, segmentation masks, and exports."
 _ICON_SRC = "https://avatars.githubusercontent.com/u/57894582?s=200&v=4"
@@ -86,6 +91,94 @@ def test_mcp_registry_status_wraps_registry_timeouts(tmp_path: Path, monkeypatch
 
     with pytest.raises(ValueError, match="Could not fetch MCP Registry metadata"):
         validate_mcp_registry_status(server_json_path=server_json_path, timeout=0.01)
+
+
+def test_mcp_registry_status_reports_retryable_failures(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    expected = McpRegistryStatusReport(
+        name="io.github.dKosarevsky/albu-mcp",
+        version="1.14.0",
+        package="albumentationsx-mcp",
+        package_version="1.14.0",
+        status="active",
+        is_latest=True,
+    )
+    outcomes: list[McpRegistryStatusReport | ValueError] = [
+        registry_status.McpRegistryFetchError("The read operation timed out"),
+        expected,
+    ]
+    delays: list[float] = []
+    monkeypatch.setattr(registry_status, "_validate_once", lambda _options: outcomes.pop(0))
+    monkeypatch.setattr(registry_status.time, "sleep", delays.append)
+
+    report = registry_status._validate_with_retries(
+        McpRegistryCheckOptions(
+            server_json_path=_write_server_json(tmp_path),
+            registry_response_path=None,
+            registry_url=None,
+            timeout=90,
+            retries=2,
+            retry_delay=15,
+        )
+    )
+
+    assert report == expected
+    assert delays == [15]
+    captured = capsys.readouterr()
+    assert "attempt 1/2 failed" in captured.err
+    assert "The read operation timed out" in captured.err
+    assert "retrying in 15 seconds" in captured.err
+
+
+def test_mcp_registry_status_does_not_retry_or_mask_semantic_mismatch(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    expected = McpRegistryStatusReport(
+        name="io.github.dKosarevsky/albu-mcp",
+        version="1.14.0",
+        package="albumentationsx-mcp",
+        package_version="1.14.0",
+        status="active",
+        is_latest=True,
+    )
+    outcomes: list[McpRegistryStatusReport | ValueError] = [
+        ValueError("MCP Registry icons does not match server.json"),
+        expected,
+    ]
+    monkeypatch.setattr(registry_status, "_validate_once", lambda _options: outcomes.pop(0))
+    monkeypatch.setattr(registry_status.time, "sleep", lambda _delay: None)
+
+    with pytest.raises(ValueError, match="icons does not match"):
+        registry_status._validate_with_retries(
+            McpRegistryCheckOptions(
+                server_json_path=_write_server_json(tmp_path),
+                registry_response_path=None,
+                registry_url=None,
+                timeout=90,
+                retries=3,
+                retry_delay=0,
+            )
+        )
+
+    assert outcomes == [expected]
+
+
+@pytest.mark.parametrize(
+    "workflow_path",
+    [
+        Path(".github/workflows/release.yml"),
+        Path(".github/workflows/publish-mcp.yml"),
+        Path(".github/workflows/mcp-registry-watchdog.yml"),
+    ],
+)
+def test_mcp_registry_workflows_allow_slow_reads(workflow_path: Path) -> None:
+    workflow = workflow_path.read_text(encoding="utf-8")
+
+    assert "check_mcp_registry_status.py --retries 3 --retry-delay 15 --timeout 90" in workflow
 
 
 def _write_server_json(tmp_path: Path) -> Path:

@@ -1,6 +1,6 @@
 # V1 RC Rehearsal Plan
 
-Package: `albumentationsx-mcp==1.17.1`
+Package: `albumentationsx-mcp==1.18.0`
 Release tag: `vX.Y.Z-rc.1`
 Rehearsal status: `preflight_only`
 RC cutover allowed: `false`

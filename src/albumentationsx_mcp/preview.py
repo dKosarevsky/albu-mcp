@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import math
+import os
 import re
 import shutil
+import stat
 import uuid
 from collections import Counter
 from datetime import datetime, timezone
@@ -39,6 +42,12 @@ from albumentationsx_mcp.preview_analysis import compare_preview_manifests
 from albumentationsx_mcp.quality import compare_manifest_quality
 
 _RUN_ID_PATTERN = re.compile(r"^[0-9a-f]{32}$")
+_ARTIFACT_FILENAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+_READABLE_IMAGE_ARTIFACT_KINDS = frozenset({"image", "overlay", "contact_sheet", "overlay_contact_sheet"})
+_MAX_MANIFEST_BYTES = 8 * 1024 * 1024
+_MAX_IMAGE_ARTIFACT_BYTES = 128 * 1024 * 1024
+_READ_CHUNK_BYTES = 1024 * 1024
+_PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
 
 class PipelineBuilder(Protocol):
@@ -124,10 +133,70 @@ class ArtifactStore:
 
     def read_manifest(self, run_id: str) -> dict[str, Any]:
         """Read a preview manifest by run id without allowing path traversal."""
-        manifest_path = self._run_dir(run_id) / "manifest.json"
-        if not manifest_path.exists():
-            raise FileNotFoundError(manifest_path)
-        return json.loads(manifest_path.read_text(encoding="utf-8"))
+        content = self._read_run_file(
+            run_id,
+            "manifest.json",
+            max_bytes=_MAX_MANIFEST_BYTES,
+            unavailable_message="Preview run manifest is unavailable",
+            invalid_message="Preview run manifest is not a regular stored file",
+        )
+        try:
+            payload = json.loads(content.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            msg = "Preview run manifest is not valid UTF-8 JSON"
+            raise ValueError(msg) from exc
+        if not isinstance(payload, dict):
+            msg = "Preview run manifest must be a JSON object"
+            raise TypeError(msg)
+        return payload
+
+    def read_image_artifact(self, run_id: str, filename: str) -> bytes:
+        """Read one manifest-recorded preview image after validating its integrity."""
+        if not _ARTIFACT_FILENAME_PATTERN.fullmatch(filename):
+            raise ValueError(f"Invalid artifact filename: {filename!r}")
+
+        run_dir = self._run_dir(run_id)
+        manifest = self.read_manifest(run_id)
+        artifact_uri = f"artifact://{run_id}/{filename}"
+        artifact = next(
+            (
+                item
+                for item in manifest.get("artifacts", [])
+                if isinstance(item, dict) and item.get("uri") == artifact_uri
+            ),
+            None,
+        )
+        if artifact is None:
+            raise FileNotFoundError(f"Preview artifact {artifact_uri!r} is not recorded in the run manifest")
+        if artifact.get("kind") not in _READABLE_IMAGE_ARTIFACT_KINDS or artifact.get("mime_type") != "image/png":
+            msg = f"Preview artifact {artifact_uri!r} is not a readable preview image"
+            raise ValueError(msg)
+
+        expected_path = run_dir / filename
+        recorded_value = artifact.get("path")
+        recorded_path = Path(recorded_value).expanduser().absolute() if isinstance(recorded_value, str) else None
+        if run_dir.parent != self.root or expected_path.parent != run_dir:
+            msg = f"Preview artifact path does not match the controlled run directory: {artifact_uri!r}"
+            raise ValueError(msg)
+        if recorded_path != expected_path:
+            msg = f"Preview artifact path does not match its manifest entry: {artifact_uri!r}"
+            raise ValueError(msg)
+
+        content = self._read_run_file(
+            run_id,
+            filename,
+            max_bytes=_MAX_IMAGE_ARTIFACT_BYTES,
+            unavailable_message=f"Preview artifact {artifact_uri!r} is unavailable",
+            invalid_message=f"Preview artifact {artifact_uri!r} is not a regular stored file",
+        )
+        if artifact.get("size_bytes") != len(content):
+            msg = f"Preview artifact size does not match its manifest entry: {artifact_uri!r}"
+            raise ValueError(msg)
+        if artifact.get("sha256") != hashlib.sha256(content).hexdigest():
+            msg = f"Preview artifact digest does not match its manifest entry: {artifact_uri!r}"
+            raise ValueError(msg)
+        self._validate_png(content, artifact_uri=artifact_uri)
+        return content
 
     def delete_run(self, run_id: str) -> PreviewRunSummary:
         """Delete a preview run directory and remove it from the local index."""
@@ -165,6 +234,139 @@ class ArtifactStore:
         if not _RUN_ID_PATTERN.fullmatch(run_id):
             raise ValueError(f"Invalid preview run id: {run_id}")
         return self.root / run_id
+
+    def _read_run_file(
+        self,
+        run_id: str,
+        filename: str,
+        *,
+        max_bytes: int,
+        unavailable_message: str,
+        invalid_message: str,
+    ) -> bytes:
+        run_dir = self._run_dir(run_id)
+        if os.open in os.supports_dir_fd and hasattr(os, "O_NOFOLLOW"):
+            return self._read_run_file_at(
+                run_dir,
+                filename,
+                max_bytes=max_bytes,
+                unavailable_message=unavailable_message,
+                invalid_message=invalid_message,
+            )
+        return self._read_run_file_fallback(
+            run_dir,
+            filename,
+            max_bytes=max_bytes,
+            unavailable_message=unavailable_message,
+            invalid_message=invalid_message,
+        )
+
+    def _read_run_file_at(
+        self,
+        run_dir: Path,
+        filename: str,
+        *,
+        max_bytes: int,
+        unavailable_message: str,
+        invalid_message: str,
+    ) -> bytes:
+        directory_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | os.O_NOFOLLOW
+        file_flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | os.O_NOFOLLOW
+        try:
+            directory_fd = os.open(run_dir, directory_flags)
+        except FileNotFoundError as exc:
+            raise FileNotFoundError(unavailable_message) from exc
+        except OSError as exc:
+            msg = "Preview run is not a regular stored directory"
+            raise ValueError(msg) from exc
+        try:
+            if not stat.S_ISDIR(os.fstat(directory_fd).st_mode):
+                msg = "Preview run is not a regular stored directory"
+                raise ValueError(msg)
+            try:
+                file_fd = os.open(filename, file_flags, dir_fd=directory_fd)
+            except FileNotFoundError as exc:
+                raise FileNotFoundError(unavailable_message) from exc
+            except OSError as exc:
+                raise ValueError(invalid_message) from exc
+            try:
+                return self._read_bounded_regular_file(file_fd, max_bytes=max_bytes, invalid_message=invalid_message)
+            finally:
+                os.close(file_fd)
+        finally:
+            os.close(directory_fd)
+
+    def _read_run_file_fallback(
+        self,
+        run_dir: Path,
+        filename: str,
+        *,
+        max_bytes: int,
+        unavailable_message: str,
+        invalid_message: str,
+    ) -> bytes:
+        if run_dir.is_symlink():
+            msg = "Preview run is not a regular stored directory"
+            raise ValueError(msg)
+        try:
+            resolved_run_dir = run_dir.resolve(strict=True)
+        except FileNotFoundError as exc:
+            raise FileNotFoundError(unavailable_message) from exc
+        if resolved_run_dir != run_dir or not resolved_run_dir.is_dir():
+            msg = "Preview run is not a regular stored directory"
+            raise ValueError(msg)
+
+        path = run_dir / filename
+        if path.is_symlink():
+            raise ValueError(invalid_message)
+        file_flags = os.O_RDONLY | getattr(os, "O_BINARY", 0)
+        try:
+            file_fd = os.open(path, file_flags)
+        except FileNotFoundError as exc:
+            raise FileNotFoundError(unavailable_message) from exc
+        except OSError as exc:
+            raise ValueError(invalid_message) from exc
+        try:
+            return self._read_bounded_regular_file(file_fd, max_bytes=max_bytes, invalid_message=invalid_message)
+        finally:
+            os.close(file_fd)
+
+    @staticmethod
+    def _read_bounded_regular_file(file_fd: int, *, max_bytes: int, invalid_message: str) -> bytes:
+        try:
+            file_status = os.fstat(file_fd)
+            if not stat.S_ISREG(file_status.st_mode) or file_status.st_size > max_bytes:
+                raise ValueError(invalid_message)
+            chunks: list[bytes] = []
+            remaining = max_bytes + 1
+            while remaining > 0:
+                chunk = os.read(file_fd, min(_READ_CHUNK_BYTES, remaining))
+                if not chunk:
+                    break
+                chunks.append(chunk)
+                remaining -= len(chunk)
+        except OSError as exc:
+            raise ValueError(invalid_message) from exc
+        content = b"".join(chunks)
+        if len(content) > max_bytes:
+            raise ValueError(invalid_message)
+        return content
+
+    @staticmethod
+    def _validate_png(content: bytes, *, artifact_uri: str) -> None:
+        if not content.startswith(_PNG_SIGNATURE):
+            msg = f"Preview artifact {artifact_uri!r} is not a valid PNG image"
+            raise ValueError(msg)
+        try:
+            with Image.open(io.BytesIO(content)) as image:
+                is_png = image.format == "PNG"
+                image.verify()
+        except (Image.DecompressionBombError, OSError, SyntaxError, ValueError) as exc:
+            msg = f"Preview artifact {artifact_uri!r} is not a valid PNG image"
+            raise ValueError(msg) from exc
+        if not is_png:
+            msg = f"Preview artifact {artifact_uri!r} is not a valid PNG image"
+            raise ValueError(msg)
 
     def _delete_run_dir(self, run_id: str) -> None:
         shutil.rmtree(self._run_dir(run_id), ignore_errors=True)

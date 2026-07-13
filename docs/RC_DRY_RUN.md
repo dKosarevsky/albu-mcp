@@ -1,6 +1,6 @@
 # RC Dry Run
 
-Package: `albumentationsx-mcp==1.17.1`
+Package: `albumentationsx-mcp==1.18.0`
 Release tag: `vX.Y.Z-rc.1`
 Dry-run status: `preflight_only_blocked_publish`
 Gate status: `blocked`
