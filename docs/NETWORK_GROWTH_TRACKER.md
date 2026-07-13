@@ -1,6 +1,6 @@
 # Network Growth Tracker
 
-Package: `albumentationsx-mcp==1.17.1`
+Package: `albumentationsx-mcp==1.18.0`
 Ready for v1: `false`
 
 ## Channels

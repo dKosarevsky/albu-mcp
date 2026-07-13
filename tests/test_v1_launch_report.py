@@ -11,8 +11,8 @@ from scripts.export_v1_launch_report import build_v1_launch_report, render_v1_la
 def test_v1_launch_report_tracks_manual_host_blockers() -> None:
     report = build_v1_launch_report()
 
-    assert report["package_version"] == "1.17.1"
-    assert report["server_version"] == "1.17.1"
+    assert report["package_version"] == "1.18.0"
+    assert report["server_version"] == "1.18.0"
     assert report["ready_for_v1"] is False
     assert {blocker["code"] for blocker in report["blockers"]} == {
         "manual_host_ui_pending",
@@ -83,7 +83,7 @@ def test_v1_launch_report_markdown_is_reviewable() -> None:
     markdown = render_v1_launch_report_markdown(build_v1_launch_report())
 
     assert markdown.startswith("# V1 Launch Report\n")
-    assert "Package version: `1.17.1`" in markdown
+    assert "Package version: `1.18.0`" in markdown
     assert "Ready for v1: `false`" in markdown
     assert "manual_host_ui_pending" in markdown
     assert "first_10_minutes_replay_pending" in markdown

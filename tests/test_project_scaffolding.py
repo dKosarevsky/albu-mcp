@@ -137,7 +137,7 @@ def test_mcp_apps_review_guide_documents_progressive_enhancement() -> None:
     install = Path("docs/INSTALL.md").read_text(encoding="utf-8")
     usage = Path("docs/USAGE.md").read_text(encoding="utf-8")
     guide = Path("docs/MCP_APPS_REVIEW.md").read_text(encoding="utf-8")
-    changelog = Path("CHANGELOG.md").read_text(encoding="utf-8").split("## 1.17.1", 1)[0]
+    changelog = Path("CHANGELOG.md").read_text(encoding="utf-8").split("## 1.18.0", 1)[1].split("## 1.17.1", 1)[0]
 
     for content in [readme, install, usage]:
         assert "[docs/MCP_APPS_REVIEW.md](docs/MCP_APPS_REVIEW.md)" in content or (
@@ -203,8 +203,8 @@ def test_v1_readiness_tracks_current_product_gate() -> None:
     readiness = Path("docs/V1_READINESS.md").read_text(encoding="utf-8")
 
     for term in [
-        "v1.17.1",
-        "albumentationsx-mcp==1.17.1",
+        "v1.18.0",
+        "albumentationsx-mcp==1.18.0",
         "MCP Registry",
         "build_review_packet",
         "review_packet_flow",

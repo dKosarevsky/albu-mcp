@@ -1,6 +1,6 @@
 # V1 RC Release Packet
 
-Package: `albumentationsx-mcp==1.17.1`
+Package: `albumentationsx-mcp==1.18.0`
 Required hosts: `Codex, Claude Code`
 RC decision: `hold_rc`
 Release candidate allowed: `false`

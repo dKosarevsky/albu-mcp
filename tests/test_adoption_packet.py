@@ -12,7 +12,7 @@ def test_adoption_packet_contains_public_launch_copy() -> None:
     markdown = render_adoption_packet_markdown(packet)
 
     assert packet["package"] == "albumentationsx-mcp"
-    assert packet["version"] == "1.17.1"
+    assert packet["version"] == "1.18.0"
     assert "uvx --from albumentationsx-mcp albumentationsx-mcp" in markdown
     assert "MCP Registry" in markdown
     assert "Launch Kit" in markdown

@@ -1,6 +1,6 @@
 # Adoption Triage Report
 
-Package: `albumentationsx-mcp==1.17.1`
+Package: `albumentationsx-mcp==1.18.0`
 Telemetry policy: No automatic telemetry; use explicit GitHub issues and redacted artifacts.
 
 ## Intake Templates
