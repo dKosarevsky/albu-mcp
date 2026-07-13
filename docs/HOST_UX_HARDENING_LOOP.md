@@ -15,7 +15,6 @@
 | Cursor | `p1` | `first_10_minutes_replay` | `missing` | `run_first_10_minutes_replay` |
 | Cursor | `p1` | `manual_host_ui` | `missing` | `run_manual_host_ui` |
 | Claude Desktop | `p1` | `first_10_minutes_replay` | `missing` | `run_first_10_minutes_replay` |
-| Claude Desktop | `p1` | `manual_host_ui` | `missing` | `run_manual_host_ui` |
 
 ## Loop Steps
 
@@ -52,12 +51,6 @@
 - `run_host_smoke_check`
 
 ### Claude Desktop / first_10_minutes_replay
-
-- `docs/HOST_FAILURE_COOKBOOK.md`
-- `albumentationsx://diagnostics/guide`
-- `run_host_smoke_check`
-
-### Claude Desktop / manual_host_ui
 
 - `docs/HOST_FAILURE_COOKBOOK.md`
 - `albumentationsx://diagnostics/guide`
