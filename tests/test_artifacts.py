@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from typing import Any
 
@@ -5,7 +6,7 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from albumentationsx_mcp.models import ComposeSpec, PreviewRequest, TransformSpec
+from albumentationsx_mcp.models import ComposeSpec, PreviewRequest, PreviewResult, TransformSpec
 from albumentationsx_mcp.preview import ArtifactStore, PathPolicy, PreviewService
 
 
@@ -87,6 +88,60 @@ def test_artifact_store_rejects_manifest_path_traversal(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="Invalid preview run id"):
         store.read_manifest("../outside")
+
+
+@pytest.mark.parametrize("artifact_kind", ["image", "contact_sheet"])
+def test_artifact_store_reads_verified_preview_images(tmp_path: Path, artifact_kind: str) -> None:
+    store, result = _render_preview_fixture(tmp_path)
+    artifact = next(item for item in result.artifacts if item.kind == artifact_kind)
+
+    content = store.read_image_artifact(result.run_id, Path(artifact.path).name)
+
+    assert content.startswith(b"\x89PNG\r\n\x1a\n")
+    assert len(content) == artifact.size_bytes
+
+
+@pytest.mark.parametrize("filename", ["../input.png", "sub/input.png", "/outside/input.png", ".."])
+def test_artifact_store_rejects_invalid_image_filenames(tmp_path: Path, filename: str) -> None:
+    store, result = _render_preview_fixture(tmp_path)
+
+    with pytest.raises(ValueError, match="Invalid artifact filename"):
+        store.read_image_artifact(result.run_id, filename)
+
+
+def test_artifact_store_rejects_unrecorded_image_artifacts(tmp_path: Path) -> None:
+    store, result = _render_preview_fixture(tmp_path)
+
+    with pytest.raises(FileNotFoundError, match="not recorded"):
+        store.read_image_artifact(result.run_id, "unknown.png")
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("kind", "manifest", "not a readable preview image"),
+        ("mime_type", "application/json", "not a readable preview image"),
+        ("path", "/outside/unrelated.png", "path does not match"),
+        ("size_bytes", 1, "size does not match"),
+        ("sha256", "0" * 64, "digest does not match"),
+    ],
+)
+def test_artifact_store_rejects_tampered_image_manifest_entries(
+    tmp_path: Path,
+    field: str,
+    value: object,
+    message: str,
+) -> None:
+    store, result = _render_preview_fixture(tmp_path)
+    manifest_path = store.root / result.run_id / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    artifact = next(item for item in manifest["artifacts"] if item["kind"] == "image")
+    filename = Path(artifact["path"]).name
+    artifact[field] = value
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(ValueError, match=message):
+        store.read_image_artifact(result.run_id, filename)
 
 
 def test_artifact_store_can_delete_preview_run_and_update_index(tmp_path: Path) -> None:
@@ -193,3 +248,17 @@ def test_preview_service_compare_includes_quality_summary(tmp_path: Path) -> Non
     assert comparison.quality_summary.candidate.image_count == 1
     assert comparison.quality_summary.deltas["brightness_mean"] == 60.0
     assert comparison.quality_warnings == []
+
+
+def _render_preview_fixture(tmp_path: Path) -> tuple[ArtifactStore, PreviewResult]:
+    image_path = tmp_path / "input.png"
+    Image.fromarray(np.full((16, 16, 3), 128, dtype=np.uint8)).save(image_path)
+    store = ArtifactStore(tmp_path / "artifacts")
+    service = PreviewService(IdentityPipelineService(), PathPolicy([tmp_path]), store)
+    result = service.render_preview(
+        PreviewRequest(
+            input_paths=[image_path],
+            pipeline=ComposeSpec(transforms=[TransformSpec(name="HorizontalFlip", p=1.0)]),
+        ),
+    )
+    return store, result

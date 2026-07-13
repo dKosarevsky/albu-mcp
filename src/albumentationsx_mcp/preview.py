@@ -39,6 +39,8 @@ from albumentationsx_mcp.preview_analysis import compare_preview_manifests
 from albumentationsx_mcp.quality import compare_manifest_quality
 
 _RUN_ID_PATTERN = re.compile(r"^[0-9a-f]{32}$")
+_ARTIFACT_FILENAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+_READABLE_IMAGE_ARTIFACT_KINDS = frozenset({"image", "overlay", "contact_sheet", "overlay_contact_sheet"})
 
 
 class PipelineBuilder(Protocol):
@@ -128,6 +130,47 @@ class ArtifactStore:
         if not manifest_path.exists():
             raise FileNotFoundError(manifest_path)
         return json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    def read_image_artifact(self, run_id: str, filename: str) -> bytes:
+        """Read one manifest-recorded preview image after validating its integrity."""
+        if not _ARTIFACT_FILENAME_PATTERN.fullmatch(filename):
+            raise ValueError(f"Invalid artifact filename: {filename!r}")
+
+        run_dir = self._run_dir(run_id)
+        manifest = self.read_manifest(run_id)
+        artifact_uri = f"artifact://{run_id}/{filename}"
+        artifact = next(
+            (
+                item
+                for item in manifest.get("artifacts", [])
+                if isinstance(item, dict) and item.get("uri") == artifact_uri
+            ),
+            None,
+        )
+        if artifact is None:
+            raise FileNotFoundError(f"Preview artifact {artifact_uri!r} is not recorded in the run manifest")
+        if artifact.get("kind") not in _READABLE_IMAGE_ARTIFACT_KINDS or artifact.get("mime_type") != "image/png":
+            msg = f"Preview artifact {artifact_uri!r} is not a readable preview image"
+            raise ValueError(msg)
+
+        resolved_run_dir = run_dir.resolve()
+        expected_path = (run_dir / filename).resolve()
+        recorded_path = Path(str(artifact.get("path", ""))).expanduser().resolve()
+        if resolved_run_dir.parent != self.root or expected_path.parent != resolved_run_dir:
+            msg = f"Preview artifact path does not match the controlled run directory: {artifact_uri!r}"
+            raise ValueError(msg)
+        if recorded_path != expected_path:
+            msg = f"Preview artifact path does not match its manifest entry: {artifact_uri!r}"
+            raise ValueError(msg)
+
+        content = expected_path.read_bytes()
+        if artifact.get("size_bytes") != len(content):
+            msg = f"Preview artifact size does not match its manifest entry: {artifact_uri!r}"
+            raise ValueError(msg)
+        if artifact.get("sha256") != hashlib.sha256(content).hexdigest():
+            msg = f"Preview artifact digest does not match its manifest entry: {artifact_uri!r}"
+            raise ValueError(msg)
+        return content
 
     def delete_run(self, run_id: str) -> PreviewRunSummary:
         """Delete a preview run directory and remove it from the local index."""
