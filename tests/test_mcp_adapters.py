@@ -1,12 +1,19 @@
 from __future__ import annotations
 
 import pytest
+from mcp.server.fastmcp import FastMCP
 
+from albumentationsx_mcp.adapters.mcp.catalog import SURFACE as CATALOG_SURFACE
+from albumentationsx_mcp.adapters.mcp.catalog import register_catalog_adapter
 from albumentationsx_mcp.adapters.mcp.contracts import (
     AdapterSurface,
     combine_adapter_surfaces,
     validate_adapter_surfaces,
 )
+from albumentationsx_mcp.adapters.mcp.policy import SURFACE as POLICY_SURFACE
+from albumentationsx_mcp.adapters.mcp.policy import register_policy_adapter
+from albumentationsx_mcp.catalog import TransformCatalog
+from albumentationsx_mcp.pipeline import PipelineService
 
 
 def test_combine_adapter_surfaces_preserves_declared_order() -> None:
@@ -97,3 +104,30 @@ def test_validate_adapter_surfaces_rejects_identifier_owned_by_two_adapters(
     assert identifier in message
     assert "catalog" in message
     assert "policy" in message
+
+
+def test_catalog_adapter_registers_its_exact_declared_surface() -> None:
+    mcp = FastMCP("catalog-test")
+
+    register_catalog_adapter(mcp, catalog=TransformCatalog())
+
+    assert _registered_surface(mcp, adapter="catalog") == CATALOG_SURFACE
+
+
+def test_policy_adapter_registers_its_exact_declared_surface() -> None:
+    mcp = FastMCP("policy-test")
+    catalog = TransformCatalog()
+
+    register_policy_adapter(mcp, catalog=catalog, pipeline_service=PipelineService(catalog))
+
+    assert _registered_surface(mcp, adapter="policy") == POLICY_SURFACE
+
+
+def _registered_surface(mcp: FastMCP, *, adapter: str) -> AdapterSurface:
+    return AdapterSurface(
+        adapter=adapter,
+        tools=tuple(mcp._tool_manager._tools),
+        resources=tuple(str(uri) for uri in mcp._resource_manager._resources),
+        resource_templates=tuple(mcp._resource_manager._templates),
+        prompts=tuple(mcp._prompt_manager._prompts),
+    )
