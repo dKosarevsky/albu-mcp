@@ -614,6 +614,7 @@ def test_release_docs_cover_mcpb_artifact_flow() -> None:
 def test_public_package_metadata_is_polished() -> None:
     pyproject = Path("pyproject.toml").read_text(encoding="utf-8")
     readme = Path("README.md").read_text(encoding="utf-8")
+    license_path = Path("LICENSE")
 
     assert "https://img.shields.io/pypi/v/albumentationsx-mcp" in readme
     assert "https://pypi.org/project/albumentationsx-mcp/" in readme
@@ -621,6 +622,8 @@ def test_public_package_metadata_is_polished() -> None:
     assert "https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.dKosarevsky/albu-mcp" in readme
     assert "[server.json](server.json): public MCP Registry metadata." in readme
     assert "[project.urls]" in pyproject
+    assert license_path.exists()
+    assert license_path.read_text(encoding="utf-8").startswith("MIT License\n")
     assert '"Repository" = "https://github.com/dKosarevsky/albu-mcp"' in pyproject
     assert '"Documentation" = "https://github.com/dKosarevsky/albu-mcp/blob/main/docs/USAGE.md"' in pyproject
     assert (

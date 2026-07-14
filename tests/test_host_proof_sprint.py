@@ -68,6 +68,8 @@ def test_host_proof_status_records_v116_machine_and_codex_host_proof() -> None:
     assert "Claude Code Manual Host UI: blocked" in status
     assert 'scripts/check_first_10_minutes_replay.py --host Codex --host "Claude Code"' in status
     assert "client_smoke_resource_flow: ok" in status
+    assert "albumentationsx-mcp-1.18.0.mcpb" in status
+    assert "albumentationsx-mcp.mcpb" in status
 
 
 def _valid_runbook_text() -> str:
