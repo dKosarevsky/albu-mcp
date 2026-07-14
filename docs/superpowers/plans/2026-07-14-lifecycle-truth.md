@@ -16,7 +16,7 @@
 - Create: `src/albumentationsx_mcp/lifecycle.py`
 - Create: `tests/test_lifecycle.py`
 
-- [ ] **Step 1: Write failing separation and validation tests**
+- [x] **Step 1: Write failing separation and validation tests**
 
 ```python
 from __future__ import annotations
@@ -79,13 +79,13 @@ def test_lifecycle_status_rejects_invalid_experiment(field: str, value: str, mes
         )
 ```
 
-- [ ] **Step 2: Run tests and confirm the missing module failure**
+- [x] **Step 2: Run tests and confirm the missing module failure**
 
 Run: `uv run pytest -q tests/test_lifecycle.py`
 
 Expected: collection fails with `ModuleNotFoundError: No module named 'albumentationsx_mcp.lifecycle'`.
 
-- [ ] **Step 3: Implement the pure lifecycle builder and renderer**
+- [x] **Step 3: Implement the pure lifecycle builder and renderer**
 
 ```python
 """Independent release, host-evidence, and adoption lifecycle status."""
@@ -182,13 +182,13 @@ def _validate_experiment(experiment: Mapping[str, Any]) -> dict[str, Any]:
     return normalized
 ```
 
-- [ ] **Step 4: Run lifecycle tests**
+- [x] **Step 4: Run lifecycle tests**
 
 Run: `uv run pytest -q tests/test_lifecycle.py`
 
 Expected: all tests pass.
 
-- [ ] **Step 5: Commit the lifecycle model**
+- [x] **Step 5: Commit the lifecycle model**
 
 ```bash
 git add src/albumentationsx_mcp/lifecycle.py tests/test_lifecycle.py
@@ -207,7 +207,7 @@ git commit -m "feat: add independent lifecycle status"
 - Modify: `tests/test_network_growth_tracker.py`
 - Modify: `tests/test_lifecycle.py`
 
-- [ ] **Step 1: Add failing exporter and consumer tests**
+- [x] **Step 1: Add failing exporter and consumer tests**
 
 Add tests that assert:
 
@@ -224,13 +224,13 @@ assert "Adoption experiment: `measuring`" in markdown
 The committed-current test must compare `docs/STATUS.md` with
 `render_lifecycle_status_markdown(build_committed_lifecycle_status())`.
 
-- [ ] **Step 2: Run focused tests and confirm failures**
+- [x] **Step 2: Run focused tests and confirm failures**
 
 Run: `uv run pytest -q tests/test_lifecycle.py tests/test_launch_kit.py tests/test_network_growth_tracker.py`
 
 Expected: failures for missing exporter/source and legacy `Ready for v1` rendering.
 
-- [ ] **Step 3: Add the committed experiment record**
+- [x] **Step 3: Add the committed experiment record**
 
 ```json
 {
@@ -243,14 +243,14 @@ Expected: failures for missing exporter/source and legacy `Ready for v1` renderi
 }
 ```
 
-- [ ] **Step 4: Implement `build_committed_lifecycle_status`**
+- [x] **Step 4: Implement `build_committed_lifecycle_status`**
 
 `scripts/export_lifecycle_status.py` reads `docs/ADOPTION_EXPERIMENT.json`, reuses
 `build_adoption_packet()` for version and URLs, and reuses `build_v1_launch_report()` only for host blockers. It passes
 three release channels (`pypi`, `github_release`, `official_registry`) to `build_lifecycle_status` and exposes the
 standard `--output` CLI used by other deterministic exporters.
 
-- [ ] **Step 5: Replace legacy launch and growth booleans**
+- [x] **Step 5: Replace legacy launch and growth booleans**
 
 In both exporters, remove `ready_for_v1`. Store the lifecycle object under `lifecycle`. Render these exact lines:
 
@@ -263,7 +263,7 @@ f"- Adoption experiment: `{kit['lifecycle']['adoption_experiment']['status']}`"
 
 Keep host proof links, but replace `docs/V1_LAUNCH_REPORT.md` with `docs/STATUS.md` in active public asset lists.
 
-- [ ] **Step 6: Generate committed status documents**
+- [x] **Step 6: Generate committed status documents**
 
 Run:
 
@@ -275,7 +275,7 @@ uv run python scripts/export_network_growth_tracker.py --output docs/NETWORK_GRO
 
 Expected: all three files regenerate without `Ready for v1`.
 
-- [ ] **Step 7: Run focused tests and commit**
+- [x] **Step 7: Run focused tests and commit**
 
 Run: `uv run pytest -q tests/test_lifecycle.py tests/test_launch_kit.py tests/test_network_growth_tracker.py`
 
@@ -293,7 +293,7 @@ git commit -m "feat: separate active lifecycle status"
 - Modify: `docs/INDEX.md`
 - Modify: `tests/test_project_scaffolding.py`
 
-- [ ] **Step 1: Add a failing navigation test**
+- [x] **Step 1: Add a failing navigation test**
 
 ```python
 def test_active_docs_separate_historical_release_snapshots() -> None:
@@ -309,13 +309,13 @@ def test_active_docs_separate_historical_release_snapshots() -> None:
     assert "Historical status snapshots" in archive
 ```
 
-- [ ] **Step 2: Run the test and confirm the missing archive failure**
+- [x] **Step 2: Run the test and confirm the missing archive failure**
 
 Run: `uv run pytest -q tests/test_project_scaffolding.py -k historical_release_snapshots`
 
 Expected: failure because `docs/ARCHIVE.md` does not exist.
 
-- [ ] **Step 3: Add the archive index and simplify active navigation**
+- [x] **Step 3: Add the archive index and simplify active navigation**
 
 `docs/ARCHIVE.md` must explain that records remain immutable evidence snapshots, link the V1 readiness/decision reports,
 all `V1_RC_*` documents, all `RC_*` documents, and state that current status is in `docs/STATUS.md`.
@@ -323,7 +323,7 @@ all `V1_RC_*` documents, all `RC_*` documents, and state that current status is 
 In `docs/INDEX.md`, add `STATUS.md` to the first operator section and replace direct V1/RC lists with one
 `Historical Release Snapshots` section linking only `ARCHIVE.md`.
 
-- [ ] **Step 4: Run the navigation test and commit**
+- [x] **Step 4: Run the navigation test and commit**
 
 Run: `uv run pytest -q tests/test_project_scaffolding.py -k historical_release_snapshots`
 
@@ -367,7 +367,7 @@ git commit -m "docs: separate historical release snapshots"
 - Modify: `docs/RC_RELEASE_DECISION_REPORT.md`
 - Create: `tests/test_historical_status.py`
 
-- [ ] **Step 1: Add failing helper and parametrized document tests**
+- [x] **Step 1: Add failing helper and parametrized document tests**
 
 ```python
 from pathlib import Path
@@ -407,7 +407,7 @@ def test_historical_document_has_banner(path: str) -> None:
     assert content.splitlines()[2].startswith("> **Historical status snapshot.**")
 ```
 
-- [ ] **Step 2: Implement the idempotent banner helper**
+- [x] **Step 2: Implement the idempotent banner helper**
 
 ```python
 HISTORICAL_STATUS_BANNER = (
@@ -426,7 +426,7 @@ def add_historical_status_banner(markdown: str) -> str:
     return f"{title}\n\n{HISTORICAL_STATUS_BANNER}\n\n{remainder.lstrip()}"
 ```
 
-- [ ] **Step 3: Wrap every deterministic historical renderer**
+- [x] **Step 3: Wrap every deterministic historical renderer**
 
 Import `add_historical_status_banner` and wrap the final Markdown return in these exporters:
 `export_v1_launch_report.py`, `export_v1_decision_report.py`, `export_v1_stabilization_plan.py`,
@@ -436,7 +436,7 @@ Import `add_historical_status_banner` and wrap the final Markdown return in thes
 `export_rc_gate_reopen_packet.py`, and `export_rc_release_decision_report.py`. Keep report payloads and historical
 decisions unchanged. Add the same banner manually to `docs/V1_READINESS.md`, which has no deterministic exporter.
 
-- [ ] **Step 4: Regenerate historical documents and run release-readiness freshness checks**
+- [x] **Step 4: Regenerate historical documents and run release-readiness freshness checks**
 
 Run:
 
@@ -460,7 +460,7 @@ uv run python scripts/check_release_readiness.py --tag v1.19.0
 
 Expected: generated-document checks pass with no decision-state changes.
 
-- [ ] **Step 5: Run parametrized tests and commit**
+- [x] **Step 5: Run parametrized tests and commit**
 
 Run: `uv run pytest -q tests/test_historical_status.py tests/test_project_scaffolding.py`
 
@@ -486,11 +486,11 @@ git commit -m "docs: mark historical lifecycle snapshots"
 - Modify: `CHANGELOG.md`
 - Modify: `docs/superpowers/plans/2026-07-14-lifecycle-truth.md`
 
-- [ ] **Step 1: Add an Unreleased changelog entry**
+- [x] **Step 1: Add an Unreleased changelog entry**
 
 Document the independent lifecycle dimensions and archive navigation without claiming a v1.20 release.
 
-- [ ] **Step 2: Run focused and full verification**
+- [x] **Step 2: Run focused and full verification**
 
 Run:
 
@@ -507,7 +507,7 @@ uv run python scripts/check_release_readiness.py --tag v1.19.0
 
 Expected: all commands pass; MCP contract snapshots remain unchanged.
 
-- [ ] **Step 3: Mark completed plan checkboxes and commit verification metadata**
+- [x] **Step 3: Mark completed plan checkboxes and commit verification metadata**
 
 ```bash
 git add CHANGELOG.md docs/superpowers/plans/2026-07-14-lifecycle-truth.md

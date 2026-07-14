@@ -41,7 +41,7 @@ def test_committed_v1_rc_cutover_checklist_is_current() -> None:
     assert checklist_path.read_text(encoding="utf-8") == render_v1_rc_cutover_checklist_markdown(
         build_v1_rc_cutover_checklist()
     )
-    assert "[V1_RC_CUTOVER_CHECKLIST.md](V1_RC_CUTOVER_CHECKLIST.md)" in Path("docs/INDEX.md").read_text(
+    assert "[V1_RC_CUTOVER_CHECKLIST.md](V1_RC_CUTOVER_CHECKLIST.md)" in Path("docs/ARCHIVE.md").read_text(
         encoding="utf-8"
     )
 

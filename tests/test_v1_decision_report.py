@@ -61,4 +61,4 @@ def test_committed_v1_decision_report_is_current() -> None:
     report_path = Path("docs/V1_DECISION_REPORT.md")
 
     assert report_path.read_text(encoding="utf-8") == render_v1_decision_report_markdown(build_v1_decision_report())
-    assert "[V1_DECISION_REPORT.md](V1_DECISION_REPORT.md)" in Path("docs/INDEX.md").read_text(encoding="utf-8")
+    assert "[V1_DECISION_REPORT.md](V1_DECISION_REPORT.md)" in Path("docs/ARCHIVE.md").read_text(encoding="utf-8")

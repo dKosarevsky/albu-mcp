@@ -4,6 +4,11 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 ## Unreleased
 
+- Separated current release health, optional host evidence, and adoption measurement into independent lifecycle
+  dimensions used by the launch kit and network growth tracker.
+- Moved pre-release V1/RC status records behind a dedicated archive while preserving their paths, decisions, and
+  deterministic regeneration with explicit historical snapshot banners.
+
 ## 1.19.0 - 2026-07-14
 
 - Streamlined the README around install, first preview, and official AlbumentationsX documentation, with deeper
