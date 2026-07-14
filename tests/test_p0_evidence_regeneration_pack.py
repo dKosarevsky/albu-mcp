@@ -47,9 +47,9 @@ def test_committed_p0_evidence_regeneration_pack_is_current() -> None:
     assert pack_path.read_text(encoding="utf-8") == render_p0_evidence_regeneration_pack_markdown(
         build_p0_evidence_regeneration_pack()
     )
-    assert "[docs/P0_EVIDENCE_REGENERATION_PACK.md](docs/P0_EVIDENCE_REGENERATION_PACK.md)" in Path(
-        "README.md"
-    ).read_text(encoding="utf-8")
+    assert "[P0_EVIDENCE_REGENERATION_PACK.md](P0_EVIDENCE_REGENERATION_PACK.md)" in Path("docs/INDEX.md").read_text(
+        encoding="utf-8"
+    )
 
 
 def test_p0_evidence_regeneration_pack_cli_writes_markdown(tmp_path: Path) -> None:

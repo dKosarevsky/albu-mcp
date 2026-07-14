@@ -24,7 +24,7 @@ def test_committed_host_ux_packets_are_current() -> None:
     packet_path = Path("docs/HOST_UX_PACKETS.md")
 
     assert packet_path.read_text(encoding="utf-8") == render_host_ux_packets_markdown(build_host_ux_packets())
-    assert "[docs/HOST_UX_PACKETS.md](docs/HOST_UX_PACKETS.md)" in Path("README.md").read_text(encoding="utf-8")
+    assert "[HOST_UX_PACKETS.md](HOST_UX_PACKETS.md)" in Path("docs/INDEX.md").read_text(encoding="utf-8")
     assert "docs/HOST_UX_PACKETS.md" in Path("docs/HOST_MATRIX.md").read_text(encoding="utf-8")
 
 

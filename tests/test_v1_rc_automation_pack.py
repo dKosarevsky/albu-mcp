@@ -36,9 +36,7 @@ def test_committed_v1_rc_automation_pack_is_current() -> None:
     pack_path = Path("docs/V1_RC_AUTOMATION_PACK.md")
 
     assert pack_path.read_text(encoding="utf-8") == render_v1_rc_automation_pack_markdown(build_v1_rc_automation_pack())
-    assert "[docs/V1_RC_AUTOMATION_PACK.md](docs/V1_RC_AUTOMATION_PACK.md)" in Path("README.md").read_text(
-        encoding="utf-8"
-    )
+    assert "[V1_RC_AUTOMATION_PACK.md](V1_RC_AUTOMATION_PACK.md)" in Path("docs/INDEX.md").read_text(encoding="utf-8")
 
 
 def test_v1_rc_automation_pack_cli_writes_markdown(tmp_path: Path) -> None:

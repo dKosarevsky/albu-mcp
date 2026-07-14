@@ -53,9 +53,9 @@ def test_committed_real_host_evidence_execution_pack_is_current() -> None:
     assert pack_path.read_text(encoding="utf-8") == render_real_host_evidence_execution_pack_markdown(
         build_real_host_evidence_execution_pack()
     )
-    assert "[docs/REAL_HOST_EVIDENCE_EXECUTION.md](docs/REAL_HOST_EVIDENCE_EXECUTION.md)" in Path(
-        "README.md"
-    ).read_text(encoding="utf-8")
+    assert "[REAL_HOST_EVIDENCE_EXECUTION.md](REAL_HOST_EVIDENCE_EXECUTION.md)" in Path("docs/INDEX.md").read_text(
+        encoding="utf-8"
+    )
 
 
 def test_real_host_evidence_execution_pack_cli_writes_markdown(tmp_path: Path) -> None:

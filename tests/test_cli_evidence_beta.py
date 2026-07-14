@@ -190,20 +190,10 @@ def test_package_cli_triages_beta_attempts_to_backlog_lanes(tmp_path: Path) -> N
     assert lane["recommendation_status"] == "candidate_backlog_item"
 
 
-def test_readme_and_usage_document_operator_cli() -> None:
+def test_readme_links_install_while_usage_documents_operator_cli() -> None:
     readme = Path("README.md").read_text(encoding="utf-8")
     usage = Path("docs/USAGE.md").read_text(encoding="utf-8")
 
-    readme_expected = [
-        "albu-mcp host setup-probe",
-        "albu-mcp preview first-pack",
-        "albu-mcp evidence collect",
-        "albu-mcp intake bundle",
-        "albu-mcp beta loop-pack",
-        "albu-mcp rc go-check",
-        "`plan_augmentation_policy`",
-        "`plan_policy_iteration`",
-    ]
     usage_expected = [
         "albu-mcp host setup-probe",
         "albu-mcp preview first-pack",
@@ -348,7 +338,6 @@ def test_readme_and_usage_document_operator_cli() -> None:
         "`plan_policy_iteration`",
     ]
 
-    for expected in readme_expected:
-        assert expected in readme
+    assert "uvx --from albumentationsx-mcp albumentationsx-mcp" in readme
     for expected in usage_expected:
         assert expected in usage

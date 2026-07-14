@@ -46,9 +46,7 @@ def test_committed_beta_validation_sprint_is_current() -> None:
     assert sprint_path.read_text(encoding="utf-8") == render_beta_validation_sprint_markdown(
         build_beta_validation_sprint()
     )
-    assert "[docs/BETA_VALIDATION_SPRINT.md](docs/BETA_VALIDATION_SPRINT.md)" in Path("README.md").read_text(
-        encoding="utf-8"
-    )
+    assert "[BETA_VALIDATION_SPRINT.md](BETA_VALIDATION_SPRINT.md)" in Path("docs/INDEX.md").read_text(encoding="utf-8")
 
 
 def test_beta_validation_sprint_cli_writes_markdown(tmp_path: Path) -> None:

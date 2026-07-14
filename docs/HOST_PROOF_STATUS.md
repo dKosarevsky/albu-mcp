@@ -11,7 +11,8 @@ until a reviewer completes the flow in the actual host UI.
 - MCP Registry verification: automated after the published-package smoke check
 - PyPI package target: `albumentationsx-mcp==1.18.0`
 - MCP Registry target: `io.github.dKosarevsky/albu-mcp` version `1.18.0`
-- GitHub Release target: Python artifacts plus `albumentationsx-mcp-1.18.0.mcpb` and `SHA256SUMS`
+- GitHub Release target: Python artifacts plus `albumentationsx-mcp-1.18.0.mcpb`, the byte-identical
+  `albumentationsx-mcp.mcpb` alias, and `SHA256SUMS`
 - Host proof packet generated for Codex and Claude Code with
   `scripts/export_manual_host_acceptance_packet.py --host Codex --host "Claude Code"`.
 

@@ -48,7 +48,7 @@ def test_committed_v1_evidence_operator_packet_is_current() -> None:
     assert packet_path.read_text(encoding="utf-8") == render_v1_evidence_operator_packet_markdown(
         build_v1_evidence_operator_packet()
     )
-    assert "[docs/V1_EVIDENCE_OPERATOR_PACKET.md](docs/V1_EVIDENCE_OPERATOR_PACKET.md)" in Path("README.md").read_text(
+    assert "[V1_EVIDENCE_OPERATOR_PACKET.md](V1_EVIDENCE_OPERATOR_PACKET.md)" in Path("docs/INDEX.md").read_text(
         encoding="utf-8"
     )
 

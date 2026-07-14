@@ -43,7 +43,7 @@ def test_committed_rc_evidence_reopen_flow_is_current() -> None:
     assert doc_path.read_text(encoding="utf-8") == render_rc_evidence_reopen_flow_markdown(
         build_rc_evidence_reopen_flow()
     )
-    assert "[docs/RC_EVIDENCE_REOPEN_FLOW.md](docs/RC_EVIDENCE_REOPEN_FLOW.md)" in Path("README.md").read_text(
+    assert "[RC_EVIDENCE_REOPEN_FLOW.md](RC_EVIDENCE_REOPEN_FLOW.md)" in Path("docs/INDEX.md").read_text(
         encoding="utf-8"
     )
 

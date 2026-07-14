@@ -50,7 +50,7 @@ def test_committed_p0_host_execution_sprint_is_current() -> None:
     assert sprint_path.read_text(encoding="utf-8") == render_p0_host_execution_sprint_markdown(
         build_p0_host_execution_sprint()
     )
-    assert "[docs/P0_HOST_EXECUTION_SPRINT.md](docs/P0_HOST_EXECUTION_SPRINT.md)" in Path("README.md").read_text(
+    assert "[P0_HOST_EXECUTION_SPRINT.md](P0_HOST_EXECUTION_SPRINT.md)" in Path("docs/INDEX.md").read_text(
         encoding="utf-8"
     )
 

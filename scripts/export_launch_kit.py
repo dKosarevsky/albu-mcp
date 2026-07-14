@@ -13,6 +13,8 @@ if not __package__:
 from scripts.export_adoption_packet import build_adoption_packet
 from scripts.export_v1_launch_report import build_v1_launch_report
 
+_UPSTREAM_MCP_GUIDE_URL = "https://albumentations.ai/docs/integrations/mcp/"
+
 
 def build_launch_kit() -> dict[str, Any]:
     """Build a deterministic launch kit from committed public metadata."""
@@ -42,6 +44,7 @@ def build_launch_kit() -> dict[str, Any]:
             "docs/HOST_ACCEPTANCE_EVIDENCE.md",
         ],
         "growth_docs": [
+            "docs/GROWTH.md",
             "docs/NETWORK_GROWTH.md",
             "docs/NETWORK_GROWTH_TRACKER.md",
             "docs/PUBLIC_ADOPTION_LOOP.md",
@@ -53,6 +56,7 @@ def build_launch_kit() -> dict[str, Any]:
             ".github/ISSUE_TEMPLATE/feature-request.yml",
         ],
         "workflow_tools": adoption["workflow_tools"],
+        "campaigns": _build_campaigns(),
     }
 
 
@@ -90,6 +94,21 @@ def render_launch_kit_markdown(kit: dict[str, Any]) -> str:
             "reproducible AlbumentationsX pipelines without arbitrary Python execution."
         ),
         "",
+        "## Audience Campaigns",
+        "",
+        "Automated preparation stops at this document. Publication: `manual only`. Run one campaign at a time, keep "
+        "its destination fixed for seven days, and record only aggregate or voluntarily submitted evidence.",
+        "",
+        *_render_campaigns(kit["campaigns"]),
+        "## Measurement",
+        "",
+        "Capture the aggregate baseline before publishing and again after seven days. Compare the non-overlapping "
+        "PyPI weeks directly; treat GitHub's rolling 14-day Traffic window as directional context:",
+        "",
+        "```bash",
+        'GH_TOKEN="$(gh auth token)" uv run python scripts/export_growth_report.py --output /tmp/albu-growth.md',
+        "```",
+        "",
         "## Demo Assets",
         "",
         *[f"- `{asset}`" for asset in kit["demo_assets"]],
@@ -120,9 +139,80 @@ def render_launch_kit_markdown(kit: dict[str, Any]) -> str:
         "- Keep `server.json`, PyPI, README, and MCP Registry copy aligned.",
         "- Share demo assets only when they are synthetic or safe to publish.",
         "- Link upstream AlbumentationsX documentation instead of duplicating long setup prose.",
+        "- Publish campaign copy manually; never automate third-party posts or imply upstream authorship.",
         "- Route host proof updates through `docs/HOST_MANUAL_RUNS.json` and regenerated reports.",
     ]
     return "\n".join(lines) + "\n"
+
+
+def _build_campaigns() -> list[dict[str, str]]:
+    return [
+        {
+            "id": "classification-robustness",
+            "audience": "Classification practitioners testing robustness without destroying label semantics",
+            "problem": "Random augmentation policies can make objects unrecognizable before anyone reviews them.",
+            "prompt": (
+                "Inspect a small allowed image folder, render several medium-intensity robustness variants, compare "
+                "them, reduce any variant tagged too_noisy:high, and export only the accepted pipeline."
+            ),
+            "artifact": "docs/assets/demo/comparison_contact_sheet.png",
+            "destination_url": _campaign_destination("classification-robustness"),
+            "success_signal": (
+                "One voluntary report of a user rendering, rejecting, adjusting, and accepting a first preview."
+            ),
+        },
+        {
+            "id": "detection-bbox-safety",
+            "audience": "Object-detection teams reviewing COCO or Pascal VOC augmentation safety",
+            "problem": "Geometric transforms can silently drop or misalign bounding boxes.",
+            "prompt": (
+                "Inspect a safe detection fixture, recommend a low-intensity image+bboxes recipe, render bbox "
+                "overlays, compare quality with the detection profile, and export only if every reviewed box remains."
+            ),
+            "artifact": "docs/RECIPES.md#detection-annotation-review",
+            "destination_url": _campaign_destination("detection-bbox-safety"),
+            "success_signal": (
+                "One voluntary report of an accepted bbox-aware preview with bbox_retention_ratio equal to 1.0."
+            ),
+        },
+        {
+            "id": "segmentation-mask-safety",
+            "audience": "Segmentation teams validating mask-aware geometric augmentation",
+            "problem": "A plausible-looking image preview can hide mask coverage loss or misalignment.",
+            "prompt": (
+                "Inspect a safe segmentation fixture, recommend a low-intensity image+mask recipe, render mask "
+                "overlays, compare with the segmentation quality profile, and reject any candidate with coverage loss."
+            ),
+            "artifact": "docs/RECIPES.md#segmentation-mask-review",
+            "destination_url": _campaign_destination("segmentation-mask-safety"),
+            "success_signal": (
+                "One voluntary report of an accepted mask-aware preview without candidate_mask_coverage_drop."
+            ),
+        },
+    ]
+
+
+def _campaign_destination(campaign_id: str) -> str:
+    return f"{_UPSTREAM_MCP_GUIDE_URL}?utm_source=community&utm_medium=manual&utm_campaign={campaign_id}"
+
+
+def _render_campaigns(campaigns: list[dict[str, str]]) -> list[str]:
+    lines: list[str] = []
+    for campaign in campaigns:
+        lines.extend(
+            [
+                f"### {campaign['id']}",
+                "",
+                f"- Audience: {campaign['audience']}",
+                f"- Problem: {campaign['problem']}",
+                f'- Prompt: "{campaign["prompt"]}"',
+                f"- Artifact: `{campaign['artifact']}`",
+                f"- Destination: {campaign['destination_url']}",
+                f"- Success signal: {campaign['success_signal']}",
+                "",
+            ]
+        )
+    return lines
 
 
 def main() -> None:

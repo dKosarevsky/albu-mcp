@@ -43,7 +43,7 @@ def test_committed_dataset_quality_depth_plan_is_current() -> None:
     assert plan_path.read_text(encoding="utf-8") == render_dataset_quality_depth_plan_markdown(
         build_dataset_quality_depth_plan()
     )
-    assert "[docs/DATASET_QUALITY_DEPTH_PLAN.md](docs/DATASET_QUALITY_DEPTH_PLAN.md)" in Path("README.md").read_text(
+    assert "[DATASET_QUALITY_DEPTH_PLAN.md](DATASET_QUALITY_DEPTH_PLAN.md)" in Path("docs/INDEX.md").read_text(
         encoding="utf-8"
     )
 

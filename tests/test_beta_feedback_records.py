@@ -85,12 +85,10 @@ def test_committed_beta_feedback_status_is_current() -> None:
     status_path = Path("docs/BETA_FEEDBACK_STATUS.md")
 
     assert status_path.read_text(encoding="utf-8") == render_beta_feedback_status_markdown(build_beta_feedback_status())
-    assert "[docs/BETA_FEEDBACK_RECORDS.json](docs/BETA_FEEDBACK_RECORDS.json)" in Path("README.md").read_text(
+    assert "[BETA_FEEDBACK_RECORDS.json](BETA_FEEDBACK_RECORDS.json)" in Path("docs/INDEX.md").read_text(
         encoding="utf-8"
     )
-    assert "[docs/BETA_FEEDBACK_STATUS.md](docs/BETA_FEEDBACK_STATUS.md)" in Path("README.md").read_text(
-        encoding="utf-8"
-    )
+    assert "[BETA_FEEDBACK_STATUS.md](BETA_FEEDBACK_STATUS.md)" in Path("docs/INDEX.md").read_text(encoding="utf-8")
 
 
 def test_beta_feedback_status_cli_writes_markdown(tmp_path: Path) -> None:

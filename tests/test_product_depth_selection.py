@@ -43,7 +43,7 @@ def test_committed_product_depth_selection_is_current() -> None:
     assert selection_path.read_text(encoding="utf-8") == render_product_depth_selection_markdown(
         build_product_depth_selection()
     )
-    assert "[docs/PRODUCT_DEPTH_SELECTION.md](docs/PRODUCT_DEPTH_SELECTION.md)" in Path("README.md").read_text(
+    assert "[PRODUCT_DEPTH_SELECTION.md](PRODUCT_DEPTH_SELECTION.md)" in Path("docs/INDEX.md").read_text(
         encoding="utf-8"
     )
 

@@ -40,7 +40,7 @@ def test_committed_v1_growth_cutover_report_is_current() -> None:
     assert report_path.read_text(encoding="utf-8") == render_v1_growth_cutover_report_markdown(
         build_v1_growth_cutover_report()
     )
-    assert "[docs/V1_GROWTH_CUTOVER_REPORT.md](docs/V1_GROWTH_CUTOVER_REPORT.md)" in Path("README.md").read_text(
+    assert "[V1_GROWTH_CUTOVER_REPORT.md](V1_GROWTH_CUTOVER_REPORT.md)" in Path("docs/INDEX.md").read_text(
         encoding="utf-8"
     )
 

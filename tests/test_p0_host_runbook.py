@@ -46,7 +46,7 @@ def test_committed_p0_host_runbook_is_current() -> None:
     runbook_path = Path("docs/P0_HOST_RUNBOOK.md")
 
     assert runbook_path.read_text(encoding="utf-8") == render_p0_host_runbook_markdown(build_p0_host_runbook())
-    assert "[docs/P0_HOST_RUNBOOK.md](docs/P0_HOST_RUNBOOK.md)" in Path("README.md").read_text(encoding="utf-8")
+    assert "[P0_HOST_RUNBOOK.md](P0_HOST_RUNBOOK.md)" in Path("docs/INDEX.md").read_text(encoding="utf-8")
 
 
 def test_p0_host_runbook_cli_writes_markdown(tmp_path: Path) -> None:

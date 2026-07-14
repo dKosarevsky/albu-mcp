@@ -29,7 +29,7 @@ def test_committed_adoption_packet_is_current() -> None:
     packet_path = Path("docs/ADOPTION_PACKET.md")
 
     assert packet_path.read_text(encoding="utf-8") == render_adoption_packet_markdown(build_adoption_packet())
-    assert "[docs/ADOPTION_PACKET.md](docs/ADOPTION_PACKET.md)" in Path("README.md").read_text(encoding="utf-8")
+    assert "[ADOPTION_PACKET.md](ADOPTION_PACKET.md)" in Path("docs/INDEX.md").read_text(encoding="utf-8")
 
 
 def test_adoption_packet_cli_writes_markdown(tmp_path: Path) -> None:

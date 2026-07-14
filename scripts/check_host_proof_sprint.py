@@ -9,7 +9,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-_DEFAULT_README_PATH = Path("README.md")
+_DEFAULT_DOCUMENTATION_INDEX_PATH = Path("docs/INDEX.md")
 _DEFAULT_RUNBOOK_PATH = Path("docs/HOST_PROOF_SPRINT.md")
 _DEFAULT_SCHEMA_PATH = Path("docs/HOST_MANUAL_RUNS.schema.json")
 _DEFAULT_ACCEPTANCE_PATH = Path("docs/HOST_ACCEPTANCE.md")
@@ -34,7 +34,7 @@ _ACCEPTANCE_REQUIRED_PHRASES = (
 class HostProofSprintConfig:
     """Inputs for Host Proof Sprint readiness checks."""
 
-    readme_path: Path = _DEFAULT_README_PATH
+    documentation_index_path: Path = _DEFAULT_DOCUMENTATION_INDEX_PATH
     runbook_path: Path = _DEFAULT_RUNBOOK_PATH
     manual_runs_schema_path: Path = _DEFAULT_SCHEMA_PATH
     host_acceptance_path: Path = _DEFAULT_ACCEPTANCE_PATH
@@ -71,7 +71,7 @@ def check_host_proof_sprint(config: HostProofSprintConfig | None = None) -> Host
         checks=[
             _check_required_text("runbook", config.runbook_path, required_phrases=_RUNBOOK_REQUIRED_PHRASES),
             _check_schema(config.manual_runs_schema_path),
-            _check_readme_link(config.readme_path),
+            _check_documentation_index_link(config.documentation_index_path),
             _check_required_text(
                 "acceptance_docs",
                 config.host_acceptance_path,
@@ -84,7 +84,7 @@ def check_host_proof_sprint(config: HostProofSprintConfig | None = None) -> Host
 def main() -> None:
     """CLI entrypoint for local and release Host Proof Sprint checks."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--readme", type=Path, default=_DEFAULT_README_PATH)
+    parser.add_argument("--documentation-index", type=Path, default=_DEFAULT_DOCUMENTATION_INDEX_PATH)
     parser.add_argument("--runbook", type=Path, default=_DEFAULT_RUNBOOK_PATH)
     parser.add_argument("--manual-runs-schema", type=Path, default=_DEFAULT_SCHEMA_PATH)
     parser.add_argument("--host-acceptance", type=Path, default=_DEFAULT_ACCEPTANCE_PATH)
@@ -93,7 +93,7 @@ def main() -> None:
 
     report = check_host_proof_sprint(
         HostProofSprintConfig(
-            readme_path=args.readme,
+            documentation_index_path=args.documentation_index,
             runbook_path=args.runbook,
             manual_runs_schema_path=args.manual_runs_schema,
             host_acceptance_path=args.host_acceptance,
@@ -147,15 +147,23 @@ def _check_schema(path: Path) -> HostProofSprintCheck:
     )
 
 
-def _check_readme_link(path: Path) -> HostProofSprintCheck:
+def _check_documentation_index_link(path: Path) -> HostProofSprintCheck:
     try:
         text = path.read_text(encoding="utf-8")
     except OSError as exc:
-        return HostProofSprintCheck(name="readme_link", ok=False, message=str(exc))
-    link = "[docs/HOST_PROOF_SPRINT.md](docs/HOST_PROOF_SPRINT.md)"
+        return HostProofSprintCheck(name="documentation_index_link", ok=False, message=str(exc))
+    link = "[HOST_PROOF_SPRINT.md](HOST_PROOF_SPRINT.md)"
     if link not in text:
-        return HostProofSprintCheck(name="readme_link", ok=False, message=f"README must link to {link}")
-    return HostProofSprintCheck(name="readme_link", ok=True, message="README links to Host Proof Sprint")
+        return HostProofSprintCheck(
+            name="documentation_index_link",
+            ok=False,
+            message=f"Documentation index must link to {link}",
+        )
+    return HostProofSprintCheck(
+        name="documentation_index_link",
+        ok=True,
+        message="Documentation index links to Host Proof Sprint",
+    )
 
 
 def _nested_dict(value: dict[str, Any], *keys: str) -> dict[str, Any] | None:

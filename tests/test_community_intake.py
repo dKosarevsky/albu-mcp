@@ -39,10 +39,10 @@ def test_github_issue_templates_collect_actionable_mcp_feedback() -> None:
 
 
 def test_community_feedback_guide_is_linked_and_privacy_safe() -> None:
-    readme = Path("README.md").read_text(encoding="utf-8")
+    docs_index = Path("docs/INDEX.md").read_text(encoding="utf-8")
     guide = Path("docs/COMMUNITY_FEEDBACK.md").read_text(encoding="utf-8")
 
-    assert "[docs/COMMUNITY_FEEDBACK.md](docs/COMMUNITY_FEEDBACK.md)" in readme
+    assert "[COMMUNITY_FEEDBACK.md](COMMUNITY_FEEDBACK.md)" in docs_index
     assert "host-acceptance.yml" in guide
     assert "workflow-feedback.yml" in guide
     assert "dataset-health.yml" in guide

@@ -189,9 +189,9 @@ def test_committed_beta_validation_status_is_current() -> None:
     assert status_path.read_text(encoding="utf-8") == render_beta_validation_status_markdown(
         build_beta_validation_status()
     )
-    readme = Path("README.md").read_text(encoding="utf-8")
-    assert "[docs/BETA_VALIDATION_RECORDS.json](docs/BETA_VALIDATION_RECORDS.json)" in readme
-    assert "[docs/BETA_VALIDATION_STATUS.md](docs/BETA_VALIDATION_STATUS.md)" in readme
+    docs_index = Path("docs/INDEX.md").read_text(encoding="utf-8")
+    assert "[BETA_VALIDATION_RECORDS.json](BETA_VALIDATION_RECORDS.json)" in docs_index
+    assert "[BETA_VALIDATION_STATUS.md](BETA_VALIDATION_STATUS.md)" in docs_index
 
 
 def test_beta_validation_status_cli_writes_markdown(tmp_path: Path) -> None:

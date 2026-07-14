@@ -62,7 +62,7 @@ def test_committed_p0_host_run_session_is_current() -> None:
     session_path = Path("docs/P0_HOST_RUN_SESSION.md")
 
     assert session_path.read_text(encoding="utf-8") == render_p0_host_run_session_markdown(build_p0_host_run_session())
-    assert "[docs/P0_HOST_RUN_SESSION.md](docs/P0_HOST_RUN_SESSION.md)" in Path("README.md").read_text(encoding="utf-8")
+    assert "[P0_HOST_RUN_SESSION.md](P0_HOST_RUN_SESSION.md)" in Path("docs/INDEX.md").read_text(encoding="utf-8")
 
 
 def test_p0_host_run_session_cli_writes_markdown(tmp_path: Path) -> None:

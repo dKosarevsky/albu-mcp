@@ -41,9 +41,7 @@ def test_committed_policy_assistant_plan_is_current() -> None:
     doc_path = Path("docs/POLICY_ASSISTANT_PLAN.md")
 
     assert doc_path.read_text(encoding="utf-8") == render_policy_assistant_plan_markdown(build_policy_assistant_plan())
-    assert "[docs/POLICY_ASSISTANT_PLAN.md](docs/POLICY_ASSISTANT_PLAN.md)" in Path("README.md").read_text(
-        encoding="utf-8"
-    )
+    assert "[POLICY_ASSISTANT_PLAN.md](POLICY_ASSISTANT_PLAN.md)" in Path("docs/INDEX.md").read_text(encoding="utf-8")
 
 
 def test_policy_assistant_plan_cli_writes_markdown(tmp_path: Path) -> None:
