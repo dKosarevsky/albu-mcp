@@ -39,6 +39,17 @@ def test_committed_network_growth_tracker_is_current() -> None:
     assert "docs/NETWORK_GROWTH_TRACKER.md" in Path("docs/NETWORK_GROWTH.md").read_text(encoding="utf-8")
 
 
+def test_network_growth_plan_defines_manual_campaign_measurement() -> None:
+    plan = Path("docs/NETWORK_GROWTH.md").read_text(encoding="utf-8")
+
+    assert "scripts/export_growth_report.py" in plan
+    assert "classification-robustness" in plan
+    assert "detection-bbox-safety" in plan
+    assert "segmentation-mask-safety" in plan
+    assert "manual" in plan.lower()
+    assert "one campaign at a time" in plan
+
+
 def test_network_growth_tracker_cli_writes_markdown(tmp_path: Path) -> None:
     output_path = tmp_path / "network-growth-tracker.md"
 

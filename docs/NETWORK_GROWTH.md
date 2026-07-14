@@ -11,6 +11,32 @@ uv run python scripts/export_network_growth_tracker.py --output docs/NETWORK_GRO
 uv run python scripts/export_public_adoption_loop.py --output docs/PUBLIC_ADOPTION_LOOP.md
 ```
 
+Generate the aggregate demand and conversion report before and after a campaign:
+
+```bash
+GH_TOKEN="$(gh auth token)" uv run python scripts/export_growth_report.py --output /tmp/albu-growth.md
+```
+
+## Campaign Measurement
+
+The audience-specific copy, prompt, destination, artifact, and success signal are generated in
+[docs/LAUNCH_KIT.md](LAUNCH_KIT.md). The current campaign IDs are `classification-robustness`,
+`detection-bbox-safety`, and `segmentation-mask-safety`.
+
+Run one campaign at a time:
+
+1. Capture the aggregate report before publication.
+2. Select one campaign and one relevant discussion where its problem is already on topic.
+3. Verify that the referenced artifact is synthetic, redacted, or safe to publish.
+4. Publish manually from an account whose owner has approved the message.
+5. Keep the prompt, destination URL, and success signal unchanged for seven days.
+6. Capture the report again and record any voluntary workflow feedback separately.
+7. Continue, revise, or stop based on qualified reach and the stated success signal, not raw downloads alone.
+
+UTM parameters identify the prepared campaign in destination analytics where those analytics are available. GitHub
+Traffic can still aggregate or omit referrer detail, so a campaign must not claim attribution that the available data
+does not prove. Preparation may be automated; third-party publication and community interaction remain manual.
+
 ## Current Directory Status
 
 - Official MCP Registry: listed as active/latest for exact server search `io.github.dKosarevsky/albu-mcp`.
