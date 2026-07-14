@@ -123,6 +123,11 @@ Before attaching the bundle, confirm that the build output contains only the fiv
 published digest against `SHA256SUMS`. Users install the `.mcpb` from Claude Desktop's extension settings and select
 explicit read and write directories; no home-directory default is shipped.
 
+Each GitHub Release contains the versioned `albumentationsx-mcp-<version>.mcpb` and a byte-identical
+`albumentationsx-mcp.mcpb` alias. Create the alias before generating `SHA256SUMS` so both names are verifiable. The
+stable name powers the public `releases/latest/download/albumentationsx-mcp.mcpb` URL; retain the versioned name for
+audits and reproducible support instructions.
+
 ## MCP Registry Publishing
 
 After the PyPI package is available, publish MCP discovery metadata:

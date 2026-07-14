@@ -73,16 +73,18 @@ Use `ALBU_MCP_MAX_PREVIEW_RUNS` to adjust preview index retention. The default k
 
 ## Claude Desktop
 
-Use the versioned release artifact rather than editing Claude's JSON configuration:
+Use the installable bundle rather than editing Claude's JSON configuration:
 
-1. Download `albumentationsx-mcp-<version>.mcpb` from the matching
-   [GitHub Release](https://github.com/dKosarevsky/albu-mcp/releases).
+1. Download the [latest `albumentationsx-mcp.mcpb`](https://github.com/dKosarevsky/albu-mcp/releases/latest/download/albumentationsx-mcp.mcpb).
 2. In Claude Desktop, open **Settings → Extensions → Advanced settings**.
 3. Under **Extension Developer**, choose **Install Extension…** and select the `.mcpb` file.
 4. Select the smallest useful image/annotation directory for **Allowed image directory**.
 5. Select a separate output directory for **Preview artifact directory** and keep the default retention unless a bounded
    value from 1 to 500 is needed.
 6. Open **+ → Connectors** in a chat and confirm that **AlbumentationsX MCP** and its tools are available.
+
+The stable filename is a byte-identical alias of `albumentationsx-mcp-<version>.mcpb` in the same GitHub Release.
+Choose the versioned asset and verify it against `SHA256SUMS` when reproducing or auditing an exact release.
 
 The extension runs locally through Claude Desktop's managed UV runtime and delegates to the matching published PyPI
 package. It does not require Claude Code or a manual Python installation. It has no implicit home-directory access: the

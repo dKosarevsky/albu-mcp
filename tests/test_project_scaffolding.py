@@ -553,10 +553,18 @@ def test_release_workflow_publishes_isolated_mcpb_artifact() -> None:
     release_downloads = [
         step for step in release_steps if step.get("uses", "").startswith("actions/download-artifact@")
     ]
+    alias_steps = [step for step in build_steps if step.get("name") == "Add stable Claude Desktop extension alias"]
 
     assert setup_node["with"]["node-version"] == "24"
     assert "uv run python scripts/check_desktop_extension.py" in build_commands
     assert "uv run python -m scripts.build_desktop_extension --output-dir dist/mcpb" in build_commands
+    assert len(alias_steps) == 1
+    assert alias_steps[0]["run"] == (
+        'cp "dist/mcpb/albumentationsx-mcp-${GITHUB_REF_NAME#v}.mcpb" dist/mcpb/albumentationsx-mcp.mcpb'
+    )
+    assert build_steps.index(alias_steps[0]) < next(
+        index for index, step in enumerate(build_steps) if step.get("name") == "Write MCPB checksum"
+    )
     assert "cd dist/mcpb && sha256sum *.mcpb > SHA256SUMS" in build_commands
     assert python_upload["with"]["path"] == "dist/*.whl\ndist/*.tar.gz\n"
     assert mcpb_upload["with"]["path"] == "dist/mcpb/*"
@@ -581,6 +589,8 @@ def test_release_docs_cover_mcpb_artifact_flow() -> None:
         "scripts/check_desktop_extension.py",
         "scripts.build_desktop_extension",
         "albumentationsx-mcp-<version>.mcpb",
+        "albumentationsx-mcp.mcpb",
+        "releases/latest/download/albumentationsx-mcp.mcpb",
         "SHA256SUMS",
         "separate workflow artifact",
         "never published to PyPI",
