@@ -47,9 +47,7 @@ def test_committed_p0_evidence_recorder_is_current() -> None:
     assert recorder_path.read_text(encoding="utf-8") == render_p0_evidence_recorder_markdown(
         build_p0_evidence_recorder()
     )
-    assert "[docs/P0_EVIDENCE_RECORDER.md](docs/P0_EVIDENCE_RECORDER.md)" in Path("README.md").read_text(
-        encoding="utf-8"
-    )
+    assert "[P0_EVIDENCE_RECORDER.md](P0_EVIDENCE_RECORDER.md)" in Path("docs/INDEX.md").read_text(encoding="utf-8")
 
 
 def test_p0_evidence_recorder_cli_writes_markdown(tmp_path: Path) -> None:

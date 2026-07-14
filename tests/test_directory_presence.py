@@ -125,13 +125,14 @@ def test_directory_presence_cli_outputs_json(tmp_path: Path) -> None:
 
 def test_network_growth_docs_are_linked() -> None:
     readme = Path("README.md").read_text(encoding="utf-8")
+    docs_index = Path("docs/INDEX.md").read_text(encoding="utf-8")
     docs = Path("docs/NETWORK_GROWTH.md").read_text(encoding="utf-8")
 
-    assert "[docs/NETWORK_GROWTH.md](docs/NETWORK_GROWTH.md)" in readme
-    assert "scripts/check_directory_presence.py" in readme
+    assert "[NETWORK_GROWTH.md](NETWORK_GROWTH.md)" in docs_index
+    assert "check_directory_presence.py" in docs_index
     assert "https://albumentations.ai/docs/integrations/mcp/" in readme
     assert "albumentations-team/AlbumentationsX/pull/289" in readme
-    assert "AlbumentationsX/blob/main/docs/integrations/mcp.md" in readme
+    assert "AlbumentationsX/blob/main/docs/integrations/mcp.md" in docs
     assert "Official MCP Registry" in docs
     assert "Glama" in docs
     assert "https://github.com/albumentations-team/AlbumentationsX/pull/289" in docs

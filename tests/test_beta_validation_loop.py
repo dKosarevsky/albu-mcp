@@ -37,9 +37,7 @@ def test_committed_beta_validation_loop_is_current() -> None:
     doc_path = Path("docs/BETA_VALIDATION_LOOP.md")
 
     assert doc_path.read_text(encoding="utf-8") == render_beta_validation_loop_markdown(build_beta_validation_loop())
-    assert "[docs/BETA_VALIDATION_LOOP.md](docs/BETA_VALIDATION_LOOP.md)" in Path("README.md").read_text(
-        encoding="utf-8"
-    )
+    assert "[BETA_VALIDATION_LOOP.md](BETA_VALIDATION_LOOP.md)" in Path("docs/INDEX.md").read_text(encoding="utf-8")
 
 
 def test_beta_validation_loop_cli_writes_markdown(tmp_path: Path) -> None:

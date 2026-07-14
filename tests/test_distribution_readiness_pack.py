@@ -39,7 +39,7 @@ def test_committed_distribution_readiness_pack_is_current() -> None:
     assert pack_path.read_text(encoding="utf-8") == render_distribution_readiness_pack_markdown(
         build_distribution_readiness_pack()
     )
-    assert "[docs/DISTRIBUTION_READINESS_PACK.md](docs/DISTRIBUTION_READINESS_PACK.md)" in Path("README.md").read_text(
+    assert "[DISTRIBUTION_READINESS_PACK.md](DISTRIBUTION_READINESS_PACK.md)" in Path("docs/INDEX.md").read_text(
         encoding="utf-8"
     )
 

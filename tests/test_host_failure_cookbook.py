@@ -53,9 +53,7 @@ def test_committed_host_failure_cookbook_is_current() -> None:
     assert cookbook_path.read_text(encoding="utf-8") == render_host_failure_cookbook_markdown(
         build_host_failure_cookbook()
     )
-    assert "[docs/HOST_FAILURE_COOKBOOK.md](docs/HOST_FAILURE_COOKBOOK.md)" in Path("README.md").read_text(
-        encoding="utf-8"
-    )
+    assert "[HOST_FAILURE_COOKBOOK.md](HOST_FAILURE_COOKBOOK.md)" in Path("docs/INDEX.md").read_text(encoding="utf-8")
 
 
 def test_host_failure_cookbook_cli_writes_markdown(tmp_path: Path) -> None:

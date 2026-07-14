@@ -45,7 +45,7 @@ def test_committed_p0_blocker_triage_is_current() -> None:
     triage_path = Path("docs/P0_BLOCKER_TRIAGE.md")
 
     assert triage_path.read_text(encoding="utf-8") == render_p0_blocker_triage_markdown(build_p0_blocker_triage())
-    assert "[docs/P0_BLOCKER_TRIAGE.md](docs/P0_BLOCKER_TRIAGE.md)" in Path("README.md").read_text(encoding="utf-8")
+    assert "[P0_BLOCKER_TRIAGE.md](P0_BLOCKER_TRIAGE.md)" in Path("docs/INDEX.md").read_text(encoding="utf-8")
 
 
 def test_p0_blocker_triage_cli_writes_markdown(tmp_path: Path) -> None:

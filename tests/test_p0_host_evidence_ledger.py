@@ -49,7 +49,7 @@ def test_committed_p0_host_evidence_ledger_is_current() -> None:
     assert ledger_path.read_text(encoding="utf-8") == render_p0_host_evidence_ledger_markdown(
         build_p0_host_evidence_ledger()
     )
-    assert "[docs/P0_HOST_EVIDENCE_LEDGER.md](docs/P0_HOST_EVIDENCE_LEDGER.md)" in Path("README.md").read_text(
+    assert "[P0_HOST_EVIDENCE_LEDGER.md](P0_HOST_EVIDENCE_LEDGER.md)" in Path("docs/INDEX.md").read_text(
         encoding="utf-8"
     )
 

@@ -62,4 +62,4 @@ def test_committed_v1_rc_readiness_report_is_current() -> None:
     assert report_path.read_text(encoding="utf-8") == render_v1_rc_readiness_report_markdown(
         build_v1_rc_readiness_report()
     )
-    assert "[docs/V1_RC_READINESS.md](docs/V1_RC_READINESS.md)" in Path("README.md").read_text(encoding="utf-8")
+    assert "[V1_RC_READINESS.md](V1_RC_READINESS.md)" in Path("docs/INDEX.md").read_text(encoding="utf-8")

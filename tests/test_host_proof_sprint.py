@@ -13,21 +13,21 @@ def test_host_proof_sprint_accepts_current_runbook_and_links() -> None:
     assert [check.name for check in report.checks] == [
         "runbook",
         "manual_runs_schema",
-        "readme_link",
+        "documentation_index_link",
         "acceptance_docs",
     ]
     assert all(check.message for check in report.checks)
 
 
-def test_host_proof_sprint_reports_missing_readme_link(tmp_path: Path) -> None:
-    readme = _write_text(tmp_path / "README.md", "# AlbumentationsX MCP\n")
+def test_host_proof_sprint_reports_missing_documentation_index_link(tmp_path: Path) -> None:
+    documentation_index = _write_text(tmp_path / "docs" / "INDEX.md", "# Documentation Index\n")
     runbook = _write_text(tmp_path / "docs" / "HOST_PROOF_SPRINT.md", _valid_runbook_text())
     schema = _write_text(tmp_path / "docs" / "HOST_MANUAL_RUNS.schema.json", _valid_schema_text())
     acceptance = _write_text(tmp_path / "docs" / "HOST_ACCEPTANCE.md", _valid_acceptance_text())
 
     report = check_host_proof_sprint(
         HostProofSprintConfig(
-            readme_path=readme,
+            documentation_index_path=documentation_index,
             runbook_path=runbook,
             manual_runs_schema_path=schema,
             host_acceptance_path=acceptance,
@@ -35,8 +35,8 @@ def test_host_proof_sprint_reports_missing_readme_link(tmp_path: Path) -> None:
     )
 
     assert report.ok is False
-    assert report.by_name["readme_link"].ok is False
-    assert "docs/HOST_PROOF_SPRINT.md" in report.by_name["readme_link"].message
+    assert report.by_name["documentation_index_link"].ok is False
+    assert "HOST_PROOF_SPRINT.md" in report.by_name["documentation_index_link"].message
 
 
 def test_host_proof_sprint_cli_outputs_json() -> None:

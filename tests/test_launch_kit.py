@@ -29,7 +29,7 @@ def test_committed_launch_kit_is_current() -> None:
     kit_path = Path("docs/LAUNCH_KIT.md")
 
     assert kit_path.read_text(encoding="utf-8") == render_launch_kit_markdown(build_launch_kit())
-    assert "[docs/LAUNCH_KIT.md](docs/LAUNCH_KIT.md)" in Path("README.md").read_text(encoding="utf-8")
+    assert "[LAUNCH_KIT.md](LAUNCH_KIT.md)" in Path("docs/INDEX.md").read_text(encoding="utf-8")
 
 
 def test_launch_kit_cli_writes_markdown(tmp_path: Path) -> None:

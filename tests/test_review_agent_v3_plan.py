@@ -37,9 +37,7 @@ def test_committed_review_agent_v3_plan_is_current() -> None:
     plan_path = Path("docs/REVIEW_AGENT_V3_PLAN.md")
 
     assert plan_path.read_text(encoding="utf-8") == render_review_agent_v3_plan_markdown(build_review_agent_v3_plan())
-    assert "[docs/REVIEW_AGENT_V3_PLAN.md](docs/REVIEW_AGENT_V3_PLAN.md)" in Path("README.md").read_text(
-        encoding="utf-8"
-    )
+    assert "[REVIEW_AGENT_V3_PLAN.md](REVIEW_AGENT_V3_PLAN.md)" in Path("docs/INDEX.md").read_text(encoding="utf-8")
 
 
 def test_review_agent_v3_plan_cli_writes_markdown(tmp_path: Path) -> None:

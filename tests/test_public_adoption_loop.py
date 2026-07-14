@@ -30,9 +30,7 @@ def test_committed_public_adoption_loop_is_current() -> None:
     loop_path = Path("docs/PUBLIC_ADOPTION_LOOP.md")
 
     assert loop_path.read_text(encoding="utf-8") == render_public_adoption_loop_markdown(build_public_adoption_loop())
-    assert "[docs/PUBLIC_ADOPTION_LOOP.md](docs/PUBLIC_ADOPTION_LOOP.md)" in Path("README.md").read_text(
-        encoding="utf-8"
-    )
+    assert "[PUBLIC_ADOPTION_LOOP.md](PUBLIC_ADOPTION_LOOP.md)" in Path("docs/INDEX.md").read_text(encoding="utf-8")
     assert "docs/PUBLIC_ADOPTION_LOOP.md" in Path("docs/NETWORK_GROWTH.md").read_text(encoding="utf-8")
 
 

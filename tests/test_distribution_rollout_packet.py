@@ -47,7 +47,7 @@ def test_committed_distribution_rollout_packet_is_current() -> None:
     assert packet_path.read_text(encoding="utf-8") == render_distribution_rollout_packet_markdown(
         build_distribution_rollout_packet()
     )
-    assert "[docs/DISTRIBUTION_ROLLOUT_PACKET.md](docs/DISTRIBUTION_ROLLOUT_PACKET.md)" in Path("README.md").read_text(
+    assert "[DISTRIBUTION_ROLLOUT_PACKET.md](DISTRIBUTION_ROLLOUT_PACKET.md)" in Path("docs/INDEX.md").read_text(
         encoding="utf-8"
     )
 

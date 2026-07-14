@@ -42,9 +42,7 @@ def test_committed_product_depth_backlog_is_current() -> None:
     assert backlog_path.read_text(encoding="utf-8") == render_product_depth_backlog_markdown(
         build_product_depth_backlog()
     )
-    assert "[docs/PRODUCT_DEPTH_BACKLOG.md](docs/PRODUCT_DEPTH_BACKLOG.md)" in Path("README.md").read_text(
-        encoding="utf-8"
-    )
+    assert "[PRODUCT_DEPTH_BACKLOG.md](PRODUCT_DEPTH_BACKLOG.md)" in Path("docs/INDEX.md").read_text(encoding="utf-8")
 
 
 def test_product_depth_backlog_cli_writes_markdown(tmp_path: Path) -> None:

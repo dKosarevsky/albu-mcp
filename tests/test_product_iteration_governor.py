@@ -44,7 +44,7 @@ def test_committed_product_iteration_governor_is_current() -> None:
     assert doc_path.read_text(encoding="utf-8") == render_product_iteration_governor_markdown(
         build_product_iteration_governor()
     )
-    assert "[docs/PRODUCT_ITERATION_GOVERNOR.md](docs/PRODUCT_ITERATION_GOVERNOR.md)" in Path("README.md").read_text(
+    assert "[PRODUCT_ITERATION_GOVERNOR.md](PRODUCT_ITERATION_GOVERNOR.md)" in Path("docs/INDEX.md").read_text(
         encoding="utf-8"
     )
 

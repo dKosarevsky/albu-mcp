@@ -122,12 +122,12 @@ def _check_readme_entrypoint(path: Path) -> FirstTenMinutesCheck:
         text = path.read_text(encoding="utf-8")
     except OSError as exc:
         return FirstTenMinutesCheck(name="readme_entrypoint", ok=False, message=str(exc))
-    required_link = "[docs/FIRST_10_MINUTES.md](docs/FIRST_10_MINUTES.md)"
-    if required_link not in text:
+    required_target = "docs/FIRST_10_MINUTES.md"
+    if required_target not in text:
         return FirstTenMinutesCheck(
             name="readme_entrypoint",
             ok=False,
-            message=f"README must link to {required_link}",
+            message=f"README must link to {required_target}",
         )
     return FirstTenMinutesCheck(
         name="readme_entrypoint",

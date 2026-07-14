@@ -33,9 +33,7 @@ def test_committed_adoption_triage_report_is_current() -> None:
     assert report_path.read_text(encoding="utf-8") == render_adoption_triage_report_markdown(
         build_adoption_triage_report()
     )
-    assert "[docs/ADOPTION_TRIAGE_REPORT.md](docs/ADOPTION_TRIAGE_REPORT.md)" in Path("README.md").read_text(
-        encoding="utf-8"
-    )
+    assert "[ADOPTION_TRIAGE_REPORT.md](ADOPTION_TRIAGE_REPORT.md)" in Path("docs/INDEX.md").read_text(encoding="utf-8")
     assert "docs/ADOPTION_TRIAGE_REPORT.md" in Path("docs/PUBLIC_ADOPTION_LOOP.md").read_text(encoding="utf-8")
 
 

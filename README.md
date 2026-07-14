@@ -1,6 +1,6 @@
 # AlbumentationsX MCP
 
-Model Context Protocol server for [AlbumentationsX](https://github.com/albumentations-team/AlbumentationsX): transform discovery, pipeline validation, deterministic previews, feedback loops, and reproducible exports for computer vision.
+Model Context Protocol server for [AlbumentationsX](https://github.com/albumentations-team/AlbumentationsX): inspect datasets, preview augmentations, refine them with visual feedback, and export reproducible pipelines.
 
 <!-- mcp-name: io.github.dKosarevsky/albu-mcp -->
 
@@ -10,34 +10,19 @@ Model Context Protocol server for [AlbumentationsX](https://github.com/albumenta
 [![MCP Registry](https://img.shields.io/badge/MCP%20Registry-active-green)](https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.dKosarevsky/albu-mcp)
 [![skills.sh](https://skills.sh/b/dKosarevsky/albu-mcp)](https://skills.sh/dKosarevsky/albu-mcp)
 
-## Purpose
+![Baseline and adjusted AlbumentationsX preview contact sheets](https://raw.githubusercontent.com/dKosarevsky/albu-mcp/main/docs/assets/demo/comparison_contact_sheet.png)
 
-AlbumentationsX MCP is a thin, typed MCP layer around existing AlbumentationsX primitives. It helps MCP hosts:
+Ask an MCP host for several robustness variants, reject an excessive result such as `too_noisy:high`, compare the adjusted batch previews, and export the accepted pipeline.
 
-- discover transforms and schemas from `albu-spec`;
-- recommend and validate augmentation pipelines;
-- render local batch previews, compare preview runs, and review variants in compatible MCP Apps hosts ([guide](docs/MCP_APPS_REVIEW.md));
-- record concrete feedback such as `too_noisy:high` or `exposure_too_weak:medium`;
-- export accepted pipelines and review reports.
+## Install
 
-The server does not execute arbitrary Python, fetch remote images, overwrite datasets, or train models. Local preview access is bounded by `--allowed-root`, and generated artifacts are written under `--artifact-root`.
+### Claude Desktop
 
-## Quick Start
+[Download the latest `albumentationsx-mcp.mcpb`](https://github.com/dKosarevsky/albu-mcp/releases/latest/download/albumentationsx-mcp.mcpb), install it from **Settings -> Extensions -> Advanced settings**, and select separate image and artifact directories.
 
-Run the published server:
+### Other MCP Hosts
 
-```bash
-uvx --from albumentationsx-mcp albumentationsx-mcp
-```
-
-For local development:
-
-```bash
-uv sync --all-extras --dev
-uv run albumentationsx-mcp
-```
-
-For preview work, scope filesystem access explicitly:
+Run the published server with bounded local access:
 
 ```bash
 uvx --from albumentationsx-mcp albumentationsx-mcp \
@@ -45,86 +30,61 @@ uvx --from albumentationsx-mcp albumentationsx-mcp \
   --artifact-root /absolute/path/to/albu-artifacts
 ```
 
-Claude Desktop users can install the matching `.mcpb` from [GitHub Releases](https://github.com/dKosarevsky/albu-mcp/releases).
-Copyable host snippets and the native Codex plugin bundle are in [docs/INSTALL.md](docs/INSTALL.md); the guided trial is
-[docs/FIRST_10_MINUTES.md](docs/FIRST_10_MINUTES.md).
-`npx skills add dKosarevsky/albu-mcp` installs agent guidance, not the MCP server. Portable server command:
-`uvx --from albumentationsx-mcp albumentationsx-mcp`.
+Copyable Claude Code, Cursor, Codex, and JSON configurations are in [the install guide](docs/INSTALL.md). The repository also contains a native Codex plugin bundle. `npx skills add dKosarevsky/albu-mcp` installs agent guidance, not the MCP server.
 
-## Operator CLI
+## First Preview
 
-Full command details are in [docs/USAGE.md](docs/USAGE.md). The shortest real-use operator path is:
+After connecting the server, ask your host:
 
-```bash
-albu-mcp host setup-probe --host Codex --live --format json
-albu-mcp host next-action --include-session --format markdown --output docs/HOST_TRUST_DASHBOARD.md
-albu-mcp preview first-pack --dataset-path /absolute/path/to/images --allowed-root /absolute/path/to --artifact-root /absolute/path/to/albu-artifacts --format json
-albu-mcp evidence collect --host Codex --date YYYY-MM-DD --reviewer "Release operator" --format json
-albu-mcp intake bundle --output-dir docs/intake-bundle --format markdown
-albu-mcp beta loop-pack --output-dir docs/beta-loop --format markdown
-albu-mcp rc go-check --format json
+```text
+Use AlbumentationsX MCP on /absolute/path/to/images.
+Run the smoke check, start with a low-intensity pipeline, validate the request,
+render one variant per image, and show me the contact sheet before exporting anything.
 ```
 
-Inside MCP hosts, use `plan_augmentation_policy`, `plan_augmentation_policy_candidates`, or `plan_policy_iteration` before rendering and reviewing contact sheets. Generated fixtures and packets are not P0 evidence.
-
-## Host Workflow
-
-After connecting an MCP host:
-
 1. When the host exposes resource reads, read `albumentationsx://examples/client-smoke`; otherwise call `run_host_smoke_check` directly.
-2. If the resource was read, call `run_host_smoke_check` next.
-3. Continue only when `preview_ready` is true.
-4. For one real image or a folder, call `build_review_packet` to get a bounded first-preview handoff.
-5. Replace or reuse the paths in `preview_request_template.request`.
-6. Call `validate_preview_request` before rendering user-provided paths.
-7. Call `render_preview_batch` on a small local image set.
-8. Inspect the contact sheet, then use `plan_preview_review` to choose adjustment, audit, or export.
+2. Continue only when `preview_ready` is true, then use the returned `preview_request_template`.
+3. Call `validate_preview_request` before rendering and compare preview runs before accepting a candidate.
+4. Give concrete feedback such as `too_noisy:high` or `exposure_too_weak:medium`, then export the final pipeline.
 
-If preview setup fails, read `albumentationsx://diagnostics/guide` and call `diagnose_environment`. Troubleshooting
-details and `remediation_actions` are documented in [docs/USAGE.md](docs/USAGE.md) and [docs/INSTALL.md](docs/INSTALL.md).
+If setup fails, read `albumentationsx://diagnostics/guide` and call `diagnose_environment` for bounded remediation actions.
 
 ## Capabilities
 
-- Transform search and schema inspection.
-- Recipe and pipeline recommendation for classification, detection, segmentation, OCR, and balanced workflows.
-- Pipeline validation and explanation before rendering.
-- Preview request validation for missing files, outside-root paths, masks, and annotation counts.
-- Read-only dataset quality inspection before rendering previews.
-- Read-only image/directory onboarding and review packets that build bbox/mask-aware first-preview templates.
-- Deterministic single-image and batch previews with contact sheets.
-- Preview comparison with `quality_summary` and suggested feedback tags.
-- Concrete preview feedback, interactive tuning sessions, ranking, dataset scoring, and visual reports.
-- Agent workflow resources, prompts, smoke checks, diagnostics, and release-safe contract snapshots.
+- Transform discovery, schemas, recipes, and pipeline validation.
+- Classification, detection, segmentation, OCR, bbox, mask, keypoint, and dataset-quality workflows.
+- Deterministic previews, contact sheets, annotation overlays, comparison, ranking, and reports.
+- Interactive MCP Apps review with a text-only fallback for other hosts.
+- Structured feedback, tuning sessions, and Python, JSON, or YAML export.
+- Stable agent workflow resources, prompts, diagnostics, and reviewed contract snapshots.
 
-The public MCP surface is kept stable through reviewed contract snapshots. Compatibility rules are in
-[docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
+The server does not execute arbitrary Python, fetch remote images, overwrite datasets, or train models. Reads are restricted by `--allowed-root`; generated files stay under `--artifact-root`.
 
-The guide is published in the official [Albumentations MCP docs](https://albumentations.ai/docs/integrations/mcp/)
-from [AlbumentationsX#289](https://github.com/albumentations-team/AlbumentationsX/pull/289); [source](https://github.com/albumentations-team/AlbumentationsX/blob/main/docs/integrations/mcp.md).
+## Integrations
+
+- [Official Albumentations MCP guide](https://albumentations.ai/docs/integrations/mcp/)
+- [Official MCP Registry entry](https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.dKosarevsky/albu-mcp)
+- [skills.sh agent skill](https://skills.sh/dKosarevsky/albu-mcp)
+- [Upstream documentation PR](https://github.com/albumentations-team/AlbumentationsX/pull/289)
 
 ## Documentation
 
-- [docs/INSTALL.md](docs/INSTALL.md) and [docs/MCP_APPS_REVIEW.md](docs/MCP_APPS_REVIEW.md): host setup, bounded roots, interactive review, and fallback behavior.
-- [docs/FIRST_10_MINUTES.md](docs/FIRST_10_MINUTES.md): shortest path from install to preview, feedback, and export.
-- [docs/HOST_TRUST_DASHBOARD.md](docs/HOST_TRUST_DASHBOARD.md), [docs/HOST_PROOF_SPRINT.md](docs/HOST_PROOF_SPRINT.md), [docs/HOST_PROOF_SPRINT_CHECKLIST.md](docs/HOST_PROOF_SPRINT_CHECKLIST.md), [docs/HOST_EVIDENCE_SPRINT_BOARD.md](docs/HOST_EVIDENCE_SPRINT_BOARD.md), [docs/P0_HOST_RUNBOOK.md](docs/P0_HOST_RUNBOOK.md), [docs/P0_HOST_RUN_SESSION.md](docs/P0_HOST_RUN_SESSION.md), [docs/P0_HOST_RUN_PREFLIGHT.md](docs/P0_HOST_RUN_PREFLIGHT.md), [docs/P0_EVIDENCE_RECORDER.md](docs/P0_EVIDENCE_RECORDER.md), [docs/P0_EVIDENCE_IMPORT_GUIDE.md](docs/P0_EVIDENCE_IMPORT_GUIDE.md), [docs/P0_EVIDENCE_REGENERATION_PACK.md](docs/P0_EVIDENCE_REGENERATION_PACK.md), [docs/P0_HOST_UNBLOCK_PACK.md](docs/P0_HOST_UNBLOCK_PACK.md), [docs/P0_HOST_EVIDENCE_RECOVERY.md](docs/P0_HOST_EVIDENCE_RECOVERY.md), [docs/HOST_EVIDENCE_RUNNER.md](docs/HOST_EVIDENCE_RUNNER.md), [docs/CODEX_CANCELLATION_TRIAGE.md](docs/CODEX_CANCELLATION_TRIAGE.md), [docs/CLAUDE_CODE_SETUP_PATH.md](docs/CLAUDE_CODE_SETUP_PATH.md), [docs/HOST_SETUP_PROBE.md](docs/HOST_SETUP_PROBE.md), [docs/HOST_EVIDENCE_CAPTURE_KIT.md](docs/HOST_EVIDENCE_CAPTURE_KIT.md), [docs/RC_HOST_EVIDENCE_OPS.md](docs/RC_HOST_EVIDENCE_OPS.md), [docs/P0_HOST_EXECUTION_SPRINT.md](docs/P0_HOST_EXECUTION_SPRINT.md), [docs/P0_HOST_EVIDENCE_LEDGER.md](docs/P0_HOST_EVIDENCE_LEDGER.md), [docs/P0_BLOCKER_TRIAGE.md](docs/P0_BLOCKER_TRIAGE.md), [docs/REAL_HOST_EVIDENCE_EXECUTION.md](docs/REAL_HOST_EVIDENCE_EXECUTION.md), [docs/REAL_HOST_EVIDENCE_COMMAND_CENTER.md](docs/REAL_HOST_EVIDENCE_COMMAND_CENTER.md), [docs/HOST_UX_HARDENING_LOOP.md](docs/HOST_UX_HARDENING_LOOP.md), and [docs/HOST_FAILURE_COOKBOOK.md](docs/HOST_FAILURE_COOKBOOK.md): host trust dashboard, real host replay runbooks, focused P0 operator packets, setup probes, evidence ledgers, blocker triage, execution packs, hardening loop, and failure triage.
-- [docs/USAGE.md](docs/USAGE.md): end-to-end MCP host workflow and tool details.
-- [docs/RECIPES.md](docs/RECIPES.md): task-specific host recipes.
-- [docs/ADOPTION.md](docs/ADOPTION.md), [docs/BETA_WORKFLOW_PACK.md](docs/BETA_WORKFLOW_PACK.md), [docs/BETA_CAMPAIGN_PACK.md](docs/BETA_CAMPAIGN_PACK.md), [docs/BETA_CAMPAIGN_EXECUTION.md](docs/BETA_CAMPAIGN_EXECUTION.md), [docs/BETA_FEEDBACK_INTAKE.md](docs/BETA_FEEDBACK_INTAKE.md), [docs/BETA_FEEDBACK_RECORDS.json](docs/BETA_FEEDBACK_RECORDS.json), [docs/BETA_FEEDBACK_STATUS.md](docs/BETA_FEEDBACK_STATUS.md), [docs/BETA_VALIDATION_INTAKE.md](docs/BETA_VALIDATION_INTAKE.md), [docs/BETA_VALIDATION_RECORDING_PACK.md](docs/BETA_VALIDATION_RECORDING_PACK.md), [docs/BETA_ATTEMPT_CAPTURE_KIT.md](docs/BETA_ATTEMPT_CAPTURE_KIT.md), [docs/BETA_VALIDATION_RECORDS.json](docs/BETA_VALIDATION_RECORDS.json), [docs/BETA_VALIDATION_STATUS.md](docs/BETA_VALIDATION_STATUS.md), [docs/BETA_VALIDATION_LOOP.md](docs/BETA_VALIDATION_LOOP.md), [docs/BETA_TO_BACKLOG_TRIAGE.md](docs/BETA_TO_BACKLOG_TRIAGE.md), and [docs/BETA_VALIDATION_SPRINT.md](docs/BETA_VALIDATION_SPRINT.md): short trial, beta CV workflows, campaign and execution packs, privacy-safe intake, beta records, validation status, host setup, workflow examples, and outreach copy.
-- [docs/ADOPTION_PACKET.md](docs/ADOPTION_PACKET.md) and [docs/LAUNCH_KIT.md](docs/LAUNCH_KIT.md): generated public launch copy, distribution checklist, demo assets, and feedback intake.
-- [docs/COMMUNITY_FEEDBACK.md](docs/COMMUNITY_FEEDBACK.md), [docs/PRODUCT_DEPTH_BACKLOG.md](docs/PRODUCT_DEPTH_BACKLOG.md), [docs/PRODUCT_DEPTH_GATE.md](docs/PRODUCT_DEPTH_GATE.md), [docs/PRODUCT_DEPTH_SELECTION.md](docs/PRODUCT_DEPTH_SELECTION.md), [docs/POLICY_ASSISTANT_PLAN.md](docs/POLICY_ASSISTANT_PLAN.md), [docs/POLICY_ASSISTANT_MVP_CONTRACT.md](docs/POLICY_ASSISTANT_MVP_CONTRACT.md), [docs/PRODUCT_ITERATION_GOVERNOR.md](docs/PRODUCT_ITERATION_GOVERNOR.md), [docs/GOVERNED_100_ITERATION_REPORT.md](docs/GOVERNED_100_ITERATION_REPORT.md), [docs/HOST_ONBOARDING_DEPTH_PLAN.md](docs/HOST_ONBOARDING_DEPTH_PLAN.md), [docs/REVIEW_AGENT_V3_PLAN.md](docs/REVIEW_AGENT_V3_PLAN.md), and [docs/DATASET_QUALITY_DEPTH_PLAN.md](docs/DATASET_QUALITY_DEPTH_PLAN.md): privacy-safe intake, post-P0 product-depth candidates, product-depth gate, selected first P1 candidate, policy assistant planning, iteration governance, host-onboarding depth plan, review-agent planning, and dataset-quality planning.
-- [docs/NETWORK_GROWTH.md](docs/NETWORK_GROWTH.md), [docs/NETWORK_GROWTH_TRACKER.md](docs/NETWORK_GROWTH_TRACKER.md), [docs/PUBLIC_ADOPTION_LOOP.md](docs/PUBLIC_ADOPTION_LOOP.md), and [docs/ADOPTION_TRIAGE_REPORT.md](docs/ADOPTION_TRIAGE_REPORT.md): directory status, registry follow-up, and adoption loop.
-- [docs/UPSTREAM_PR_PACKET.md](docs/UPSTREAM_PR_PACKET.md): upstream source for [AlbumentationsX#289](https://github.com/albumentations-team/AlbumentationsX/pull/289).
-- [examples/distortion_review_workflow.md](examples/distortion_review_workflow.md): rejected noisy preview review loop.
-- [docs/DEMO.md](docs/DEMO.md): generated preview comparison demo.
-- [docs/HOST_ACCEPTANCE.md](docs/HOST_ACCEPTANCE.md), [docs/HOST_MATRIX.md](docs/HOST_MATRIX.md), [docs/HOST_UX_PACKETS.md](docs/HOST_UX_PACKETS.md), and [docs/HOST_ACCEPTANCE_EVIDENCE.md](docs/HOST_ACCEPTANCE_EVIDENCE.md): MCP host acceptance status.
-- [docs/V1_READINESS.md](docs/V1_READINESS.md): v1 compatibility and release audit.
-- [docs/V1_LAUNCH_REPORT.md](docs/V1_LAUNCH_REPORT.md), [docs/V1_DECISION_REPORT.md](docs/V1_DECISION_REPORT.md), [docs/V1_EVIDENCE_OPERATOR_PACKET.md](docs/V1_EVIDENCE_OPERATOR_PACKET.md), [docs/V1_GROWTH_CUTOVER_REPORT.md](docs/V1_GROWTH_CUTOVER_REPORT.md), [docs/V1_STABILIZATION_PLAN.md](docs/V1_STABILIZATION_PLAN.md), [docs/V1_RC_READINESS.md](docs/V1_RC_READINESS.md), [docs/V1_RC_RELEASE_PACKET.md](docs/V1_RC_RELEASE_PACKET.md), [docs/V1_RC_CUTOVER_CHECKLIST.md](docs/V1_RC_CUTOVER_CHECKLIST.md), [docs/V1_RC_AUTOMATION_PACK.md](docs/V1_RC_AUTOMATION_PACK.md), [docs/V1_RC_REHEARSAL_PLAN.md](docs/V1_RC_REHEARSAL_PLAN.md), [docs/V1_RC_CUTOVER_GATE.md](docs/V1_RC_CUTOVER_GATE.md), [docs/RC_CUTOVER_RECOVERY_PLAN.md](docs/RC_CUTOVER_RECOVERY_PLAN.md), [docs/RC_DRY_RUN.md](docs/RC_DRY_RUN.md), [docs/RC_EVIDENCE_REOPEN_FLOW.md](docs/RC_EVIDENCE_REOPEN_FLOW.md), [docs/RC_GATE_REOPEN_PACKET.md](docs/RC_GATE_REOPEN_PACKET.md), [docs/RC_RELEASE_DECISION_REPORT.md](docs/RC_RELEASE_DECISION_REPORT.md), [docs/EVIDENCE_FIRST_CYCLE_REPORT.md](docs/EVIDENCE_FIRST_CYCLE_REPORT.md), and [docs/P0_EVIDENCE_STATUS.md](docs/P0_EVIDENCE_STATUS.md): current v1 blockers, go/no-go decision, evidence packet, growth cutover, stabilization, RC gates, rehearsal, recovery, dry run, and P0 evidence status.
-- [docs/RELEASE.md](docs/RELEASE.md), [docs/DISTRIBUTION_READINESS_PACK.md](docs/DISTRIBUTION_READINESS_PACK.md), and [docs/DISTRIBUTION_ROLLOUT_PACKET.md](docs/DISTRIBUTION_ROLLOUT_PACKET.md): PyPI, GitHub Release, MCP Registry, distribution readiness, and public rollout process.
-- [CHANGELOG.md](CHANGELOG.md): release history.
+- [Install and host configuration](docs/INSTALL.md)
+- [First 10 minutes](docs/FIRST_10_MINUTES.md)
+- [Usage](docs/USAGE.md) and [recipes](docs/RECIPES.md)
+- [MCP Apps review](docs/MCP_APPS_REVIEW.md) and [compatibility policy](docs/COMPATIBILITY.md)
+- [Documentation index](docs/INDEX.md)
+- [CHANGELOG.md](CHANGELOG.md)
 - [server.json](server.json): public MCP Registry metadata.
-- [evals/golden_mcp_scenarios.yaml](evals/golden_mcp_scenarios.yaml): executable MCP scenarios. Operational scripts live in [scripts](scripts/).
 
-## Verification
+## Development
 
-Core gate: `uv run pytest`, `uv run ruff check .`, `uv run ruff format --check .`, `uv run ty check`,
-`uv run python scripts/check_release_readiness.py`, and `uv build`. Release-specific gates are in [docs/RELEASE.md](docs/RELEASE.md); tracked guards include `scripts/check_host_acceptance_report.py`, `scripts/check_contract_snapshots.py`, and `scripts/check_directory_presence.py`.
+```bash
+uv sync --all-extras --dev
+uv run pytest
+uv run ruff check .
+uv run ruff format --check .
+uv run ty check
+```
+
+Licensed under [AGPL-3.0-or-later](LICENSE).

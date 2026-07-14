@@ -52,9 +52,7 @@ def test_committed_host_ux_hardening_loop_is_current() -> None:
     assert loop_path.read_text(encoding="utf-8") == render_host_ux_hardening_loop_markdown(
         build_host_ux_hardening_loop()
     )
-    assert "[docs/HOST_UX_HARDENING_LOOP.md](docs/HOST_UX_HARDENING_LOOP.md)" in Path("README.md").read_text(
-        encoding="utf-8"
-    )
+    assert "[HOST_UX_HARDENING_LOOP.md](HOST_UX_HARDENING_LOOP.md)" in Path("docs/INDEX.md").read_text(encoding="utf-8")
 
 
 def test_host_ux_hardening_loop_cli_writes_markdown(tmp_path: Path) -> None:

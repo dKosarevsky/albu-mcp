@@ -35,9 +35,7 @@ def test_committed_network_growth_tracker_is_current() -> None:
     assert tracker_path.read_text(encoding="utf-8") == render_network_growth_tracker_markdown(
         build_network_growth_tracker()
     )
-    assert "[docs/NETWORK_GROWTH_TRACKER.md](docs/NETWORK_GROWTH_TRACKER.md)" in Path("README.md").read_text(
-        encoding="utf-8"
-    )
+    assert "[NETWORK_GROWTH_TRACKER.md](NETWORK_GROWTH_TRACKER.md)" in Path("docs/INDEX.md").read_text(encoding="utf-8")
     assert "docs/NETWORK_GROWTH_TRACKER.md" in Path("docs/NETWORK_GROWTH.md").read_text(encoding="utf-8")
 
 

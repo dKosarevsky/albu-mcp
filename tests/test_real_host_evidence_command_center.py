@@ -40,8 +40,8 @@ def test_committed_real_host_evidence_command_center_is_current() -> None:
     assert doc_path.read_text(encoding="utf-8") == render_real_host_evidence_command_center_markdown(
         build_real_host_evidence_command_center()
     )
-    assert "[docs/REAL_HOST_EVIDENCE_COMMAND_CENTER.md](docs/REAL_HOST_EVIDENCE_COMMAND_CENTER.md)" in Path(
-        "README.md"
+    assert "[REAL_HOST_EVIDENCE_COMMAND_CENTER.md](REAL_HOST_EVIDENCE_COMMAND_CENTER.md)" in Path(
+        "docs/INDEX.md"
     ).read_text(encoding="utf-8")
 
 

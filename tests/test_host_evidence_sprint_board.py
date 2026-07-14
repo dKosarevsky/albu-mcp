@@ -52,7 +52,7 @@ def test_committed_host_evidence_sprint_board_is_current() -> None:
     assert board_path.read_text(encoding="utf-8") == render_host_evidence_sprint_board_markdown(
         build_host_evidence_sprint_board()
     )
-    assert "[docs/HOST_EVIDENCE_SPRINT_BOARD.md](docs/HOST_EVIDENCE_SPRINT_BOARD.md)" in Path("README.md").read_text(
+    assert "[HOST_EVIDENCE_SPRINT_BOARD.md](HOST_EVIDENCE_SPRINT_BOARD.md)" in Path("docs/INDEX.md").read_text(
         encoding="utf-8"
     )
     assert "docs/HOST_EVIDENCE_SPRINT_BOARD.md" in Path("docs/HOST_PROOF_SPRINT.md").read_text(encoding="utf-8")

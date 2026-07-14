@@ -15,6 +15,17 @@ def test_readme_first_sentence_links_to_albumentationsx_repo() -> None:
     )
 
 
+def test_readme_is_a_concise_product_install_funnel() -> None:
+    readme = Path("README.md").read_text(encoding="utf-8")
+
+    assert len(readme.splitlines()) <= 100
+    assert "docs/assets/demo/comparison_contact_sheet.png" in readme
+    assert "releases/latest/download/albumentationsx-mcp.mcpb" in readme
+    assert "[Documentation index](docs/INDEX.md)" in readme
+    assert "https://albumentations.ai/docs/integrations/mcp/" in readme
+    assert "## Operator CLI" not in readme
+
+
 def test_ci_workflow_runs_core_quality_gates() -> None:
     workflow_path = Path(".github/workflows/ci.yml")
     workflow = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
@@ -139,10 +150,9 @@ def test_mcp_apps_review_guide_documents_progressive_enhancement() -> None:
     guide = Path("docs/MCP_APPS_REVIEW.md").read_text(encoding="utf-8")
     changelog = Path("CHANGELOG.md").read_text(encoding="utf-8").split("## 1.18.0", 1)[1].split("## 1.17.1", 1)[0]
 
-    for content in [readme, install, usage]:
-        assert "[docs/MCP_APPS_REVIEW.md](docs/MCP_APPS_REVIEW.md)" in content or (
-            "[MCP_APPS_REVIEW.md](MCP_APPS_REVIEW.md)" in content
-        )
+    assert "docs/MCP_APPS_REVIEW.md" in readme
+    for content in [install, usage]:
+        assert "[MCP_APPS_REVIEW.md](MCP_APPS_REVIEW.md)" in content
     for term in [
         "ui://albumentationsx/preview-review.html",
         "artifact://{run_id}/{filename}",
@@ -181,10 +191,10 @@ def test_mcp_apps_basic_host_proof_is_linked_and_honest() -> None:
 
 
 def test_adoption_packet_is_linked_and_actionable() -> None:
-    readme = Path("README.md").read_text(encoding="utf-8")
+    docs_index = Path("docs/INDEX.md").read_text(encoding="utf-8")
     adoption = Path("docs/ADOPTION.md").read_text(encoding="utf-8")
 
-    assert "[docs/ADOPTION.md](docs/ADOPTION.md)" in readme
+    assert "[ADOPTION.md](ADOPTION.md)" in docs_index
     for term in [
         "2-minute trial",
         "uvx --from albumentationsx-mcp albumentationsx-mcp",
@@ -240,7 +250,7 @@ def test_install_guide_covers_host_setup_and_examples() -> None:
         "Troubleshooting",
     ]
 
-    assert "[docs/INSTALL.md](docs/INSTALL.md)" in readme
+    assert "docs/INSTALL.md" in readme
     assert "[INSTALL.md](INSTALL.md)" in usage
     for term in required_terms:
         assert term in install
@@ -289,17 +299,17 @@ def test_docs_link_client_smoke_playbook_resource() -> None:
 
 
 def test_host_acceptance_checklist_covers_registry_and_hosts() -> None:
-    readme = Path("README.md").read_text(encoding="utf-8")
+    docs_index = Path("docs/INDEX.md").read_text(encoding="utf-8")
     checklist = Path("docs/HOST_ACCEPTANCE.md").read_text(encoding="utf-8")
     matrix = Path("docs/HOST_MATRIX.md").read_text(encoding="utf-8")
     evidence = Path("docs/HOST_ACCEPTANCE_EVIDENCE.md").read_text(encoding="utf-8")
     manual_runs = Path("docs/HOST_MANUAL_RUNS.json").read_text(encoding="utf-8")
     manual_runs_schema = json.loads(Path("docs/HOST_MANUAL_RUNS.schema.json").read_text(encoding="utf-8"))
 
-    assert "[docs/HOST_ACCEPTANCE.md](docs/HOST_ACCEPTANCE.md)" in readme
-    assert "[docs/HOST_MATRIX.md](docs/HOST_MATRIX.md)" in readme
-    assert "[docs/HOST_ACCEPTANCE_EVIDENCE.md](docs/HOST_ACCEPTANCE_EVIDENCE.md)" in readme
-    assert "Operational scripts live in [scripts](scripts/)" in readme
+    assert "[HOST_ACCEPTANCE.md](HOST_ACCEPTANCE.md)" in docs_index
+    assert "[HOST_MATRIX.md](HOST_MATRIX.md)" in docs_index
+    assert "[HOST_ACCEPTANCE_EVIDENCE.md](HOST_ACCEPTANCE_EVIDENCE.md)" in docs_index
+    assert "Operational scripts live in [scripts](../scripts/)" in docs_index
     host_scripts = [
         "export_host_acceptance_report.py",
         "export_manual_host_acceptance_packet.py",
@@ -346,34 +356,34 @@ def test_host_acceptance_checklist_covers_registry_and_hosts() -> None:
 
 
 def test_strict_manual_host_acceptance_gate_is_documented() -> None:
-    readme = Path("README.md").read_text(encoding="utf-8")
+    docs_index = Path("docs/INDEX.md").read_text(encoding="utf-8")
     checklist = Path("docs/HOST_ACCEPTANCE.md").read_text(encoding="utf-8")
     release_docs = Path("docs/RELEASE.md").read_text(encoding="utf-8")
 
-    assert "Operational scripts live in [scripts](scripts/)" in readme
+    assert "Operational scripts live in [scripts](../scripts/)" in docs_index
     for content in [checklist, release_docs]:
         assert "check_manual_host_acceptance.py" in content
     assert "fails while any required host is missing" in checklist
 
 
 def test_host_acceptance_freshness_guard_is_documented() -> None:
-    readme = Path("README.md").read_text(encoding="utf-8")
+    docs_index = Path("docs/INDEX.md").read_text(encoding="utf-8")
     checklist = Path("docs/HOST_ACCEPTANCE.md").read_text(encoding="utf-8")
     matrix = Path("docs/HOST_MATRIX.md").read_text(encoding="utf-8")
     release_docs = Path("docs/RELEASE.md").read_text(encoding="utf-8")
 
-    for content in [readme, checklist, matrix, release_docs]:
+    for content in [docs_index, checklist, matrix, release_docs]:
         assert "check_host_acceptance_report.py" in content
     for content in [checklist, matrix, release_docs]:
         assert "generated evidence freshness guard" in content
 
 
 def test_contract_snapshot_freshness_guard_is_documented() -> None:
-    readme = Path("README.md").read_text(encoding="utf-8")
+    docs_index = Path("docs/INDEX.md").read_text(encoding="utf-8")
     compatibility = Path("docs/COMPATIBILITY.md").read_text(encoding="utf-8")
     release_docs = Path("docs/RELEASE.md").read_text(encoding="utf-8")
 
-    for content in [readme, compatibility, release_docs]:
+    for content in [docs_index, compatibility, release_docs]:
         assert "check_contract_snapshots.py" in content
     for content in [compatibility, release_docs]:
         assert "classify_contract_drift.py" in content
@@ -382,11 +392,11 @@ def test_contract_snapshot_freshness_guard_is_documented() -> None:
 
 
 def test_release_readiness_guard_is_documented() -> None:
-    readme = Path("README.md").read_text(encoding="utf-8")
+    docs_index = Path("docs/INDEX.md").read_text(encoding="utf-8")
     release_docs = Path("docs/RELEASE.md").read_text(encoding="utf-8")
     audit = Path("docs/V1_READINESS.md").read_text(encoding="utf-8")
 
-    for content in [readme, release_docs, audit]:
+    for content in [docs_index, release_docs, audit]:
         assert "check_release_readiness.py" in content
     assert "release readiness guard" in release_docs
     assert "--format json" in release_docs
@@ -411,7 +421,7 @@ def test_docs_link_diagnostics_playbook_resource() -> None:
 
 def test_v1_readiness_audit_is_present_and_complete() -> None:
     audit = Path("docs/V1_READINESS.md").read_text(encoding="utf-8")
-    readme = Path("README.md").read_text(encoding="utf-8")
+    docs_index = Path("docs/INDEX.md").read_text(encoding="utf-8")
 
     required_terms = [
         "Public Contract Freeze",
@@ -427,7 +437,7 @@ def test_v1_readiness_audit_is_present_and_complete() -> None:
 
     for term in required_terms:
         assert term in audit
-    assert "[docs/V1_READINESS.md](docs/V1_READINESS.md)" in readme
+    assert "[V1_READINESS.md](V1_READINESS.md)" in docs_index
 
 
 def test_release_docs_and_package_metadata_are_v1_ready() -> None:
@@ -601,7 +611,7 @@ def test_public_package_metadata_is_polished() -> None:
 
 def test_upstream_pr_packet_is_available() -> None:
     packet_path = Path("docs/UPSTREAM_PR_PACKET.md")
-    readme = Path("README.md").read_text(encoding="utf-8")
+    docs_index = Path("docs/INDEX.md").read_text(encoding="utf-8")
     network_growth = Path("docs/NETWORK_GROWTH.md").read_text(encoding="utf-8")
 
     assert packet_path.exists()
@@ -612,7 +622,7 @@ def test_upstream_pr_packet_is_available() -> None:
     assert "Community integration" in packet
     assert "segmentation mask onboarding" in packet
     assert "not an official AlbumentationsX project" in packet
-    assert "docs/UPSTREAM_PR_PACKET.md" in readme
+    assert "[UPSTREAM_PR_PACKET.md](UPSTREAM_PR_PACKET.md)" in docs_index
     assert "docs/UPSTREAM_PR_PACKET.md" in network_growth
 
 
@@ -644,20 +654,21 @@ def test_public_docs_describe_current_preview_workflow() -> None:
     assert "segmentation masks" in server_json["description"]
 
 
-def test_readme_operator_cli_section_stays_concise() -> None:
+def test_readme_moves_operator_cli_to_usage_docs() -> None:
     readme = Path("README.md").read_text(encoding="utf-8")
     usage = Path("docs/USAGE.md").read_text(encoding="utf-8")
-    operator_section = readme.split("## Operator CLI", 1)[1].split("## Host Workflow", 1)[0]
 
-    assert len(operator_section.splitlines()) <= 18
-    assert operator_section.count("albu-mcp ") <= 8
-    assert "[docs/USAGE.md](docs/USAGE.md)" in operator_section
+    assert "## Operator CLI" not in readme
+    assert "[Usage](docs/USAGE.md)" in readme
     assert "[CHANGELOG.md](CHANGELOG.md)" in readme
-    assert "albu-mcp host setup-probe" in operator_section
-    assert "albu-mcp preview first-pack" in operator_section
-    assert "albu-mcp evidence collect" in operator_section
-    assert "albu-mcp beta loop-pack" in operator_section
-    assert "albu-mcp evidence import-artifacts" in usage
+    for command in [
+        "albu-mcp host setup-probe",
+        "albu-mcp preview first-pack",
+        "albu-mcp evidence collect",
+        "albu-mcp beta loop-pack",
+        "albu-mcp evidence import-artifacts",
+    ]:
+        assert command in usage
 
 
 def test_codex_plugin_bundle_has_concise_public_setup_guidance() -> None:

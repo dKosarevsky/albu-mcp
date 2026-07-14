@@ -41,7 +41,7 @@ def test_committed_p0_evidence_status_is_current() -> None:
     status_path = Path("docs/P0_EVIDENCE_STATUS.md")
 
     assert status_path.read_text(encoding="utf-8") == render_p0_evidence_status_markdown(build_p0_evidence_status())
-    assert "[docs/P0_EVIDENCE_STATUS.md](docs/P0_EVIDENCE_STATUS.md)" in Path("README.md").read_text(encoding="utf-8")
+    assert "[P0_EVIDENCE_STATUS.md](P0_EVIDENCE_STATUS.md)" in Path("docs/INDEX.md").read_text(encoding="utf-8")
 
 
 def test_p0_evidence_status_cli_writes_markdown(tmp_path: Path) -> None:
