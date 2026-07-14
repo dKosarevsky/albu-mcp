@@ -60,7 +60,7 @@ def test_host_proof_sprint_cli_outputs_json() -> None:
 def test_host_proof_status_records_v116_machine_and_codex_host_proof() -> None:
     status = Path("docs/HOST_PROOF_STATUS.md").read_text(encoding="utf-8")
 
-    assert "v1.18.0" in status
+    assert "v1.19.0" in status
     assert "review_packet_flow: ok" in status
     assert "dataset_quality_inspection_flow: ok" in status
     assert "Codex Manual Host UI: passed on 2026-07-11" in status
@@ -68,7 +68,7 @@ def test_host_proof_status_records_v116_machine_and_codex_host_proof() -> None:
     assert "Claude Code Manual Host UI: blocked" in status
     assert 'scripts/check_first_10_minutes_replay.py --host Codex --host "Claude Code"' in status
     assert "client_smoke_resource_flow: ok" in status
-    assert "albumentationsx-mcp-1.18.0.mcpb" in status
+    assert "albumentationsx-mcp-1.19.0.mcpb" in status
     assert "albumentationsx-mcp.mcpb" in status
 
 

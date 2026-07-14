@@ -33,7 +33,7 @@ The Python package is published as
 Pin a version when debugging or reproducing a release:
 
 ```bash
-uvx --from albumentationsx-mcp==1.18.0 albumentationsx-mcp --help
+uvx --from albumentationsx-mcp==1.19.0 albumentationsx-mcp --help
 ```
 
 ## MCP Registry
@@ -272,7 +272,7 @@ uvx --from albumentationsx-mcp albumentationsx-mcp --help
 For a pinned release:
 
 ```bash
-uvx --from albumentationsx-mcp==1.18.0 albumentationsx-mcp --help
+uvx --from albumentationsx-mcp==1.19.0 albumentationsx-mcp --help
 ```
 
 For local development:

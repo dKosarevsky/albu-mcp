@@ -1,6 +1,6 @@
 # Host Proof Status
 
-Current release target: `v1.18.0`
+Current release target: `v1.19.0`
 
 This status separates machine-verifiable MCP proof from real host UI evidence. Do not mark manual host runs as passed
 until a reviewer completes the flow in the actual host UI.
@@ -9,9 +9,9 @@ until a reviewer completes the flow in the actual host UI.
 
 - Release workflow: tag-triggered through `.github/workflows/release.yml`
 - MCP Registry verification: automated after the published-package smoke check
-- PyPI package target: `albumentationsx-mcp==1.18.0`
-- MCP Registry target: `io.github.dKosarevsky/albu-mcp` version `1.18.0`
-- GitHub Release target: Python artifacts plus `albumentationsx-mcp-1.18.0.mcpb`, the byte-identical
+- PyPI package target: `albumentationsx-mcp==1.19.0`
+- MCP Registry target: `io.github.dKosarevsky/albu-mcp` version `1.19.0`
+- GitHub Release target: Python artifacts plus `albumentationsx-mcp-1.19.0.mcpb`, the byte-identical
   `albumentationsx-mcp.mcpb` alias, and `SHA256SUMS`
 - Host proof packet generated for Codex and Claude Code with
   `scripts/export_manual_host_acceptance_packet.py --host Codex --host "Claude Code"`.
@@ -19,7 +19,7 @@ until a reviewer completes the flow in the actual host UI.
 Verified commands:
 
 ```bash
-uv run python scripts/check_release_readiness.py --tag v1.18.0
+uv run python scripts/check_release_readiness.py --tag v1.19.0
 uv run python scripts/export_manual_host_acceptance_packet.py --host Codex --host "Claude Code"
 uv run python scripts/run_golden_evals.py --work-dir /private/tmp/albu-mcp-host-proof-golden
 ```
@@ -27,7 +27,7 @@ uv run python scripts/run_golden_evals.py --work-dir /private/tmp/albu-mcp-host-
 After publication, verify PyPI and Registry propagation with:
 
 ```bash
-uv run python scripts/check_published_package_smoke.py --version 1.18.0
+uv run python scripts/check_published_package_smoke.py --version 1.19.0
 uv run python scripts/check_mcp_registry_status.py --retries 6 --retry-delay 10 --timeout 30
 ```
 
@@ -53,7 +53,7 @@ interactive_tuning_session_flow: ok
 
 ## MCP Apps Machine Proof
 
-The `v1.18.0` interactive review surface passed the official `@modelcontextprotocol/ext-apps` `1.7.4`
+The `v1.19.0` interactive review surface passed the official `@modelcontextprotocol/ext-apps` `1.7.4`
 basic-host replay on 2026-07-13. The generated-fixture run covered verified artifact reads, image and overlay review,
 feedback persistence, accept decisions, fullscreen, desktop/mobile layout, and the non-MCP-Apps fallback contract.
 

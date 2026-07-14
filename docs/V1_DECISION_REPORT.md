@@ -1,7 +1,7 @@
 # V1 Decision Report
 
-Package: `albumentationsx-mcp==1.18.0`
-Server version: `1.18.0`
+Package: `albumentationsx-mcp==1.19.0`
+Server version: `1.19.0`
 Ready for v1: `false`
 Decision: `hold_v1`
 Release candidate allowed: `false`

@@ -1,6 +1,6 @@
 # V1 RC Cutover Checklist
 
-Package: `albumentationsx-mcp==1.18.0`
+Package: `albumentationsx-mcp==1.19.0`
 Required hosts: `Codex, Claude Code`
 RC decision: `hold_rc`
 Release candidate allowed: `false`

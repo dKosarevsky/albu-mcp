@@ -4,6 +4,18 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 ## Unreleased
 
+## 1.19.0 - 2026-07-14
+
+- Streamlined the README around install, first preview, and official AlbumentationsX documentation, with deeper
+  operator material moved to a curated documentation index.
+- Added a stable `albumentationsx-mcp.mcpb` release alias for the latest full release while keeping versioned MCPB
+  artifacts and preventing prereleases from becoming GitHub `latest`.
+- Added privacy-safe, release-aware aggregate PyPI and GitHub growth reporting with complete release pagination,
+  explicit rolling Traffic windows, and no runtime telemetry.
+- Added manual-only campaign cards for classification robustness, detection bbox safety, and segmentation mask safety,
+  each with a prompt, artifact, attributed destination, and success signal.
+- Added the MIT license and aligned public release, host-proof, Registry, plugin, and desktop-extension metadata.
+
 ## 1.18.0 - 2026-07-13
 
 - Added a self-contained MCP Apps review surface for `render_preview` and `render_preview_batch`, with image/overlay

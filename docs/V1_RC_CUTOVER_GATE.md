@@ -1,6 +1,6 @@
 # V1 RC Cutover Gate
 
-Package: `albumentationsx-mcp==1.18.0`
+Package: `albumentationsx-mcp==1.19.0`
 Release tag: `vX.Y.Z-rc.1`
 Required hosts: `Codex, Claude Code`
 Gate status: `blocked`

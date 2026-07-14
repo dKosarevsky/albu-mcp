@@ -1,6 +1,6 @@
 # Host Proof Sprint Checklist
 
-Package: `albumentationsx-mcp==1.18.0`
+Package: `albumentationsx-mcp==1.19.0`
 Ready for v1: `false`
 
 ## Current Blockers
