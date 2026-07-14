@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+from pathlib import Path
+
 import pytest
 from mcp.server.fastmcp import FastMCP
 
@@ -10,10 +13,53 @@ from albumentationsx_mcp.adapters.mcp.contracts import (
     combine_adapter_surfaces,
     validate_adapter_surfaces,
 )
+from albumentationsx_mcp.adapters.mcp.dataset import SURFACE as DATASET_SURFACE
+from albumentationsx_mcp.adapters.mcp.dataset import register_dataset_adapter
+from albumentationsx_mcp.adapters.mcp.diagnostics import SURFACE as DIAGNOSTICS_SURFACE
+from albumentationsx_mcp.adapters.mcp.diagnostics import register_diagnostics_adapter
 from albumentationsx_mcp.adapters.mcp.policy import SURFACE as POLICY_SURFACE
 from albumentationsx_mcp.adapters.mcp.policy import register_policy_adapter
+from albumentationsx_mcp.adapters.mcp.prompts import SURFACE as PROMPT_SURFACE
+from albumentationsx_mcp.adapters.mcp.prompts import register_prompt_adapter
 from albumentationsx_mcp.catalog import TransformCatalog
+from albumentationsx_mcp.diagnostics import DiagnosticsService, PublicSurface
 from albumentationsx_mcp.pipeline import PipelineService
+from albumentationsx_mcp.preview import ArtifactStore, PathPolicy, PreviewService
+
+
+@dataclass(frozen=True)
+class AdapterTestDependencies:
+    catalog: TransformCatalog
+    pipeline_service: PipelineService
+    path_policy: PathPolicy
+    preview_service: PreviewService
+    diagnostics_service: DiagnosticsService
+
+
+@pytest.fixture
+def adapter_dependencies(tmp_path: Path) -> AdapterTestDependencies:
+    catalog = TransformCatalog()
+    pipeline_service = PipelineService(catalog)
+    path_policy = PathPolicy([tmp_path])
+    artifact_root = tmp_path / "artifacts"
+    preview_service = PreviewService(
+        pipeline_service,
+        path_policy,
+        ArtifactStore(artifact_root),
+    )
+    diagnostics_service = DiagnosticsService(
+        allowed_roots=[tmp_path],
+        artifact_root=artifact_root,
+        max_preview_runs=100,
+        public_surface=PublicSurface(tools=[], prompts=[], workflow_resources=[]),
+    )
+    return AdapterTestDependencies(
+        catalog=catalog,
+        pipeline_service=pipeline_service,
+        path_policy=path_policy,
+        preview_service=preview_service,
+        diagnostics_service=diagnostics_service,
+    )
 
 
 def test_combine_adapter_surfaces_preserves_declared_order() -> None:
@@ -121,6 +167,43 @@ def test_policy_adapter_registers_its_exact_declared_surface() -> None:
     register_policy_adapter(mcp, catalog=catalog, pipeline_service=PipelineService(catalog))
 
     assert _registered_surface(mcp, adapter="policy") == POLICY_SURFACE
+
+
+def test_dataset_adapter_registers_its_exact_declared_surface(
+    adapter_dependencies: AdapterTestDependencies,
+) -> None:
+    mcp = FastMCP("dataset-test")
+
+    register_dataset_adapter(
+        mcp,
+        path_policy=adapter_dependencies.path_policy,
+        pipeline_service=adapter_dependencies.pipeline_service,
+        preview_service=adapter_dependencies.preview_service,
+    )
+
+    assert _registered_surface(mcp, adapter="dataset") == DATASET_SURFACE
+
+
+def test_diagnostics_adapter_registers_its_exact_declared_surface(
+    adapter_dependencies: AdapterTestDependencies,
+) -> None:
+    mcp = FastMCP("diagnostics-test")
+
+    register_diagnostics_adapter(
+        mcp,
+        diagnostics_service=adapter_dependencies.diagnostics_service,
+        pipeline_service=adapter_dependencies.pipeline_service,
+    )
+
+    assert _registered_surface(mcp, adapter="diagnostics") == DIAGNOSTICS_SURFACE
+
+
+def test_prompt_adapter_registers_its_exact_declared_surface() -> None:
+    mcp = FastMCP("prompts-test")
+
+    register_prompt_adapter(mcp)
+
+    assert _registered_surface(mcp, adapter="prompts") == PROMPT_SURFACE
 
 
 def _registered_surface(mcp: FastMCP, *, adapter: str) -> AdapterSurface:
