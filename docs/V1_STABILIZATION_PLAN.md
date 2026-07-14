@@ -1,5 +1,7 @@
 # V1 Stabilization Plan
 
+> **Historical status snapshot.** This document preserves a pre-release decision and does not describe the current published release. See [STATUS.md](STATUS.md).
+
 Package: `albumentationsx-mcp==1.19.0`
 Stabilization status: `blocked_until_trust_gates_pass`
 Ready for v1: `false`

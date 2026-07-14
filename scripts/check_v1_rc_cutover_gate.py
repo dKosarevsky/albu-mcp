@@ -13,6 +13,7 @@ if not __package__:
 
 from scripts.export_p0_host_evidence_ledger import build_p0_host_evidence_ledger
 from scripts.export_v1_rc_automation_pack import build_v1_rc_automation_pack
+from scripts.historical_status import add_historical_status_banner
 
 _DEFAULT_RECORDS_PATH = Path("docs/HOST_MANUAL_RUNS.json")
 _DEFAULT_RELEASE_TAG = "vX.Y.Z-rc.1"
@@ -111,7 +112,7 @@ def render_v1_rc_cutover_gate_markdown(gate: dict[str, Any]) -> str:
     lines.extend(["", "## Source Docs", ""])
     lines.extend(f"- `{source}`" for source in gate["source_docs"])
     lines.extend(["", "## Next Action", "", gate["next_action"]])
-    return "\n".join(lines) + "\n"
+    return add_historical_status_banner("\n".join(lines) + "\n")
 
 
 def main() -> None:

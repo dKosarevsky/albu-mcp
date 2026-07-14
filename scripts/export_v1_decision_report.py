@@ -12,6 +12,7 @@ if not __package__:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from scripts.export_v1_launch_report import build_v1_launch_report
+from scripts.historical_status import add_historical_status_banner
 
 
 def build_v1_decision_report() -> dict[str, Any]:
@@ -73,7 +74,7 @@ def render_v1_decision_report_markdown(report: dict[str, Any]) -> str:
     lines.extend(f"- {item}" for item in report["non_goals"])
     lines.extend(["", "## Next Decision Checks", ""])
     lines.extend(f"- `{command}`" for command in report["next_decision_checks"])
-    return "\n".join(lines) + "\n"
+    return add_historical_status_banner("\n".join(lines) + "\n")
 
 
 def main() -> None:

@@ -12,6 +12,7 @@ if not __package__:
 
 from scripts.check_v1_rc_cutover_gate import build_v1_rc_cutover_gate
 from scripts.export_beta_validation_status import build_beta_validation_status
+from scripts.historical_status import add_historical_status_banner
 
 _RELEASE_TAG = "v1.15.0-rc.1"
 
@@ -79,7 +80,7 @@ def render_rc_release_decision_report_markdown(report: dict[str, Any]) -> str:
         lines.append("- none")
     lines.extend(["", "## Source Docs", ""])
     lines.extend(f"- `{source}`" for source in report["source_docs"])
-    return "\n".join(lines) + "\n"
+    return add_historical_status_banner("\n".join(lines) + "\n")
 
 
 def main() -> None:

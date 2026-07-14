@@ -13,6 +13,7 @@ if not __package__:
 from scripts.check_v1_rc_cutover_gate import build_v1_rc_cutover_gate
 from scripts.export_distribution_rollout_packet import build_distribution_rollout_packet
 from scripts.export_v1_rc_rehearsal_plan import build_v1_rc_rehearsal_plan
+from scripts.historical_status import add_historical_status_banner
 
 
 def build_rc_cutover_recovery_plan() -> dict[str, Any]:
@@ -100,7 +101,7 @@ def render_rc_cutover_recovery_plan_markdown(plan: dict[str, Any]) -> str:
     lines.extend(f"- {criterion}" for criterion in plan["reopen_criteria"])
     lines.extend(["", "## Source Docs", ""])
     lines.extend(f"- `{source}`" for source in plan["source_docs"])
-    return "\n".join(lines) + "\n"
+    return add_historical_status_banner("\n".join(lines) + "\n")
 
 
 def main() -> None:

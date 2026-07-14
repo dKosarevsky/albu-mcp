@@ -12,6 +12,7 @@ if not __package__:
 
 from scripts.check_v1_rc_cutover_gate import build_v1_rc_cutover_gate
 from scripts.export_v1_rc_automation_pack import build_v1_rc_automation_pack
+from scripts.historical_status import add_historical_status_banner
 
 
 def build_v1_rc_rehearsal_plan() -> dict[str, Any]:
@@ -81,7 +82,7 @@ def render_v1_rc_rehearsal_plan_markdown(plan: dict[str, Any]) -> str:
     lines.extend(f"- {condition}" for condition in plan["stop_conditions"])
     lines.extend(["", "## Source Docs", ""])
     lines.extend(f"- `{source}`" for source in plan["source_docs"])
-    return "\n".join(lines) + "\n"
+    return add_historical_status_banner("\n".join(lines) + "\n")
 
 
 def main() -> None:

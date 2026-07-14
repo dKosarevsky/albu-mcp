@@ -1,5 +1,7 @@
 # V1 RC Rehearsal Plan
 
+> **Historical status snapshot.** This document preserves a pre-release decision and does not describe the current published release. See [STATUS.md](STATUS.md).
+
 Package: `albumentationsx-mcp==1.19.0`
 Release tag: `vX.Y.Z-rc.1`
 Rehearsal status: `preflight_only`

@@ -15,6 +15,7 @@ from scripts.export_beta_to_backlog_triage import build_beta_to_backlog_triage
 from scripts.export_beta_validation_recording_pack import build_beta_validation_recording_pack
 from scripts.export_p0_host_evidence_recovery import build_p0_host_evidence_recovery
 from scripts.export_rc_dry_run import build_rc_dry_run
+from scripts.historical_status import add_historical_status_banner
 
 
 def build_rc_gate_reopen_packet() -> dict[str, Any]:
@@ -112,7 +113,7 @@ def render_rc_gate_reopen_packet_markdown(packet: dict[str, Any]) -> str:
         lines.append("- none")
     lines.extend(["", "## Source Docs", ""])
     lines.extend(f"- `{source}`" for source in packet["source_docs"])
-    return "\n".join(lines) + "\n"
+    return add_historical_status_banner("\n".join(lines) + "\n")
 
 
 def main() -> None:

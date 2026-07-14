@@ -1,5 +1,7 @@
 # RC Release Decision Report
 
+> **Historical status snapshot.** This document preserves a pre-release decision and does not describe the current published release. See [STATUS.md](STATUS.md).
+
 Decision: `no_go`
 Release tag: `v1.15.0-rc.1`
 Cutover allowed: `false`
