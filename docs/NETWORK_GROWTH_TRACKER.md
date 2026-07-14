@@ -1,7 +1,10 @@
 # Network Growth Tracker
 
 Package: `albumentationsx-mcp==1.19.0`
-Ready for v1: `false`
+Release health: `published`
+Host evidence: `partial`
+Adoption experiment: `measuring`
+Details: `docs/STATUS.md`
 
 ## Channels
 
@@ -16,7 +19,7 @@ Ready for v1: `false`
 ## Proof Assets
 
 - `docs/HOST_PROOF_SPRINT_CHECKLIST.md`
-- `docs/V1_LAUNCH_REPORT.md`
+- `docs/STATUS.md`
 - `docs/HOST_ACCEPTANCE_EVIDENCE.md`
 
 ## Launch Assets

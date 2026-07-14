@@ -11,7 +11,7 @@ if not __package__:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from scripts.export_adoption_packet import build_adoption_packet
-from scripts.export_v1_launch_report import build_v1_launch_report
+from scripts.export_lifecycle_status import build_committed_lifecycle_status
 
 _UPSTREAM_MCP_GUIDE_URL = "https://albumentations.ai/docs/integrations/mcp/"
 
@@ -19,7 +19,7 @@ _UPSTREAM_MCP_GUIDE_URL = "https://albumentations.ai/docs/integrations/mcp/"
 def build_launch_kit() -> dict[str, Any]:
     """Build a deterministic launch kit from committed public metadata."""
     adoption = build_adoption_packet()
-    launch_report = build_v1_launch_report()
+    lifecycle = build_committed_lifecycle_status()
     return {
         "title": "AlbumentationsX MCP Launch Kit",
         "package": adoption["package"],
@@ -30,8 +30,7 @@ def build_launch_kit() -> dict[str, Any]:
         "upstream_pr_url": adoption["upstream_pr_url"],
         "install_command": adoption["install_command"],
         "preview_command": adoption["preview_command"],
-        "ready_for_v1": launch_report["ready_for_v1"],
-        "blockers": launch_report["blockers"],
+        "lifecycle": lifecycle,
         "demo_assets": [
             "docs/assets/demo/contact_sheet.png",
             "docs/assets/demo/comparison_contact_sheet.png",
@@ -40,7 +39,7 @@ def build_launch_kit() -> dict[str, Any]:
         "proof_docs": [
             "docs/HOST_PROOF_SPRINT.md",
             "docs/HOST_PROOF_SPRINT_CHECKLIST.md",
-            "docs/V1_LAUNCH_REPORT.md",
+            "docs/STATUS.md",
             "docs/HOST_ACCEPTANCE_EVIDENCE.md",
         ],
         "growth_docs": [
@@ -117,10 +116,12 @@ def render_launch_kit_markdown(kit: dict[str, Any]) -> str:
         "",
         *[f"1. `{tool}`" for tool in kit["workflow_tools"]],
         "",
-        "## Proof Status",
+        "## Lifecycle Status",
         "",
-        f"- Ready for v1: `{str(kit['ready_for_v1']).lower()}`",
-        *[f"- Blocker `{blocker['code']}`: {blocker['summary']}" for blocker in kit["blockers"]],
+        f"- Release health: `{kit['lifecycle']['release_health']['status']}`",
+        f"- Host evidence: `{kit['lifecycle']['host_evidence']['status']}`",
+        f"- Adoption experiment: `{kit['lifecycle']['adoption_experiment']['status']}`",
+        "- Details: `docs/STATUS.md`",
         "",
         "## Proof Docs",
         "",

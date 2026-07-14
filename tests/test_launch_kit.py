@@ -20,9 +20,17 @@ def test_launch_kit_contains_public_distribution_assets() -> None:
     assert "inspect_dataset_quality" in markdown
     assert "docs/HOST_PROOF_SPRINT.md" in markdown
     assert "docs/HOST_PROOF_SPRINT_CHECKLIST.md" in markdown
+    assert "docs/STATUS.md" in markdown
+    assert "docs/V1_LAUNCH_REPORT.md" not in kit["proof_docs"]
     assert "docs/NETWORK_GROWTH_TRACKER.md" in markdown
     assert "docs/PUBLIC_ADOPTION_LOOP.md" in markdown
     assert "dataset-health.yml" in markdown
+    assert kit["lifecycle"]["release_health"]["status"] == "published"
+    assert kit["lifecycle"]["host_evidence"]["status"] == "partial"
+    assert kit["lifecycle"]["adoption_experiment"]["status"] == "measuring"
+    assert "Ready for v1" not in markdown
+    assert "Release health: `published`" in markdown
+    assert "Adoption experiment: `measuring`" in markdown
 
 
 def test_launch_kit_contains_three_measurable_audience_campaigns() -> None:

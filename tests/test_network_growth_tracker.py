@@ -25,8 +25,16 @@ def test_network_growth_tracker_contains_channels_and_next_actions() -> None:
     assert "docs/LAUNCH_KIT.md" in markdown
     assert "docs/PUBLIC_ADOPTION_LOOP.md" in markdown
     assert "docs/HOST_PROOF_SPRINT_CHECKLIST.md" in markdown
+    assert "docs/STATUS.md" in markdown
+    assert "docs/V1_LAUNCH_REPORT.md" not in tracker["proof_assets"]
     assert "dataset-health.yml" in markdown
     assert "export_public_adoption_loop.py" in markdown
+    assert tracker["lifecycle"]["release_health"]["status"] == "published"
+    assert tracker["lifecycle"]["host_evidence"]["status"] == "partial"
+    assert tracker["lifecycle"]["adoption_experiment"]["status"] == "measuring"
+    assert "Ready for v1" not in markdown
+    assert "Release health: `published`" in markdown
+    assert "Adoption experiment: `measuring`" in markdown
 
 
 def test_committed_network_growth_tracker_is_current() -> None:

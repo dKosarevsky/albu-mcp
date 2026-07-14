@@ -11,17 +11,15 @@ if not __package__:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from scripts.export_launch_kit import build_launch_kit
-from scripts.export_v1_launch_report import build_v1_launch_report
 
 
 def build_network_growth_tracker() -> dict[str, Any]:
     """Build a deterministic tracker for public distribution work."""
     launch_kit = build_launch_kit()
-    launch_report = build_v1_launch_report()
     return {
         "package": launch_kit["package"],
         "version": launch_kit["version"],
-        "ready_for_v1": launch_report["ready_for_v1"],
+        "lifecycle": launch_kit["lifecycle"],
         "channels": [
             {
                 "id": "pypi",
@@ -61,7 +59,7 @@ def build_network_growth_tracker() -> dict[str, Any]:
         ],
         "proof_assets": [
             "docs/HOST_PROOF_SPRINT_CHECKLIST.md",
-            "docs/V1_LAUNCH_REPORT.md",
+            "docs/STATUS.md",
             "docs/HOST_ACCEPTANCE_EVIDENCE.md",
         ],
         "launch_assets": [
@@ -92,7 +90,10 @@ def render_network_growth_tracker_markdown(tracker: dict[str, Any]) -> str:
         "# Network Growth Tracker",
         "",
         f"Package: `{tracker['package']}=={tracker['version']}`",
-        f"Ready for v1: `{str(tracker['ready_for_v1']).lower()}`",
+        f"Release health: `{tracker['lifecycle']['release_health']['status']}`",
+        f"Host evidence: `{tracker['lifecycle']['host_evidence']['status']}`",
+        f"Adoption experiment: `{tracker['lifecycle']['adoption_experiment']['status']}`",
+        "Details: `docs/STATUS.md`",
         "",
         "## Channels",
         "",

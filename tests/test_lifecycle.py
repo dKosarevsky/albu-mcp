@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from albumentationsx_mcp.lifecycle import build_lifecycle_status, render_lifecycle_status_markdown
+from scripts.export_lifecycle_status import build_committed_lifecycle_status
 
 
 def _experiment() -> dict[str, object]:
@@ -56,3 +59,20 @@ def test_lifecycle_status_rejects_invalid_experiment(field: str, value: str, mes
             host_blockers=[],
             experiment=experiment,
         )
+
+
+def test_committed_lifecycle_status_describes_current_project_state() -> None:
+    report = build_committed_lifecycle_status()
+
+    assert report["release_health"]["status"] == "published"
+    assert report["release_health"]["version"] == "1.19.0"
+    assert report["host_evidence"]["status"] == "partial"
+    assert report["adoption_experiment"]["campaign_id"] == "classification-robustness"
+
+
+def test_committed_lifecycle_status_markdown_is_current() -> None:
+    status_path = Path("docs/STATUS.md")
+
+    assert status_path.read_text(encoding="utf-8") == render_lifecycle_status_markdown(
+        build_committed_lifecycle_status()
+    )
