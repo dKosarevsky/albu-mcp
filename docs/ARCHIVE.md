@@ -1,0 +1,38 @@
+# Historical Release Archive
+
+Historical status snapshots remain at their original paths as immutable evidence of pre-release decisions. They do
+not describe the current published release. See [STATUS.md](STATUS.md) for current release health, host evidence, and
+adoption measurement.
+
+## V1 Status And Decisions
+
+- [V1_READINESS.md](V1_READINESS.md)
+- [V1_LAUNCH_REPORT.md](V1_LAUNCH_REPORT.md)
+- [V1_DECISION_REPORT.md](V1_DECISION_REPORT.md)
+- [V1_STABILIZATION_PLAN.md](V1_STABILIZATION_PLAN.md)
+
+## V1 RC Snapshots
+
+- [V1_RC_READINESS.md](V1_RC_READINESS.md)
+- [V1_RC_RELEASE_PACKET.md](V1_RC_RELEASE_PACKET.md)
+- [V1_RC_CUTOVER_CHECKLIST.md](V1_RC_CUTOVER_CHECKLIST.md)
+- [V1_RC_AUTOMATION_PACK.md](V1_RC_AUTOMATION_PACK.md)
+- [V1_RC_REHEARSAL_PLAN.md](V1_RC_REHEARSAL_PLAN.md)
+- [V1_RC_CUTOVER_GATE.md](V1_RC_CUTOVER_GATE.md)
+
+## RC Recovery And Decisions
+
+- [RC_CUTOVER_RECOVERY_PLAN.md](RC_CUTOVER_RECOVERY_PLAN.md)
+- [RC_DRY_RUN.md](RC_DRY_RUN.md)
+- [RC_EVIDENCE_REOPEN_FLOW.md](RC_EVIDENCE_REOPEN_FLOW.md)
+- [RC_GATE_REOPEN_PACKET.md](RC_GATE_REOPEN_PACKET.md)
+- [RC_HOST_EVIDENCE_OPS.md](RC_HOST_EVIDENCE_OPS.md)
+- [RC_RELEASE_DECISION_REPORT.md](RC_RELEASE_DECISION_REPORT.md)
+
+## Supporting Release Records
+
+- [V1_EVIDENCE_OPERATOR_PACKET.md](V1_EVIDENCE_OPERATOR_PACKET.md)
+- [V1_GROWTH_CUTOVER_REPORT.md](V1_GROWTH_CUTOVER_REPORT.md)
+- [V1_RELEASE_TRAIN.md](V1_RELEASE_TRAIN.md)
+- [V1_TRUST_GATES.md](V1_TRUST_GATES.md)
+- [EVIDENCE_FIRST_CYCLE_REPORT.md](EVIDENCE_FIRST_CYCLE_REPORT.md)
