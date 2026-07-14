@@ -102,7 +102,8 @@ def render_launch_kit_markdown(kit: dict[str, Any]) -> str:
         *_render_campaigns(kit["campaigns"]),
         "## Measurement",
         "",
-        "Capture the aggregate baseline before publishing and compare it after seven days:",
+        "Capture the aggregate baseline before publishing and again after seven days. Compare the non-overlapping "
+        "PyPI weeks directly; treat GitHub's rolling 14-day Traffic window as directional context:",
         "",
         "```bash",
         'GH_TOKEN="$(gh auth token)" uv run python scripts/export_growth_report.py --output /tmp/albu-growth.md',

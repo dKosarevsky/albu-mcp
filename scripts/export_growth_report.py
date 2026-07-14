@@ -7,6 +7,7 @@ import json
 import os
 import sys
 from collections.abc import Mapping
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -22,6 +23,7 @@ _DEFAULT_PACKAGE = "albumentationsx-mcp"
 _DEFAULT_REPOSITORY = "dKosarevsky/albu-mcp"
 _REQUEST_TIMEOUT_SECONDS = 30
 _REPOSITORY_PART_COUNT = 2
+_GITHUB_PAGE_SIZE = 100
 _USER_AGENT = "albumentationsx-mcp-growth-report/1"
 
 
@@ -91,12 +93,10 @@ def _fetch_live_payload(*, package: str, repository: str) -> dict[str, Any]:
             f"https://api.github.com/repos/{repository_segment}",
             headers=github_headers,
         ),
-        "github_releases": _fetch_json(
-            f"https://api.github.com/repos/{repository_segment}/releases?per_page=100",
-            headers=github_headers,
-        ),
+        "github_releases": _fetch_github_releases(repository_segment, headers=github_headers),
         "source_errors": {},
     }
+    payload["collected_at"] = datetime.now(tz=timezone.utc).isoformat()
     if token is None:
         payload["github_views"] = None
         payload["github_referrers"] = None
@@ -124,6 +124,23 @@ def _fetch_json(url: str, *, headers: Mapping[str, str]) -> Any:
     request = Request(url, headers=request_headers)  # noqa: S310
     with urlopen(request, timeout=_REQUEST_TIMEOUT_SECONDS) as response:  # noqa: S310
         return json.loads(response.read().decode("utf-8"))
+
+
+def _fetch_github_releases(repository_segment: str, *, headers: Mapping[str, str]) -> list[Any]:
+    releases: list[Any] = []
+    page = 1
+    while True:
+        value = _fetch_json(
+            f"https://api.github.com/repos/{repository_segment}/releases?per_page={_GITHUB_PAGE_SIZE}&page={page}",
+            headers=headers,
+        )
+        if not isinstance(value, list):
+            msg = "GitHub releases response must be a list"
+            raise TypeError(msg)
+        releases.extend(value)
+        if len(value) < _GITHUB_PAGE_SIZE:
+            return releases
+        page += 1
 
 
 def _optional_fetch_json(url: str, *, headers: Mapping[str, str]) -> tuple[Any | None, str | None]:

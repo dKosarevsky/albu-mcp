@@ -48,7 +48,11 @@ requires a sanitized snapshot.
 - `week_over_week_percent` is undefined when the previous period is zero.
 - The default baseline uses 28 calendar days and excludes each release day plus the following two calendar days.
 - Missing dates make a weekly window incomplete; the report does not silently claim completeness.
-- GitHub views, unique visitors, and referrers are aggregate owner metrics.
+- The release-excluded median is unavailable unless every non-excluded date in its baseline is present.
+- GitHub views and unique visitors use GitHub's rolling 14-day Traffic window.
+- Referrer totals cover only GitHub's top 10 referrers over the same rolling 14-day window.
+- `collected_at` records when the API snapshot was assembled; it is distinct from the latest PyPI data date.
+- GitHub Releases are fetched page by page, so MCPB totals and release exclusions are not capped at 100 releases.
 - MCPB counts include every `.mcpb` asset, including stable and versioned filenames.
 
 The release-excluded median is the primary PyPI trend. Do not optimize raw downloads with extra releases, artificial
@@ -66,3 +70,7 @@ installs, mirrors, or unrelated dependencies.
 PyPI downloads remain a distribution proxy. A successful first preview, useful reviewer feedback, and repeat use are
 stronger product signals; collect them through explicit, voluntary host evidence or GitHub feedback, not hidden
 telemetry.
+
+Reports taken seven days apart have non-overlapping PyPI weekly windows but overlapping GitHub 14-day Traffic windows.
+Use GitHub movement directionally and do not claim campaign attribution without destination analytics or voluntary
+feedback that supports it.

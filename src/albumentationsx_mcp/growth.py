@@ -9,6 +9,7 @@ from statistics import median
 from typing import Any
 
 _MIN_BASELINE_DAYS = 14
+_GITHUB_TRAFFIC_WINDOW_DAYS = 14
 
 
 @dataclass(frozen=True)
@@ -16,8 +17,13 @@ class _ReleaseRecord:
     """Normalized release data used by demand and asset analysis."""
 
     tag: str
-    published_on: date
+    published_at: datetime
     mcpb_downloads: int
+
+    @property
+    def published_on(self) -> date:
+        """Calendar date used to exclude release-influenced demand."""
+        return self.published_at.date()
 
 
 def build_growth_report(
@@ -38,6 +44,14 @@ def build_growth_report(
     releases = _parse_releases(payload.get("github_releases"))
     as_of = max(downloads)
     warnings = _source_warnings(payload.get("source_errors"))
+    collected_at_value = payload.get("collected_at")
+    collected_at = (
+        _parse_iso_datetime(collected_at_value, field="collected_at").isoformat()
+        if collected_at_value is not None
+        else None
+    )
+    if collected_at is None:
+        warnings.append("collected_at is unavailable")
 
     current_dates = _date_window(as_of=as_of, days=7)
     previous_dates = _date_window(as_of=as_of - timedelta(days=7), days=7)
@@ -57,10 +71,20 @@ def build_growth_report(
     baseline_window = _date_window(as_of=as_of, days=baseline_days)
     excluded_dates = _release_window_dates(releases, days_after_release=release_exclusion_days)
     excluded_in_baseline = sorted(set(baseline_window) & excluded_dates)
-    baseline_values = [downloads[day] for day in baseline_window if day in downloads and day not in excluded_dates]
-    if not baseline_values:
+    eligible_baseline_dates = [day for day in baseline_window if day not in excluded_dates]
+    if not eligible_baseline_dates:
         msg = "no release-independent PyPI days remain in the baseline window"
         raise ValueError(msg)
+    baseline_values = [downloads[day] for day in eligible_baseline_dates if day in downloads]
+    baseline_complete = len(baseline_values) == len(eligible_baseline_dates)
+    release_excluded_median: float | None = None
+    if baseline_complete:
+        release_excluded_median = float(median(baseline_values))
+    else:
+        warnings.append(
+            "release_excluded_median_daily is unavailable because baseline contains "
+            f"{len(baseline_values)} of {len(eligible_baseline_dates)} eligible dates"
+        )
 
     github = _build_github_summary(
         views=payload.get("github_views"),
@@ -73,6 +97,7 @@ def build_growth_report(
     return {
         "schema_version": 1,
         "as_of": as_of.isoformat(),
+        "collected_at": collected_at,
         "privacy": {
             "runtime_telemetry": False,
             "reads_local_data": False,
@@ -87,8 +112,10 @@ def build_growth_report(
             "previous_7_days_complete": previous_complete,
             "baseline_window_days": baseline_days,
             "release_exclusion_days_after_release": release_exclusion_days,
-            "release_excluded_median_daily": float(median(baseline_values)),
+            "release_excluded_median_daily": release_excluded_median,
+            "baseline_complete": baseline_complete,
             "baseline_sample_days": len(baseline_values),
+            "baseline_eligible_days": len(eligible_baseline_dates),
             "excluded_release_dates": [day.isoformat() for day in excluded_in_baseline],
         },
         "github": github,
@@ -112,9 +139,13 @@ def render_growth_report_markdown(report: Mapping[str, Any]) -> str:
     warnings = report.get("warnings", [])
     warning_lines = "\n".join(f"- {warning}" for warning in warnings) if warnings else "- None"
     referrers = github.get("top_referrers")
-    if isinstance(referrers, list) and referrers:
-        referrer_lines = "\n".join(
-            f"- `{item['name']}`: {item['visits']} visits, {item['uniques']} unique visitors" for item in referrers
+    if isinstance(referrers, list):
+        referrer_lines = (
+            "\n".join(
+                f"- `{item['name']}`: {item['visits']} visits, {item['uniques']} unique visitors" for item in referrers
+            )
+            if referrers
+            else "- None reported"
         )
     else:
         referrer_lines = "- Unavailable"
@@ -125,6 +156,7 @@ def render_growth_report_markdown(report: Mapping[str, Any]) -> str:
     return (
         "# Aggregate Growth Report\n\n"
         f"As of: `{report['as_of']}`\n\n"
+        f"Collected at: `{report.get('collected_at') or 'unavailable'}`\n\n"
         f"Runtime telemetry: `{runtime_telemetry}`\n\n"
         "This report reads aggregate distribution metadata only. It does not inspect datasets, preview artifacts, "
         "host logs, or local paths.\n\n"
@@ -133,14 +165,16 @@ def render_growth_report_markdown(report: Mapping[str, Any]) -> str:
         f"- Last 7 days: `{pypi['last_7_days']}`\n"
         f"- Previous 7 days: `{pypi['previous_7_days']}`\n"
         f"- Week over week: `{week_over_week_text}`\n"
-        f"- Release-excluded median: `{pypi['release_excluded_median_daily']}` downloads/day "
+        f"- Release-excluded median: `{_optional_metric(pypi['release_excluded_median_daily'])}` downloads/day "
         f"from `{pypi['baseline_sample_days']}` sampled days\n\n"
         "## Qualified Reach\n\n"
-        f"- GitHub views: `{_optional_metric(github['views'])}`\n"
+        f"- GitHub views (rolling {github['traffic_window_days']} days): "
+        f"`{_optional_metric(github['views'])}`\n"
         f"- Unique visitors: `{_optional_metric(github['unique_visitors'])}`\n"
         f"- Stars: `{_optional_metric(github['stars'])}`\n"
-        f"- Referrer visits: `{_optional_metric(github['referrer_visits'])}`\n\n"
-        "### Top Referrers\n\n"
+        f"- Top-referrer visits (top 10, rolling {github['traffic_window_days']} days): "
+        f"`{_optional_metric(github['top_referrer_visits'])}`\n\n"
+        f"### Top Referrers (up to 10, rolling {github['traffic_window_days']} days)\n\n"
         f"{referrer_lines}\n\n"
         "## Installable Assets\n\n"
         f"- MCPB downloads across releases: `{release_assets['mcpb_downloads_total']}`\n"
@@ -188,7 +222,7 @@ def _parse_releases(value: Any) -> list[_ReleaseRecord]:
         published_at = item.get("published_at")
         if published_at is None:
             continue
-        published_on = _parse_iso_datetime(published_at, field=f"github release {index} published_at").date()
+        published_timestamp = _parse_iso_datetime(published_at, field=f"github release {index} published_at")
         tag = item.get("tag_name")
         if not isinstance(tag, str) or not tag:
             msg = f"github release {index} tag_name must be a non-empty string"
@@ -208,8 +242,8 @@ def _parse_releases(value: Any) -> list[_ReleaseRecord]:
                     asset.get("download_count"),
                     field=f"github release {index} asset {asset_index} download_count",
                 )
-        releases.append(_ReleaseRecord(tag=tag, published_on=published_on, mcpb_downloads=mcpb_downloads))
-    return sorted(releases, key=lambda release: (release.published_on, release.tag))
+        releases.append(_ReleaseRecord(tag=tag, published_at=published_timestamp, mcpb_downloads=mcpb_downloads))
+    return sorted(releases, key=lambda release: (release.published_at, release.tag))
 
 
 def _build_github_summary(*, views: Any, referrers: Any, repository: Any) -> dict[str, Any]:
@@ -223,8 +257,8 @@ def _build_github_summary(*, views: Any, referrers: Any, repository: Any) -> dic
         unique_visitors = _parse_count(views.get("uniques"), field="github_views uniques")
 
     top_referrers: list[dict[str, Any]] | None = None
-    referrer_visits: int | None = None
-    referrer_uniques: int | None = None
+    top_referrer_visits: int | None = None
+    top_referrer_count: int | None = None
     if referrers is not None:
         if not isinstance(referrers, list):
             msg = "github_referrers must be a list or null"
@@ -246,8 +280,8 @@ def _build_github_summary(*, views: Any, referrers: Any, repository: Any) -> dic
                 }
             )
         top_referrers.sort(key=lambda item: (-item["visits"], item["name"].lower()))
-        referrer_visits = sum(item["visits"] for item in top_referrers)
-        referrer_uniques = sum(item["uniques"] for item in top_referrers)
+        top_referrer_visits = sum(item["visits"] for item in top_referrers)
+        top_referrer_count = len(top_referrers)
 
     stars: int | None = None
     if repository is not None:
@@ -258,11 +292,12 @@ def _build_github_summary(*, views: Any, referrers: Any, repository: Any) -> dic
 
     return {
         "traffic_available": views is not None and referrers is not None,
+        "traffic_window_days": _GITHUB_TRAFFIC_WINDOW_DAYS,
         "views": view_count,
         "unique_visitors": unique_visitors,
         "stars": stars,
-        "referrer_visits": referrer_visits,
-        "referrer_uniques": referrer_uniques,
+        "top_referrer_visits": top_referrer_visits,
+        "top_referrer_count": top_referrer_count,
         "top_referrers": top_referrers,
     }
 
@@ -320,10 +355,14 @@ def _parse_iso_datetime(value: Any, *, field: str) -> datetime:
         msg = f"{field} must be a valid ISO datetime"
         raise TypeError(msg)
     try:
-        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError as exc:
         msg = f"{field} must be a valid ISO datetime"
         raise ValueError(msg) from exc
+    if parsed.tzinfo is None:
+        msg = f"{field} must include a timezone"
+        raise ValueError(msg)
+    return parsed
 
 
 def _parse_count(value: Any, *, field: str) -> int:

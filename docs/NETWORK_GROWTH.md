@@ -35,7 +35,9 @@ Run one campaign at a time:
 
 UTM parameters identify the prepared campaign in destination analytics where those analytics are available. GitHub
 Traffic can still aggregate or omit referrer detail, so a campaign must not claim attribution that the available data
-does not prove. Preparation may be automated; third-party publication and community interaction remain manual.
+does not prove. GitHub views and top-10 referrers use a rolling 14-day window, so reports captured seven days apart
+overlap; use those changes directionally. Preparation may be automated; third-party publication and community
+interaction remain manual.
 
 ## Current Directory Status
 
