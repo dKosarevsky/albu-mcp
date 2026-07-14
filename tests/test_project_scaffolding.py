@@ -581,6 +581,19 @@ def test_release_workflow_publishes_isolated_mcpb_artifact() -> None:
     assert "dist/python/* dist/mcpb/*" in release_commands
 
 
+def test_release_workflow_keeps_prereleases_out_of_latest() -> None:
+    workflow = yaml.safe_load(Path(".github/workflows/release.yml").read_text(encoding="utf-8"))
+    release_step = next(
+        step for step in workflow["jobs"]["github-release"]["steps"] if step.get("name") == "Create GitHub release"
+    )
+    command = release_step["run"]
+
+    assert '[[ "${GITHUB_REF_NAME}" == *-* ]]' in command
+    assert "--prerelease" in command
+    assert "--latest=false" in command
+    assert command.count("gh release create") == 1
+
+
 def test_release_docs_cover_mcpb_artifact_flow() -> None:
     release_docs = Path("docs/RELEASE.md").read_text(encoding="utf-8")
 
