@@ -190,7 +190,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          release_flags=()
+          release_flags=(--latest)
           if [[ "${GITHUB_REF_NAME}" == *-* ]]; then
             release_flags=(--prerelease --latest=false)
           fi

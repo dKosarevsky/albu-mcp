@@ -122,7 +122,9 @@ def test_v1_launch_report_cli_outputs_json_and_markdown(tmp_path: Path) -> None:
 
 def test_committed_v1_launch_report_is_current() -> None:
     report_path = Path("docs/V1_LAUNCH_REPORT.md")
+    readiness = Path("docs/V1_READINESS.md").read_text(encoding="utf-8")
 
     assert "[V1_LAUNCH_REPORT.md](V1_LAUNCH_REPORT.md)" in Path("docs/INDEX.md").read_text(encoding="utf-8")
-    assert "docs/V1_LAUNCH_REPORT.md" in Path("docs/V1_READINESS.md").read_text(encoding="utf-8")
+    assert "docs/V1_LAUNCH_REPORT.md" in readiness
+    assert "As of 2026-07-14, `v1.19.0`" in readiness
     assert report_path.read_text(encoding="utf-8") == render_v1_launch_report_markdown(build_v1_launch_report())

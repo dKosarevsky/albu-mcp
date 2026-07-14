@@ -53,7 +53,7 @@ interactive_tuning_session_flow: ok
 
 ## MCP Apps Machine Proof
 
-The `v1.19.0` interactive review surface passed the official `@modelcontextprotocol/ext-apps` `1.7.4`
+The `v1.18.0` interactive review surface passed the official `@modelcontextprotocol/ext-apps` `1.7.4`
 basic-host replay on 2026-07-13. The generated-fixture run covered verified artifact reads, image and overlay review,
 feedback persistence, accept decisions, fullscreen, desktop/mobile layout, and the non-MCP-Apps fallback contract.
 

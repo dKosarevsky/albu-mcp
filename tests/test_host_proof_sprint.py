@@ -70,6 +70,7 @@ def test_host_proof_status_records_v116_machine_and_codex_host_proof() -> None:
     assert "client_smoke_resource_flow: ok" in status
     assert "albumentationsx-mcp-1.19.0.mcpb" in status
     assert "albumentationsx-mcp.mcpb" in status
+    assert "The `v1.18.0` interactive review surface passed" in status
 
 
 def _valid_runbook_text() -> str:

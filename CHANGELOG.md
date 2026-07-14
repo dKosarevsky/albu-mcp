@@ -14,7 +14,8 @@ All notable public changes to AlbumentationsX MCP are tracked here.
   explicit rolling Traffic windows, and no runtime telemetry.
 - Added manual-only campaign cards for classification robustness, detection bbox safety, and segmentation mask safety,
   each with a prompt, artifact, attributed destination, and success signal.
-- Added the MIT license and aligned public release, host-proof, Registry, plugin, and desktop-extension metadata.
+- Added the canonical AGPL-3.0-or-later license text and aligned public release, host-proof, Registry, plugin, and
+  desktop-extension metadata.
 
 ## 1.18.0 - 2026-07-13
 
