@@ -1,6 +1,6 @@
 # V1 Trust Gates
 
-Package: `albumentationsx-mcp==1.18.0`
+Package: `albumentationsx-mcp==1.19.0`
 Ready for v1: `false`
 Manual evidence required: `true`
 

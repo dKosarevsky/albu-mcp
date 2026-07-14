@@ -18,7 +18,7 @@ _APP_HTML = b"""<!doctype html>
 
 
 def test_inspect_wheel_accepts_one_self_contained_mcp_app(tmp_path: Path) -> None:
-    wheel = tmp_path / "albumentationsx_mcp-1.18.0-py3-none-any.whl"
+    wheel = tmp_path / "albumentationsx_mcp-1.19.0-py3-none-any.whl"
     with zipfile.ZipFile(wheel, "w") as archive:
         archive.writestr("albumentationsx_mcp/ui/preview-review.html", _APP_HTML)
 
@@ -66,18 +66,18 @@ def test_inspect_wheel_rejects_incomplete_or_remote_apps(tmp_path: Path, html: b
 
 
 def test_inspect_sdist_requires_app_source_and_packaged_output(tmp_path: Path) -> None:
-    sdist = tmp_path / "albumentationsx_mcp-1.18.0.tar.gz"
+    sdist = tmp_path / "albumentationsx_mcp-1.19.0.tar.gz"
     with tarfile.open(sdist, "w:gz") as archive:
         files = {
-            "albumentationsx_mcp-1.18.0/src/albumentationsx_mcp/ui/preview-review.html": _APP_HTML,
-            "albumentationsx_mcp-1.18.0/mcp-app/package.json": b"{}",
-            "albumentationsx_mcp-1.18.0/mcp-app/package-lock.json": b"{}",
-            "albumentationsx_mcp-1.18.0/mcp-app/preview-review.html": b"<main></main>",
-            "albumentationsx_mcp-1.18.0/mcp-app/src/main.ts": b"export {};",
-            "albumentationsx_mcp-1.18.0/mcp-app/src/review-state.ts": b"export {};",
-            "albumentationsx_mcp-1.18.0/mcp-app/src/styles.css": b":root {}",
-            "albumentationsx_mcp-1.18.0/mcp-app/tsconfig.json": b"{}",
-            "albumentationsx_mcp-1.18.0/mcp-app/vite.config.ts": b"export {};",
+            "albumentationsx_mcp-1.19.0/src/albumentationsx_mcp/ui/preview-review.html": _APP_HTML,
+            "albumentationsx_mcp-1.19.0/mcp-app/package.json": b"{}",
+            "albumentationsx_mcp-1.19.0/mcp-app/package-lock.json": b"{}",
+            "albumentationsx_mcp-1.19.0/mcp-app/preview-review.html": b"<main></main>",
+            "albumentationsx_mcp-1.19.0/mcp-app/src/main.ts": b"export {};",
+            "albumentationsx_mcp-1.19.0/mcp-app/src/review-state.ts": b"export {};",
+            "albumentationsx_mcp-1.19.0/mcp-app/src/styles.css": b":root {}",
+            "albumentationsx_mcp-1.19.0/mcp-app/tsconfig.json": b"{}",
+            "albumentationsx_mcp-1.19.0/mcp-app/vite.config.ts": b"export {};",
         }
         for name, content in files.items():
             info = tarfile.TarInfo(name)
@@ -103,24 +103,24 @@ def test_inspect_sdist_rejects_missing_frontend_source(tmp_path: Path) -> None:
 
 
 def test_check_distributions_requires_identical_wheel_and_sdist_apps(tmp_path: Path) -> None:
-    wheel = tmp_path / "albumentationsx_mcp-1.18.0-py3-none-any.whl"
+    wheel = tmp_path / "albumentationsx_mcp-1.19.0-py3-none-any.whl"
     with zipfile.ZipFile(wheel, "w") as archive:
         archive.writestr("albumentationsx_mcp/ui/preview-review.html", _APP_HTML)
 
-    sdist = tmp_path / "albumentationsx_mcp-1.18.0.tar.gz"
+    sdist = tmp_path / "albumentationsx_mcp-1.19.0.tar.gz"
     with tarfile.open(sdist, "w:gz") as archive:
         files = {
-            "albumentationsx_mcp-1.18.0/src/albumentationsx_mcp/ui/preview-review.html": _APP_HTML.replace(
+            "albumentationsx_mcp-1.19.0/src/albumentationsx_mcp/ui/preview-review.html": _APP_HTML.replace(
                 b"true", b"false"
             ),
-            "albumentationsx_mcp-1.18.0/mcp-app/package.json": b"{}",
-            "albumentationsx_mcp-1.18.0/mcp-app/package-lock.json": b"{}",
-            "albumentationsx_mcp-1.18.0/mcp-app/preview-review.html": b"<main></main>",
-            "albumentationsx_mcp-1.18.0/mcp-app/src/main.ts": b"export {};",
-            "albumentationsx_mcp-1.18.0/mcp-app/src/review-state.ts": b"export {};",
-            "albumentationsx_mcp-1.18.0/mcp-app/src/styles.css": b":root {}",
-            "albumentationsx_mcp-1.18.0/mcp-app/tsconfig.json": b"{}",
-            "albumentationsx_mcp-1.18.0/mcp-app/vite.config.ts": b"export {};",
+            "albumentationsx_mcp-1.19.0/mcp-app/package.json": b"{}",
+            "albumentationsx_mcp-1.19.0/mcp-app/package-lock.json": b"{}",
+            "albumentationsx_mcp-1.19.0/mcp-app/preview-review.html": b"<main></main>",
+            "albumentationsx_mcp-1.19.0/mcp-app/src/main.ts": b"export {};",
+            "albumentationsx_mcp-1.19.0/mcp-app/src/review-state.ts": b"export {};",
+            "albumentationsx_mcp-1.19.0/mcp-app/src/styles.css": b":root {}",
+            "albumentationsx_mcp-1.19.0/mcp-app/tsconfig.json": b"{}",
+            "albumentationsx_mcp-1.19.0/mcp-app/vite.config.ts": b"export {};",
         }
         for name, content in files.items():
             info = tarfile.TarInfo(name)

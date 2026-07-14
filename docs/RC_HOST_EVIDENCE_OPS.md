@@ -1,6 +1,6 @@
 # RC Host Evidence Ops
 
-Package: `albumentationsx-mcp==1.18.0`
+Package: `albumentationsx-mcp==1.19.0`
 Records path: `docs/HOST_MANUAL_RUNS.json`
 Required hosts: `Codex, Claude Code`
 Ops status: `blocked_until_real_host_runs`

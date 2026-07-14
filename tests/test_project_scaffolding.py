@@ -213,8 +213,8 @@ def test_v1_readiness_tracks_current_product_gate() -> None:
     readiness = Path("docs/V1_READINESS.md").read_text(encoding="utf-8")
 
     for term in [
-        "v1.18.0",
-        "albumentationsx-mcp==1.18.0",
+        "v1.19.0",
+        "albumentationsx-mcp==1.19.0",
         "MCP Registry",
         "build_review_packet",
         "review_packet_flow",
@@ -588,6 +588,7 @@ def test_release_workflow_keeps_prereleases_out_of_latest() -> None:
     )
     command = release_step["run"]
 
+    assert "release_flags=(--latest)" in command
     assert '[[ "${GITHUB_REF_NAME}" == *-* ]]' in command
     assert "--prerelease" in command
     assert "--latest=false" in command
@@ -615,6 +616,9 @@ def test_public_package_metadata_is_polished() -> None:
     pyproject = Path("pyproject.toml").read_text(encoding="utf-8")
     readme = Path("README.md").read_text(encoding="utf-8")
     license_path = Path("LICENSE")
+    plugin = json.loads(Path(".codex-plugin/plugin.json").read_text(encoding="utf-8"))
+    desktop_manifest = json.loads(Path("desktop-extension/manifest.json").read_text(encoding="utf-8"))
+    package_metadata = tomli.loads(pyproject)
 
     assert "https://img.shields.io/pypi/v/albumentationsx-mcp" in readme
     assert "https://pypi.org/project/albumentationsx-mcp/" in readme
@@ -623,7 +627,13 @@ def test_public_package_metadata_is_polished() -> None:
     assert "[server.json](server.json): public MCP Registry metadata." in readme
     assert "[project.urls]" in pyproject
     assert license_path.exists()
-    assert license_path.read_text(encoding="utf-8").startswith("MIT License\n")
+    assert license_path.read_text(encoding="utf-8").lstrip().startswith("GNU AFFERO GENERAL PUBLIC LICENSE\n")
+    assert {
+        package_metadata["project"]["license"],
+        plugin["license"],
+        desktop_manifest["license"],
+    } == {"AGPL-3.0-or-later"}
+    assert "Licensed under [AGPL-3.0-or-later](LICENSE)." in readme
     assert '"Repository" = "https://github.com/dKosarevsky/albu-mcp"' in pyproject
     assert '"Documentation" = "https://github.com/dKosarevsky/albu-mcp/blob/main/docs/USAGE.md"' in pyproject
     assert (

@@ -11,8 +11,8 @@ from scripts.export_v1_launch_report import build_v1_launch_report, render_v1_la
 def test_v1_launch_report_tracks_manual_host_blockers() -> None:
     report = build_v1_launch_report()
 
-    assert report["package_version"] == "1.18.0"
-    assert report["server_version"] == "1.18.0"
+    assert report["package_version"] == "1.19.0"
+    assert report["server_version"] == "1.19.0"
     assert report["ready_for_v1"] is False
     assert {blocker["code"] for blocker in report["blockers"]} == {
         "manual_host_ui_pending",
@@ -83,7 +83,7 @@ def test_v1_launch_report_markdown_is_reviewable() -> None:
     markdown = render_v1_launch_report_markdown(build_v1_launch_report())
 
     assert markdown.startswith("# V1 Launch Report\n")
-    assert "Package version: `1.18.0`" in markdown
+    assert "Package version: `1.19.0`" in markdown
     assert "Ready for v1: `false`" in markdown
     assert "manual_host_ui_pending" in markdown
     assert "first_10_minutes_replay_pending" in markdown
@@ -122,7 +122,9 @@ def test_v1_launch_report_cli_outputs_json_and_markdown(tmp_path: Path) -> None:
 
 def test_committed_v1_launch_report_is_current() -> None:
     report_path = Path("docs/V1_LAUNCH_REPORT.md")
+    readiness = Path("docs/V1_READINESS.md").read_text(encoding="utf-8")
 
     assert "[V1_LAUNCH_REPORT.md](V1_LAUNCH_REPORT.md)" in Path("docs/INDEX.md").read_text(encoding="utf-8")
-    assert "docs/V1_LAUNCH_REPORT.md" in Path("docs/V1_READINESS.md").read_text(encoding="utf-8")
+    assert "docs/V1_LAUNCH_REPORT.md" in readiness
+    assert "As of 2026-07-14, `v1.19.0`" in readiness
     assert report_path.read_text(encoding="utf-8") == render_v1_launch_report_markdown(build_v1_launch_report())

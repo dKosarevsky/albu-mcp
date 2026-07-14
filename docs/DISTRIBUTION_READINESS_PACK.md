@@ -1,6 +1,6 @@
 # Distribution Readiness Pack
 
-Package: `albumentationsx-mcp==1.18.0`
+Package: `albumentationsx-mcp==1.19.0`
 Release tag: `vX.Y.Z-rc.1`
 Distribution status: `blocked_until_rc_cutover`
 RC cutover allowed: `false`

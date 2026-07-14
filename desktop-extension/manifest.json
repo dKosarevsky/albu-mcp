@@ -3,7 +3,7 @@
   "manifest_version": "0.4",
   "name": "albumentationsx-mcp",
   "display_name": "AlbumentationsX MCP",
-  "version": "1.18.0",
+  "version": "1.19.0",
   "description": "Preview and tune bounded local computer-vision augmentations with AlbumentationsX.",
   "long_description": "Use AlbumentationsX from Claude Desktop to inspect local images, generate reproducible augmentation previews, tune transforms from visual feedback, and export evidence. The extension reads only from the dataset directory you select and writes only to the artifact directory you select.",
   "author": {
