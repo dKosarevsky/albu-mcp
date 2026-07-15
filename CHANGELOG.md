@@ -4,6 +4,8 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 ## Unreleased
 
+- Extracted monolithic FastMCP registration into focused adapters with declared ownership, explicit dependencies, and
+  atomic ordered composition while preserving the canonical MCP and output contracts.
 - Separated current release health, optional host evidence, and adoption measurement into independent lifecycle
   dimensions used by the launch kit and network growth tracker.
 - Moved pre-release V1/RC status records behind a dedicated archive while preserving their paths, decisions, and

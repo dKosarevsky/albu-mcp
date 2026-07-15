@@ -22,7 +22,7 @@ surface model, and one ordered registration coordinator. Domain/application modu
 - Create: `src/albumentationsx_mcp/adapters/mcp/contracts.py`
 - Create: `tests/test_mcp_adapters.py`
 
-- [ ] **Step 1: Write failing pure manifest tests**
+- [x] **Step 1: Write failing pure manifest tests**
 
 Add tests for `AdapterSurface`, `combine_adapter_surfaces`, and `validate_adapter_surfaces` that assert:
 
@@ -41,19 +41,19 @@ assert surface.prompts == ("policy_prompt",)
 Parameterize duplicate tests over `tools`, `resources`, `resource_templates`, and `prompts`. The error must include the
 surface kind, duplicate identifier, and both adapter names.
 
-- [ ] **Step 2: Confirm RED**
+- [x] **Step 2: Confirm RED**
 
 Run: `uv run pytest -q tests/test_mcp_adapters.py`
 
 Expected: import failure because `albumentationsx_mcp.adapters.mcp.contracts` does not exist.
 
-- [ ] **Step 3: Implement the immutable surface model**
+- [x] **Step 3: Implement the immutable surface model**
 
 Use frozen, slotted dataclasses. Preserve tuple order when combining surfaces. Reject empty adapter names, duplicate
 adapter names, duplicate identifiers within one adapter, and identifiers declared by two adapters. Keep this module
 free of FastMCP and domain imports.
 
-- [ ] **Step 4: Verify the pure contract**
+- [x] **Step 4: Verify the pure contract**
 
 Run:
 
@@ -70,7 +70,7 @@ uv run ty check src/albumentationsx_mcp/adapters tests/test_mcp_adapters.py
 - Create: `src/albumentationsx_mcp/adapters/mcp/policy.py`
 - Modify: `tests/test_mcp_adapters.py`
 
-- [ ] **Step 1: Add failing registrar ownership tests**
+- [x] **Step 1: Add failing registrar ownership tests**
 
 Register each adapter into a fresh `FastMCP` and assert exact ownership:
 
@@ -86,23 +86,23 @@ policy resources: policy-assistant/contract
 
 The test must compare manager keys with each module's `SURFACE`, not repeat a second expected set in assertions.
 
-- [ ] **Step 2: Confirm RED for missing registrars**
+- [x] **Step 2: Confirm RED for missing registrars**
 
 Run: `uv run pytest -q tests/test_mcp_adapters.py -k 'catalog or policy'`
 
-- [ ] **Step 3: Move catalog handlers unchanged**
+- [x] **Step 3: Move catalog handlers unchanged**
 
 `register_catalog_adapter(mcp, *, catalog)` owns catalog/search/schema resources, feedback/quality/recipe discovery,
 and their five tools. Keep handler names, explicit FastMCP names, docstrings, annotations, defaults, JSON sorting, and
 Pydantic dump options byte-for-byte compatible with the existing server implementation.
 
-- [ ] **Step 4: Move policy handlers unchanged**
+- [x] **Step 4: Move policy handlers unchanged**
 
 `register_policy_adapter(mcp, *, catalog, pipeline_service)` owns validation, pipeline recommendation/adjustment/
 explanation/export, policy planning, and the policy safety resource. Define `OutputFormat` in this module and re-export
 it from the eventual server facade.
 
-- [ ] **Step 5: Run focused tests and static checks**
+- [x] **Step 5: Run focused tests and static checks**
 
 Run:
 
@@ -121,7 +121,7 @@ uv run ty check src/albumentationsx_mcp/adapters/mcp tests/test_mcp_adapters.py
 - Create: `src/albumentationsx_mcp/adapters/mcp/prompts.py`
 - Modify: `tests/test_mcp_adapters.py`
 
-- [ ] **Step 1: Add failing exact-surface tests**
+- [x] **Step 1: Add failing exact-surface tests**
 
 Use a `tmp_path` dependency fixture and assert:
 
@@ -137,11 +137,11 @@ prompts: build_robustness_augmentation_session, compare_preview_runs_for_feedbac
          tune_pipeline_from_preview_feedback, export_reproducible_pipeline
 ```
 
-- [ ] **Step 2: Confirm RED**
+- [x] **Step 2: Confirm RED**
 
 Run: `uv run pytest -q tests/test_mcp_adapters.py -k 'dataset or diagnostics or prompts'`
 
-- [ ] **Step 3: Implement focused registrars**
+- [x] **Step 3: Implement focused registrars**
 
 - `register_dataset_adapter` receives `path_policy`, `pipeline_service`, and `preview_service` explicitly.
 - `register_diagnostics_adapter` receives `diagnostics_service` and `pipeline_service`; capabilities read settings and
@@ -150,7 +150,7 @@ Run: `uv run pytest -q tests/test_mcp_adapters.py -k 'dataset or diagnostics or 
 
 Keep all existing names, docstrings, annotations, defaults, content, and serialization behavior.
 
-- [ ] **Step 4: Run focused tests and static checks**
+- [x] **Step 4: Run focused tests and static checks**
 
 Run:
 
@@ -168,7 +168,7 @@ uv run ty check src/albumentationsx_mcp/adapters/mcp tests/test_mcp_adapters.py
 - Create: `src/albumentationsx_mcp/adapters/mcp/sessions.py`
 - Modify: `tests/test_mcp_adapters.py`
 
-- [ ] **Step 1: Add failing exact-surface tests**
+- [x] **Step 1: Add failing exact-surface tests**
 
 Assert these ownership boundaries:
 
@@ -184,22 +184,22 @@ sessions tools: summarize_tuning_session, start_tuning_session, record_tuning_se
                 cleanup_preview_runs
 ```
 
-- [ ] **Step 2: Confirm RED**
+- [x] **Step 2: Confirm RED**
 
 Run: `uv run pytest -q tests/test_mcp_adapters.py -k 'preview or sessions'`
 
-- [ ] **Step 3: Implement preview registration and report helpers**
+- [x] **Step 3: Implement preview registration and report helpers**
 
 Move preview validation/render/compare/review/ranking/report handlers and the matching decision/feedback/session helper
 functions into `preview.py`. Call `register_preview_review_resources` from this registrar with the explicit
 `artifact_store`. Expose `export_matching_tuning_session_artifacts` for the compatibility facade.
 
-- [ ] **Step 4: Implement session, feedback, and retention registration**
+- [x] **Step 4: Implement session, feedback, and retention registration**
 
 Move persistent tuning sessions, preview feedback, tuning decisions/reports, and preview run retention handlers into
 `sessions.py`. Keep feedback target validation private to this adapter.
 
-- [ ] **Step 5: Run focused tests and static checks**
+- [x] **Step 5: Run focused tests and static checks**
 
 Run the same pytest/Ruff/format/ty commands as Task 3 over the adapter package and `tests/test_mcp_adapters.py`.
 
@@ -213,7 +213,7 @@ Run the same pytest/Ruff/format/ty commands as Task 3 over the adapter package a
 - Modify: `tests/test_mcp_adapters.py`
 - Modify: `tests/test_server.py`
 
-- [ ] **Step 1: Add failing composition and architecture tests**
+- [x] **Step 1: Add failing composition and architecture tests**
 
 Tests must assert:
 
@@ -229,29 +229,29 @@ assert len(Path("src/albumentationsx_mcp/server.py").read_text(encoding="utf-8")
 Add a test that pre-registers `search_transforms`, calls the coordinator, and expects a deterministic duplicate error
 before any adapter mutates the server. Keep the existing private helper test through the server facade.
 
-- [ ] **Step 2: Confirm RED against the monolithic facade**
+- [x] **Step 2: Confirm RED against the monolithic facade**
 
 Run: `uv run pytest -q tests/test_mcp_adapters.py tests/test_server.py`
 
-- [ ] **Step 3: Add explicit dependency transport**
+- [x] **Step 3: Add explicit dependency transport**
 
 Create a frozen, slotted `McpDependencies` dataclass containing only already-constructed services/policies/stores. It
 must not construct storage, read environment variables, or import `ServerSettings`.
 
-- [ ] **Step 4: Implement ordered registration**
+- [x] **Step 4: Implement ordered registration**
 
 `register_mcp_adapters(mcp, dependencies)` validates all declared surfaces, checks the target FastMCP server for
 collisions before mutation, invokes registrars in the documented stable order, and verifies that the resulting manager
 keys exactly match the combined manifest. Export canonical `PUBLIC_TOOLS`, `PUBLIC_PROMPTS`, and
 `PUBLIC_WORKFLOW_RESOURCES` in their existing order for diagnostics.
 
-- [ ] **Step 5: Reduce `server.py` to composition**
+- [x] **Step 5: Reduce `server.py` to composition**
 
 Keep `ServerSettings`, `settings_from_environment`, `OutputFormat`, and `create_mcp_server`. Construct `PathPolicy`,
 catalog, services, stores, `PublicSurface`, and `McpDependencies` once; create FastMCP; call the coordinator; return it.
 Keep `_export_matching_tuning_session_artifacts` as a thin compatibility wrapper over the public adapter helper.
 
-- [ ] **Step 6: Prove contract identity**
+- [x] **Step 6: Prove contract identity**
 
 Run:
 
@@ -269,12 +269,12 @@ Expected: all tests pass and neither canonical snapshot changes.
 - Modify: `CHANGELOG.md`
 - Modify: `docs/superpowers/plans/2026-07-14-mcp-adapter-extraction.md`
 
-- [ ] **Step 1: Add an Unreleased changelog entry**
+- [x] **Step 1: Add an Unreleased changelog entry**
 
 Document the internal adapter extraction and explicit composition without claiming a new release or a public contract
 change.
 
-- [ ] **Step 2: Run focused and full verification**
+- [x] **Step 2: Run focused and full verification**
 
 Run:
 
@@ -289,7 +289,7 @@ uv run python scripts/check_contract_snapshots.py
 uv run python scripts/check_release_readiness.py --tag v1.19.0
 ```
 
-- [ ] **Step 3: Mark the plan complete and commit**
+- [x] **Step 3: Mark the plan complete and commit**
 
 ```bash
 git add CHANGELOG.md docs/superpowers/plans/2026-07-14-mcp-adapter-extraction.md \
