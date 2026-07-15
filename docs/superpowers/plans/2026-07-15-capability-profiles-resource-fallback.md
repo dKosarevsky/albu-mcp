@@ -28,29 +28,29 @@ handlers and one diagnostic tool.
 - Modify: `tests/fixtures/snapshots/mcp_contract.json`
 - Modify: `tests/fixtures/snapshots/output_contracts.json`
 
-- [ ] **Step 1: Add failing closed-id, parity, and guidance tests**
+- [x] **Step 1: Add failing closed-id, parity, and guidance tests**
 
 Assert seven stable `HOST_EXAMPLE_IDS`, a deterministic accepted-id error, exact JSON parity between every
 `albumentationsx://examples/{id}` resource and `get_workflow_example(example_id=id)`, and fallback guidance in
 `run_host_smoke_check`.
 
-- [ ] **Step 2: Implement the application lookup contract**
+- [x] **Step 2: Implement the application lookup contract**
 
 Add `HostExampleId`, `HOST_EXAMPLE_IDS`, and stable unknown-id validation in `workflows.py`. Existing resources and the
 new tool must both call `get_host_example`; no copied example payload is allowed in the adapter.
 
-- [ ] **Step 3: Register the additive diagnostic tool**
+- [x] **Step 3: Register the additive diagnostic tool**
 
 Add `get_workflow_example` to the diagnostics surface and full public tool inventory. Its argument schema must be a
 closed enum and its response must be the existing typed `HostExample` JSON shape.
 
-- [ ] **Step 4: Update smoke guidance and snapshots**
+- [x] **Step 4: Update smoke guidance and snapshots**
 
 When resource reads are unavailable, direct the host to
 `get_workflow_example(example_id="client-smoke")`. Regenerate only the intentional additive MCP and output contract
 changes and classify the MCP drift as additive.
 
-- [ ] **Step 5: Verify and commit**
+- [x] **Step 5: Verify and commit**
 
 Run focused workflow, host-smoke, adapter, contract, Ruff, format, and ty checks. Commit as
 `feat: add workflow example fallback tool`.

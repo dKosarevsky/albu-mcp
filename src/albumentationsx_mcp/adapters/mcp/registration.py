@@ -82,6 +82,7 @@ PUBLIC_TOOLS = (
     "export_pipeline",
     "diagnose_environment",
     "run_host_smoke_check",
+    "get_workflow_example",
     "validate_preview_request",
     "plan_dataset_onboarding",
     "build_review_packet",

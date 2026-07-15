@@ -1837,6 +1837,10 @@
     ],
     "status": "warning",
     "workflow_guidance": {
+      "fallback_tool": {
+        "example_id": "client-smoke",
+        "tool": "get_workflow_example"
+      },
       "instructions": [
         "Read albumentationsx://examples/client-smoke when the host exposes resource reads; otherwise use this report directly.",
         "Continue to preview validation and rendering only when preview_ready is true.",
@@ -2104,6 +2108,10 @@
     ],
     "status": "ok",
     "workflow_guidance": {
+      "fallback_tool": {
+        "example_id": "client-smoke",
+        "tool": "get_workflow_example"
+      },
       "instructions": [
         "Read albumentationsx://examples/client-smoke when the host exposes resource reads; otherwise use this report directly.",
         "Continue to preview validation and rendering only when preview_ready is true.",

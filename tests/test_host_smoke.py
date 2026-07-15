@@ -39,6 +39,9 @@ def test_host_smoke_report_is_preview_ready_when_diagnostics_and_validation_pass
     assert report.workflow_guidance.resource_uri == "albumentationsx://examples/client-smoke"
     assert report.workflow_guidance.resource_access == "optional"
     assert any("otherwise" in instruction.lower() for instruction in report.workflow_guidance.instructions)
+    assert report.workflow_guidance.fallback_tool is not None
+    assert report.workflow_guidance.fallback_tool.tool == "get_workflow_example"
+    assert report.workflow_guidance.fallback_tool.example_id == "client-smoke"
     assert any("preview_ready" in instruction for instruction in report.workflow_guidance.instructions)
     assert any("validate_preview_request" in instruction for instruction in report.workflow_guidance.instructions)
     assert any("validate_preview_request" in action for action in report.next_actions)

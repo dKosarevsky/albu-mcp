@@ -2,7 +2,28 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from albumentationsx_mcp.models import StrictModel
+
+HostExampleId = Literal[
+    "client-smoke",
+    "first-preview",
+    "distortion-review",
+    "dataset-onboarding",
+    "diagnostics",
+    "review-loop",
+    "report-handoff",
+]
+HOST_EXAMPLE_IDS: tuple[HostExampleId, ...] = (
+    "client-smoke",
+    "first-preview",
+    "distortion-review",
+    "dataset-onboarding",
+    "diagnostics",
+    "review-loop",
+    "report-handoff",
+)
 
 
 class WorkflowStep(StrictModel):
@@ -595,5 +616,6 @@ def get_host_example(name: str) -> HostExample:
     try:
         return _HOST_EXAMPLES[name]
     except KeyError as exc:
-        msg = f"Unknown host example: {name}"
+        accepted = ", ".join(HOST_EXAMPLE_IDS)
+        msg = f"Unknown host example: {name}. Accepted examples: {accepted}"
         raise KeyError(msg) from exc

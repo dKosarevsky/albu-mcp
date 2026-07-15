@@ -36,11 +36,19 @@ class HostPreviewRequestTemplate(StrictModel):
     instructions: list[str] = Field(default_factory=list)
 
 
+class HostWorkflowExampleFallback(StrictModel):
+    """Tool call for hosts that cannot expose MCP resource reads."""
+
+    tool: Literal["get_workflow_example"] = "get_workflow_example"
+    example_id: Literal["client-smoke"] = "client-smoke"
+
+
 class HostWorkflowGuidance(StrictModel):
     """Host-neutral instructions that do not require model-visible MCP resources."""
 
     resource_uri: str = "albumentationsx://examples/client-smoke"
     resource_access: Literal["optional"] = "optional"
+    fallback_tool: HostWorkflowExampleFallback | None = None
     instructions: list[str]
 
 
@@ -94,6 +102,7 @@ def build_host_smoke_report(
 
 def _workflow_guidance() -> HostWorkflowGuidance:
     return HostWorkflowGuidance(
+        fallback_tool=HostWorkflowExampleFallback(),
         instructions=[
             (
                 "Read albumentationsx://examples/client-smoke when the host exposes resource reads; "
@@ -102,7 +111,7 @@ def _workflow_guidance() -> HostWorkflowGuidance:
             "Continue to preview validation and rendering only when preview_ready is true.",
             "Call validate_preview_request before render_preview_batch.",
             "Keep the first preview bounded to one small image and one variant.",
-        ]
+        ],
     )
 
 

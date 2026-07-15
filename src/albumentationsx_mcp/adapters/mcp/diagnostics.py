@@ -12,6 +12,7 @@ from albumentationsx_mcp.models import TargetSpec
 from albumentationsx_mcp.presets import Intensity
 from albumentationsx_mcp.recipes import recommend_recipe
 from albumentationsx_mcp.workflows import (
+    HostExampleId,
     get_agent_workflow,
     get_host_example,
     list_agent_workflows,
@@ -26,7 +27,7 @@ if TYPE_CHECKING:
 
 SURFACE = AdapterSurface(
     adapter="diagnostics",
-    tools=("diagnose_environment", "run_host_smoke_check"),
+    tools=("diagnose_environment", "run_host_smoke_check", "get_workflow_example"),
     resources=(
         "albumentationsx://capabilities",
         "albumentationsx://diagnostics/guide",
@@ -157,3 +158,8 @@ def register_diagnostics_adapter(
             recipe=recipe,
             validation=validation,
         ).model_dump(mode="json")
+
+    @mcp.tool(name="get_workflow_example")
+    def get_workflow_example_tool(example_id: HostExampleId) -> dict[str, Any]:
+        """Return a reviewed workflow example when the MCP host cannot read resources."""
+        return get_host_example(example_id).model_dump(mode="json")
