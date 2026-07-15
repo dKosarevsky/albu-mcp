@@ -9,6 +9,7 @@ from typing import Any, Literal
 
 from pydantic import Field
 
+from albumentationsx_mcp.capabilities import CapabilityProfile
 from albumentationsx_mcp.models import StrictModel
 
 DiagnosticStatus = Literal["ok", "warning", "error"]
@@ -16,6 +17,7 @@ DiagnosticSeverity = Literal["info", "medium", "high", "critical"]
 WriteProbeStatus = Literal["not_run", "passed", "failed"]
 
 _PROBE_FILENAME = ".albumentationsx-mcp-diagnostics-probe"
+_PREVIEW_TOOLS = {"render_preview_batch", "validate_preview_request"}
 _REQUIRED_TOOLS = {
     "diagnose_environment",
     "run_host_smoke_check",
@@ -47,11 +49,44 @@ _REQUIRED_WORKFLOW_RESOURCES = {
     "albumentationsx://recipes/catalog",
     "albumentationsx://workflows/preview-tuning",
 }
+_CORE_REQUIRED_TOOLS = {
+    "diagnose_environment",
+    "get_workflow_example",
+    "recommend_recipe",
+    "run_host_smoke_check",
+    "validate_pipeline",
+}
+_CORE_REQUIRED_WORKFLOW_RESOURCES = {
+    "albumentationsx://diagnostics/guide",
+    "albumentationsx://examples/client-smoke",
+    "albumentationsx://recipes/catalog",
+}
+_REQUIRED_SURFACE_BY_PROFILE = {
+    CapabilityProfile.CORE: (_CORE_REQUIRED_TOOLS, set(), _CORE_REQUIRED_WORKFLOW_RESOURCES),
+    CapabilityProfile.REVIEW: (
+        _REQUIRED_TOOLS - {"plan_dataset_onboarding"},
+        _REQUIRED_PROMPTS,
+        _REQUIRED_WORKFLOW_RESOURCES - {"albumentationsx://examples/dataset-onboarding"},
+    ),
+    CapabilityProfile.DATASET: (
+        _CORE_REQUIRED_TOOLS
+        | {
+            "build_review_packet",
+            "inspect_dataset_quality",
+            "plan_dataset_onboarding",
+            "score_dataset_preview_candidates",
+        },
+        set(),
+        _CORE_REQUIRED_WORKFLOW_RESOURCES,
+    ),
+    CapabilityProfile.FULL: (_REQUIRED_TOOLS, _REQUIRED_PROMPTS, _REQUIRED_WORKFLOW_RESOURCES),
+}
 
 
 class PublicSurface(StrictModel):
     """Public MCP surface advertised by the server."""
 
+    capability_profile: CapabilityProfile = CapabilityProfile.FULL
     tools: list[str]
     prompts: list[str]
     workflow_resources: list[str]
@@ -135,6 +170,11 @@ class DiagnosticsService:
         self.max_preview_runs = max_preview_runs
         self.public_surface = public_surface
 
+    @property
+    def preview_tools_available(self) -> bool:
+        """Return whether the active surface can validate and render previews."""
+        return set(self.public_surface.tools) >= _PREVIEW_TOOLS
+
     def diagnose(self, *, include_write_probe: bool = True) -> DiagnosticsReport:
         """Return environment checks without reading user datasets."""
         checks: list[DiagnosticCheck] = []
@@ -144,7 +184,10 @@ class DiagnosticsService:
         checks.extend(artifact_checks)
         checks.extend(self._public_surface_checks())
         warnings = [check.message for check in checks if check.status == "warning"]
-        remediation_actions = _remediation_actions(checks)
+        remediation_actions = _remediation_actions(
+            checks,
+            preview_tools_available=self.preview_tools_available,
+        )
         return DiagnosticsReport(
             status=_aggregate_status(checks),
             checks=checks,
@@ -288,24 +331,27 @@ class DiagnosticsService:
         return checks, "passed"
 
     def _public_surface_checks(self) -> list[DiagnosticCheck]:
+        required_tools, required_prompts, required_resources = _REQUIRED_SURFACE_BY_PROFILE[
+            self.public_surface.capability_profile
+        ]
         return [
             _surface_check(
                 code="required_tools_available",
                 label="Required diagnostics tools",
                 present=set(self.public_surface.tools),
-                required=_REQUIRED_TOOLS,
+                required=required_tools,
             ),
             _surface_check(
                 code="required_prompts_available",
                 label="Required workflow prompts",
                 present=set(self.public_surface.prompts),
-                required=_REQUIRED_PROMPTS,
+                required=required_prompts,
             ),
             _surface_check(
                 code="required_workflow_resources_available",
                 label="Required workflow resources",
                 present=set(self.public_surface.workflow_resources),
-                required=_REQUIRED_WORKFLOW_RESOURCES,
+                required=required_resources,
             ),
         ]
 
@@ -380,7 +426,11 @@ def _next_actions(remediation_actions: list[DiagnosticRemediationAction]) -> lis
     return [action.summary for action in remediation_actions]
 
 
-def _remediation_actions(checks: list[DiagnosticCheck]) -> list[DiagnosticRemediationAction]:
+def _remediation_actions(
+    checks: list[DiagnosticCheck],
+    *,
+    preview_tools_available: bool,
+) -> list[DiagnosticRemediationAction]:
     actions: list[DiagnosticRemediationAction] = []
     codes = {check.code for check in checks if check.status != "ok"}
     docs_uri = "albumentationsx://diagnostics/guide"
@@ -442,7 +492,18 @@ def _remediation_actions(checks: list[DiagnosticCheck]) -> list[DiagnosticRemedi
                 docs_uri=docs_uri,
             )
         )
-    if not actions:
+    if not preview_tools_available:
+        actions.append(
+            DiagnosticRemediationAction(
+                code="select_preview_capability_profile",
+                severity="info",
+                check_codes=[],
+                summary=("Restart with `--capability-profile review`, `dataset`, or `full` before rendering previews."),
+                command_hint="--capability-profile review",
+                docs_uri=docs_uri,
+            )
+        )
+    elif not actions:
         actions.append(
             DiagnosticRemediationAction(
                 code="proceed_with_preview_smoke",

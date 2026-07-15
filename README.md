@@ -30,7 +30,9 @@ uvx --from albumentationsx-mcp albumentationsx-mcp \
   --artifact-root /absolute/path/to/albu-artifacts
 ```
 
-Copyable Claude Code, Cursor, Codex, and JSON configurations are in [the install guide](docs/INSTALL.md). The repository also contains a native Codex plugin bundle. `npx skills add dKosarevsky/albu-mcp` installs agent guidance, not the MCP server.
+`full` is the v1.x default. Add `--capability-profile review` for a preview-focused tool surface; see
+[configuration](docs/CONFIGURATION.md). Copyable host configurations are in [the install guide](docs/INSTALL.md).
+The repository also contains a native Codex plugin bundle. `npx skills add dKosarevsky/albu-mcp` installs agent guidance, not the MCP server.
 
 ## First Preview
 
@@ -42,8 +44,8 @@ Run the smoke check, start with a low-intensity pipeline, validate the request,
 render one variant per image, and show me the contact sheet before exporting anything.
 ```
 
-1. When the host exposes resource reads, read `albumentationsx://examples/client-smoke`; otherwise call `run_host_smoke_check` directly.
-2. Continue only when `preview_ready` is true, then use the returned `preview_request_template`.
+1. Read `albumentationsx://examples/client-smoke`; if resource reads are unavailable, call `get_workflow_example` with `example_id="client-smoke"`.
+2. Call `run_host_smoke_check`; continue only when `preview_ready` is true, using its `preview_request_template`.
 3. Call `validate_preview_request` before rendering and compare preview runs before accepting a candidate.
 4. Give concrete feedback such as `too_noisy:high` or `exposure_too_weak:medium`, then export the final pipeline.
 
@@ -70,6 +72,7 @@ The server does not execute arbitrary Python, fetch remote images, overwrite dat
 ## Documentation
 
 - [Install and host configuration](docs/INSTALL.md)
+- [Runtime settings and capability profiles](docs/CONFIGURATION.md)
 - [First 10 minutes](docs/FIRST_10_MINUTES.md)
 - [Usage](docs/USAGE.md) and [recipes](docs/RECIPES.md)
 - [MCP Apps review](docs/MCP_APPS_REVIEW.md) and [compatibility policy](docs/COMPATIBILITY.md)

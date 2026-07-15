@@ -43,7 +43,7 @@ def test_committed_rc_host_evidence_ops_is_current() -> None:
     ops_path = Path("docs/RC_HOST_EVIDENCE_OPS.md")
 
     assert ops_path.read_text(encoding="utf-8") == render_rc_host_evidence_ops_markdown(build_rc_host_evidence_ops())
-    assert "[RC_HOST_EVIDENCE_OPS.md](RC_HOST_EVIDENCE_OPS.md)" in Path("docs/INDEX.md").read_text(encoding="utf-8")
+    assert "[RC_HOST_EVIDENCE_OPS.md](RC_HOST_EVIDENCE_OPS.md)" in Path("docs/ARCHIVE.md").read_text(encoding="utf-8")
 
 
 def test_rc_host_evidence_ops_cli_writes_markdown(tmp_path: Path) -> None:

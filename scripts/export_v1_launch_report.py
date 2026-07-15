@@ -14,6 +14,7 @@ if not __package__:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from scripts.check_first_10_minutes_replay import check_first_10_minutes_replay
+from scripts.historical_status import add_historical_status_banner
 from scripts.validate_host_manual_runs import HOST_NAMES, HostName, validate_host_manual_runs
 
 _DEFAULT_MANUAL_RUNS_PATH = Path("docs/HOST_MANUAL_RUNS.json")
@@ -99,7 +100,7 @@ def render_v1_launch_report_markdown(report: dict[str, Any]) -> str:
     lines.extend(_evidence_plan_lines(report["evidence_plan"]))
     lines.extend(["", "## Recommended Next Actions", ""])
     lines.extend(f"- {action}" for action in report["recommended_next_actions"])
-    return "\n".join(lines) + "\n"
+    return add_historical_status_banner("\n".join(lines) + "\n")
 
 
 def main() -> None:

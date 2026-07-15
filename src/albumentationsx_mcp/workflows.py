@@ -2,7 +2,28 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from albumentationsx_mcp.models import StrictModel
+
+HostExampleId = Literal[
+    "client-smoke",
+    "first-preview",
+    "distortion-review",
+    "dataset-onboarding",
+    "diagnostics",
+    "review-loop",
+    "report-handoff",
+]
+HOST_EXAMPLE_IDS: tuple[HostExampleId, ...] = (
+    "client-smoke",
+    "first-preview",
+    "distortion-review",
+    "dataset-onboarding",
+    "diagnostics",
+    "review-loop",
+    "report-handoff",
+)
 
 
 class WorkflowStep(StrictModel):
@@ -590,10 +611,40 @@ def list_host_examples() -> list[HostExample]:
     return sorted(_HOST_EXAMPLES.values(), key=lambda example: example.name)
 
 
-def get_host_example(name: str) -> HostExample:
-    """Return one host interaction example by stable name."""
+def get_host_example(name: str, *, preview_tools_available: bool = True) -> HostExample:
+    """Return one host interaction example adapted to active preview capabilities."""
     try:
-        return _HOST_EXAMPLES[name]
+        example = _HOST_EXAMPLES[name]
     except KeyError as exc:
-        msg = f"Unknown host example: {name}"
+        accepted = ", ".join(HOST_EXAMPLE_IDS)
+        msg = f"Unknown host example: {name}. Accepted examples: {accepted}"
         raise KeyError(msg) from exc
+    if name == "client-smoke" and not preview_tools_available:
+        steps = [
+            *example.steps[:-1],
+            example.steps[-1].model_copy(
+                update={
+                    "instruction": (
+                        "Call run_host_smoke_check to confirm host health and identify the preview-capable "
+                        "profile required for rendering."
+                    ),
+                    "expected_result": (
+                        "A report with preview_ready=false, no preview request template, and an action to restart "
+                        "with --capability-profile review, dataset, or full."
+                    ),
+                }
+            ),
+        ]
+        return example.model_copy(
+            update={
+                "steps": steps,
+                "success_criteria": [
+                    *example.success_criteria[:-1],
+                    (
+                        "run_host_smoke_check returns preview_ready=false and recommends "
+                        "--capability-profile review, dataset, or full before rendering."
+                    ),
+                ],
+            }
+        )
+    return example

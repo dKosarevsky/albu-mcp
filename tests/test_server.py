@@ -1,9 +1,14 @@
+import json
 from pathlib import Path
 from typing import Any, cast
 
+import pytest
+
 from albumentationsx_mcp import server as server_module
+from albumentationsx_mcp.adapters.mcp.registration import PUBLIC_WORKFLOW_RESOURCES, surface_for_profile
+from albumentationsx_mcp.capabilities import CapabilityProfile
 from albumentationsx_mcp.models import TuningSessionSummary
-from albumentationsx_mcp.server import create_mcp_server
+from albumentationsx_mcp.server import ServerSettings, create_mcp_server, settings_from_environment
 from albumentationsx_mcp.sessions import InteractiveTuningSessionStore
 
 
@@ -11,6 +16,101 @@ def test_create_mcp_server_registers_fastmcp_instance() -> None:
     server = create_mcp_server()
 
     assert server.name == "AlbumentationsX MCP"
+
+
+def test_server_settings_default_to_full_profile() -> None:
+    assert ServerSettings().capability_profile is CapabilityProfile.FULL
+
+
+def test_server_settings_read_capability_profile_from_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ALBU_MCP_CAPABILITY_PROFILE", "review")
+
+    assert settings_from_environment().capability_profile is CapabilityProfile.REVIEW
+
+
+def test_unknown_environment_capability_profile_lists_accepted_values(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ALBU_MCP_CAPABILITY_PROFILE", "unknown")
+
+    with pytest.raises(ValueError, match="unknown capability profile") as error:
+        settings_from_environment()
+
+    message = str(error.value)
+    assert "unknown capability profile" in message
+    for profile in CapabilityProfile:
+        assert profile.value in message
+
+
+@pytest.mark.parametrize("profile", CapabilityProfile)
+def test_create_mcp_server_exposes_exact_profile_and_capabilities(
+    tmp_path: Path,
+    profile: CapabilityProfile,
+) -> None:
+    server = create_mcp_server(
+        ServerSettings(
+            allowed_roots=[tmp_path],
+            artifact_root=tmp_path / "artifacts",
+            capability_profile=profile,
+        )
+    )
+    expected = surface_for_profile(profile)
+
+    assert tuple(server._tool_manager._tools) == expected.tools
+    assert tuple(str(uri) for uri in server._resource_manager._resources) == expected.resources
+    assert tuple(server._resource_manager._templates) == expected.resource_templates
+    assert tuple(server._prompt_manager._prompts) == expected.prompts
+
+    capabilities = json.loads(cast("Any", server._resource_manager._resources["albumentationsx://capabilities"]).fn())
+    diagnostics = cast("Any", server._tool_manager._tools["diagnose_environment"]).fn(include_write_probe=False)
+    assert capabilities["capability_profile"] == profile.value
+    assert set(capabilities["tools"]) == set(expected.tools)
+    assert set(capabilities["prompts"]) == set(expected.prompts)
+    assert capabilities["workflow_resources"] == [
+        uri for uri in PUBLIC_WORKFLOW_RESOURCES if uri in set(expected.resources)
+    ]
+    assert diagnostics["status"] == "ok"
+
+
+@pytest.mark.parametrize(
+    ("profile", "expected_state"),
+    [
+        (CapabilityProfile.CORE, "blocked"),
+        (CapabilityProfile.REVIEW, "ready"),
+        (CapabilityProfile.DATASET, "ready"),
+        (CapabilityProfile.FULL, "ready"),
+    ],
+)
+def test_host_smoke_preview_readiness_matches_active_profile(
+    tmp_path: Path,
+    profile: CapabilityProfile,
+    expected_state: str,
+) -> None:
+    server = create_mcp_server(
+        ServerSettings(
+            allowed_roots=[tmp_path],
+            artifact_root=tmp_path / "artifacts",
+            capability_profile=profile,
+        )
+    )
+
+    report = cast("Any", server._tool_manager._tools["run_host_smoke_check"]).fn(include_write_probe=False)
+    preview_ready = expected_state == "ready"
+
+    assert report["preview_ready"] is preview_ready
+    assert (report["preview_request_template"] is not None) is preview_ready
+    if preview_ready:
+        assert any("render_preview_batch" in action for action in report["next_actions"])
+    else:
+        assert report["status"] == "warning"
+        assert any("--capability-profile review" in action for action in report["next_actions"])
+        assert any(action["code"] == "select_preview_capability_profile" for action in report["remediation_actions"])
+        assert all("render_preview_batch" not in action for action in report["diagnostics"]["next_actions"])
+
+
+def test_server_module_is_a_thin_composition_facade() -> None:
+    source = Path(server_module.__file__).read_text(encoding="utf-8")
+
+    assert "@mcp." not in source
+    assert len(source.splitlines()) <= 220
 
 
 def test_server_exposes_documented_tool_names() -> None:

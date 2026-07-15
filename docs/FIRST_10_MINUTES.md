@@ -60,7 +60,8 @@ After editing host configuration, refresh MCP discovery or restart the host.
 Ask the host:
 
 ```text
-Read albumentationsx://examples/client-smoke, then run run_host_smoke_check.
+Read albumentationsx://examples/client-smoke. If resource reads are unavailable, call
+get_workflow_example with example_id="client-smoke". Then run run_host_smoke_check.
 Continue only if preview_ready is true. If it is not ready, explain the remediation actions.
 ```
 

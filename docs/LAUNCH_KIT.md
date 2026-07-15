@@ -83,17 +83,18 @@ GH_TOKEN="$(gh auth token)" uv run python scripts/export_growth_report.py --outp
 1. `export_preview_report`
 1. `export_pipeline`
 
-## Proof Status
+## Lifecycle Status
 
-- Ready for v1: `false`
-- Blocker `manual_host_ui_pending`: At least one supported host lacks passed manual UI evidence.
-- Blocker `first_10_minutes_replay_pending`: At least one supported host lacks passed First 10 Minutes replay evidence.
+- Release health: `published`
+- Host evidence: `partial`
+- Adoption experiment: `measuring`
+- Details: `docs/STATUS.md`
 
 ## Proof Docs
 
 - `docs/HOST_PROOF_SPRINT.md`
 - `docs/HOST_PROOF_SPRINT_CHECKLIST.md`
-- `docs/V1_LAUNCH_REPORT.md`
+- `docs/STATUS.md`
 - `docs/HOST_ACCEPTANCE_EVIDENCE.md`
 
 ## Growth Docs

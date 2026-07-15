@@ -14,9 +14,11 @@ if not __package__:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from scripts.classify_contract_drift import classify_contract_drift
+from scripts.export_cli_contract import build_cli_contract_snapshot, dump_cli_contract_snapshot
 from scripts.export_mcp_contract import build_contract_snapshot, dump_contract_snapshot
 from scripts.export_output_contracts import build_output_contract_snapshot, dump_output_contract_snapshot
 
+_DEFAULT_CLI_SNAPSHOT_PATH = Path("tests/fixtures/snapshots/cli_contract.json")
 _DEFAULT_MCP_SNAPSHOT_PATH = Path("tests/fixtures/snapshots/mcp_contract.json")
 _DEFAULT_OUTPUT_SNAPSHOT_PATH = Path("tests/fixtures/snapshots/output_contracts.json")
 
@@ -45,6 +47,7 @@ class ContractSnapshotReport:
 
 def check_contract_snapshots(
     *,
+    cli_snapshot_path: Path = _DEFAULT_CLI_SNAPSHOT_PATH,
     mcp_snapshot_path: Path = _DEFAULT_MCP_SNAPSHOT_PATH,
     output_snapshot_path: Path = _DEFAULT_OUTPUT_SNAPSHOT_PATH,
     output_work_dir: Path | None = None,
@@ -53,11 +56,13 @@ def check_contract_snapshots(
     if output_work_dir is None:
         with tempfile.TemporaryDirectory(prefix="albu-contract-snapshots-") as tmp_dir:
             return _check_contract_snapshots(
+                cli_snapshot_path=cli_snapshot_path,
                 mcp_snapshot_path=mcp_snapshot_path,
                 output_snapshot_path=output_snapshot_path,
                 output_work_dir=Path(tmp_dir),
             )
     return _check_contract_snapshots(
+        cli_snapshot_path=cli_snapshot_path,
         mcp_snapshot_path=mcp_snapshot_path,
         output_snapshot_path=output_snapshot_path,
         output_work_dir=output_work_dir,
@@ -67,12 +72,14 @@ def check_contract_snapshots(
 def main() -> None:
     """CLI entrypoint for CI and release snapshot freshness checks."""
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--cli-snapshot", type=Path, default=_DEFAULT_CLI_SNAPSHOT_PATH)
     parser.add_argument("--mcp-snapshot", type=Path, default=_DEFAULT_MCP_SNAPSHOT_PATH)
     parser.add_argument("--output-snapshot", type=Path, default=_DEFAULT_OUTPUT_SNAPSHOT_PATH)
     parser.add_argument("--output-work-dir", type=Path, default=None)
     args = parser.parse_args()
 
     report = check_contract_snapshots(
+        cli_snapshot_path=args.cli_snapshot,
         mcp_snapshot_path=args.mcp_snapshot,
         output_snapshot_path=args.output_snapshot,
         output_work_dir=args.output_work_dir,
@@ -91,15 +98,24 @@ def main() -> None:
 
 def _check_contract_snapshots(
     *,
+    cli_snapshot_path: Path,
     mcp_snapshot_path: Path,
     output_snapshot_path: Path,
     output_work_dir: Path,
 ) -> ContractSnapshotReport:
     output_work_dir.mkdir(parents=True, exist_ok=True)
+    cli_expected = dump_cli_contract_snapshot(build_cli_contract_snapshot())
     mcp_expected = dump_contract_snapshot(build_contract_snapshot())
     output_expected = dump_output_contract_snapshot(build_output_contract_snapshot(output_work_dir))
     return ContractSnapshotReport(
         checks=[
+            _compare_snapshot(
+                name="cli_contract",
+                label="CLI contract snapshot",
+                path=cli_snapshot_path,
+                expected=cli_expected,
+                regenerate_command=f"uv run python scripts/export_cli_contract.py --output {cli_snapshot_path}",
+            ),
             _compare_snapshot(
                 name="mcp_contract",
                 label="MCP contract snapshot",

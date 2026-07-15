@@ -1837,8 +1837,12 @@
     ],
     "status": "warning",
     "workflow_guidance": {
+      "fallback_tool": {
+        "example_id": "client-smoke",
+        "tool": "get_workflow_example"
+      },
       "instructions": [
-        "Read albumentationsx://examples/client-smoke when the host exposes resource reads; otherwise use this report directly.",
+        "Read albumentationsx://examples/client-smoke when the host exposes resource reads; if resource reads are unavailable, call get_workflow_example with example_id=\"client-smoke\".",
         "Continue to preview validation and rendering only when preview_ready is true.",
         "Call validate_preview_request before render_preview_batch.",
         "Keep the first preview bounded to one small image and one variant."
@@ -2104,8 +2108,12 @@
     ],
     "status": "ok",
     "workflow_guidance": {
+      "fallback_tool": {
+        "example_id": "client-smoke",
+        "tool": "get_workflow_example"
+      },
       "instructions": [
-        "Read albumentationsx://examples/client-smoke when the host exposes resource reads; otherwise use this report directly.",
+        "Read albumentationsx://examples/client-smoke when the host exposes resource reads; if resource reads are unavailable, call get_workflow_example with example_id=\"client-smoke\".",
         "Continue to preview validation and rendering only when preview_ready is true.",
         "Call validate_preview_request before render_preview_batch.",
         "Keep the first preview bounded to one small image and one variant."

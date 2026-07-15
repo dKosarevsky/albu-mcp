@@ -49,7 +49,7 @@ def test_committed_rc_gate_reopen_packet_is_current() -> None:
     assert packet_path.read_text(encoding="utf-8") == render_rc_gate_reopen_packet_markdown(
         build_rc_gate_reopen_packet()
     )
-    assert "[RC_GATE_REOPEN_PACKET.md](RC_GATE_REOPEN_PACKET.md)" in Path("docs/INDEX.md").read_text(encoding="utf-8")
+    assert "[RC_GATE_REOPEN_PACKET.md](RC_GATE_REOPEN_PACKET.md)" in Path("docs/ARCHIVE.md").read_text(encoding="utf-8")
     assert "docs/RC_GATE_REOPEN_PACKET.md" in Path("docs/V1_READINESS.md").read_text(encoding="utf-8")
 
 

@@ -70,6 +70,8 @@ uvx --from albumentationsx-mcp albumentationsx-mcp
 ```
 
 Use `ALBU_MCP_MAX_PREVIEW_RUNS` to adjust preview index retention. The default keeps the latest 100 preview runs.
+Use `ALBU_MCP_CAPABILITY_PROFILE` for an opt-in focused surface; `full` remains the default. See
+[CONFIGURATION.md](CONFIGURATION.md) for profile membership and precedence.
 
 ## Claude Desktop
 
@@ -218,9 +220,9 @@ The same preview-ready shape is available in
 
 After configuring Claude Desktop, Claude Code, Cursor, or Codex, use the same first-preview flow:
 
-1. Read `albumentationsx://examples/client-smoke` when the host exposes resource reads; otherwise call
-   `run_host_smoke_check` directly.
-2. If the resource was read, call `run_host_smoke_check` next.
+1. Read `albumentationsx://examples/client-smoke`; when resource reads are unavailable, call
+   `get_workflow_example` with `example_id="client-smoke"`.
+2. Call `run_host_smoke_check` next.
 3. Continue only when `preview_ready` is true.
 4. Copy `preview_request_template.request` and replace the placeholder image path.
 5. Call `validate_preview_request`.
@@ -288,13 +290,15 @@ Expected CLI output includes:
 usage: albumentationsx-mcp [-h] [--transport {stdio,streamable-http}]
                            [--artifact-root ARTIFACT_ROOT]
                            [--allowed-root ALLOWED_ROOT]
+                           [--capability-profile {core,review,dataset,full}]
 ```
 
-After wiring a host, ask it to read `albumentationsx://examples/client-smoke` when the host exposes resource reads;
-otherwise call `run_host_smoke_check` directly. The resource provides the detailed client smoke playbook, while the
-tool response contains the complete safe fallback guidance. A healthy host smoke report returns `preview_ready: true`,
-`workflow_guidance`, and a `preview_request_template`. After replacing the sample path, call `validate_preview_request`
-before `render_preview_batch`.
+After wiring a host, ask it to read `albumentationsx://examples/client-smoke`; when resource reads are unavailable,
+call `get_workflow_example` with `example_id="client-smoke"`. Then call `run_host_smoke_check`. Both example access paths
+return the same profile-aware client smoke playbook. In `review`, `dataset`, or `full`, a healthy host smoke report
+returns `preview_ready: true`, `workflow_guidance`, and a `preview_request_template`. Healthy `core` installations return
+`preview_ready: false` and recommend a preview-capable profile. After replacing the sample path, call
+`validate_preview_request` before `render_preview_batch`.
 
 If the host connects but previews fail, ask it to read `albumentationsx://diagnostics/guide` and call
 `diagnose_environment`. The report checks AlbumentationsX import/version, `--allowed-root`, `--artifact-root`,
@@ -316,7 +320,7 @@ structured `remediation_actions` plus text `next_actions`.
 - If preview reports lack thumbnails, confirm the artifact root still contains the preview run and contact sheet files.
 - If host-side tool discovery looks incomplete and the host exposes resource reads, read
   `albumentationsx://examples/client-smoke` and `albumentationsx://capabilities`; otherwise call
-  `run_host_smoke_check` directly and inspect its checks.
+  `get_workflow_example` with `example_id="client-smoke"`, then call `run_host_smoke_check` and inspect its checks.
 - If a host shows stale tools after upgrading, restart the host and clear any client-side MCP server cache it provides.
 - If `uvx` cannot find a just-published version, wait for PyPI Simple API propagation and retry with
   `--refresh-package albumentationsx-mcp`.

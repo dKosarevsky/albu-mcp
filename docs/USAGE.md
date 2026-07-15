@@ -7,11 +7,12 @@ Python code.
 ## Host Configuration
 
 For copyable host snippets, PyPI install, bounded local access, and troubleshooting, start with
-[INSTALL.md](INSTALL.md). This page focuses on the augmentation workflow after the server is connected.
+[INSTALL.md](INSTALL.md). Runtime profiles and environment precedence are in [CONFIGURATION.md](CONFIGURATION.md). This
+page focuses on the augmentation workflow after the server is connected.
 For a copyable host prompt that works across Claude Desktop, Claude Code, Cursor, and Codex, see
 [examples/first_preview_workflow.md](../examples/first_preview_workflow.md).
-After connecting a new host, read `albumentationsx://examples/client-smoke` when the host exposes resource reads;
-otherwise call `run_host_smoke_check` directly before rendering local previews.
+After connecting a new host, read `albumentationsx://examples/client-smoke`; when resource reads are unavailable, call
+`get_workflow_example` with `example_id="client-smoke"`. Then call `run_host_smoke_check` before rendering local previews.
 When preview setup is unclear, read `albumentationsx://diagnostics/guide` and call `diagnose_environment` before
 changing augmentation pipelines.
 For a single read-only preflight, call `run_host_smoke_check` and continue only when `preview_ready` is true. For one
@@ -217,7 +218,8 @@ Use `run_host_smoke_check` after connecting a host and before the first local pr
 true, copy `preview_request_template.request`, replace the placeholder input path with one small image under an allowed
 root, call `validate_preview_request`, then call `render_preview_batch`. When `preview_ready` is false, follow
 `remediation_actions` before rendering. Its `workflow_guidance` is complete even when the host can list MCP resources
-but does not expose resource reads directly to the model.
+but does not expose resource reads directly to the model; `fallback_tool` contains the canonical
+`get_workflow_example` call.
 
 ## Dataset Onboarding
 

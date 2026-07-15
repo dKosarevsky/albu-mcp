@@ -1,5 +1,7 @@
 # RC Evidence Reopen Flow
 
+> **Historical status snapshot.** This document preserves a pre-release decision and does not describe the current published release. See [STATUS.md](STATUS.md).
+
 Flow status: `blocked_until_p0_and_beta_evidence`
 Decision: `hold_rc`
 Cutover allowed: `false`

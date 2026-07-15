@@ -74,11 +74,14 @@ def test_agent_skill_contains_first_run_playbook() -> None:
         assert expected_text in skill
 
 
-def test_agent_skill_treats_client_smoke_resource_as_optional() -> None:
+def test_agent_skill_uses_client_smoke_tool_fallback() -> None:
     skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
 
     assert "resource reads" in skill
-    assert "otherwise call `run_host_smoke_check` directly" in skill
+    assert "resource reads are unavailable" in skill
+    assert "`get_workflow_example`" in skill
+    assert '`example_id="client-smoke"`' in skill
+    assert "otherwise call `run_host_smoke_check` directly" not in skill
     assert "continue only when `preview_ready` is true" in skill
 
 

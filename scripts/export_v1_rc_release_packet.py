@@ -12,6 +12,7 @@ if not __package__:
 
 from scripts.export_p0_evidence_status import build_p0_evidence_status
 from scripts.export_v1_rc_readiness_report import build_v1_rc_readiness_report
+from scripts.historical_status import add_historical_status_banner
 
 
 def build_v1_rc_release_packet() -> dict[str, Any]:
@@ -61,7 +62,7 @@ def render_v1_rc_release_packet_markdown(packet: dict[str, Any]) -> str:
     lines.extend(f"- `{item}`" for item in packet["ready_release_steps"])
     lines.extend(["", "## Source Reports", ""])
     lines.extend(f"- `{source}`" for source in packet["source_reports"])
-    return "\n".join(lines) + "\n"
+    return add_historical_status_banner("\n".join(lines) + "\n")
 
 
 def main() -> None:

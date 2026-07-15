@@ -1,5 +1,7 @@
 # V1 Readiness Audit
 
+> **Historical status snapshot.** This document preserves a pre-release decision and does not describe the current published release. See [STATUS.md](STATUS.md).
+
 This audit records the release gate for a future `v1.0.0`. It is intentionally focused on public MCP compatibility,
 host proof, and release reproducibility.
 

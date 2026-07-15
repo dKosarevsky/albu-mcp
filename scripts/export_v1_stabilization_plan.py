@@ -14,6 +14,7 @@ from scripts.export_product_depth_selection import build_product_depth_selection
 from scripts.export_v1_decision_report import build_v1_decision_report
 from scripts.export_v1_growth_cutover_report import build_v1_growth_cutover_report
 from scripts.export_v1_trust_gates import build_v1_trust_gates
+from scripts.historical_status import add_historical_status_banner
 
 _V1_SCOPE = [
     "Stable MCP server packaging and server.json metadata.",
@@ -116,7 +117,7 @@ def render_v1_stabilization_plan_markdown(plan: dict[str, Any]) -> str:
     lines.extend(f"| `{item['item']}` | `{item['status']}` | {item['candidate']} |" for item in plan["post_v1_backlog"])
     lines.extend(["", "## Source Docs", ""])
     lines.extend(f"- `{source}`" for source in plan["source_docs"])
-    return "\n".join(lines) + "\n"
+    return add_historical_status_banner("\n".join(lines) + "\n")
 
 
 def main() -> None:

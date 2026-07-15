@@ -13,6 +13,7 @@ if not __package__:
 from scripts.check_v1_rc_cutover_gate import build_v1_rc_cutover_gate
 from scripts.export_beta_validation_status import build_beta_validation_status
 from scripts.export_rc_gate_reopen_packet import build_rc_gate_reopen_packet
+from scripts.historical_status import add_historical_status_banner
 
 
 def build_rc_evidence_reopen_flow() -> dict[str, Any]:
@@ -85,7 +86,7 @@ def render_rc_evidence_reopen_flow_markdown(flow: dict[str, Any]) -> str:
         lines.append("- none")
     lines.extend(["", "## Source Docs", ""])
     lines.extend(f"- `{source}`" for source in flow["source_docs"])
-    return "\n".join(lines) + "\n"
+    return add_historical_status_banner("\n".join(lines) + "\n")
 
 
 def main() -> None:

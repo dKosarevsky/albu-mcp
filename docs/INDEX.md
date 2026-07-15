@@ -5,7 +5,10 @@ Use this page for deeper product, operator, adoption, and release material. New 
 
 ## Product Guides
 
+- [STATUS.md](STATUS.md): current release health, host evidence, and adoption experiment.
+- [RELEASE_HEALTH.json](RELEASE_HEALTH.json): versioned observed PyPI, GitHub Release, CI, and Registry evidence.
 - [INSTALL.md](INSTALL.md): PyPI, MCPB, Claude Desktop, Claude Code, Cursor, Codex, and bounded roots.
+- [CONFIGURATION.md](CONFIGURATION.md): local roots, capability profiles, transport, and resource-read fallback.
 - [FIRST_10_MINUTES.md](FIRST_10_MINUTES.md): shortest path from installation to an accepted preview.
 - [USAGE.md](USAGE.md): end-to-end tools, resources, diagnostics, and operator CLI reference.
 - [RECIPES.md](RECIPES.md): classification, detection, segmentation, OCR, and review recipes.
@@ -42,18 +45,18 @@ Use this page for deeper product, operator, adoption, and release material. New 
 - [P0_HOST_RUNBOOK.md](P0_HOST_RUNBOOK.md), [P0_HOST_RUN_PREFLIGHT.md](P0_HOST_RUN_PREFLIGHT.md), [P0_HOST_RUN_SESSION.md](P0_HOST_RUN_SESSION.md), and [P0_HOST_EXECUTION_SPRINT.md](P0_HOST_EXECUTION_SPRINT.md)
 - [P0_HOST_EVIDENCE_LEDGER.md](P0_HOST_EVIDENCE_LEDGER.md), [P0_HOST_EVIDENCE_RECOVERY.md](P0_HOST_EVIDENCE_RECOVERY.md), [P0_HOST_UNBLOCK_PACK.md](P0_HOST_UNBLOCK_PACK.md), and [P0_BLOCKER_TRIAGE.md](P0_BLOCKER_TRIAGE.md)
 - [P0_EVIDENCE_IMPORT_GUIDE.md](P0_EVIDENCE_IMPORT_GUIDE.md), [P0_EVIDENCE_RECORDER.md](P0_EVIDENCE_RECORDER.md), [P0_EVIDENCE_REGENERATION_PACK.md](P0_EVIDENCE_REGENERATION_PACK.md), and [P0_EVIDENCE_STATUS.md](P0_EVIDENCE_STATUS.md)
-- [REAL_HOST_EVIDENCE_EXECUTION.md](REAL_HOST_EVIDENCE_EXECUTION.md), [REAL_HOST_EVIDENCE_COMMAND_CENTER.md](REAL_HOST_EVIDENCE_COMMAND_CENTER.md), and [RC_HOST_EVIDENCE_OPS.md](RC_HOST_EVIDENCE_OPS.md)
+- [REAL_HOST_EVIDENCE_EXECUTION.md](REAL_HOST_EVIDENCE_EXECUTION.md) and [REAL_HOST_EVIDENCE_COMMAND_CENTER.md](REAL_HOST_EVIDENCE_COMMAND_CENTER.md)
 
-## V1 And Release Operations
+## Release Operations
 
-- [V1_READINESS.md](V1_READINESS.md), [V1_LAUNCH_REPORT.md](V1_LAUNCH_REPORT.md), [V1_DECISION_REPORT.md](V1_DECISION_REPORT.md), and [V1_STABILIZATION_PLAN.md](V1_STABILIZATION_PLAN.md)
-- [V1_EVIDENCE_OPERATOR_PACKET.md](V1_EVIDENCE_OPERATOR_PACKET.md) and [V1_GROWTH_CUTOVER_REPORT.md](V1_GROWTH_CUTOVER_REPORT.md)
-- [V1_RC_READINESS.md](V1_RC_READINESS.md), [V1_RC_RELEASE_PACKET.md](V1_RC_RELEASE_PACKET.md), [V1_RC_CUTOVER_CHECKLIST.md](V1_RC_CUTOVER_CHECKLIST.md), [V1_RC_AUTOMATION_PACK.md](V1_RC_AUTOMATION_PACK.md), [V1_RC_REHEARSAL_PLAN.md](V1_RC_REHEARSAL_PLAN.md), and [V1_RC_CUTOVER_GATE.md](V1_RC_CUTOVER_GATE.md)
-- [RC_CUTOVER_RECOVERY_PLAN.md](RC_CUTOVER_RECOVERY_PLAN.md), [RC_DRY_RUN.md](RC_DRY_RUN.md), [RC_EVIDENCE_REOPEN_FLOW.md](RC_EVIDENCE_REOPEN_FLOW.md), [RC_GATE_REOPEN_PACKET.md](RC_GATE_REOPEN_PACKET.md), and [RC_RELEASE_DECISION_REPORT.md](RC_RELEASE_DECISION_REPORT.md)
-- [EVIDENCE_FIRST_CYCLE_REPORT.md](EVIDENCE_FIRST_CYCLE_REPORT.md)
+- [STATUS.md](STATUS.md): current lifecycle status.
 - [RELEASE.md](RELEASE.md): PyPI, GitHub Release, MCP Registry, checksums, and release gates.
 - [CHANGELOG.md](../CHANGELOG.md), [server.json](../server.json), and [golden_mcp_scenarios.yaml](../evals/golden_mcp_scenarios.yaml)
 - [distortion_review_workflow.md](../examples/distortion_review_workflow.md)
+
+## Historical Release Snapshots
+
+- [ARCHIVE.md](ARCHIVE.md): pre-release status, RC decisions, recovery records, and supporting evidence.
 
 ## Maintainer Commands
 

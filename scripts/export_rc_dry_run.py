@@ -15,6 +15,7 @@ from scripts.export_distribution_rollout_packet import build_distribution_rollou
 from scripts.export_rc_cutover_recovery_plan import build_rc_cutover_recovery_plan
 from scripts.export_v1_rc_rehearsal_plan import build_v1_rc_rehearsal_plan
 from scripts.export_v1_stabilization_plan import build_v1_stabilization_plan
+from scripts.historical_status import add_historical_status_banner
 
 
 def build_rc_dry_run() -> dict[str, Any]:
@@ -105,7 +106,7 @@ def render_rc_dry_run_markdown(dry_run: dict[str, Any]) -> str:
     lines.extend(f"- {criterion}" for criterion in dry_run["reopen_criteria"])
     lines.extend(["", "## Source Docs", ""])
     lines.extend(f"- `{source}`" for source in dry_run["source_docs"])
-    return "\n".join(lines) + "\n"
+    return add_historical_status_banner("\n".join(lines) + "\n")
 
 
 def main() -> None:

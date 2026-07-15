@@ -9,7 +9,7 @@ def test_contract_snapshot_guard_accepts_current_committed_snapshots(tmp_path: P
     report = check_contract_snapshots(output_work_dir=tmp_path)
 
     assert report.ok is True
-    assert {check.name for check in report.checks} == {"mcp_contract", "output_contracts"}
+    assert {check.name for check in report.checks} == {"cli_contract", "mcp_contract", "output_contracts"}
     assert all(check.diff == "" for check in report.checks)
 
 

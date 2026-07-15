@@ -36,11 +36,19 @@ class HostPreviewRequestTemplate(StrictModel):
     instructions: list[str] = Field(default_factory=list)
 
 
+class HostWorkflowExampleFallback(StrictModel):
+    """Tool call for hosts that cannot expose MCP resource reads."""
+
+    tool: Literal["get_workflow_example"] = "get_workflow_example"
+    example_id: Literal["client-smoke"] = "client-smoke"
+
+
 class HostWorkflowGuidance(StrictModel):
     """Host-neutral instructions that do not require model-visible MCP resources."""
 
     resource_uri: str = "albumentationsx://examples/client-smoke"
     resource_access: Literal["optional"] = "optional"
+    fallback_tool: HostWorkflowExampleFallback | None = None
     instructions: list[str]
 
 
@@ -62,9 +70,10 @@ def build_host_smoke_report(
     diagnostics: DiagnosticsReport,
     recipe: RecipeRecommendation,
     validation: PipelineValidationReport,
+    preview_tools_available: bool = True,
 ) -> HostSmokeReport:
     """Build a read-only host smoke report from existing typed service outputs."""
-    preview_ready = diagnostics.status == "ok" and validation.valid
+    preview_ready = diagnostics.status == "ok" and validation.valid and preview_tools_available
     preview_request_template = _preview_request_template(diagnostics, recipe) if preview_ready else None
     checks = [
         _diagnostics_check(diagnostics),
@@ -72,6 +81,7 @@ def build_host_smoke_report(
         _validation_check(validation),
         _preview_template_check(
             preview_ready=preview_ready,
+            preview_tools_available=preview_tools_available,
             diagnostics=diagnostics,
             validation=validation,
         ),
@@ -84,6 +94,7 @@ def build_host_smoke_report(
         diagnostics=diagnostics,
         next_actions=_next_actions(
             preview_ready=preview_ready,
+            preview_tools_available=preview_tools_available,
             diagnostics=diagnostics,
             validation=validation,
         ),
@@ -94,15 +105,17 @@ def build_host_smoke_report(
 
 def _workflow_guidance() -> HostWorkflowGuidance:
     return HostWorkflowGuidance(
+        fallback_tool=HostWorkflowExampleFallback(),
         instructions=[
             (
                 "Read albumentationsx://examples/client-smoke when the host exposes resource reads; "
-                "otherwise use this report directly."
+                "if resource reads are unavailable, call get_workflow_example with "
+                'example_id="client-smoke".'
             ),
             "Continue to preview validation and rendering only when preview_ready is true.",
             "Call validate_preview_request before render_preview_batch.",
             "Keep the first preview bounded to one small image and one variant.",
-        ]
+        ],
     )
 
 
@@ -158,6 +171,7 @@ def _validation_check(validation: PipelineValidationReport) -> HostSmokeCheck:
 def _preview_template_check(
     *,
     preview_ready: bool,
+    preview_tools_available: bool,
     diagnostics: DiagnosticsReport,
     validation: PipelineValidationReport,
 ) -> HostSmokeCheck:
@@ -178,6 +192,18 @@ def _preview_template_check(
             summary="Preview request template is blocked until the recommended pipeline validates.",
             tool="render_preview_batch",
             details={"template_available": False, "blocked_by": ["pipeline_validation"]},
+        )
+    if not preview_tools_available:
+        return HostSmokeCheck(
+            code="preview_request_template",
+            status="warning",
+            severity="medium",
+            summary="Preview request template requires a preview-capable capability profile.",
+            details={
+                "template_available": False,
+                "blocked_by": ["capability_profile"],
+                "required_tools": ["validate_preview_request", "render_preview_batch"],
+            },
         )
     return HostSmokeCheck(
         code="preview_request_template",
@@ -214,6 +240,7 @@ def _preview_request_template(
 def _next_actions(
     *,
     preview_ready: bool,
+    preview_tools_available: bool,
     diagnostics: DiagnosticsReport,
     validation: PipelineValidationReport,
 ) -> list[str]:
@@ -225,6 +252,8 @@ def _next_actions(
             "Inspect the contact sheet before increasing variants, intensity, or batch size.",
         ]
     actions = list(diagnostics.next_actions)
+    if not preview_tools_available and not any("--capability-profile" in action for action in actions):
+        actions.append("Restart with `--capability-profile review`, `dataset`, or `full` before rendering previews.")
     if not validation.valid:
         actions.append("Fix recommended pipeline validation errors before rendering previews.")
     if not actions:

@@ -776,6 +776,32 @@
       }
     },
     {
+      "description": "Return an active-profile workflow example when the MCP host cannot read resources.",
+      "name": "get_workflow_example",
+      "parameters": {
+        "properties": {
+          "example_id": {
+            "enum": [
+              "client-smoke",
+              "first-preview",
+              "distortion-review",
+              "dataset-onboarding",
+              "diagnostics",
+              "review-loop",
+              "report-handoff"
+            ],
+            "title": "Example Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "example_id"
+        ],
+        "title": "get_workflow_example_toolArguments",
+        "type": "object"
+      }
+    },
+    {
       "description": "Inspect local dataset image quality before first preview rendering.",
       "name": "inspect_dataset_quality",
       "parameters": {

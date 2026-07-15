@@ -11,6 +11,7 @@ if not __package__:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from scripts.export_v1_rc_cutover_checklist import build_v1_rc_cutover_checklist
+from scripts.historical_status import add_historical_status_banner
 
 
 def build_v1_rc_automation_pack() -> dict[str, Any]:
@@ -62,7 +63,7 @@ def render_v1_rc_automation_pack_markdown(pack: dict[str, Any]) -> str:
     lines.extend(f"- `{command}`" for command in pack["publish_commands"])
     lines.extend(["", "## Source Docs", ""])
     lines.extend(f"- `{source}`" for source in pack["source_docs"])
-    return "\n".join(lines) + "\n"
+    return add_historical_status_banner("\n".join(lines) + "\n")
 
 
 def main() -> None:

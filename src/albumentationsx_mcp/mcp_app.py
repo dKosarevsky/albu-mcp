@@ -2,17 +2,32 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from importlib.resources import files
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
-    from mcp.server.fastmcp import FastMCP
-
     from albumentationsx_mcp.preview import ArtifactStore
 
 PREVIEW_REVIEW_APP_URI = "ui://albumentationsx/preview-review.html"
 PREVIEW_REVIEW_APP_MIME_TYPE = "text/html;profile=mcp-app"
 PREVIEW_ARTIFACT_URI_TEMPLATE = "artifact://{run_id}/{filename}"
+
+ResourceHandler = Callable[..., Any]
+
+
+class ResourceRegistrar(Protocol):
+    """Transport port required to register MCP App resources."""
+
+    def resource(
+        self,
+        uri: str,
+        *,
+        name: str | None = None,
+        description: str | None = None,
+        mime_type: str | None = None,
+        meta: dict[str, Any] | None = None,
+    ) -> Callable[[ResourceHandler], ResourceHandler]: ...
 
 
 def preview_review_tool_meta() -> dict[str, Any]:
@@ -25,7 +40,7 @@ def preview_review_tool_meta() -> dict[str, Any]:
     }
 
 
-def register_preview_review_resources(mcp: FastMCP, artifact_store: ArtifactStore) -> None:
+def register_preview_review_resources(mcp: ResourceRegistrar, artifact_store: ArtifactStore) -> None:
     """Register the packaged review app and its verified image resource template."""
 
     @mcp.resource(

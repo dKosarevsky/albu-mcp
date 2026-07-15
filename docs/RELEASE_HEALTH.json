@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "version": "1.19.0",
+  "observed_at": "2026-07-14",
+  "channels": [
+    {
+      "id": "pypi",
+      "status": "published",
+      "url": "https://pypi.org/project/albumentationsx-mcp/1.19.0/",
+      "evidence_url": "https://pypi.org/pypi/albumentationsx-mcp/1.19.0/json"
+    },
+    {
+      "id": "github_release",
+      "status": "published",
+      "url": "https://github.com/dKosarevsky/albu-mcp/releases/tag/v1.19.0",
+      "evidence_url": "https://github.com/dKosarevsky/albu-mcp/releases/tag/v1.19.0"
+    },
+    {
+      "id": "ci",
+      "status": "passed",
+      "url": "https://github.com/dKosarevsky/albu-mcp/actions/runs/29330162104",
+      "evidence_url": "https://github.com/dKosarevsky/albu-mcp/actions/runs/29330162104"
+    },
+    {
+      "id": "official_registry",
+      "status": "listed",
+      "url": "https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.dKosarevsky/albu-mcp",
+      "evidence_url": "https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.dKosarevsky/albu-mcp"
+    }
+  ]
+}

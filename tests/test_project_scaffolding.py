@@ -143,6 +143,19 @@ def test_usage_docs_and_examples_are_present() -> None:
     assert Path("docs/assets/demo/demo_report.md").exists()
 
 
+def test_active_docs_separate_historical_release_snapshots() -> None:
+    index = Path("docs/INDEX.md").read_text(encoding="utf-8")
+    archive = Path("docs/ARCHIVE.md").read_text(encoding="utf-8")
+
+    assert "[STATUS.md](STATUS.md)" in index
+    assert "[ARCHIVE.md](ARCHIVE.md)" in index
+    assert "V1_RC_RELEASE_PACKET.md" not in index
+    assert "RC_DRY_RUN.md" not in index
+    assert "V1_RC_RELEASE_PACKET.md" in archive
+    assert "RC_DRY_RUN.md" in archive
+    assert "Historical status snapshots" in archive
+
+
 def test_mcp_apps_review_guide_documents_progressive_enhancement() -> None:
     readme = Path("README.md").read_text(encoding="utf-8")
     install = Path("docs/INSTALL.md").read_text(encoding="utf-8")
@@ -291,8 +304,9 @@ def test_docs_link_client_smoke_playbook_resource() -> None:
         assert "preview_ready" in content
         assert "preview_request_template" in content
     for content in [readme, install, usage]:
-        assert "when the host exposes resource reads" in content.lower()
-        assert "otherwise call `run_host_smoke_check` directly" in content.lower()
+        assert "resource reads are unavailable" in content.lower()
+        assert "get_workflow_example" in content
+        assert 'example_id="client-smoke"' in content
     assert "client smoke" in install.lower()
     assert "client-smoke" in usage
     assert "client-smoke" in recipes
@@ -422,6 +436,7 @@ def test_docs_link_diagnostics_playbook_resource() -> None:
 def test_v1_readiness_audit_is_present_and_complete() -> None:
     audit = Path("docs/V1_READINESS.md").read_text(encoding="utf-8")
     docs_index = Path("docs/INDEX.md").read_text(encoding="utf-8")
+    archive = Path("docs/ARCHIVE.md").read_text(encoding="utf-8")
 
     required_terms = [
         "Public Contract Freeze",
@@ -437,7 +452,8 @@ def test_v1_readiness_audit_is_present_and_complete() -> None:
 
     for term in required_terms:
         assert term in audit
-    assert "[V1_READINESS.md](V1_READINESS.md)" in docs_index
+    assert "[ARCHIVE.md](ARCHIVE.md)" in docs_index
+    assert "[V1_READINESS.md](V1_READINESS.md)" in archive
 
 
 def test_release_docs_and_package_metadata_are_v1_ready() -> None:

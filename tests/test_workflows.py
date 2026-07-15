@@ -1,6 +1,7 @@
 import pytest
 
 from albumentationsx_mcp.workflows import (
+    HOST_EXAMPLE_IDS,
     get_agent_workflow,
     get_host_example,
     get_task_profile,
@@ -98,3 +99,12 @@ def test_host_examples_cover_review_loop_and_report_handoff() -> None:
         "adjust_pipeline",
     ]
     assert "export_preview_report" in [step.tool for step in report_handoff.steps]
+
+
+def test_unknown_host_example_lists_every_accepted_identifier() -> None:
+    with pytest.raises(KeyError) as error:
+        get_host_example("missing")
+
+    message = str(error.value)
+    assert "Unknown host example: missing" in message
+    assert ", ".join(HOST_EXAMPLE_IDS) in message

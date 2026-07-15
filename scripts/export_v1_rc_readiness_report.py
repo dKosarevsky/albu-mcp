@@ -12,6 +12,7 @@ if not __package__:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from scripts.export_v1_launch_report import build_v1_launch_report
+from scripts.historical_status import add_historical_status_banner
 
 _REQUIRED_RC_HOSTS = ["Codex", "Claude Code"]
 _HOST_ORDER = ("Codex", "Claude Code", "Cursor", "Claude Desktop")
@@ -81,7 +82,7 @@ def render_v1_rc_readiness_report_markdown(report: dict[str, Any]) -> str:
         lines.append("| none | `none` | `none` | `recorded` | `no_action` |")
     lines.extend(["", "## Promotion Rule", "", report["promotion_rule"], "", "## Next Checks", ""])
     lines.extend(f"- `{command}`" for command in report["next_checks"])
-    return "\n".join(lines) + "\n"
+    return add_historical_status_banner("\n".join(lines) + "\n")
 
 
 def main() -> None:

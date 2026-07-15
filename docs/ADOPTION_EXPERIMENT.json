@@ -1,0 +1,8 @@
+{
+  "baseline_date": "2026-07-14",
+  "campaign_id": "classification-robustness",
+  "measurement_due": "2026-07-21",
+  "post_url": null,
+  "status": "measuring",
+  "success_signal": "One voluntary render -> reject -> adjust -> accept report."
+}

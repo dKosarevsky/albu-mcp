@@ -22,7 +22,7 @@ uvx --from albumentationsx-mcp albumentationsx-mcp \
 Use this as the first host task:
 
 ```text
-Use AlbumentationsX MCP on image or directory `DATASET_PATH`. Read from `ALLOWED_ROOT` and write to `ARTIFACT_ROOT`. When the host exposes resource reads, read `albumentationsx://examples/client-smoke` and call `run_host_smoke_check`; otherwise call `run_host_smoke_check` directly. Continue only when `preview_ready` is true. If `preview_ready` is false, call `diagnose_environment` and stop before rendering. Then call `plan_dataset_onboarding`, `build_review_packet`, `validate_preview_request`, and `render_preview_batch`. Render at most 6 images on the first pass. Show the contact sheet path and ask for concrete feedback before `adjust_pipeline` or `export_pipeline`.
+Use AlbumentationsX MCP on image or directory `DATASET_PATH`. Read from `ALLOWED_ROOT` and write to `ARTIFACT_ROOT`. When the host exposes resource reads, read `albumentationsx://examples/client-smoke`; if resource reads are unavailable, call `get_workflow_example` with `example_id="client-smoke"`. Then call `run_host_smoke_check`. Continue only when `preview_ready` is true. If `preview_ready` is false, call `diagnose_environment` and stop before rendering. Then call `plan_dataset_onboarding`, `build_review_packet`, `validate_preview_request`, and `render_preview_batch`. Render at most 6 images on the first pass. Show the contact sheet path and ask for concrete feedback before `adjust_pipeline` or `export_pipeline`.
 ```
 
 ## Host Config Hints
@@ -33,8 +33,8 @@ Use AlbumentationsX MCP on image or directory `DATASET_PATH`. Read from `ALLOWED
 
 ## Host Workflow
 
-1. Read `albumentationsx://examples/client-smoke` when supported; otherwise call `run_host_smoke_check` directly.
-2. Call `run_host_smoke_check` after reading; continue only when `preview_ready` is true.
+1. Read `albumentationsx://examples/client-smoke`; if resource reads are unavailable, call `get_workflow_example` with `example_id="client-smoke"`.
+2. Call `run_host_smoke_check` next; continue only when `preview_ready` is true.
 3. Call `plan_dataset_onboarding`, then `build_review_packet` for one image or folder.
 4. Validate user paths with `validate_preview_request` before rendering.
 5. Render a small sample with `render_preview_batch`; inspect the contact sheet.
