@@ -159,7 +159,8 @@ def surface_for_profile(profile: CapabilityProfile) -> CombinedSurface:
 
 
 def _register_adapters(mcp: FastMCP, dependencies: McpDependencies) -> None:
-    register_catalog_adapter(mcp, catalog=dependencies.catalog)
+    available_tools = set(dependencies.diagnostics_service.public_surface.tools)
+    register_catalog_adapter(mcp, catalog=dependencies.catalog, available_tools=available_tools)
     register_policy_adapter(
         mcp,
         catalog=dependencies.catalog,
@@ -170,6 +171,7 @@ def _register_adapters(mcp: FastMCP, dependencies: McpDependencies) -> None:
         path_policy=dependencies.path_policy,
         pipeline_service=dependencies.pipeline_service,
         preview_service=dependencies.preview_service,
+        available_tools=available_tools,
     )
     register_preview_adapter(
         mcp,

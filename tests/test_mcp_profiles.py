@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any, cast
 
 import pytest
@@ -12,13 +14,18 @@ from albumentationsx_mcp.adapters.mcp.contracts import (
 )
 from albumentationsx_mcp.adapters.mcp.registration import ADAPTER_SURFACES, COMBINED_SURFACE
 from albumentationsx_mcp.capabilities import CapabilityProfile
+from albumentationsx_mcp.server import ServerSettings, create_mcp_server
 
 _EXPECTED_COUNTS = {
     CapabilityProfile.CORE: (16, 9, 1, 0),
-    CapabilityProfile.REVIEW: (41, 19, 2, 5),
-    CapabilityProfile.DATASET: (20, 9, 1, 0),
+    CapabilityProfile.REVIEW: (42, 19, 2, 5),
+    CapabilityProfile.DATASET: (24, 11, 2, 0),
     CapabilityProfile.FULL: (45, 20, 2, 5),
 }
+
+_SINGLE_TOOL_REFERENCE_KEYS = {"primary_tool", "recommended_next_tool", "tool", "v2_tool"}
+_TOOL_SEQUENCE_KEYS = {"follow_up_tools", "recommended_tools", "tool_sequence"}
+_SINGLE_RESOURCE_REFERENCE_KEYS = {"resource", "resource_uri"}
 
 _PROMPT_TOOL_DEPENDENCIES = {
     "build_robustness_augmentation_session": {
@@ -127,7 +134,15 @@ def test_full_profile_preserves_canonical_registration_order() -> None:
         ),
         (
             CapabilityProfile.DATASET,
-            {"plan_dataset_onboarding", "build_review_packet", "inspect_dataset_quality"},
+            {
+                "build_review_packet",
+                "compare_preview_runs",
+                "export_preview_report",
+                "inspect_dataset_quality",
+                "plan_dataset_onboarding",
+                "render_preview_batch",
+                "validate_preview_request",
+            },
             {"render_preview", "start_tuning_session"},
         ),
     ],
@@ -202,3 +217,69 @@ def test_profile_prompts_and_workflow_resources_are_dependency_closed(profile: C
     for resource in surface.resources:
         dependencies = _WORKFLOW_RESOURCE_TOOL_DEPENDENCIES.get(resource, set())
         assert dependencies <= tools
+
+
+@pytest.mark.parametrize("profile", CapabilityProfile)
+def test_registered_json_resources_reference_only_active_profile_surface(
+    tmp_path: Path,
+    profile: CapabilityProfile,
+) -> None:
+    server = create_mcp_server(
+        ServerSettings(
+            allowed_roots=[tmp_path],
+            artifact_root=tmp_path / "artifacts",
+            capability_profile=profile,
+        )
+    )
+    tools = set(server._tool_manager._tools)
+    resources = {str(uri) for uri in server._resource_manager._resources}
+    unresolved: list[str] = []
+
+    for uri, resource in server._resource_manager._resources.items():
+        payload = cast("Any", resource).fn()
+        if not isinstance(payload, str):
+            continue
+        try:
+            data = json.loads(payload)
+        except json.JSONDecodeError:
+            continue
+        for reference_kind, reference in _iter_capability_references(data):
+            available = resources if reference_kind == "resource" else tools
+            if reference not in available:
+                unresolved.append(f"{uri}: {reference_kind} {reference}")
+
+    assert unresolved == []
+
+
+@pytest.mark.parametrize("profile", CapabilityProfile)
+def test_recipe_recommendation_lists_only_active_profile_tools(tmp_path: Path, profile: CapabilityProfile) -> None:
+    server = create_mcp_server(
+        ServerSettings(
+            allowed_roots=[tmp_path],
+            artifact_root=tmp_path / "artifacts",
+            capability_profile=profile,
+        )
+    )
+    tools = set(server._tool_manager._tools)
+
+    recommendation = cast("Any", server._tool_manager._tools["recommend_recipe"]).fn(task="classification")
+
+    assert set(recommendation["recommended_tools"]) <= tools
+
+
+def _iter_capability_references(value: Any) -> list[tuple[str, str]]:
+    references: list[tuple[str, str]] = []
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if key in _SINGLE_TOOL_REFERENCE_KEYS and isinstance(item, str):
+                kind = "resource" if item.startswith("albumentationsx://") else "tool"
+                references.append((kind, item))
+            elif key in _TOOL_SEQUENCE_KEYS and isinstance(item, list):
+                references.extend(("tool", entry) for entry in item if isinstance(entry, str))
+            elif key in _SINGLE_RESOURCE_REFERENCE_KEYS and isinstance(item, str):
+                references.append(("resource", item))
+            references.extend(_iter_capability_references(item))
+    elif isinstance(value, list):
+        for item in value:
+            references.extend(_iter_capability_references(item))
+    return references

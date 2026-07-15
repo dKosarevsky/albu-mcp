@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal
 
 from albumentationsx_mcp.adapters.mcp.contracts import AdapterSurface, ProfileSurface
-from albumentationsx_mcp.capabilities import REVIEW_PROFILE_MEMBERSHIP
+from albumentationsx_mcp.capabilities import REVIEW_DATASET_PROFILE_MEMBERSHIP, REVIEW_PROFILE_MEMBERSHIP
 from albumentationsx_mcp.dataset import score_dataset_preview_candidates as score_dataset_candidates
 from albumentationsx_mcp.mcp_app import (
     PREVIEW_ARTIFACT_URI_TEMPLATE,
@@ -45,6 +45,13 @@ _TOOLS = (
     "rank_preview_candidates",
     "export_preview_report",
 )
+_DATASET_TOOLS = (
+    "validate_preview_request",
+    "render_preview_batch",
+    "compare_preview_runs",
+    "export_preview_report",
+)
+_REVIEW_ONLY_TOOLS = tuple(tool for tool in _TOOLS if tool not in _DATASET_TOOLS)
 _RESOURCES = (PREVIEW_REVIEW_APP_URI,)
 _RESOURCE_TEMPLATES = (PREVIEW_ARTIFACT_URI_TEMPLATE,)
 SURFACE = AdapterSurface(
@@ -53,9 +60,10 @@ SURFACE = AdapterSurface(
     resources=_RESOURCES,
     resource_templates=_RESOURCE_TEMPLATES,
     profile_surfaces=(
+        ProfileSurface(profiles=REVIEW_PROFILE_MEMBERSHIP, tools=_REVIEW_ONLY_TOOLS),
         ProfileSurface(
-            profiles=REVIEW_PROFILE_MEMBERSHIP,
-            tools=_TOOLS,
+            profiles=REVIEW_DATASET_PROFILE_MEMBERSHIP,
+            tools=_DATASET_TOOLS,
             resources=_RESOURCES,
             resource_templates=_RESOURCE_TEMPLATES,
         ),

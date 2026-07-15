@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from albumentationsx_mcp.adapters.mcp.contracts import AdapterSurface, ProfileSurface
-from albumentationsx_mcp.capabilities import DATASET_PROFILE_MEMBERSHIP
+from albumentationsx_mcp.capabilities import DATASET_PROFILE_MEMBERSHIP, REVIEW_DATASET_PROFILE_MEMBERSHIP
 from albumentationsx_mcp.dataset import score_dataset_preview_candidates as score_dataset_candidates
 from albumentationsx_mcp.dataset_quality import inspect_dataset_quality
 from albumentationsx_mcp.models import QualityProfileName
@@ -27,10 +27,15 @@ _TOOLS = (
     "inspect_dataset_quality",
     "score_dataset_preview_candidates",
 )
+_DATASET_ONLY_TOOLS = _TOOLS[:-1]
+_SHARED_SCORING_TOOLS = _TOOLS[-1:]
 SURFACE = AdapterSurface(
     adapter="dataset",
     tools=_TOOLS,
-    profile_surfaces=(ProfileSurface(profiles=DATASET_PROFILE_MEMBERSHIP, tools=_TOOLS),),
+    profile_surfaces=(
+        ProfileSurface(profiles=DATASET_PROFILE_MEMBERSHIP, tools=_DATASET_ONLY_TOOLS),
+        ProfileSurface(profiles=REVIEW_DATASET_PROFILE_MEMBERSHIP, tools=_SHARED_SCORING_TOOLS),
+    ),
 )
 
 
@@ -40,6 +45,7 @@ def register_dataset_adapter(
     path_policy: PathPolicy,
     pipeline_service: PipelineService,
     preview_service: PreviewService,
+    available_tools: set[str] | None = None,
 ) -> None:
     """Register bounded dataset onboarding, review, quality, and scoring tools."""
 
@@ -60,7 +66,7 @@ def register_dataset_adapter(
             max_images=max_images,
             path_policy=path_policy,
             pipeline_service=pipeline_service,
-            recipe_builder=recommend_recipe,
+            recipe_builder=lambda **kwargs: recommend_recipe(**kwargs, available_tools=available_tools),
         ).model_dump(mode="json", exclude_none=True)
 
     @mcp.tool(name="build_review_packet")
@@ -80,7 +86,7 @@ def register_dataset_adapter(
             max_images=max_images,
             path_policy=path_policy,
             pipeline_service=pipeline_service,
-            recipe_builder=recommend_recipe,
+            recipe_builder=lambda **kwargs: recommend_recipe(**kwargs, available_tools=available_tools),
         ).model_dump(mode="json", exclude_none=True)
 
     @mcp.tool(name="inspect_dataset_quality")

@@ -30,6 +30,11 @@ REVIEW_PROFILE_MEMBERSHIP = (
     CapabilityProfile.REVIEW,
     CapabilityProfile.FULL,
 )
+REVIEW_DATASET_PROFILE_MEMBERSHIP = (
+    CapabilityProfile.REVIEW,
+    CapabilityProfile.DATASET,
+    CapabilityProfile.FULL,
+)
 DATASET_PROFILE_MEMBERSHIP = (
     CapabilityProfile.DATASET,
     CapabilityProfile.FULL,

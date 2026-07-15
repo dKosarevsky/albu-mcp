@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Collection
 from typing import NamedTuple
 
 from albumentationsx_mcp.models import QualityProfileName, RecipeExplanation, RecipeInfo, RecipeRecommendation
@@ -89,9 +90,10 @@ _RECIPES: tuple[RecipeDefinition, ...] = (
 )
 
 
-def list_recipe_catalog() -> list[RecipeInfo]:
+def list_recipe_catalog(*, available_tools: Collection[str] | None = None) -> list[RecipeInfo]:
     """Return deterministic task recipe metadata for MCP resources."""
-    return [_recipe_info(recipe) for recipe in _RECIPES]
+    recommended_tools = _available_recommended_tools(available_tools)
+    return [_recipe_info(recipe, recommended_tools=recommended_tools) for recipe in _RECIPES]
 
 
 def recommend_recipe(
@@ -99,12 +101,20 @@ def recommend_recipe(
     *,
     intensity: Intensity = "medium",
     targets: list[str] | None = None,
+    available_tools: Collection[str] | None = None,
 ) -> RecipeRecommendation:
     """Recommend a task-aware starter pipeline and workflow envelope."""
     recipe = _match_recipe(task)
     selected_targets = list(targets) if targets is not None else list(recipe.default_targets)
+    recommended_tools = _available_recommended_tools(available_tools)
     pipeline = recommend_preset_pipeline(recipe.preset_task, intensity=intensity, targets=selected_targets)
-    explanations = _explanations(recipe, task=task, targets=selected_targets, explicit_targets=targets is not None)
+    explanations = _explanations(
+        recipe,
+        task=task,
+        targets=selected_targets,
+        explicit_targets=targets is not None,
+        recommended_tools=recommended_tools,
+    )
     return RecipeRecommendation(
         task=task,
         recipe_name=recipe.name,
@@ -112,15 +122,15 @@ def recommend_recipe(
         targets=selected_targets,
         quality_profile=recipe.quality_profile,
         pipeline=pipeline,
-        recommended_tools=list(_RECOMMENDED_TOOLS),
+        recommended_tools=recommended_tools,
         feedback_tags=list(recipe.feedback_tags),
-        preview_guidance=_preview_guidance(recipe),
+        preview_guidance=_preview_guidance(recipe, recommended_tools=recommended_tools),
         explanations=explanations,
-        rationale=_rationale(recipe),
+        rationale=_rationale(recipe, recommended_tools=recommended_tools),
     )
 
 
-def _recipe_info(recipe: RecipeDefinition) -> RecipeInfo:
+def _recipe_info(recipe: RecipeDefinition, *, recommended_tools: list[str]) -> RecipeInfo:
     return RecipeInfo(
         name=recipe.name,
         description=recipe.description,
@@ -128,7 +138,7 @@ def _recipe_info(recipe: RecipeDefinition) -> RecipeInfo:
         quality_profile=recipe.quality_profile,
         default_targets=list(recipe.default_targets),
         feedback_tags=list(recipe.feedback_tags),
-        recommended_tools=list(_RECOMMENDED_TOOLS),
+        recommended_tools=recommended_tools,
     )
 
 
@@ -146,6 +156,7 @@ def _explanations(
     task: str,
     targets: list[str],
     explicit_targets: bool,
+    recommended_tools: list[str],
 ) -> list[RecipeExplanation]:
     return [
         RecipeExplanation(
@@ -165,8 +176,8 @@ def _explanations(
         ),
         RecipeExplanation(
             kind="workflow",
-            selected=list(_RECOMMENDED_TOOLS),
-            rationale="Render, rank, score, report, record the decision, then export only after preview acceptance.",
+            selected=recommended_tools,
+            rationale=_workflow_rationale(recommended_tools),
         ),
     ]
 
@@ -188,7 +199,19 @@ def _normalize_task(task: str) -> str:
     return task.strip().lower().replace("-", "_").replace(" ", "_")
 
 
-def _preview_guidance(recipe: RecipeDefinition) -> list[str]:
+def _preview_guidance(recipe: RecipeDefinition, *, recommended_tools: list[str]) -> list[str]:
+    if "render_preview_batch" not in recommended_tools:
+        return [
+            "Validate the starter pipeline in the active capability profile.",
+            "Switch to the review, dataset, or full profile before rendering local previews.",
+            "Export only after the candidate has been accepted in a preview-capable profile.",
+        ]
+    if "rank_preview_candidates" not in recommended_tools:
+        return [
+            f"Use the {recipe.quality_profile} quality profile when comparing preview runs.",
+            "Render at least two candidate preview runs before dataset-level scoring.",
+            "Score the candidate set before exporting a report or final pipeline.",
+        ]
     return [
         f"Use the {recipe.quality_profile} quality profile when comparing preview runs.",
         "Render at least two candidate preview runs before ranking.",
@@ -196,8 +219,26 @@ def _preview_guidance(recipe: RecipeDefinition) -> list[str]:
     ]
 
 
-def _rationale(recipe: RecipeDefinition) -> str:
+def _rationale(recipe: RecipeDefinition, *, recommended_tools: list[str]) -> str:
+    if recommended_tools != _RECOMMENDED_TOOLS:
+        return (
+            f"Matched the {recipe.name} recipe, selected the {recipe.quality_profile} quality profile, "
+            "and limited workflow guidance to tools available in the active capability profile."
+        )
     return (
         f"Matched the {recipe.name} recipe, selected the {recipe.quality_profile} quality profile, "
         "and paired a conservative starter pipeline with preview ranking and report export tools."
     )
+
+
+def _available_recommended_tools(available_tools: Collection[str] | None) -> list[str]:
+    if available_tools is None:
+        return list(_RECOMMENDED_TOOLS)
+    available = set(available_tools)
+    return [tool for tool in _RECOMMENDED_TOOLS if tool in available]
+
+
+def _workflow_rationale(recommended_tools: list[str]) -> str:
+    if recommended_tools == _RECOMMENDED_TOOLS:
+        return "Render, rank, score, report, record the decision, then export only after preview acceptance."
+    return "Use only the workflow tools exposed by the active capability profile."

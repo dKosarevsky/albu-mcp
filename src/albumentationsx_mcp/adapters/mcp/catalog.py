@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Collection
 from typing import TYPE_CHECKING, Any
 
 from albumentationsx_mcp.adapters.mcp.contracts import AdapterSurface, ProfileSurface
@@ -49,7 +50,12 @@ SURFACE = AdapterSurface(
 )
 
 
-def register_catalog_adapter(mcp: FastMCP, *, catalog: TransformCatalog) -> None:
+def register_catalog_adapter(
+    mcp: FastMCP,
+    *,
+    catalog: TransformCatalog,
+    available_tools: Collection[str] | None = None,
+) -> None:
     """Register transform, schema, feedback, quality, and recipe discovery."""
 
     @mcp.resource("albumentationsx://transforms/catalog")
@@ -83,7 +89,9 @@ def register_catalog_adapter(mcp: FastMCP, *, catalog: TransformCatalog) -> None
     @mcp.resource("albumentationsx://recipes/catalog")
     def recipes_catalog_resource() -> str:
         """Return task-aware recipe recommendations as compact JSON."""
-        data = [recipe.model_dump(mode="json") for recipe in list_recipe_catalog()]
+        data = [
+            recipe.model_dump(mode="json") for recipe in list_recipe_catalog(available_tools=available_tools)
+        ]
         return json.dumps(data, sort_keys=True)
 
     @mcp.tool()
@@ -126,7 +134,12 @@ def register_catalog_adapter(mcp: FastMCP, *, catalog: TransformCatalog) -> None
         targets: list[str] | None = None,
     ) -> dict[str, Any]:
         """Recommend a task-aware starter pipeline, quality profile, and preview workflow."""
-        return recommend_recipe(task=task, intensity=intensity, targets=targets).model_dump(
+        return recommend_recipe(
+            task=task,
+            intensity=intensity,
+            targets=targets,
+            available_tools=available_tools,
+        ).model_dump(
             mode="json",
             exclude_none=True,
         )

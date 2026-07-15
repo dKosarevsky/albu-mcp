@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 from albumentationsx_mcp.adapters.mcp.contracts import AdapterSurface, ProfileSurface
 from albumentationsx_mcp.capabilities import (
     CORE_PROFILE_MEMBERSHIP,
-    FULL_PROFILE_MEMBERSHIP,
+    DATASET_PROFILE_MEMBERSHIP,
     REVIEW_PROFILE_MEMBERSHIP,
 )
 from albumentationsx_mcp.diagnostics import build_diagnostics_guide
@@ -62,7 +62,7 @@ _REVIEW_RESOURCES = (
     "albumentationsx://examples/review-loop",
     "albumentationsx://examples/report-handoff",
 )
-_FULL_RESOURCES = ("albumentationsx://examples/dataset-onboarding",)
+_DATASET_RESOURCES = ("albumentationsx://examples/dataset-onboarding",)
 SURFACE = AdapterSurface(
     adapter="diagnostics",
     tools=_TOOLS,
@@ -70,7 +70,7 @@ SURFACE = AdapterSurface(
     profile_surfaces=(
         ProfileSurface(profiles=CORE_PROFILE_MEMBERSHIP, tools=_TOOLS, resources=_CORE_RESOURCES),
         ProfileSurface(profiles=REVIEW_PROFILE_MEMBERSHIP, resources=_REVIEW_RESOURCES),
-        ProfileSurface(profiles=FULL_PROFILE_MEMBERSHIP, resources=_FULL_RESOURCES),
+        ProfileSurface(profiles=DATASET_PROFILE_MEMBERSHIP, resources=_DATASET_RESOURCES),
     ),
 )
 
@@ -181,7 +181,12 @@ def register_diagnostics_adapter(
     ) -> dict[str, Any]:
         """Run a read-only host preflight; reading the client-smoke resource is optional."""
         diagnostics = diagnostics_service.diagnose(include_write_probe=include_write_probe)
-        recipe = recommend_recipe(task=task, intensity=intensity, targets=targets)
+        recipe = recommend_recipe(
+            task=task,
+            intensity=intensity,
+            targets=targets,
+            available_tools=diagnostics_service.public_surface.tools,
+        )
         validation = pipeline_service.validate_pipeline(recipe.pipeline, TargetSpec(targets=recipe.targets))
         return build_host_smoke_report(
             diagnostics=diagnostics,
