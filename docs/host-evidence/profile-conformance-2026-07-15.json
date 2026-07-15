@@ -6,6 +6,7 @@
       "fallback_matches_resource": true,
       "preview_ready": false,
       "profile": "core",
+      "reported_capability_profile": "core",
       "smoke_ok": true,
       "status": "passed",
       "surface": {
@@ -26,6 +27,7 @@
       "fallback_matches_resource": true,
       "preview_ready": true,
       "profile": "review",
+      "reported_capability_profile": "review",
       "smoke_ok": true,
       "status": "passed",
       "surface": {
@@ -46,6 +48,7 @@
       "fallback_matches_resource": true,
       "preview_ready": true,
       "profile": "dataset",
+      "reported_capability_profile": "dataset",
       "smoke_ok": true,
       "status": "passed",
       "surface": {
@@ -66,6 +69,7 @@
       "fallback_matches_resource": true,
       "preview_ready": true,
       "profile": "full",
+      "reported_capability_profile": "full",
       "smoke_ok": true,
       "status": "passed",
       "surface": {
@@ -82,8 +86,8 @@
       "surface_mismatches": {}
     }
   ],
-  "schema_version": 1,
-  "source_revision": "ffcb3574673d2edae5f4023168f6f3a6a7007795",
+  "schema_version": 2,
+  "source_revision": "c1704df2a4c7c18136e3de95968de8a9fabd2e49",
   "status": "passed",
   "transport": "stdio"
 }
