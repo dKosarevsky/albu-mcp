@@ -5,12 +5,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+from mcp.server.fastmcp import FastMCP
+
 from albumentationsx_mcp.adapters.mcp.catalog import SURFACE as CATALOG_SURFACE
 from albumentationsx_mcp.adapters.mcp.catalog import register_catalog_adapter
 from albumentationsx_mcp.adapters.mcp.contracts import (
     CombinedSurface,
-    combine_adapter_surfaces,
-    validate_adapter_surfaces,
+    combine_adapter_surfaces_for_profile,
+    validate_profiled_adapter_surfaces,
 )
 from albumentationsx_mcp.adapters.mcp.dataset import SURFACE as DATASET_SURFACE
 from albumentationsx_mcp.adapters.mcp.dataset import register_dataset_adapter
@@ -24,10 +26,9 @@ from albumentationsx_mcp.adapters.mcp.prompts import SURFACE as PROMPT_SURFACE
 from albumentationsx_mcp.adapters.mcp.prompts import register_prompt_adapter
 from albumentationsx_mcp.adapters.mcp.sessions import SURFACE as SESSION_SURFACE
 from albumentationsx_mcp.adapters.mcp.sessions import register_session_adapter
+from albumentationsx_mcp.capabilities import CapabilityProfile
 
 if TYPE_CHECKING:
-    from mcp.server.fastmcp import FastMCP
-
     from albumentationsx_mcp.adapters.mcp.dependencies import McpDependencies
 
 ADAPTER_SURFACES = (
@@ -39,7 +40,10 @@ ADAPTER_SURFACES = (
     DIAGNOSTICS_SURFACE,
     PROMPT_SURFACE,
 )
-COMBINED_SURFACE = combine_adapter_surfaces(ADAPTER_SURFACES)
+PROFILE_SURFACES = {
+    profile: combine_adapter_surfaces_for_profile(ADAPTER_SURFACES, profile) for profile in CapabilityProfile
+}
+COMBINED_SURFACE = PROFILE_SURFACES[CapabilityProfile.FULL]
 
 PUBLIC_TOOLS = (
     "search_transforms",
@@ -121,19 +125,37 @@ class _ManagerState:
     prompts: dict[Any, Any]
 
 
-def register_mcp_adapters(mcp: FastMCP, dependencies: McpDependencies) -> None:
-    """Register every public adapter without leaving a partial surface on failure."""
-    validate_adapter_surfaces(ADAPTER_SURFACES)
+def register_mcp_adapters(
+    mcp: FastMCP,
+    dependencies: McpDependencies,
+    *,
+    profile: CapabilityProfile = CapabilityProfile.FULL,
+) -> None:
+    """Register one canonical profile without leaving a partial target surface."""
+    validate_profiled_adapter_surfaces(ADAPTER_SURFACES)
+    declared_surface = surface_for_profile(profile)
     before = _capture_manager_state(mcp)
     initial_surface = _surface_from_state(before)
-    _raise_on_collisions(initial_surface, COMBINED_SURFACE)
+    _raise_on_collisions(initial_surface, declared_surface)
 
     try:
-        _register_adapters(mcp, dependencies)
-        _verify_registered_surface(mcp, initial_surface)
+        staged = FastMCP("AlbumentationsX MCP registration staging")
+        _register_adapters(staged, dependencies)
+        _verify_staged_surface(staged)
+        selected = _select_manager_state(_capture_manager_state(staged), declared_surface)
+        _append_manager_state(mcp, selected)
+        _verify_registered_surface(mcp, initial_surface, declared_surface)
     except Exception:
         _restore_manager_state(mcp, before)
         raise
+
+
+def surface_for_profile(profile: CapabilityProfile) -> CombinedSurface:
+    """Return the validated canonical surface for one capability profile."""
+    if not isinstance(profile, CapabilityProfile):
+        msg = f"unknown capability profile: {profile}"
+        raise TypeError(msg)
+    return PROFILE_SURFACES[profile]
 
 
 def _register_adapters(mcp: FastMCP, dependencies: McpDependencies) -> None:
@@ -213,17 +235,54 @@ def _raise_on_collisions(existing: CombinedSurface, declared: CombinedSurface) -
             raise ValueError(msg)
 
 
-def _verify_registered_surface(mcp: FastMCP, initial: CombinedSurface) -> None:
+def _verify_staged_surface(mcp: FastMCP) -> None:
+    actual = _registered_surface(mcp)
+    if actual != COMBINED_SURFACE:
+        msg = f"staged MCP surface does not match full declaration: expected {COMBINED_SURFACE!r}, got {actual!r}"
+        raise RuntimeError(msg)
+
+
+def _verify_registered_surface(
+    mcp: FastMCP,
+    initial: CombinedSurface,
+    declared: CombinedSurface,
+) -> None:
     expected = CombinedSurface(
-        tools=initial.tools + COMBINED_SURFACE.tools,
-        resources=initial.resources + COMBINED_SURFACE.resources,
-        resource_templates=initial.resource_templates + COMBINED_SURFACE.resource_templates,
-        prompts=initial.prompts + COMBINED_SURFACE.prompts,
+        tools=initial.tools + declared.tools,
+        resources=initial.resources + declared.resources,
+        resource_templates=initial.resource_templates + declared.resource_templates,
+        prompts=initial.prompts + declared.prompts,
     )
     actual = _registered_surface(mcp)
     if actual != expected:
         msg = f"registered MCP surface does not match declarations: expected {expected!r}, got {actual!r}"
         raise RuntimeError(msg)
+
+
+def _select_manager_state(state: _ManagerState, surface: CombinedSurface) -> _ManagerState:
+    tools = set(surface.tools)
+    resources = set(surface.resources)
+    resource_templates = set(surface.resource_templates)
+    prompts = set(surface.prompts)
+    return _ManagerState(
+        tools={name: item for name, item in state.tools.items() if name in tools},
+        resources={uri: item for uri, item in state.resources.items() if str(uri) in resources},
+        resource_templates={
+            uri: item for uri, item in state.resource_templates.items() if str(uri) in resource_templates
+        },
+        prompts={name: item for name, item in state.prompts.items() if name in prompts},
+    )
+
+
+def _append_manager_state(mcp: FastMCP, state: _ManagerState) -> None:
+    managers = (
+        (mcp._tool_manager._tools, state.tools),  # noqa: SLF001
+        (mcp._resource_manager._resources, state.resources),  # noqa: SLF001
+        (mcp._resource_manager._templates, state.resource_templates),  # noqa: SLF001
+        (mcp._prompt_manager._prompts, state.prompts),  # noqa: SLF001
+    )
+    for registered, selected in managers:
+        registered.update(selected)
 
 
 def _restore_manager_state(mcp: FastMCP, state: _ManagerState) -> None:

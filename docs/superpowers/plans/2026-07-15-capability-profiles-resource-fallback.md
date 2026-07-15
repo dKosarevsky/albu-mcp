@@ -99,19 +99,19 @@ Run profile contract, adapter, Ruff, format, and ty checks. Commit as `feat: dec
 - Modify: `tests/test_mcp_profiles.py`
 - Modify: `tests/test_mcp_adapters.py`
 
-- [ ] **Step 1: Add failing registration tests**
+- [x] **Step 1: Add failing registration tests**
 
 For every profile, assert actual FastMCP managers exactly equal the declared filtered surface. Add tests proving an
 excluded-name collision is preserved, a selected collision fails before target mutation, and staging failures leave
 the target unchanged.
 
-- [ ] **Step 2: Implement staged filtering**
+- [x] **Step 2: Implement staged filtering**
 
 Register the canonical full adapter set on an isolated FastMCP instance, verify it against the full declaration, select
 manager entries by profile, then atomically append them to the target. Preserve registration order and rollback target
 state on every failure.
 
-- [ ] **Step 3: Verify and commit**
+- [x] **Step 3: Verify and commit**
 
 Run profile/adapter tests and all MCP contract tests plus static checks. Commit as
 `feat: register filtered MCP profiles`.

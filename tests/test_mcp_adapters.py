@@ -14,6 +14,7 @@ from albumentationsx_mcp.adapters.mcp.catalog import register_catalog_adapter
 from albumentationsx_mcp.adapters.mcp.contracts import (
     AdapterSurface,
     combine_adapter_surfaces,
+    combine_adapter_surfaces_for_profile,
     validate_adapter_surfaces,
 )
 from albumentationsx_mcp.adapters.mcp.dataset import SURFACE as DATASET_SURFACE
@@ -34,6 +35,7 @@ from albumentationsx_mcp.adapters.mcp.registration import (
 )
 from albumentationsx_mcp.adapters.mcp.sessions import SURFACE as SESSION_SURFACE
 from albumentationsx_mcp.adapters.mcp.sessions import register_session_adapter
+from albumentationsx_mcp.capabilities import CapabilityProfile
 from albumentationsx_mcp.catalog import TransformCatalog
 from albumentationsx_mcp.diagnostics import DiagnosticsService, PublicSurface
 from albumentationsx_mcp.pipeline import PipelineService
@@ -316,8 +318,48 @@ def test_register_mcp_adapters_registers_exact_combined_surface(
     assert tuple(mcp._prompt_manager._prompts) == COMBINED_SURFACE.prompts
 
 
+@pytest.mark.parametrize("profile", CapabilityProfile)
+def test_register_mcp_adapters_registers_exact_profile_surface(
+    adapter_dependencies: AdapterTestDependencies,
+    profile: CapabilityProfile,
+) -> None:
+    mcp = FastMCP(f"{profile.value}-profile-test")
+    expected = combine_adapter_surfaces_for_profile(ADAPTER_SURFACES, profile)
+
+    register_mcp_adapters(mcp, _mcp_dependencies(adapter_dependencies), profile=profile)
+
+    assert tuple(mcp._tool_manager._tools) == expected.tools
+    assert tuple(str(uri) for uri in mcp._resource_manager._resources) == expected.resources
+    assert tuple(mcp._resource_manager._templates) == expected.resource_templates
+    assert tuple(mcp._prompt_manager._prompts) == expected.prompts
+
+
+def test_profile_registration_preserves_collision_for_excluded_identifier(
+    adapter_dependencies: AdapterTestDependencies,
+) -> None:
+    mcp = FastMCP("excluded-collision-test")
+
+    @mcp.tool(name="render_preview")
+    def existing_render_preview() -> str:
+        return "existing"
+
+    existing = mcp._tool_manager._tools["render_preview"]
+    expected = combine_adapter_surfaces_for_profile(ADAPTER_SURFACES, CapabilityProfile.CORE)
+
+    register_mcp_adapters(
+        mcp,
+        _mcp_dependencies(adapter_dependencies),
+        profile=CapabilityProfile.CORE,
+    )
+
+    assert mcp._tool_manager._tools["render_preview"] is existing
+    assert tuple(mcp._tool_manager._tools) == ("render_preview", *expected.tools)
+
+
+@pytest.mark.parametrize("profile", [CapabilityProfile.FULL, CapabilityProfile.CORE])
 def test_register_mcp_adapters_rejects_collision_before_partial_registration(
     adapter_dependencies: AdapterTestDependencies,
+    profile: CapabilityProfile,
 ) -> None:
     mcp = FastMCP("collision-test")
 
@@ -326,7 +368,7 @@ def test_register_mcp_adapters_rejects_collision_before_partial_registration(
         return "existing"
 
     with pytest.raises(ValueError, match=r"tools.*search_transforms"):
-        register_mcp_adapters(mcp, _mcp_dependencies(adapter_dependencies))
+        register_mcp_adapters(mcp, _mcp_dependencies(adapter_dependencies), profile=profile)
 
     assert tuple(mcp._tool_manager._tools) == ("search_transforms",)
     assert not mcp._resource_manager._resources
@@ -334,9 +376,11 @@ def test_register_mcp_adapters_rejects_collision_before_partial_registration(
     assert not mcp._prompt_manager._prompts
 
 
+@pytest.mark.parametrize("profile", [CapabilityProfile.FULL, CapabilityProfile.CORE])
 def test_register_mcp_adapters_rolls_back_unexpected_registration_failure(
     adapter_dependencies: AdapterTestDependencies,
     monkeypatch: pytest.MonkeyPatch,
+    profile: CapabilityProfile,
 ) -> None:
     mcp = FastMCP("rollback-test")
 
@@ -355,7 +399,7 @@ def test_register_mcp_adapters_rolls_back_unexpected_registration_failure(
     monkeypatch.setattr(registration_module, "register_session_adapter", failing_session_adapter)
 
     with pytest.raises(RuntimeError, match="injected registration failure"):
-        register_mcp_adapters(mcp, _mcp_dependencies(adapter_dependencies))
+        register_mcp_adapters(mcp, _mcp_dependencies(adapter_dependencies), profile=profile)
 
     assert tuple(mcp._tool_manager._tools) == ("existing_tool",)
     assert not mcp._resource_manager._resources
