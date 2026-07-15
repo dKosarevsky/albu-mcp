@@ -65,6 +65,7 @@ async def check_profile_conformance(
             resources_result = await session.list_resources()
             templates_result = await session.list_resource_templates()
             prompts_result = await session.list_prompts()
+            diagnostics_result = await session.call_tool("diagnose_environment", {"include_write_probe": False})
             smoke_result = await session.call_tool("run_host_smoke_check", {"include_write_probe": False})
             resource_result = await session.read_resource(AnyUrl("albumentationsx://examples/client-smoke"))
             fallback_result = await session.call_tool(
@@ -80,26 +81,36 @@ async def check_profile_conformance(
             prompts=tuple(prompt.name for prompt in prompts_result.prompts),
         )
         mismatches = _surface_mismatches(expected, observed)
+        diagnostics = _structured_content(diagnostics_result.structuredContent, label="diagnose_environment")
         smoke = _structured_content(smoke_result.structuredContent, label="run_host_smoke_check")
         fallback = _structured_content(fallback_result.structuredContent, label="get_workflow_example")
         resource = _resource_json(resource_result.contents)
         expected_preview_ready = profile is not CapabilityProfile.CORE
+        profile_identity_failures = _profile_identity_failures(
+            diagnostics=diagnostics,
+            smoke=smoke,
+            expected=profile,
+        )
+        diagnostics_ok = diagnostics_result.isError is not True
         reported_capability_profile = smoke.get("capability_profile")
-        profile_matches = reported_capability_profile == profile.value
         preview_ready = smoke.get("preview_ready")
-        smoke_ok = smoke_result.isError is not True and profile_matches and preview_ready is expected_preview_ready
+        smoke_ok = smoke_result.isError is not True and preview_ready is expected_preview_ready
         fallback_matches_resource = fallback_result.isError is not True and fallback == resource
         failures = _profile_failures(
             mismatches=mismatches,
+            diagnostics_ok=diagnostics_ok,
             smoke_ok=smoke_ok,
-            profile_matches=profile_matches,
+            profile_identity_failures=profile_identity_failures,
             fallback_matches_resource=fallback_matches_resource,
         )
         return {
+            "diagnostics_ok": diagnostics_ok,
+            "diagnostics_reported_capability_profile": diagnostics.get("capability_profile"),
             "failures": failures,
             "fallback_matches_resource": fallback_matches_resource,
             "preview_ready": preview_ready,
             "profile": profile.value,
+            "profile_identity_matches": not profile_identity_failures,
             "reported_capability_profile": reported_capability_profile,
             "smoke_ok": smoke_ok,
             "status": "passed" if not failures else "failed",
@@ -109,10 +120,13 @@ async def check_profile_conformance(
         }
     except Exception as exc:  # noqa: BLE001 - profile boundary must report a failed probe, not abort the matrix.
         return {
+            "diagnostics_ok": False,
+            "diagnostics_reported_capability_profile": None,
             "failures": [_sanitized_failure(config, exc)],
             "fallback_matches_resource": False,
             "preview_ready": None,
             "profile": profile.value,
+            "profile_identity_matches": False,
             "reported_capability_profile": None,
             "smoke_ok": False,
             "status": "failed",
@@ -262,19 +276,37 @@ def _resource_json(contents: list[Any]) -> dict[str, Any]:
 def _profile_failures(
     *,
     mismatches: dict[str, Any],
+    diagnostics_ok: bool,
     smoke_ok: bool,
-    profile_matches: bool,
+    profile_identity_failures: list[str],
     fallback_matches_resource: bool,
 ) -> list[str]:
     failures: list[str] = []
     if mismatches:
         failures.append("observed MCP surface differs from the canonical profile")
-    if not profile_matches:
-        failures.append("host smoke result does not report the active capability profile")
+    if not diagnostics_ok:
+        failures.append("diagnose_environment returned an MCP tool error")
+    failures.extend(profile_identity_failures)
     if not smoke_ok:
         failures.append("host smoke result does not match profile preview semantics")
     if not fallback_matches_resource:
         failures.append("client-smoke fallback differs from the canonical resource")
+    return failures
+
+
+def _profile_identity_failures(
+    *,
+    diagnostics: dict[str, Any],
+    smoke: dict[str, Any],
+    expected: CapabilityProfile,
+) -> list[str]:
+    failures: list[str] = []
+    for tool, payload in (
+        ("diagnose_environment", diagnostics),
+        ("run_host_smoke_check", smoke),
+    ):
+        if payload.get("capability_profile") != expected.value:
+            failures.append(f"{tool} did not report capability profile {expected.value!r}")
     return failures
 
 
