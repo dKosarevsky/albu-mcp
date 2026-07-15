@@ -26,6 +26,17 @@ from albumentationsx_mcp.adapters.cli.intake import build_intake_parser
 from albumentationsx_mcp.adapters.cli.preview import SURFACE as PREVIEW_SURFACE
 from albumentationsx_mcp.adapters.cli.preview import build_preview_parser
 from albumentationsx_mcp.adapters.cli.product_fix import PRODUCT_FIX_COMMANDS
+from albumentationsx_mcp.adapters.cli.registration import COMBINED_CLI_SURFACE, GROUP_RUNNERS
+from albumentationsx_mcp.adapters.cli.release import (
+    DISTRIBUTION_SURFACE,
+    RC_SURFACE,
+    TRUST_SURFACE,
+    build_distribution_parser,
+    build_rc_parser,
+    build_trust_parser,
+    handle_rc_command,
+    handle_trust_command,
+)
 from albumentationsx_mcp.adapters.cli.runtime import HOST_SURFACE, build_host_parser, build_server_parser
 from scripts.export_cli_contract import build_parser_contract
 
@@ -183,3 +194,89 @@ def test_evidence_and_beta_handler_matches_legacy_dispatch(
     args = builder().parse_args(argv)
 
     assert handler(args) == legacy_handler(args)
+
+
+def test_release_adapter_parsers_match_canonical_fragments() -> None:
+    snapshot = json.loads(_SNAPSHOT_PATH.read_text(encoding="utf-8"))
+    builders = {
+        "rc": build_rc_parser,
+        "distribution": build_distribution_parser,
+        "trust": build_trust_parser,
+    }
+
+    assert len(RC_SURFACE.commands) == 6
+    assert len(DISTRIBUTION_SURFACE.commands) == 1
+    assert len(TRUST_SURFACE.commands) == 4
+    for group, builder in builders.items():
+        assert build_parser_contract(builder()) == snapshot["groups"][group]
+
+
+@pytest.mark.parametrize(
+    ("builder", "handler", "legacy_handler", "argv"),
+    [
+        (
+            build_rc_parser,
+            handle_rc_command,
+            legacy_cli._handle_rc_command,
+            ["rehearse", "--format", "json"],
+        ),
+        (
+            build_trust_parser,
+            handle_trust_command,
+            legacy_cli._handle_trust_command,
+            ["audit", "--format", "json"],
+        ),
+    ],
+)
+def test_release_adapter_handler_matches_legacy_dispatch(
+    builder: Callable[[], argparse.ArgumentParser],
+    handler: Callable[[argparse.Namespace], str],
+    legacy_handler: Callable[[argparse.Namespace], str],
+    argv: list[str],
+) -> None:
+    args = builder().parse_args(argv)
+
+    assert handler(args) == legacy_handler(args)
+
+
+def test_cli_registry_preserves_complete_stable_dispatch_order() -> None:
+    assert COMBINED_CLI_SURFACE.groups == (
+        "activation",
+        "beta",
+        "distribution",
+        "evidence",
+        "host",
+        "intake",
+        "preview",
+        "rc",
+        "trust",
+    )
+    assert len(COMBINED_CLI_SURFACE.command_paths) == 84
+    assert tuple(GROUP_RUNNERS) == COMBINED_CLI_SURFACE.groups
+
+
+def test_cli_module_is_a_thin_compatibility_facade() -> None:
+    source = Path("src/albumentationsx_mcp/cli.py").read_text(encoding="utf-8")
+
+    assert "add_parser(" not in source
+    assert "build_" not in source
+    assert len(source.splitlines()) <= 120
+
+
+def test_console_scripts_and_legacy_runner_aliases_remain_stable() -> None:
+    pyproject = Path("pyproject.toml").read_text(encoding="utf-8")
+    assert 'albumentationsx-mcp = "albumentationsx_mcp.cli:main"' in pyproject
+    assert 'albu-mcp = "albumentationsx_mcp.cli:main"' in pyproject
+    for name in (
+        "_run_server",
+        "_run_activation_cli",
+        "_run_beta_cli",
+        "_run_distribution_cli",
+        "_run_evidence_cli",
+        "_run_host_cli",
+        "_run_intake_cli",
+        "_run_preview_cli",
+        "_run_rc_cli",
+        "_run_trust_cli",
+    ):
+        assert callable(getattr(legacy_cli, name))
