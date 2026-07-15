@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal
 
 from albumentationsx_mcp.adapters.mcp.contracts import AdapterSurface, ProfileSurface
-from albumentationsx_mcp.capabilities import REVIEW_PROFILE_MEMBERSHIP
+from albumentationsx_mcp.capabilities import REVIEW_DATASET_PROFILE_MEMBERSHIP, REVIEW_PROFILE_MEMBERSHIP
 from albumentationsx_mcp.models import QualityProfileName
 from albumentationsx_mcp.tuning import build_tuning_session_summary
 
@@ -36,10 +36,15 @@ _TOOLS = (
     "delete_preview_run",
     "cleanup_preview_runs",
 )
+_DATASET_APP_TOOLS = ("record_preview_feedback",)
+_REVIEW_TOOLS = tuple(tool for tool in _TOOLS if tool not in _DATASET_APP_TOOLS)
 SURFACE = AdapterSurface(
     adapter="sessions",
     tools=_TOOLS,
-    profile_surfaces=(ProfileSurface(profiles=REVIEW_PROFILE_MEMBERSHIP, tools=_TOOLS),),
+    profile_surfaces=(
+        ProfileSurface(profiles=REVIEW_PROFILE_MEMBERSHIP, tools=_REVIEW_TOOLS),
+        ProfileSurface(profiles=REVIEW_DATASET_PROFILE_MEMBERSHIP, tools=_DATASET_APP_TOOLS),
+    ),
 )
 
 

@@ -170,6 +170,18 @@ def test_mcp_stdio_dataset_profile_executes_onboarding_preview_flow(tmp_path: Pa
             request = onboarding.structuredContent["preview_request_template"]["request"]
             validation = await session.call_tool("validate_preview_request", {"request": request})
             preview = await session.call_tool("render_preview_batch", {"request": request})
+            assert preview.structuredContent is not None
+            feedback = await session.call_tool(
+                "record_preview_feedback",
+                {
+                    "run_id": preview.structuredContent["run_id"],
+                    "image_index": 0,
+                    "variant_index": 0,
+                    "feedback_tags": ["accepted"],
+                    "note": "Dataset review app smoke check",
+                    "accepted": True,
+                },
+            )
             example_content = example.contents[0]
             assert isinstance(example_content, TextResourceContents)
             return {
@@ -178,7 +190,8 @@ def test_mcp_stdio_dataset_profile_executes_onboarding_preview_flow(tmp_path: Pa
                 "onboarding": onboarding.structuredContent,
                 "validation": validation.structuredContent,
                 "preview": preview.structuredContent,
-                "errors": [onboarding.isError, validation.isError, preview.isError],
+                "feedback": feedback.structuredContent,
+                "errors": [onboarding.isError, validation.isError, preview.isError, feedback.isError],
             }
 
     result = asyncio.run(run_client())
@@ -188,7 +201,8 @@ def test_mcp_stdio_dataset_profile_executes_onboarding_preview_flow(tmp_path: Pa
     assert result["onboarding"]["preview_ready"] is True
     assert result["validation"]["valid"] is True
     assert result["preview"]["run_id"]
-    assert result["errors"] == [False, False, False]
+    assert result["feedback"]["accepted"] is True
+    assert result["errors"] == [False, False, False, False]
 
 
 def _profile_server_parameters(tmp_path: Path, profile: CapabilityProfile) -> StdioServerParameters:

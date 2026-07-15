@@ -19,7 +19,7 @@ from albumentationsx_mcp.server import ServerSettings, create_mcp_server
 _EXPECTED_COUNTS = {
     CapabilityProfile.CORE: (16, 9, 1, 0),
     CapabilityProfile.REVIEW: (42, 19, 2, 5),
-    CapabilityProfile.DATASET: (24, 11, 2, 0),
+    CapabilityProfile.DATASET: (25, 11, 2, 0),
     CapabilityProfile.FULL: (45, 20, 2, 5),
 }
 
@@ -140,6 +140,7 @@ def test_full_profile_preserves_canonical_registration_order() -> None:
                 "export_preview_report",
                 "inspect_dataset_quality",
                 "plan_dataset_onboarding",
+                "record_preview_feedback",
                 "render_preview_batch",
                 "validate_preview_request",
             },
