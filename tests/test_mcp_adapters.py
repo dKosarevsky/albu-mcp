@@ -31,6 +31,7 @@ from albumentationsx_mcp.adapters.mcp.prompts import register_prompt_adapter
 from albumentationsx_mcp.adapters.mcp.registration import (
     ADAPTER_SURFACES,
     COMBINED_SURFACE,
+    public_surface_for_profile,
     register_mcp_adapters,
 )
 from albumentationsx_mcp.adapters.mcp.sessions import SURFACE as SESSION_SURFACE
@@ -326,7 +327,7 @@ def test_register_mcp_adapters_registers_exact_profile_surface(
     mcp = FastMCP(f"{profile.value}-profile-test")
     expected = combine_adapter_surfaces_for_profile(ADAPTER_SURFACES, profile)
 
-    register_mcp_adapters(mcp, _mcp_dependencies(adapter_dependencies), profile=profile)
+    register_mcp_adapters(mcp, _mcp_dependencies(adapter_dependencies, profile=profile), profile=profile)
 
     assert tuple(mcp._tool_manager._tools) == expected.tools
     assert tuple(str(uri) for uri in mcp._resource_manager._resources) == expected.resources
@@ -348,12 +349,33 @@ def test_profile_registration_preserves_collision_for_excluded_identifier(
 
     register_mcp_adapters(
         mcp,
-        _mcp_dependencies(adapter_dependencies),
+        _mcp_dependencies(adapter_dependencies, profile=CapabilityProfile.CORE),
         profile=CapabilityProfile.CORE,
     )
 
     assert mcp._tool_manager._tools["render_preview"] is existing
     assert tuple(mcp._tool_manager._tools) == ("render_preview", *expected.tools)
+
+
+def test_register_mcp_adapters_rejects_dependency_surface_mismatch_before_registration(
+    adapter_dependencies: AdapterTestDependencies,
+) -> None:
+    mcp = FastMCP("mismatched-profile-test")
+    dependencies = _mcp_dependencies(adapter_dependencies)
+    dependencies.diagnostics_service.public_surface = PublicSurface(
+        capability_profile=CapabilityProfile.FULL,
+        tools=list(COMBINED_SURFACE.tools),
+        prompts=list(COMBINED_SURFACE.prompts),
+        workflow_resources=[],
+    )
+
+    with pytest.raises(ValueError, match="dependency surface does not match capability profile 'core'"):
+        register_mcp_adapters(mcp, dependencies, profile=CapabilityProfile.CORE)
+
+    assert not mcp._tool_manager._tools
+    assert not mcp._resource_manager._resources
+    assert not mcp._resource_manager._templates
+    assert not mcp._prompt_manager._prompts
 
 
 @pytest.mark.parametrize("profile", [CapabilityProfile.FULL, CapabilityProfile.CORE])
@@ -368,7 +390,7 @@ def test_register_mcp_adapters_rejects_collision_before_partial_registration(
         return "existing"
 
     with pytest.raises(ValueError, match=r"tools.*search_transforms"):
-        register_mcp_adapters(mcp, _mcp_dependencies(adapter_dependencies), profile=profile)
+        register_mcp_adapters(mcp, _mcp_dependencies(adapter_dependencies, profile=profile), profile=profile)
 
     assert tuple(mcp._tool_manager._tools) == ("search_transforms",)
     assert not mcp._resource_manager._resources
@@ -399,7 +421,7 @@ def test_register_mcp_adapters_rolls_back_unexpected_registration_failure(
     monkeypatch.setattr(registration_module, "register_session_adapter", failing_session_adapter)
 
     with pytest.raises(RuntimeError, match="injected registration failure"):
-        register_mcp_adapters(mcp, _mcp_dependencies(adapter_dependencies), profile=profile)
+        register_mcp_adapters(mcp, _mcp_dependencies(adapter_dependencies, profile=profile), profile=profile)
 
     assert tuple(mcp._tool_manager._tools) == ("existing_tool",)
     assert not mcp._resource_manager._resources
@@ -431,7 +453,17 @@ def _surface_with_identifiers(
     return AdapterSurface(adapter=adapter, prompts=identifiers)
 
 
-def _mcp_dependencies(dependencies: AdapterTestDependencies) -> McpDependencies:
+def _mcp_dependencies(
+    dependencies: AdapterTestDependencies,
+    *,
+    profile: CapabilityProfile = CapabilityProfile.FULL,
+) -> McpDependencies:
+    diagnostics_service = DiagnosticsService(
+        allowed_roots=dependencies.diagnostics_service.allowed_roots,
+        artifact_root=dependencies.diagnostics_service.artifact_root,
+        max_preview_runs=dependencies.diagnostics_service.max_preview_runs,
+        public_surface=public_surface_for_profile(profile),
+    )
     return McpDependencies(
         catalog=dependencies.catalog,
         pipeline_service=dependencies.pipeline_service,
@@ -443,7 +475,7 @@ def _mcp_dependencies(dependencies: AdapterTestDependencies) -> McpDependencies:
         session_store=dependencies.session_store,
         feedback_store=dependencies.feedback_store,
         report_service=dependencies.report_service,
-        diagnostics_service=dependencies.diagnostics_service,
+        diagnostics_service=diagnostics_service,
     )
 
 

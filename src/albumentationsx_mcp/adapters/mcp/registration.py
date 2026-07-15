@@ -27,6 +27,7 @@ from albumentationsx_mcp.adapters.mcp.prompts import register_prompt_adapter
 from albumentationsx_mcp.adapters.mcp.sessions import SURFACE as SESSION_SURFACE
 from albumentationsx_mcp.adapters.mcp.sessions import register_session_adapter
 from albumentationsx_mcp.capabilities import CapabilityProfile
+from albumentationsx_mcp.diagnostics import PublicSurface
 
 if TYPE_CHECKING:
     from albumentationsx_mcp.adapters.mcp.dependencies import McpDependencies
@@ -134,6 +135,14 @@ def register_mcp_adapters(
     """Register one canonical profile without leaving a partial target surface."""
     validate_profiled_adapter_surfaces(ADAPTER_SURFACES)
     declared_surface = surface_for_profile(profile)
+    expected_public_surface = public_surface_for_profile(profile)
+    actual_public_surface = dependencies.diagnostics_service.public_surface
+    if actual_public_surface != expected_public_surface:
+        msg = (
+            f"MCP dependency surface does not match capability profile {profile.value!r}: "
+            f"expected {expected_public_surface!r}, got {actual_public_surface!r}"
+        )
+        raise ValueError(msg)
     before = _capture_manager_state(mcp)
     initial_surface = _surface_from_state(before)
     _raise_on_collisions(initial_surface, declared_surface)
@@ -156,6 +165,20 @@ def surface_for_profile(profile: CapabilityProfile) -> CombinedSurface:
         msg = f"unknown capability profile: {profile}"
         raise TypeError(msg)
     return PROFILE_SURFACES[profile]
+
+
+def public_surface_for_profile(profile: CapabilityProfile) -> PublicSurface:
+    """Return diagnostics metadata derived from the canonical profile declaration."""
+    selected = surface_for_profile(profile)
+    selected_tools = set(selected.tools)
+    selected_prompts = set(selected.prompts)
+    selected_resources = set(selected.resources)
+    return PublicSurface(
+        capability_profile=profile,
+        tools=[name for name in PUBLIC_TOOLS if name in selected_tools],
+        prompts=[name for name in PUBLIC_PROMPTS if name in selected_prompts],
+        workflow_resources=[uri for uri in PUBLIC_WORKFLOW_RESOURCES if uri in selected_resources],
+    )
 
 
 def _register_adapters(mcp: FastMCP, dependencies: McpDependencies) -> None:
