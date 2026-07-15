@@ -2,7 +2,7 @@
 
 Use this same workflow after configuring AlbumentationsX MCP in Claude Desktop, Claude Code, Cursor, or Codex.
 
-1. Read `albumentationsx://examples/client-smoke`.
+1. Read `albumentationsx://examples/client-smoke`; if resource reads are unavailable, call `get_workflow_example` with `example_id="client-smoke"`.
 2. Call `run_host_smoke_check`.
 3. Continue only when `preview_ready` is true.
 4. Copy `preview_request_template.request`.
@@ -14,5 +14,5 @@ Use this same workflow after configuring AlbumentationsX MCP in Claude Desktop, 
 Example host instruction:
 
 ```text
-Read albumentationsx://examples/client-smoke. Then call run_host_smoke_check for classification. If preview_ready is true, copy preview_request_template.request, replace input_paths with /absolute/path/to/images/sample.jpg, call validate_preview_request, and render one preview batch only if the request is valid.
+Read albumentationsx://examples/client-smoke. If resource reads are unavailable, call get_workflow_example with example_id="client-smoke". Then call run_host_smoke_check for classification. If preview_ready is true, copy preview_request_template.request, replace input_paths with /absolute/path/to/images/sample.jpg, call validate_preview_request, and render one preview batch only if the request is valid.
 ```

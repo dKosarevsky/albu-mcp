@@ -8,7 +8,8 @@ Use AlbumentationsX MCP for a first 10-minute augmentation review.
 Local image or dataset folder:
 /absolute/path/to/images-or-dataset
 
-First, read albumentationsx://examples/client-smoke and run run_host_smoke_check.
+First, read albumentationsx://examples/client-smoke. If resource reads are unavailable, call get_workflow_example with
+example_id="client-smoke". Then run run_host_smoke_check.
 Continue only if preview_ready is true. If it is not ready, explain the remediation actions and stop before rendering.
 
 Then call plan_dataset_onboarding for the local image or directory. Use preview_request_template as the starting point.
