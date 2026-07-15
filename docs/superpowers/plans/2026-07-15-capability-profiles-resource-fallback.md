@@ -126,22 +126,22 @@ Run profile/adapter tests and all MCP contract tests plus static checks. Commit 
 - Modify: `tests/test_cli_contract_snapshot.py`
 - Modify: `tests/fixtures/snapshots/cli_contract.json`
 
-- [ ] **Step 1: Add failing settings, environment, CLI, and capabilities tests**
+- [x] **Step 1: Add failing settings, environment, CLI, and capabilities tests**
 
 Assert `full` default, `ALBU_MCP_CAPABILITY_PROFILE`, `--capability-profile`, accepted-value diagnostics, profile-specific
 server managers, and a capabilities resource that lists only the active public surface.
 
-- [ ] **Step 2: Wire profile selection through the composition root**
+- [x] **Step 2: Wire profile selection through the composition root**
 
 Add `capability_profile` to `ServerSettings`, parse the environment once, preserve all settings during CLI overrides,
 build profile-aware `DiagnosticsService` data, and pass the profile to `register_mcp_adapters`.
 
-- [ ] **Step 3: Regenerate the additive CLI contract and verify stdio**
+- [x] **Step 3: Regenerate the additive CLI contract and verify stdio**
 
 Regenerate the CLI snapshot for the one new server option. Exercise at least `core`, `review`, and `dataset` through
 in-process construction and one focused stdio smoke. Existing MCPB/install examples remain `full` by omission.
 
-- [ ] **Step 4: Verify and commit**
+- [x] **Step 4: Verify and commit**
 
 Run server, CLI, profile, stdio, snapshot, Ruff, format, and ty checks. Commit as
 `feat: expose MCP capability profiles`.

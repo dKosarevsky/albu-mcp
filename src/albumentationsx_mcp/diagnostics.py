@@ -9,6 +9,7 @@ from typing import Any, Literal
 
 from pydantic import Field
 
+from albumentationsx_mcp.capabilities import CapabilityProfile
 from albumentationsx_mcp.models import StrictModel
 
 DiagnosticStatus = Literal["ok", "warning", "error"]
@@ -47,11 +48,44 @@ _REQUIRED_WORKFLOW_RESOURCES = {
     "albumentationsx://recipes/catalog",
     "albumentationsx://workflows/preview-tuning",
 }
+_CORE_REQUIRED_TOOLS = {
+    "diagnose_environment",
+    "get_workflow_example",
+    "recommend_recipe",
+    "run_host_smoke_check",
+    "validate_pipeline",
+}
+_CORE_REQUIRED_WORKFLOW_RESOURCES = {
+    "albumentationsx://diagnostics/guide",
+    "albumentationsx://examples/client-smoke",
+    "albumentationsx://recipes/catalog",
+}
+_REQUIRED_SURFACE_BY_PROFILE = {
+    CapabilityProfile.CORE: (_CORE_REQUIRED_TOOLS, set(), _CORE_REQUIRED_WORKFLOW_RESOURCES),
+    CapabilityProfile.REVIEW: (
+        _REQUIRED_TOOLS - {"plan_dataset_onboarding"},
+        _REQUIRED_PROMPTS,
+        _REQUIRED_WORKFLOW_RESOURCES - {"albumentationsx://examples/dataset-onboarding"},
+    ),
+    CapabilityProfile.DATASET: (
+        _CORE_REQUIRED_TOOLS
+        | {
+            "build_review_packet",
+            "inspect_dataset_quality",
+            "plan_dataset_onboarding",
+            "score_dataset_preview_candidates",
+        },
+        set(),
+        _CORE_REQUIRED_WORKFLOW_RESOURCES,
+    ),
+    CapabilityProfile.FULL: (_REQUIRED_TOOLS, _REQUIRED_PROMPTS, _REQUIRED_WORKFLOW_RESOURCES),
+}
 
 
 class PublicSurface(StrictModel):
     """Public MCP surface advertised by the server."""
 
+    capability_profile: CapabilityProfile = CapabilityProfile.FULL
     tools: list[str]
     prompts: list[str]
     workflow_resources: list[str]
@@ -288,24 +322,27 @@ class DiagnosticsService:
         return checks, "passed"
 
     def _public_surface_checks(self) -> list[DiagnosticCheck]:
+        required_tools, required_prompts, required_resources = _REQUIRED_SURFACE_BY_PROFILE[
+            self.public_surface.capability_profile
+        ]
         return [
             _surface_check(
                 code="required_tools_available",
                 label="Required diagnostics tools",
                 present=set(self.public_surface.tools),
-                required=_REQUIRED_TOOLS,
+                required=required_tools,
             ),
             _surface_check(
                 code="required_prompts_available",
                 label="Required workflow prompts",
                 present=set(self.public_surface.prompts),
-                required=_REQUIRED_PROMPTS,
+                required=required_prompts,
             ),
             _surface_check(
                 code="required_workflow_resources_available",
                 label="Required workflow resources",
                 present=set(self.public_surface.workflow_resources),
-                required=_REQUIRED_WORKFLOW_RESOURCES,
+                required=required_resources,
             ),
         ]
 

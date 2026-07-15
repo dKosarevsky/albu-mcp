@@ -7,6 +7,9 @@ from pathlib import Path
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
+from albumentationsx_mcp.adapters.mcp.registration import surface_for_profile
+from albumentationsx_mcp.capabilities import CapabilityProfile
+
 
 def test_mcp_stdio_lists_documented_tools(tmp_path: Path) -> None:
     async def run_client() -> list[str]:
@@ -72,3 +75,29 @@ def test_mcp_stdio_lists_documented_tools(tmp_path: Path) -> None:
         "build_review_packet",
         "inspect_dataset_quality",
     }.issubset(tool_names)
+
+
+def test_mcp_stdio_core_profile_lists_only_core_tools(tmp_path: Path) -> None:
+    async def run_client() -> list[str]:
+        params = StdioServerParameters(
+            command=sys.executable,
+            args=[
+                "-m",
+                "albumentationsx_mcp",
+                "--allowed-root",
+                str(tmp_path),
+                "--artifact-root",
+                str(tmp_path / "artifacts"),
+                "--capability-profile",
+                "core",
+            ],
+            cwd=str(Path.cwd()),
+        )
+        async with stdio_client(params) as (read, write), ClientSession(read, write) as session:
+            await session.initialize()
+            tools = await session.list_tools()
+            return [tool.name for tool in tools.tools]
+
+    tool_names = asyncio.run(run_client())
+
+    assert tool_names == list(surface_for_profile(CapabilityProfile.CORE).tools)

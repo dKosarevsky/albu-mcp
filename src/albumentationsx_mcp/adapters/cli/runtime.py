@@ -11,6 +11,7 @@ from typing import get_args
 from pydantic import ValidationError
 
 from albumentationsx_mcp.adapters.cli.contracts import CliGroupSurface
+from albumentationsx_mcp.capabilities import CAPABILITY_PROFILE_VALUES, parse_capability_profile
 from albumentationsx_mcp.evidence import HostName
 from albumentationsx_mcp.host_setup import (
     DEFAULT_ALLOWED_ROOT,
@@ -30,18 +31,24 @@ def build_server_parser() -> argparse.ArgumentParser:
     parser.add_argument("--transport", choices=["stdio", "streamable-http"], default="stdio")
     parser.add_argument("--artifact-root", type=Path, default=None)
     parser.add_argument("--allowed-root", action="append", type=Path, default=None)
+    parser.add_argument("--capability-profile", choices=CAPABILITY_PROFILE_VALUES, default=None)
     return parser
 
 
 def run_server(argv: list[str]) -> None:
     """Run the MCP server."""
     args = build_server_parser().parse_args(argv)
-    settings = settings_from_environment()
-    if args.artifact_root is not None or args.allowed_root is not None:
-        settings = ServerSettings(
-            allowed_roots=args.allowed_root or settings.allowed_roots,
-            artifact_root=args.artifact_root or settings.artifact_root,
-        )
+    environment_settings = settings_from_environment()
+    settings = ServerSettings(
+        allowed_roots=args.allowed_root or environment_settings.allowed_roots,
+        artifact_root=args.artifact_root or environment_settings.artifact_root,
+        max_preview_runs=environment_settings.max_preview_runs,
+        capability_profile=(
+            parse_capability_profile(args.capability_profile)
+            if args.capability_profile is not None
+            else environment_settings.capability_profile
+        ),
+    )
 
     server = create_mcp_server(settings)
     server.run(transport=args.transport)

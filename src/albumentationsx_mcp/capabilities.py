@@ -35,3 +35,15 @@ DATASET_PROFILE_MEMBERSHIP = (
     CapabilityProfile.FULL,
 )
 FULL_PROFILE_MEMBERSHIP = (CapabilityProfile.FULL,)
+
+
+def parse_capability_profile(value: str | CapabilityProfile) -> CapabilityProfile:
+    """Parse one profile value with a stable accepted-values error."""
+    if isinstance(value, CapabilityProfile):
+        return value
+    try:
+        return CapabilityProfile(value)
+    except ValueError as exc:
+        accepted = ", ".join(CAPABILITY_PROFILE_VALUES)
+        msg = f"unknown capability profile {value!r}; expected one of: {accepted}"
+        raise ValueError(msg) from exc

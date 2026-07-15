@@ -91,6 +91,7 @@ def register_diagnostics_adapter(
             {
                 "allowed_roots": [str(path.resolve()) for path in diagnostics_service.allowed_roots],
                 "artifact_root": str(diagnostics_service.artifact_root.resolve()),
+                "capability_profile": public_surface.capability_profile.value,
                 "preview_limits": {
                     "max_input_paths": 32,
                     "max_variants_per_image": 16,

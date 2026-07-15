@@ -18,7 +18,9 @@ from albumentationsx_mcp.adapters.mcp.registration import (
     PUBLIC_TOOLS,
     PUBLIC_WORKFLOW_RESOURCES,
     register_mcp_adapters,
+    surface_for_profile,
 )
+from albumentationsx_mcp.capabilities import CapabilityProfile, parse_capability_profile
 from albumentationsx_mcp.catalog import TransformCatalog
 from albumentationsx_mcp.diagnostics import DiagnosticsService, PublicSurface
 from albumentationsx_mcp.pipeline import PipelineService
@@ -39,6 +41,7 @@ class ServerSettings(BaseModel):
     allowed_roots: list[Path] = Field(default_factory=lambda: [Path.cwd()])
     artifact_root: Path = Field(default_factory=lambda: Path.cwd() / "artifacts")
     max_preview_runs: int = Field(default=100, ge=1)
+    capability_profile: CapabilityProfile = CapabilityProfile.FULL
 
 
 def settings_from_environment() -> ServerSettings:
@@ -46,10 +49,12 @@ def settings_from_environment() -> ServerSettings:
     allowed = os.getenv("ALBU_MCP_ALLOWED_ROOTS")
     artifact_root = os.getenv("ALBU_MCP_ARTIFACT_ROOT")
     max_preview_runs = os.getenv("ALBU_MCP_MAX_PREVIEW_RUNS")
+    capability_profile = os.getenv("ALBU_MCP_CAPABILITY_PROFILE", CapabilityProfile.FULL.value)
     return ServerSettings(
         allowed_roots=[Path(item) for item in allowed.split(os.pathsep)] if allowed else [Path.cwd()],
         artifact_root=Path(artifact_root) if artifact_root else Path.cwd() / "artifacts",
         max_preview_runs=int(max_preview_runs) if max_preview_runs else 100,
+        capability_profile=parse_capability_profile(capability_profile),
     )
 
 
@@ -72,14 +77,17 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:
     session_store = InteractiveTuningSessionStore(settings.artifact_root)
     feedback_store = PreviewFeedbackStore(settings.artifact_root)
     report_service = PreviewReportService(settings.artifact_root)
+    selected_surface = surface_for_profile(settings.capability_profile)
+    selected_resources = set(selected_surface.resources)
     diagnostics_service = DiagnosticsService(
         allowed_roots=settings.allowed_roots,
         artifact_root=settings.artifact_root,
         max_preview_runs=settings.max_preview_runs,
         public_surface=PublicSurface(
-            tools=list(PUBLIC_TOOLS),
-            prompts=list(PUBLIC_PROMPTS),
-            workflow_resources=list(PUBLIC_WORKFLOW_RESOURCES),
+            capability_profile=settings.capability_profile,
+            tools=[name for name in PUBLIC_TOOLS if name in set(selected_surface.tools)],
+            prompts=[name for name in PUBLIC_PROMPTS if name in set(selected_surface.prompts)],
+            workflow_resources=[uri for uri in PUBLIC_WORKFLOW_RESOURCES if uri in selected_resources],
         ),
     )
     dependencies = McpDependencies(
@@ -96,7 +104,7 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:
         diagnostics_service=diagnostics_service,
     )
     mcp = FastMCP("AlbumentationsX MCP")
-    register_mcp_adapters(mcp, dependencies)
+    register_mcp_adapters(mcp, dependencies, profile=settings.capability_profile)
     return mcp
 
 

@@ -7627,6 +7627,26 @@
         "nargs": null,
         "required": false,
         "type": "Path"
+      },
+      {
+        "action": "_StoreAction",
+        "choices": [
+          "core",
+          "review",
+          "dataset",
+          "full"
+        ],
+        "const": null,
+        "default": null,
+        "dest": "capability_profile",
+        "flags": [
+          "--capability-profile"
+        ],
+        "help": null,
+        "metavar": null,
+        "nargs": null,
+        "required": false,
+        "type": null
       }
     ]
   }

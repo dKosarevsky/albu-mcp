@@ -4,10 +4,12 @@ import argparse
 import json
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 from albumentationsx_mcp import cli as legacy_cli
+from albumentationsx_mcp.adapters.cli import runtime as runtime_adapter
 from albumentationsx_mcp.adapters.cli.activation import SURFACE as ACTIVATION_SURFACE
 from albumentationsx_mcp.adapters.cli.activation import build_activation_parser, handle_activation_command
 from albumentationsx_mcp.adapters.cli.beta import SURFACE as BETA_SURFACE
@@ -37,7 +39,9 @@ from albumentationsx_mcp.adapters.cli.release import (
     handle_rc_command,
     handle_trust_command,
 )
-from albumentationsx_mcp.adapters.cli.runtime import HOST_SURFACE, build_host_parser, build_server_parser
+from albumentationsx_mcp.adapters.cli.runtime import HOST_SURFACE, build_host_parser, build_server_parser, run_server
+from albumentationsx_mcp.capabilities import CapabilityProfile
+from albumentationsx_mcp.server import ServerSettings
 from scripts.export_cli_contract import build_parser_contract
 
 _SNAPSHOT_PATH = Path("tests/fixtures/snapshots/cli_contract.json")
@@ -111,6 +115,64 @@ def test_server_parser_matches_canonical_fragment() -> None:
     snapshot = json.loads(_SNAPSHOT_PATH.read_text(encoding="utf-8"))
 
     assert build_parser_contract(build_server_parser()) == snapshot["server"]
+
+
+def test_server_parser_accepts_only_declared_capability_profiles(capsys: pytest.CaptureFixture[str]) -> None:
+    args = build_server_parser().parse_args(["--capability-profile", "review"])
+
+    assert args.capability_profile == "review"
+    with pytest.raises(SystemExit):
+        build_server_parser().parse_args(["--capability-profile", "unknown"])
+    error = capsys.readouterr().err
+    for profile in CapabilityProfile:
+        assert profile.value in error
+
+
+def test_server_cli_profile_override_preserves_environment_settings(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Any] = {}
+
+    class StubServer:
+        def run(self, *, transport: str) -> None:
+            captured["transport"] = transport
+
+    monkeypatch.setattr(
+        runtime_adapter,
+        "settings_from_environment",
+        lambda: ServerSettings(
+            allowed_roots=[tmp_path / "environment-root"],
+            artifact_root=tmp_path / "environment-artifacts",
+            max_preview_runs=7,
+            capability_profile=CapabilityProfile.CORE,
+        ),
+    )
+
+    def create_stub(settings: ServerSettings) -> StubServer:
+        captured["settings"] = settings
+        return StubServer()
+
+    monkeypatch.setattr(runtime_adapter, "create_mcp_server", create_stub)
+
+    run_server(
+        [
+            "--transport",
+            "stdio",
+            "--allowed-root",
+            str(tmp_path / "cli-root"),
+            "--capability-profile",
+            "review",
+        ]
+    )
+
+    settings = captured["settings"]
+    assert isinstance(settings, ServerSettings)
+    assert settings.allowed_roots == [tmp_path / "cli-root"]
+    assert settings.artifact_root == tmp_path / "environment-artifacts"
+    assert settings.max_preview_runs == 7
+    assert settings.capability_profile is CapabilityProfile.REVIEW
+    assert captured["transport"] == "stdio"
 
 
 def test_activation_adapter_declares_all_cycle_and_product_fix_commands() -> None:
