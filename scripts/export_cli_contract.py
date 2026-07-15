@@ -58,6 +58,11 @@ def dump_cli_contract_snapshot(snapshot: dict[str, Any]) -> str:
     return json.dumps(_json_safe(snapshot), indent=2, sort_keys=True) + "\n"
 
 
+def build_parser_contract(parser: argparse.ArgumentParser) -> dict[str, Any]:
+    """Return the canonical contract fragment for one constructed parser."""
+    return _parser_entry(parser)
+
+
 def main() -> None:
     """Write the current CLI contract snapshot to stdout or a file."""
     parser = argparse.ArgumentParser(description=__doc__)
