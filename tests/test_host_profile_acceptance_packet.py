@@ -7,7 +7,7 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
-import tomllib
+import tomli
 
 from scripts.export_host_profile_acceptance_packet import (
     HostProfileAcceptancePacketConfig,
@@ -51,7 +51,7 @@ def test_packet_contains_deterministic_profile_configs(
     artifacts = build_host_profile_acceptance_artifacts(packet_config)
 
     assert set(artifacts) == _EXPECTED_ARTIFACTS
-    codex = tomllib.loads(artifacts["codex-config.toml"])["mcp_servers"]
+    codex = tomli.loads(artifacts["codex-config.toml"])["mcp_servers"]
     desktop = json.loads(artifacts["claude-desktop-config.json"])["mcpServers"]
     assert list(codex) == [f"albumentationsx_{profile}" for profile in _PROFILES]
     assert list(desktop) == [f"albumentationsx_{profile}" for profile in _PROFILES]
