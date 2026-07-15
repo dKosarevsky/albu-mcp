@@ -7,7 +7,8 @@ from datetime import date
 from typing import Any
 
 _EXPERIMENT_STATUSES = {"planned", "measuring", "complete", "stopped"}
-_READY_RELEASE_STATUSES = {"published", "listed", "merged", "ready"}
+_READY_RELEASE_STATUSES = {"passed", "published", "listed", "merged", "ready"}
+_UNOBSERVED_RELEASE_STATUSES = {"not_observed", "unknown"}
 _EMPTY_VERSION_ERROR = "version must not be empty"
 _EMPTY_RELEASE_CHANNELS_ERROR = "release_channels must not be empty"
 _DUPLICATE_RELEASE_CHANNELS_ERROR = "release channel ids must be unique"
@@ -32,11 +33,10 @@ def build_lifecycle_status(
 
     normalized_experiment = _validate_experiment(experiment)
     blockers = [dict(blocker) for blocker in host_blockers]
-    release_ready = all(channel["status"] in _READY_RELEASE_STATUSES for channel in channels)
     return {
         "schema_version": 1,
         "release_health": {
-            "status": "published" if release_ready else "attention_required",
+            "status": _release_health_status(channels),
             "version": version,
             "channels": channels,
         },
@@ -47,6 +47,15 @@ def build_lifecycle_status(
         },
         "adoption_experiment": normalized_experiment,
     }
+
+
+def _release_health_status(channels: list[dict[str, str]]) -> str:
+    statuses = {channel["status"] for channel in channels}
+    if statuses <= _READY_RELEASE_STATUSES:
+        return "published"
+    if statuses & _UNOBSERVED_RELEASE_STATUSES:
+        return "unknown"
+    return "attention_required"
 
 
 def render_lifecycle_status_markdown(report: Mapping[str, Any]) -> str:

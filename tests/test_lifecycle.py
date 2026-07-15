@@ -19,14 +19,19 @@ def _experiment() -> dict[str, object]:
     }
 
 
+def _release_channels() -> list[dict[str, str]]:
+    return [
+        {"id": "pypi", "status": "published", "url": "https://pypi.org/project/albumentationsx-mcp/"},
+        {"id": "github_release", "status": "published", "url": "https://example.test/releases/v1.19.0"},
+        {"id": "ci", "status": "passed", "url": "https://example.test/actions/runs/1"},
+        {"id": "official_registry", "status": "listed", "url": "https://example.test/registry"},
+    ]
+
+
 def test_lifecycle_status_keeps_release_host_and_adoption_independent() -> None:
     report = build_lifecycle_status(
         version="1.19.0",
-        release_channels=[
-            {"id": "pypi", "status": "published", "url": "https://pypi.org/project/albumentationsx-mcp/"},
-            {"id": "github_release", "status": "published", "url": "https://example.test/releases/v1.19.0"},
-            {"id": "official_registry", "status": "listed", "url": "https://example.test/registry"},
-        ],
+        release_channels=_release_channels(),
         host_blockers=[{"code": "manual_host_ui_pending", "summary": "Claude Code was not observed."}],
         experiment=_experiment(),
     )
@@ -55,7 +60,7 @@ def test_lifecycle_status_rejects_invalid_experiment(field: str, value: str, mes
     with pytest.raises(ValueError, match=message):
         build_lifecycle_status(
             version="1.19.0",
-            release_channels=[{"id": "pypi", "status": "published", "url": "https://example.test"}],
+            release_channels=_release_channels(),
             host_blockers=[],
             experiment=experiment,
         )
@@ -66,8 +71,42 @@ def test_committed_lifecycle_status_describes_current_project_state() -> None:
 
     assert report["release_health"]["status"] == "published"
     assert report["release_health"]["version"] == "1.19.0"
+    assert [channel["id"] for channel in report["release_health"]["channels"]] == [
+        "pypi",
+        "github_release",
+        "ci",
+        "official_registry",
+    ]
     assert report["host_evidence"]["status"] == "partial"
     assert report["adoption_experiment"]["campaign_id"] == "classification-robustness"
+
+
+def test_committed_lifecycle_status_does_not_infer_publication_without_evidence(tmp_path: Path) -> None:
+    report = build_committed_lifecycle_status(release_health_path=tmp_path / "missing-release-health.json")
+
+    assert report["release_health"]["status"] == "unknown"
+    assert {channel["status"] for channel in report["release_health"]["channels"]} <= {
+        "unknown",
+        "not_observed",
+    }
+
+
+def test_committed_lifecycle_status_ignores_evidence_for_another_version(tmp_path: Path) -> None:
+    evidence_path = tmp_path / "release-health.json"
+    evidence_path.write_text(
+        """{
+  "schema_version": 1,
+  "version": "0.0.1",
+  "observed_at": "2026-07-14",
+  "channels": []
+}
+""",
+        encoding="utf-8",
+    )
+
+    report = build_committed_lifecycle_status(release_health_path=evidence_path)
+
+    assert report["release_health"]["status"] == "unknown"
 
 
 def test_committed_lifecycle_status_markdown_is_current() -> None:

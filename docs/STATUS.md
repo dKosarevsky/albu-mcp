@@ -10,8 +10,9 @@ Version: `1.19.0`
 
 | Channel | Status | URL |
 | --- | --- | --- |
-| pypi | `published` | https://pypi.org/project/albumentationsx-mcp/ |
+| pypi | `published` | https://pypi.org/project/albumentationsx-mcp/1.19.0/ |
 | github_release | `published` | https://github.com/dKosarevsky/albu-mcp/releases/tag/v1.19.0 |
+| ci | `passed` | https://github.com/dKosarevsky/albu-mcp/actions/runs/29330162104 |
 | official_registry | `listed` | https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.dKosarevsky/albu-mcp |
 
 ## Host Evidence
