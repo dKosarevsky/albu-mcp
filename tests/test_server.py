@@ -70,6 +70,42 @@ def test_create_mcp_server_exposes_exact_profile_and_capabilities(
     assert diagnostics["status"] == "ok"
 
 
+@pytest.mark.parametrize(
+    ("profile", "expected_state"),
+    [
+        (CapabilityProfile.CORE, "blocked"),
+        (CapabilityProfile.REVIEW, "ready"),
+        (CapabilityProfile.DATASET, "ready"),
+        (CapabilityProfile.FULL, "ready"),
+    ],
+)
+def test_host_smoke_preview_readiness_matches_active_profile(
+    tmp_path: Path,
+    profile: CapabilityProfile,
+    expected_state: str,
+) -> None:
+    server = create_mcp_server(
+        ServerSettings(
+            allowed_roots=[tmp_path],
+            artifact_root=tmp_path / "artifacts",
+            capability_profile=profile,
+        )
+    )
+
+    report = cast("Any", server._tool_manager._tools["run_host_smoke_check"]).fn(include_write_probe=False)
+    preview_ready = expected_state == "ready"
+
+    assert report["preview_ready"] is preview_ready
+    assert (report["preview_request_template"] is not None) is preview_ready
+    if preview_ready:
+        assert any("render_preview_batch" in action for action in report["next_actions"])
+    else:
+        assert report["status"] == "warning"
+        assert any("--capability-profile review" in action for action in report["next_actions"])
+        assert any(action["code"] == "select_preview_capability_profile" for action in report["remediation_actions"])
+        assert all("render_preview_batch" not in action for action in report["diagnostics"]["next_actions"])
+
+
 def test_server_module_is_a_thin_composition_facade() -> None:
     source = Path(server_module.__file__).read_text(encoding="utf-8")
 

@@ -192,6 +192,7 @@ def register_diagnostics_adapter(
             diagnostics=diagnostics,
             recipe=recipe,
             validation=validation,
+            preview_tools_available=diagnostics_service.preview_tools_available,
         ).model_dump(mode="json")
 
     @mcp.tool(name="get_workflow_example")

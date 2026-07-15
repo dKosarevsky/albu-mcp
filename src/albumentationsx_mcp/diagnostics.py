@@ -17,6 +17,7 @@ DiagnosticSeverity = Literal["info", "medium", "high", "critical"]
 WriteProbeStatus = Literal["not_run", "passed", "failed"]
 
 _PROBE_FILENAME = ".albumentationsx-mcp-diagnostics-probe"
+_PREVIEW_TOOLS = {"render_preview_batch", "validate_preview_request"}
 _REQUIRED_TOOLS = {
     "diagnose_environment",
     "run_host_smoke_check",
@@ -169,6 +170,11 @@ class DiagnosticsService:
         self.max_preview_runs = max_preview_runs
         self.public_surface = public_surface
 
+    @property
+    def preview_tools_available(self) -> bool:
+        """Return whether the active surface can validate and render previews."""
+        return set(self.public_surface.tools) >= _PREVIEW_TOOLS
+
     def diagnose(self, *, include_write_probe: bool = True) -> DiagnosticsReport:
         """Return environment checks without reading user datasets."""
         checks: list[DiagnosticCheck] = []
@@ -178,7 +184,10 @@ class DiagnosticsService:
         checks.extend(artifact_checks)
         checks.extend(self._public_surface_checks())
         warnings = [check.message for check in checks if check.status == "warning"]
-        remediation_actions = _remediation_actions(checks)
+        remediation_actions = _remediation_actions(
+            checks,
+            preview_tools_available=self.preview_tools_available,
+        )
         return DiagnosticsReport(
             status=_aggregate_status(checks),
             checks=checks,
@@ -417,7 +426,11 @@ def _next_actions(remediation_actions: list[DiagnosticRemediationAction]) -> lis
     return [action.summary for action in remediation_actions]
 
 
-def _remediation_actions(checks: list[DiagnosticCheck]) -> list[DiagnosticRemediationAction]:
+def _remediation_actions(
+    checks: list[DiagnosticCheck],
+    *,
+    preview_tools_available: bool,
+) -> list[DiagnosticRemediationAction]:
     actions: list[DiagnosticRemediationAction] = []
     codes = {check.code for check in checks if check.status != "ok"}
     docs_uri = "albumentationsx://diagnostics/guide"
@@ -479,7 +492,20 @@ def _remediation_actions(checks: list[DiagnosticCheck]) -> list[DiagnosticRemedi
                 docs_uri=docs_uri,
             )
         )
-    if not actions:
+    if not preview_tools_available:
+        actions.append(
+            DiagnosticRemediationAction(
+                code="select_preview_capability_profile",
+                severity="info",
+                check_codes=[],
+                summary=(
+                    "Restart with `--capability-profile review`, `dataset`, or `full` before rendering previews."
+                ),
+                command_hint="--capability-profile review",
+                docs_uri=docs_uri,
+            )
+        )
+    elif not actions:
         actions.append(
             DiagnosticRemediationAction(
                 code="proceed_with_preview_smoke",

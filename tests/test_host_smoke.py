@@ -38,7 +38,14 @@ def test_host_smoke_report_is_preview_ready_when_diagnostics_and_validation_pass
     assert report.preview_request_template.request["input_paths"] == [str(tmp_path.resolve() / "example.jpg")]
     assert report.workflow_guidance.resource_uri == "albumentationsx://examples/client-smoke"
     assert report.workflow_guidance.resource_access == "optional"
-    assert any("otherwise" in instruction.lower() for instruction in report.workflow_guidance.instructions)
+    assert any(
+        "get_workflow_example" in instruction and 'example_id="client-smoke"' in instruction
+        for instruction in report.workflow_guidance.instructions
+    )
+    assert all(
+        "use this report directly" not in instruction.lower()
+        for instruction in report.workflow_guidance.instructions
+    )
     assert report.workflow_guidance.fallback_tool is not None
     assert report.workflow_guidance.fallback_tool.tool == "get_workflow_example"
     assert report.workflow_guidance.fallback_tool.example_id == "client-smoke"
