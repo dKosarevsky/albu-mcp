@@ -67,6 +67,7 @@ def test_create_mcp_server_exposes_exact_profile_and_capabilities(
     assert capabilities["workflow_resources"] == [
         uri for uri in PUBLIC_WORKFLOW_RESOURCES if uri in set(expected.resources)
     ]
+    assert diagnostics["capability_profile"] == profile.value
     assert diagnostics["status"] == "ok"
 
 
@@ -95,6 +96,7 @@ def test_host_smoke_preview_readiness_matches_active_profile(
     report = cast("Any", server._tool_manager._tools["run_host_smoke_check"]).fn(include_write_probe=False)
     preview_ready = expected_state == "ready"
 
+    assert report["capability_profile"] == profile.value
     assert report["preview_ready"] is preview_ready
     assert (report["preview_request_template"] is not None) is preview_ready
     if preview_ready:

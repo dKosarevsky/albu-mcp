@@ -24,6 +24,7 @@ def test_host_smoke_report_is_preview_ready_when_diagnostics_and_validation_pass
     report = build_host_smoke_report(diagnostics=diagnostics, recipe=recipe, validation=validation)
 
     assert report.status == "ok"
+    assert report.capability_profile == "full"
     assert report.preview_ready is True
     assert [check.code for check in report.checks] == [
         "diagnostics",

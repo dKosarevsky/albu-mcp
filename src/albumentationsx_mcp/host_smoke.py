@@ -7,6 +7,7 @@ from typing import Any, Literal
 
 from pydantic import Field
 
+from albumentationsx_mcp.capabilities import CapabilityProfile
 from albumentationsx_mcp.diagnostics import (
     DiagnosticRemediationAction,
     DiagnosticSeverity,
@@ -55,6 +56,7 @@ class HostWorkflowGuidance(StrictModel):
 class HostSmokeReport(StrictModel):
     """Machine-readable host preflight report."""
 
+    capability_profile: CapabilityProfile
     status: DiagnosticStatus
     preview_ready: bool
     workflow_guidance: HostWorkflowGuidance
@@ -87,6 +89,7 @@ def build_host_smoke_report(
         ),
     ]
     return HostSmokeReport(
+        capability_profile=diagnostics.capability_profile,
         status=_aggregate_status(checks),
         preview_ready=preview_ready,
         workflow_guidance=_workflow_guidance(),

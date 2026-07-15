@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
+from albumentationsx_mcp.capabilities import CapabilityProfile
 from albumentationsx_mcp.diagnostics import DiagnosticsService, PublicSurface, build_diagnostics_guide
 
 
@@ -29,6 +30,21 @@ def test_diagnostics_reports_ok_environment(tmp_path: Path) -> None:
     assert report.environment.max_preview_runs == 7
     assert report.environment.write_probe == "passed"
     assert not (artifact_root / ".albumentationsx-mcp-diagnostics-probe").exists()
+
+
+@pytest.mark.parametrize("profile", CapabilityProfile)
+def test_diagnostics_reports_active_capability_profile(tmp_path: Path, profile: CapabilityProfile) -> None:
+    public_surface = _complete_public_surface().model_copy(update={"capability_profile": profile})
+
+    report = DiagnosticsService(
+        allowed_roots=[tmp_path],
+        artifact_root=tmp_path / "artifacts",
+        max_preview_runs=7,
+        public_surface=public_surface,
+    ).diagnose(include_write_probe=False)
+
+    assert report.capability_profile is profile
+    assert report.model_dump(mode="json")["capability_profile"] == profile.value
 
 
 def test_diagnostics_warns_for_missing_allowed_root(tmp_path: Path) -> None:

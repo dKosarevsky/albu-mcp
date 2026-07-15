@@ -13,6 +13,7 @@ from albumentationsx_mcp.adapters.mcp.registration import surface_for_profile
 from albumentationsx_mcp.capabilities import CapabilityProfile
 from scripts.check_host_profile_conformance import (
     ProfileConformanceConfig,
+    _profile_identity_failures,
     build_profile_conformance_report,
     check_profile_conformance,
     profile_conformance_exit_code,
@@ -55,10 +56,44 @@ def test_profile_conformance_matches_exact_stdio_surface_and_fallback(
         "tools_sha256": _surface_digest(expected.tools),
     }
     assert result["surface_mismatches"] == {}
+    assert result["profile_identity_matches"] is True
+    assert result["diagnostics_reported_capability_profile"] == profile.value
     assert result["smoke_ok"] is True
+    assert result["reported_capability_profile"] == profile.value
     assert result["preview_ready"] is (profile is not CapabilityProfile.CORE)
     assert result["fallback_matches_resource"] is True
     assert result["failures"] == []
+
+
+@pytest.mark.parametrize(
+    ("diagnostics", "smoke", "expected_failure"),
+    [
+        ({}, {"capability_profile": "core"}, "diagnose_environment did not report capability profile 'core'"),
+        (
+            {"capability_profile": "wrong"},
+            {"capability_profile": "core"},
+            "diagnose_environment did not report capability profile 'core'",
+        ),
+        ({"capability_profile": "core"}, {}, "run_host_smoke_check did not report capability profile 'core'"),
+        (
+            {"capability_profile": "core"},
+            {"capability_profile": "wrong"},
+            "run_host_smoke_check did not report capability profile 'core'",
+        ),
+    ],
+)
+def test_profile_identity_rejects_missing_or_wrong_tool_report(
+    diagnostics: dict[str, str],
+    smoke: dict[str, str],
+    expected_failure: str,
+) -> None:
+    failures = _profile_identity_failures(
+        diagnostics=diagnostics,
+        smoke=smoke,
+        expected=CapabilityProfile.CORE,
+    )
+
+    assert failures == [expected_failure]
 
 
 def test_profile_conformance_report_is_deterministic_and_privacy_safe(
@@ -67,7 +102,7 @@ def test_profile_conformance_report_is_deterministic_and_privacy_safe(
     report = asyncio.run(build_profile_conformance_report(conformance_config))
     rendered = render_profile_conformance_report(report)
 
-    assert report["schema_version"] == 1
+    assert report["schema_version"] == 2
     assert report["status"] == "passed"
     assert report["source_revision"] == conformance_config.source_revision
     assert report["transport"] == "stdio"
