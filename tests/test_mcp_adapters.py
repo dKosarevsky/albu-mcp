@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import pytest
 from mcp.server.fastmcp import FastMCP
@@ -19,12 +21,24 @@ from albumentationsx_mcp.adapters.mcp.diagnostics import SURFACE as DIAGNOSTICS_
 from albumentationsx_mcp.adapters.mcp.diagnostics import register_diagnostics_adapter
 from albumentationsx_mcp.adapters.mcp.policy import SURFACE as POLICY_SURFACE
 from albumentationsx_mcp.adapters.mcp.policy import register_policy_adapter
+from albumentationsx_mcp.adapters.mcp.preview import SURFACE as PREVIEW_SURFACE
+from albumentationsx_mcp.adapters.mcp.preview import register_preview_adapter
 from albumentationsx_mcp.adapters.mcp.prompts import SURFACE as PROMPT_SURFACE
 from albumentationsx_mcp.adapters.mcp.prompts import register_prompt_adapter
+from albumentationsx_mcp.adapters.mcp.sessions import SURFACE as SESSION_SURFACE
+from albumentationsx_mcp.adapters.mcp.sessions import register_session_adapter
 from albumentationsx_mcp.catalog import TransformCatalog
 from albumentationsx_mcp.diagnostics import DiagnosticsService, PublicSurface
 from albumentationsx_mcp.pipeline import PipelineService
 from albumentationsx_mcp.preview import ArtifactStore, PathPolicy, PreviewService
+from albumentationsx_mcp.preview_validation import PreviewRequestValidator
+from albumentationsx_mcp.reports import PreviewReportService
+from albumentationsx_mcp.review import PreviewFeedbackStore
+from albumentationsx_mcp.sessions import InteractiveTuningSessionStore
+from albumentationsx_mcp.tuning import TuningDecisionStore
+from scripts.export_mcp_contract import build_contract_snapshot
+
+_CONTRACT_SNAPSHOT_PATH = Path("tests/fixtures/snapshots/mcp_contract.json")
 
 
 @dataclass(frozen=True)
@@ -32,7 +46,13 @@ class AdapterTestDependencies:
     catalog: TransformCatalog
     pipeline_service: PipelineService
     path_policy: PathPolicy
+    artifact_store: ArtifactStore
     preview_service: PreviewService
+    preview_validator: PreviewRequestValidator
+    tuning_store: TuningDecisionStore
+    session_store: InteractiveTuningSessionStore
+    feedback_store: PreviewFeedbackStore
+    report_service: PreviewReportService
     diagnostics_service: DiagnosticsService
 
 
@@ -42,10 +62,15 @@ def adapter_dependencies(tmp_path: Path) -> AdapterTestDependencies:
     pipeline_service = PipelineService(catalog)
     path_policy = PathPolicy([tmp_path])
     artifact_root = tmp_path / "artifacts"
+    artifact_store = ArtifactStore(artifact_root)
     preview_service = PreviewService(
         pipeline_service,
         path_policy,
-        ArtifactStore(artifact_root),
+        artifact_store,
+    )
+    preview_validator = PreviewRequestValidator(
+        pipeline_service=pipeline_service,
+        path_policy=path_policy,
     )
     diagnostics_service = DiagnosticsService(
         allowed_roots=[tmp_path],
@@ -57,7 +82,13 @@ def adapter_dependencies(tmp_path: Path) -> AdapterTestDependencies:
         catalog=catalog,
         pipeline_service=pipeline_service,
         path_policy=path_policy,
+        artifact_store=artifact_store,
         preview_service=preview_service,
+        preview_validator=preview_validator,
+        tuning_store=TuningDecisionStore(artifact_root),
+        session_store=InteractiveTuningSessionStore(artifact_root),
+        feedback_store=PreviewFeedbackStore(artifact_root),
+        report_service=PreviewReportService(artifact_root),
         diagnostics_service=diagnostics_service,
     )
 
@@ -158,6 +189,7 @@ def test_catalog_adapter_registers_its_exact_declared_surface() -> None:
     register_catalog_adapter(mcp, catalog=TransformCatalog())
 
     assert _registered_surface(mcp, adapter="catalog") == CATALOG_SURFACE
+    _assert_registered_contract_matches_snapshot(mcp, CATALOG_SURFACE)
 
 
 def test_policy_adapter_registers_its_exact_declared_surface() -> None:
@@ -167,6 +199,7 @@ def test_policy_adapter_registers_its_exact_declared_surface() -> None:
     register_policy_adapter(mcp, catalog=catalog, pipeline_service=PipelineService(catalog))
 
     assert _registered_surface(mcp, adapter="policy") == POLICY_SURFACE
+    _assert_registered_contract_matches_snapshot(mcp, POLICY_SURFACE)
 
 
 def test_dataset_adapter_registers_its_exact_declared_surface(
@@ -182,6 +215,7 @@ def test_dataset_adapter_registers_its_exact_declared_surface(
     )
 
     assert _registered_surface(mcp, adapter="dataset") == DATASET_SURFACE
+    _assert_registered_contract_matches_snapshot(mcp, DATASET_SURFACE)
 
 
 def test_diagnostics_adapter_registers_its_exact_declared_surface(
@@ -196,6 +230,7 @@ def test_diagnostics_adapter_registers_its_exact_declared_surface(
     )
 
     assert _registered_surface(mcp, adapter="diagnostics") == DIAGNOSTICS_SURFACE
+    _assert_registered_contract_matches_snapshot(mcp, DIAGNOSTICS_SURFACE)
 
 
 def test_prompt_adapter_registers_its_exact_declared_surface() -> None:
@@ -204,6 +239,44 @@ def test_prompt_adapter_registers_its_exact_declared_surface() -> None:
     register_prompt_adapter(mcp)
 
     assert _registered_surface(mcp, adapter="prompts") == PROMPT_SURFACE
+    _assert_registered_contract_matches_snapshot(mcp, PROMPT_SURFACE)
+
+
+def test_preview_adapter_registers_its_exact_declared_surface(
+    adapter_dependencies: AdapterTestDependencies,
+) -> None:
+    mcp = FastMCP("preview-test")
+
+    register_preview_adapter(
+        mcp,
+        artifact_store=adapter_dependencies.artifact_store,
+        preview_service=adapter_dependencies.preview_service,
+        preview_validator=adapter_dependencies.preview_validator,
+        tuning_store=adapter_dependencies.tuning_store,
+        session_store=adapter_dependencies.session_store,
+        feedback_store=adapter_dependencies.feedback_store,
+        report_service=adapter_dependencies.report_service,
+    )
+
+    assert _registered_surface(mcp, adapter="preview") == PREVIEW_SURFACE
+    _assert_registered_contract_matches_snapshot(mcp, PREVIEW_SURFACE)
+
+
+def test_session_adapter_registers_its_exact_declared_surface(
+    adapter_dependencies: AdapterTestDependencies,
+) -> None:
+    mcp = FastMCP("sessions-test")
+
+    register_session_adapter(
+        mcp,
+        preview_service=adapter_dependencies.preview_service,
+        tuning_store=adapter_dependencies.tuning_store,
+        session_store=adapter_dependencies.session_store,
+        feedback_store=adapter_dependencies.feedback_store,
+    )
+
+    assert _registered_surface(mcp, adapter="sessions") == SESSION_SURFACE
+    _assert_registered_contract_matches_snapshot(mcp, SESSION_SURFACE)
 
 
 def _registered_surface(mcp: FastMCP, *, adapter: str) -> AdapterSurface:
@@ -214,3 +287,29 @@ def _registered_surface(mcp: FastMCP, *, adapter: str) -> AdapterSurface:
         resource_templates=tuple(mcp._resource_manager._templates),
         prompts=tuple(mcp._prompt_manager._prompts),
     )
+
+
+def _assert_registered_contract_matches_snapshot(mcp: FastMCP, surface: AdapterSurface) -> None:
+    expected = json.loads(_CONTRACT_SNAPSHOT_PATH.read_text(encoding="utf-8"))
+    actual = build_contract_snapshot(mcp)
+
+    assert _contract_fragment(actual, surface) == _contract_fragment(expected, surface)
+
+
+def _contract_fragment(snapshot: dict[str, Any], surface: AdapterSurface) -> dict[str, Any]:
+    tools = snapshot["tools"]
+    resources = snapshot["resources"]
+    resource_templates = snapshot["resource_templates"]
+    prompts = snapshot["prompts"]
+    assert isinstance(tools, list)
+    assert isinstance(resources, list)
+    assert isinstance(resource_templates, list)
+    assert isinstance(prompts, list)
+    return {
+        "tools": [entry for entry in tools if entry["name"] in surface.tools],
+        "resources": [entry for entry in resources if entry["uri"] in surface.resources],
+        "resource_templates": [
+            entry for entry in resource_templates if entry["uri_template"] in surface.resource_templates
+        ],
+        "prompts": [entry for entry in prompts if entry["name"] in surface.prompts],
+    }
