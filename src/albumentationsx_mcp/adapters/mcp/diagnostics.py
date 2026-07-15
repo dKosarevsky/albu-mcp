@@ -135,7 +135,10 @@ def register_diagnostics_adapter(
     @mcp.resource("albumentationsx://examples/client-smoke")
     def client_smoke_example() -> str:
         """Return the MCP host smoke-check example."""
-        return get_host_example("client-smoke").model_dump_json()
+        return get_host_example(
+            "client-smoke",
+            preview_tools_available=diagnostics_service.preview_tools_available,
+        ).model_dump_json()
 
     @mcp.resource("albumentationsx://examples/first-preview")
     def first_preview_example() -> str:
@@ -206,4 +209,7 @@ def register_diagnostics_adapter(
                 f"switch to a profile that exposes {resource_uri}"
             )
             raise ValueError(msg)
-        return get_host_example(example_id).model_dump(mode="json")
+        return get_host_example(
+            example_id,
+            preview_tools_available=diagnostics_service.preview_tools_available,
+        ).model_dump(mode="json")

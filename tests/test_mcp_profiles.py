@@ -252,6 +252,27 @@ def test_registered_json_resources_reference_only_active_profile_surface(
     assert unresolved == []
 
 
+def test_core_client_smoke_resource_and_fallback_describe_non_preview_profile(tmp_path: Path) -> None:
+    server = create_mcp_server(
+        ServerSettings(
+            allowed_roots=[tmp_path],
+            artifact_root=tmp_path / "artifacts",
+            capability_profile=CapabilityProfile.CORE,
+        )
+    )
+    resource = server._resource_manager._resources["albumentationsx://examples/client-smoke"]
+    resource_payload = json.loads(cast("Any", resource).fn())
+    fallback_payload = cast("Any", server._tool_manager._tools["get_workflow_example"]).fn(
+        example_id="client-smoke"
+    )
+
+    assert resource_payload == fallback_payload
+    serialized = json.dumps(resource_payload)
+    assert "preview_ready=true" not in serialized
+    assert "preview_ready=false" in serialized
+    assert "--capability-profile review" in serialized
+
+
 @pytest.mark.parametrize("profile", CapabilityProfile)
 def test_recipe_recommendation_lists_only_active_profile_tools(tmp_path: Path, profile: CapabilityProfile) -> None:
     server = create_mcp_server(
