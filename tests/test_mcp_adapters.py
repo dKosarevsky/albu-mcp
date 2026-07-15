@@ -8,6 +8,7 @@ from typing import Any
 import pytest
 from mcp.server.fastmcp import FastMCP
 
+from albumentationsx_mcp.adapters.mcp import registration as registration_module
 from albumentationsx_mcp.adapters.mcp.catalog import SURFACE as CATALOG_SURFACE
 from albumentationsx_mcp.adapters.mcp.catalog import register_catalog_adapter
 from albumentationsx_mcp.adapters.mcp.contracts import (
@@ -17,6 +18,7 @@ from albumentationsx_mcp.adapters.mcp.contracts import (
 )
 from albumentationsx_mcp.adapters.mcp.dataset import SURFACE as DATASET_SURFACE
 from albumentationsx_mcp.adapters.mcp.dataset import register_dataset_adapter
+from albumentationsx_mcp.adapters.mcp.dependencies import McpDependencies
 from albumentationsx_mcp.adapters.mcp.diagnostics import SURFACE as DIAGNOSTICS_SURFACE
 from albumentationsx_mcp.adapters.mcp.diagnostics import register_diagnostics_adapter
 from albumentationsx_mcp.adapters.mcp.policy import SURFACE as POLICY_SURFACE
@@ -25,6 +27,11 @@ from albumentationsx_mcp.adapters.mcp.preview import SURFACE as PREVIEW_SURFACE
 from albumentationsx_mcp.adapters.mcp.preview import register_preview_adapter
 from albumentationsx_mcp.adapters.mcp.prompts import SURFACE as PROMPT_SURFACE
 from albumentationsx_mcp.adapters.mcp.prompts import register_prompt_adapter
+from albumentationsx_mcp.adapters.mcp.registration import (
+    ADAPTER_SURFACES,
+    COMBINED_SURFACE,
+    register_mcp_adapters,
+)
 from albumentationsx_mcp.adapters.mcp.sessions import SURFACE as SESSION_SURFACE
 from albumentationsx_mcp.adapters.mcp.sessions import register_session_adapter
 from albumentationsx_mcp.catalog import TransformCatalog
@@ -279,6 +286,82 @@ def test_session_adapter_registers_its_exact_declared_surface(
     _assert_registered_contract_matches_snapshot(mcp, SESSION_SURFACE)
 
 
+def test_combined_adapter_surface_matches_canonical_counts() -> None:
+    assert tuple(surface.adapter for surface in ADAPTER_SURFACES) == (
+        "catalog",
+        "policy",
+        "dataset",
+        "preview",
+        "sessions",
+        "diagnostics",
+        "prompts",
+    )
+    assert len(COMBINED_SURFACE.tools) == 44
+    assert len(COMBINED_SURFACE.resources) == 20
+    assert len(COMBINED_SURFACE.resource_templates) == 2
+    assert len(COMBINED_SURFACE.prompts) == 5
+
+
+def test_register_mcp_adapters_registers_exact_combined_surface(
+    adapter_dependencies: AdapterTestDependencies,
+) -> None:
+    mcp = FastMCP("combined-test")
+
+    register_mcp_adapters(mcp, _mcp_dependencies(adapter_dependencies))
+
+    assert tuple(mcp._tool_manager._tools) == COMBINED_SURFACE.tools
+    assert tuple(str(uri) for uri in mcp._resource_manager._resources) == COMBINED_SURFACE.resources
+    assert tuple(mcp._resource_manager._templates) == COMBINED_SURFACE.resource_templates
+    assert tuple(mcp._prompt_manager._prompts) == COMBINED_SURFACE.prompts
+
+
+def test_register_mcp_adapters_rejects_collision_before_partial_registration(
+    adapter_dependencies: AdapterTestDependencies,
+) -> None:
+    mcp = FastMCP("collision-test")
+
+    @mcp.tool(name="search_transforms")
+    def existing_search_transforms() -> str:
+        return "existing"
+
+    with pytest.raises(ValueError, match=r"tools.*search_transforms"):
+        register_mcp_adapters(mcp, _mcp_dependencies(adapter_dependencies))
+
+    assert tuple(mcp._tool_manager._tools) == ("search_transforms",)
+    assert not mcp._resource_manager._resources
+    assert not mcp._resource_manager._templates
+    assert not mcp._prompt_manager._prompts
+
+
+def test_register_mcp_adapters_rolls_back_unexpected_registration_failure(
+    adapter_dependencies: AdapterTestDependencies,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mcp = FastMCP("rollback-test")
+
+    @mcp.tool(name="existing_tool")
+    def existing_tool() -> str:
+        return "existing"
+
+    def failing_session_adapter(target: FastMCP, **_: Any) -> None:
+        @target.tool(name="partially_registered_tool")
+        def partially_registered_tool() -> str:
+            return "partial"
+
+        message = "injected registration failure"
+        raise RuntimeError(message)
+
+    monkeypatch.setattr(registration_module, "register_session_adapter", failing_session_adapter)
+
+    with pytest.raises(RuntimeError, match="injected registration failure"):
+        register_mcp_adapters(mcp, _mcp_dependencies(adapter_dependencies))
+
+    assert tuple(mcp._tool_manager._tools) == ("existing_tool",)
+    assert not mcp._resource_manager._resources
+    assert not mcp._resource_manager._templates
+    assert not mcp._prompt_manager._prompts
+
+
 def _registered_surface(mcp: FastMCP, *, adapter: str) -> AdapterSurface:
     return AdapterSurface(
         adapter=adapter,
@@ -286,6 +369,22 @@ def _registered_surface(mcp: FastMCP, *, adapter: str) -> AdapterSurface:
         resources=tuple(str(uri) for uri in mcp._resource_manager._resources),
         resource_templates=tuple(mcp._resource_manager._templates),
         prompts=tuple(mcp._prompt_manager._prompts),
+    )
+
+
+def _mcp_dependencies(dependencies: AdapterTestDependencies) -> McpDependencies:
+    return McpDependencies(
+        catalog=dependencies.catalog,
+        pipeline_service=dependencies.pipeline_service,
+        path_policy=dependencies.path_policy,
+        artifact_store=dependencies.artifact_store,
+        preview_service=dependencies.preview_service,
+        preview_validator=dependencies.preview_validator,
+        tuning_store=dependencies.tuning_store,
+        session_store=dependencies.session_store,
+        feedback_store=dependencies.feedback_store,
+        report_service=dependencies.report_service,
+        diagnostics_service=dependencies.diagnostics_service,
     )
 
 

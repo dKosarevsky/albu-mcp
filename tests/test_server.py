@@ -13,6 +13,13 @@ def test_create_mcp_server_registers_fastmcp_instance() -> None:
     assert server.name == "AlbumentationsX MCP"
 
 
+def test_server_module_is_a_thin_composition_facade() -> None:
+    source = Path(server_module.__file__).read_text(encoding="utf-8")
+
+    assert "@mcp." not in source
+    assert len(source.splitlines()) <= 220
+
+
 def test_server_exposes_documented_tool_names() -> None:
     server = create_mcp_server()
 
