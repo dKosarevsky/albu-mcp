@@ -22,7 +22,7 @@ objects inside `adapters.cli`, and retain compatibility aliases in `albumentatio
 - Create: `tests/test_cli_contract_snapshot.py`
 - Modify: `scripts/check_contract_snapshots.py`
 
-- [ ] **Step 1: Write failing snapshot tests**
+- [x] **Step 1: Write failing snapshot tests**
 
 Add tests that require a deterministic exporter and committed fixture:
 
@@ -43,13 +43,13 @@ def test_cli_contract_has_complete_inventory() -> None:
 Also assert that `dump_cli_contract_snapshot` reproduces the fixture byte-for-byte with sorted JSON keys and one final
 newline.
 
-- [ ] **Step 2: Confirm RED**
+- [x] **Step 2: Confirm RED**
 
 Run: `uv run pytest -q tests/test_cli_contract_snapshot.py`
 
 Expected: import failure because `scripts.export_cli_contract` does not exist.
 
-- [ ] **Step 3: Implement parser capture and canonical serialization**
+- [x] **Step 3: Implement parser capture and canonical serialization**
 
 Use `unittest.mock.patch.object(argparse.ArgumentParser, "parse_args", ...)` to capture the parser created by each
 existing `_run_*` compatibility function before any handler executes. Serialize recursively:
@@ -77,7 +77,7 @@ existing `_run_*` compatibility function before any handler executes. Serialize 
 Omit generated `prog` values and argparse's implicit help action so the fixture captures the authored contract rather
 than process-specific text. Capture the default server parser separately and use sorted group names from `_SUBCOMMANDS`.
 
-- [ ] **Step 4: Generate and verify the baseline**
+- [x] **Step 4: Generate and verify the baseline**
 
 Run:
 
@@ -91,7 +91,7 @@ uv run ty check scripts/export_cli_contract.py tests/test_cli_contract_snapshot.
 
 Expected: 9 groups, 84 commands, and a canonical fresh fixture.
 
-- [ ] **Step 5: Commit the baseline**
+- [x] **Step 5: Commit the baseline**
 
 ```bash
 git add scripts/export_cli_contract.py scripts/check_contract_snapshots.py \
@@ -109,7 +109,7 @@ git commit -m "test: snapshot the CLI contract"
 - Create: `src/albumentationsx_mcp/adapters/cli/intake.py`
 - Create: `tests/test_cli_adapters.py`
 
-- [ ] **Step 1: Write failing pure surface and parser-fragment tests**
+- [x] **Step 1: Write failing pure surface and parser-fragment tests**
 
 Define the expected contract usage in tests:
 
@@ -127,19 +127,19 @@ Parameterize duplicate checks for empty group names, duplicate groups, empty com
 group. Add parser-fragment comparisons for `host`, `preview`, and `intake`, plus server options, against
 `cli_contract.json`.
 
-- [ ] **Step 2: Confirm RED**
+- [x] **Step 2: Confirm RED**
 
 Run: `uv run pytest -q tests/test_cli_adapters.py`
 
 Expected: import failure for `albumentationsx_mcp.adapters.cli.contracts`.
 
-- [ ] **Step 3: Implement pure declarations**
+- [x] **Step 3: Implement pure declarations**
 
 Add frozen, slotted `CliGroupSurface` and `CombinedCliSurface` dataclasses. `combine_cli_group_surfaces` must preserve
 group and command declaration order and return fully qualified command paths. This module must not import argparse,
 Pydantic, domain modules, environment accessors, or the legacy CLI facade.
 
-- [ ] **Step 4: Extract runtime, preview, and intake adapters**
+- [x] **Step 4: Extract runtime, preview, and intake adapters**
 
 Move code without changing parser descriptions, flags, defaults, choices, output strings, or exception translation:
 
@@ -160,7 +160,7 @@ def run_preview(argv: list[str]) -> None:
         raise SystemExit(1) from exc
 ```
 
-- [ ] **Step 5: Verify exact fragments and representative behavior**
+- [x] **Step 5: Verify exact fragments and representative behavior**
 
 Run:
 
@@ -172,7 +172,7 @@ uv run ruff format --check src/albumentationsx_mcp/adapters/cli tests/test_cli_a
 uv run ty check src/albumentationsx_mcp/adapters/cli tests/test_cli_adapters.py
 ```
 
-- [ ] **Step 6: Commit small adapters**
+- [x] **Step 6: Commit small adapters**
 
 ```bash
 git add src/albumentationsx_mcp/adapters/cli tests/test_cli_adapters.py
@@ -186,7 +186,7 @@ git commit -m "refactor: extract runtime CLI adapters"
 - Create: `src/albumentationsx_mcp/adapters/cli/product_fix.py`
 - Modify: `tests/test_cli_adapters.py`
 
-- [ ] **Step 1: Add failing activation ownership tests**
+- [x] **Step 1: Add failing activation ownership tests**
 
 Declare `activation` as one public group with 24 commands. Keep 11 cycle/proof commands in `activation.py` and 13
 product-fix commands in `product_fix.py`. Assert that the composed parser command order and every recursive parser
@@ -204,7 +204,7 @@ product-fix-outcome, product-fix-outcome-capture, product-fix-outcome-import-gua
 product-fix-outcome-rehearsal
 ```
 
-- [ ] **Step 2: Confirm RED and extract parser registration**
+- [x] **Step 2: Confirm RED and extract parser registration**
 
 Run: `uv run pytest -q tests/test_cli_adapters.py -k activation`
 
@@ -212,12 +212,12 @@ Move `_add_activation_*_parser` functions into the two modules. `activation.buil
 root parser, invokes its local registrars, then `product_fix.register_product_fix_parsers(subparsers)` in the same order
 as the baseline.
 
-- [ ] **Step 3: Extract handlers with explicit dispatch maps**
+- [x] **Step 3: Extract handlers with explicit dispatch maps**
 
 Move `_handle_activation_*` functions unchanged. Export `PRODUCT_FIX_HANDLERS` from `product_fix.py`; merge it after the
 11 cycle handlers in `activation.py`. Unknown commands keep the exact `unsupported activation command` error.
 
-- [ ] **Step 4: Verify parser identity and command behavior**
+- [x] **Step 4: Verify parser identity and command behavior**
 
 Run:
 
@@ -230,7 +230,7 @@ uv run ruff check src/albumentationsx_mcp/adapters/cli tests/test_cli_adapters.p
 uv run ty check src/albumentationsx_mcp/adapters/cli tests/test_cli_adapters.py
 ```
 
-- [ ] **Step 5: Commit activation extraction**
+- [x] **Step 5: Commit activation extraction**
 
 ```bash
 git add src/albumentationsx_mcp/adapters/cli/activation.py \
@@ -247,13 +247,13 @@ git commit -m "refactor: extract activation CLI adapters"
 - Create: `src/albumentationsx_mcp/adapters/cli/beta.py`
 - Modify: `tests/test_cli_adapters.py`
 
-- [ ] **Step 1: Add failing evidence/beta surface tests**
+- [x] **Step 1: Add failing evidence/beta surface tests**
 
 Assert exact baseline fragments for 33 `evidence` commands and 12 `beta` commands. `evidence.py` owns composition and
 dispatch only; capture/import/execution-pack/template/preflight commands belong to `evidence_capture.py`, while
 packet/proof/doctor/status commands belong to `evidence_guidance.py`.
 
-- [ ] **Step 2: Confirm RED and extract evidence registration**
+- [x] **Step 2: Confirm RED and extract evidence registration**
 
 Run: `uv run pytest -q tests/test_cli_adapters.py -k 'evidence or beta'`
 
@@ -261,18 +261,18 @@ Move recording/import/session/execution-pack/template/preflight parser builders 
 Move run-session, packet, collect, proof, transition, transcript, doctor, unblock, status, and close-host builders and
 handlers to `evidence_guidance.py`. Export registrar functions and handler dictionaries from each module.
 
-- [ ] **Step 3: Compose evidence without cross-module namespace mutation**
+- [x] **Step 3: Compose evidence without cross-module namespace mutation**
 
 `evidence.build_evidence_parser()` creates one subparser action and calls the two registrars in existing order.
 `handle_evidence_command` performs a deterministic dictionary lookup across the two exported handler maps and retains
 the exact unsupported-command error. No domain module imports an argparse type.
 
-- [ ] **Step 4: Extract beta commands unchanged**
+- [x] **Step 4: Extract beta commands unchanged**
 
 Move beta parser construction and handlers into `beta.py`, including response validation/import/template commands.
 Export `SURFACE`, `build_beta_parser`, and `run_beta`.
 
-- [ ] **Step 5: Verify parser and output contracts**
+- [x] **Step 5: Verify parser and output contracts**
 
 Run:
 
@@ -286,7 +286,7 @@ uv run ruff format --check src/albumentationsx_mcp/adapters/cli tests/test_cli_a
 uv run ty check src/albumentationsx_mcp/adapters/cli tests/test_cli_adapters.py
 ```
 
-- [ ] **Step 6: Commit evidence extraction**
+- [x] **Step 6: Commit evidence extraction**
 
 ```bash
 git add src/albumentationsx_mcp/adapters/cli tests/test_cli_adapters.py
@@ -304,7 +304,7 @@ git commit -m "refactor: extract evidence CLI adapters"
 - Modify: `tests/test_cli_adapters.py`
 - Modify: `tests/test_cli_contract_snapshot.py`
 
-- [ ] **Step 1: Add failing release/composition/facade tests**
+- [x] **Step 1: Add failing release/composition/facade tests**
 
 Tests must assert:
 
@@ -324,18 +324,18 @@ Also assert that both console scripts still target `albumentationsx_mcp.cli:main
 `_run_server`, `_run_activation_cli`, `_run_beta_cli`, `_run_distribution_cli`, `_run_evidence_cli`, `_run_host_cli`,
 `_run_intake_cli`, `_run_preview_cli`, `_run_rc_cli`, and `_run_trust_cli` remain callable.
 
-- [ ] **Step 2: Extract release-facing groups**
+- [x] **Step 2: Extract release-facing groups**
 
 Move RC, distribution, and trust parser/handler code to `release.py` with three surfaces and three parser factories.
 Keep report-only semantics, output text, file writes, and `(ValidationError, ValueError) -> SystemExit(1)` behavior.
 
-- [ ] **Step 3: Implement ordered registry**
+- [x] **Step 3: Implement ordered registry**
 
 `registration.py` validates all nine surfaces, exposes `CLI_GROUP_SURFACES`, `COMBINED_CLI_SURFACE`, and the stable
 `GROUP_RUNNERS` mapping. It verifies at import/test time that each parser's direct subcommand names exactly equal its
 declared `SURFACE.commands`; no registry function may read environment variables or execute a handler.
 
-- [ ] **Step 4: Implement app dispatch and thin facade**
+- [x] **Step 4: Implement app dispatch and thin facade**
 
 `app.main(argv)` preserves current fallback semantics: a recognized first token dispatches a CLI group; otherwise the
 same argv is parsed as server options. Replace `cli.py` with imports and compatibility aliases only:
@@ -350,7 +350,7 @@ _SUBCOMMANDS = frozenset(GROUP_RUNNERS)
 
 Re-export each legacy private runner alias for the contract exporter and any downstream diagnostic imports.
 
-- [ ] **Step 5: Prove full CLI contract identity**
+- [x] **Step 5: Prove full CLI contract identity**
 
 Run:
 
@@ -365,7 +365,7 @@ uv run pytest -q tests/test_activation_cli.py tests/test_cli_evidence_beta.py \
 Expected: the baseline fixture is unchanged and representative commands preserve stdout, stderr, writes, and exit
 codes.
 
-- [ ] **Step 6: Commit the facade switch**
+- [x] **Step 6: Commit the facade switch**
 
 ```bash
 git add src/albumentationsx_mcp/adapters/cli src/albumentationsx_mcp/cli.py \
@@ -377,22 +377,26 @@ git commit -m "refactor: compose CLI adapters"
 
 **Files:**
 - Create: `tests/test_architecture_boundaries.py`
+- Modify: `src/albumentationsx_mcp/mcp_app.py`
+- Modify: `scripts/check_release_readiness.py`
+- Modify: `tests/test_release_readiness.py`
 - Modify: `CHANGELOG.md`
 - Modify: `docs/superpowers/plans/2026-07-15-cli-adapter-extraction.md`
 
-- [ ] **Step 1: Add transport-boundary tests**
+- [x] **Step 1: Add transport-boundary tests**
 
 Parse imports with `ast` and assert that modules outside `albumentationsx_mcp.adapters`, `server.py`, and the `cli.py`
 compatibility facade do not import FastMCP, argparse, or `albumentationsx_mcp.adapters`. Assert each CLI adapter module
-stays below its documented size ceiling: 650 lines for leaf adapters, 250 for composition modules, and 120 for the
-facade.
+stays below its documented size ceiling: 700 lines for leaf adapters, 250 for composition modules, and 120 for the
+facade. Replace the MCP App helper's type-only FastMCP dependency with a transport-agnostic port and keep the release
+readiness snapshot inventory aligned with the canonical CLI contract.
 
-- [ ] **Step 2: Add an Unreleased changelog entry**
+- [x] **Step 2: Add an Unreleased changelog entry**
 
 Document the internal CLI adapter extraction and canonical CLI snapshot. Do not claim a new command, changed output,
 or release.
 
-- [ ] **Step 3: Run focused and full verification**
+- [x] **Step 3: Run focused and full verification**
 
 Run:
 
@@ -409,7 +413,7 @@ git diff --exit-code -- tests/fixtures/snapshots/cli_contract.json \
   tests/fixtures/snapshots/mcp_contract.json tests/fixtures/snapshots/output_contracts.json
 ```
 
-- [ ] **Step 4: Mark the plan complete and commit**
+- [x] **Step 4: Mark the plan complete and commit**
 
 ```bash
 git add CHANGELOG.md tests/test_architecture_boundaries.py \

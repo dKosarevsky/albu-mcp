@@ -4,6 +4,8 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 ## Unreleased
 
+- Extracted the monolithic command-line module into focused argparse adapters with a canonical 9-group, 84-command
+  contract snapshot and executable dependency boundaries while preserving command behavior and console entrypoints.
 - Extracted monolithic FastMCP registration into focused adapters with declared ownership, explicit dependencies, and
   atomic ordered composition while preserving the canonical MCP and output contracts.
 - Separated current release health, optional host evidence, and adoption measurement into independent lifecycle

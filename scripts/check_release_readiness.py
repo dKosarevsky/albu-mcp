@@ -236,6 +236,7 @@ _DEFAULT_DISTRIBUTION_ROLLOUT_PACKET_PATH = Path("docs/DISTRIBUTION_ROLLOUT_PACK
 _DEFAULT_EVIDENCE_FIRST_CYCLE_REPORT_PATH = Path("docs/EVIDENCE_FIRST_CYCLE_REPORT.md")
 _DEFAULT_RC_RELEASE_DECISION_REPORT_PATH = Path("docs/RC_RELEASE_DECISION_REPORT.md")
 _DEFAULT_GOVERNED_100_ITERATION_REPORT_PATH = Path("docs/GOVERNED_100_ITERATION_REPORT.md")
+_DEFAULT_CLI_SNAPSHOT_PATH = Path("tests/fixtures/snapshots/cli_contract.json")
 _DEFAULT_MCP_SNAPSHOT_PATH = Path("tests/fixtures/snapshots/mcp_contract.json")
 _DEFAULT_OUTPUT_SNAPSHOT_PATH = Path("tests/fixtures/snapshots/output_contracts.json")
 _DEFAULT_PYPROJECT_PATH = Path("pyproject.toml")
@@ -311,6 +312,7 @@ class ReleaseReadinessConfig:
     evidence_first_cycle_report_path: Path = _DEFAULT_EVIDENCE_FIRST_CYCLE_REPORT_PATH
     rc_release_decision_report_path: Path = _DEFAULT_RC_RELEASE_DECISION_REPORT_PATH
     governed_100_iteration_report_path: Path = _DEFAULT_GOVERNED_100_ITERATION_REPORT_PATH
+    cli_snapshot_path: Path = _DEFAULT_CLI_SNAPSHOT_PATH
     mcp_snapshot_path: Path = _DEFAULT_MCP_SNAPSHOT_PATH
     output_snapshot_path: Path = _DEFAULT_OUTPUT_SNAPSHOT_PATH
     contract_output_work_dir: Path | None = None
@@ -705,6 +707,7 @@ def check_release_readiness(config: ReleaseReadinessConfig | None = None) -> Rel
             pyproject_path=config.pyproject_path,
         ),
         *_check_contract_snapshot_freshness(
+            cli_snapshot_path=config.cli_snapshot_path,
             mcp_snapshot_path=config.mcp_snapshot_path,
             output_snapshot_path=config.output_snapshot_path,
             output_work_dir=config.contract_output_work_dir,
@@ -776,6 +779,7 @@ def main() -> None:
             review_agent_v3_plan_path=args.review_agent_v3_plan,
             dataset_quality_depth_plan_path=args.dataset_quality_depth_plan,
             distribution_rollout_packet_path=args.distribution_rollout_packet,
+            cli_snapshot_path=args.cli_snapshot,
             mcp_snapshot_path=args.mcp_snapshot,
             output_snapshot_path=args.output_snapshot,
             contract_output_work_dir=args.contract_output_work_dir,
@@ -848,6 +852,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--review-agent-v3-plan", type=Path, default=_DEFAULT_REVIEW_AGENT_V3_PLAN_PATH)
     parser.add_argument("--dataset-quality-depth-plan", type=Path, default=_DEFAULT_DATASET_QUALITY_DEPTH_PLAN_PATH)
     parser.add_argument("--distribution-rollout-packet", type=Path, default=_DEFAULT_DISTRIBUTION_ROLLOUT_PACKET_PATH)
+    parser.add_argument("--cli-snapshot", type=Path, default=_DEFAULT_CLI_SNAPSHOT_PATH)
     parser.add_argument("--mcp-snapshot", type=Path, default=_DEFAULT_MCP_SNAPSHOT_PATH)
     parser.add_argument("--output-snapshot", type=Path, default=_DEFAULT_OUTPUT_SNAPSHOT_PATH)
     parser.add_argument("--contract-output-work-dir", type=Path, default=None)
@@ -1033,23 +1038,27 @@ def _check_desktop_extension(*, extension_root: Path, pyproject_path: Path) -> R
 
 def _check_contract_snapshot_freshness(
     *,
+    cli_snapshot_path: Path,
     mcp_snapshot_path: Path,
     output_snapshot_path: Path,
     output_work_dir: Path | None,
 ) -> list[ReleaseReadinessCheck]:
     try:
         report = check_contract_snapshots(
+            cli_snapshot_path=cli_snapshot_path,
             mcp_snapshot_path=mcp_snapshot_path,
             output_snapshot_path=output_snapshot_path,
             output_work_dir=output_work_dir,
         )
     except (OSError, ValueError) as exc:
         return [
+            ReleaseReadinessCheck(name="cli_contract_snapshot", ok=False, message=str(exc)),
             ReleaseReadinessCheck(name="mcp_contract_snapshot", ok=False, message=str(exc)),
             ReleaseReadinessCheck(name="output_contract_snapshot", ok=False, message=str(exc)),
         ]
 
     names = {
+        "cli_contract": "cli_contract_snapshot",
         "mcp_contract": "mcp_contract_snapshot",
         "output_contracts": "output_contract_snapshot",
     }

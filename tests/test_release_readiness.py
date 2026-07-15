@@ -75,6 +75,7 @@ EXPECTED_RELEASE_READINESS_CHECKS = [
     "governed_100_iteration_report",
     "codex_plugin",
     "desktop_extension",
+    "cli_contract_snapshot",
     "mcp_contract_snapshot",
     "output_contract_snapshot",
 ]
@@ -134,6 +135,7 @@ CLI_OUTPUT_CHECK_NAMES = [
     "governed_100_iteration_report",
     "codex_plugin",
     "desktop_extension",
+    "cli_contract_snapshot",
     "output_contract_snapshot",
 ]
 
@@ -241,6 +243,24 @@ def test_release_readiness_reports_stale_generated_doc(tmp_path: Path) -> None:
     assert len(failed) == 1
     assert failed[0].name == "beta_feedback_intake"
     assert "is stale; regenerate it with scripts/export_beta_feedback_intake.py" in failed[0].message
+
+
+def test_release_readiness_reports_stale_cli_contract(tmp_path: Path) -> None:
+    stale_path = tmp_path / "cli_contract.json"
+    stale_path.write_text("{}\n", encoding="utf-8")
+
+    report = check_release_readiness(
+        ReleaseReadinessConfig(
+            cli_snapshot_path=stale_path,
+            contract_output_work_dir=tmp_path / "contracts",
+        )
+    )
+
+    failed = [check for check in report.checks if not check.ok]
+    assert report.ok is False
+    assert len(failed) == 1
+    assert failed[0].name == "cli_contract_snapshot"
+    assert "CLI contract snapshot is stale" in failed[0].message
 
 
 def test_release_readiness_cli_prints_failed_check(tmp_path: Path) -> None:
