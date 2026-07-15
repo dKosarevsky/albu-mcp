@@ -7,6 +7,9 @@ from pathlib import Path
 
 import pytest
 
+from albumentationsx_mcp import cli as legacy_cli
+from albumentationsx_mcp.adapters.cli.activation import SURFACE as ACTIVATION_SURFACE
+from albumentationsx_mcp.adapters.cli.activation import build_activation_parser, handle_activation_command
 from albumentationsx_mcp.adapters.cli.contracts import (
     CliGroupSurface,
     combine_cli_group_surfaces,
@@ -16,6 +19,7 @@ from albumentationsx_mcp.adapters.cli.intake import SURFACE as INTAKE_SURFACE
 from albumentationsx_mcp.adapters.cli.intake import build_intake_parser
 from albumentationsx_mcp.adapters.cli.preview import SURFACE as PREVIEW_SURFACE
 from albumentationsx_mcp.adapters.cli.preview import build_preview_parser
+from albumentationsx_mcp.adapters.cli.product_fix import PRODUCT_FIX_COMMANDS
 from albumentationsx_mcp.adapters.cli.runtime import HOST_SURFACE, build_host_parser, build_server_parser
 from scripts.export_cli_contract import build_parser_contract
 
@@ -90,3 +94,32 @@ def test_server_parser_matches_canonical_fragment() -> None:
     snapshot = json.loads(_SNAPSHOT_PATH.read_text(encoding="utf-8"))
 
     assert build_parser_contract(build_server_parser()) == snapshot["server"]
+
+
+def test_activation_adapter_declares_all_cycle_and_product_fix_commands() -> None:
+    assert len(ACTIVATION_SURFACE.commands) == 24
+    assert len(PRODUCT_FIX_COMMANDS) == 13
+    product_fix_commands = tuple(
+        command for command in ACTIVATION_SURFACE.commands if command in set(PRODUCT_FIX_COMMANDS)
+    )
+    assert product_fix_commands == PRODUCT_FIX_COMMANDS
+
+
+def test_activation_adapter_parser_matches_canonical_fragment() -> None:
+    snapshot = json.loads(_SNAPSHOT_PATH.read_text(encoding="utf-8"))
+
+    assert build_parser_contract(build_activation_parser()) == snapshot["groups"]["activation"]
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["command-center", "--format", "json"],
+        ["first-product-fix", "--host", "Codex", "--format", "json"],
+        ["product-fix-implementation-plan", "--host", "Codex", "--format", "json"],
+    ],
+)
+def test_activation_adapter_handler_matches_legacy_dispatch(argv: list[str]) -> None:
+    args = build_activation_parser().parse_args(argv)
+
+    assert handle_activation_command(args) == legacy_cli._handle_activation_command(args)
