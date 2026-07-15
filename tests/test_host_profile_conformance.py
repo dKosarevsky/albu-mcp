@@ -81,6 +81,21 @@ def test_profile_conformance_report_is_deterministic_and_privacy_safe(
     assert str(conformance_config.source_root) not in rendered
 
 
+def test_committed_profile_conformance_report_matches_current_contract(tmp_path: Path) -> None:
+    report_path = Path("docs/host-evidence/profile-conformance-2026-07-15.json")
+    committed = json.loads(report_path.read_text(encoding="utf-8"))
+    allowed_root = Path("docs/assets/demo/inputs").resolve()
+    config = ProfileConformanceConfig(
+        server_python=Path(sys.executable).absolute(),
+        source_root=Path.cwd().resolve(),
+        source_revision=committed["source_revision"],
+        allowed_root=allowed_root,
+        artifact_root=tmp_path / "artifacts",
+    )
+
+    assert asyncio.run(build_profile_conformance_report(config)) == committed
+
+
 def test_profile_conformance_exit_code_rejects_failed_report() -> None:
     assert profile_conformance_exit_code({"status": "failed"}) == 1
 
