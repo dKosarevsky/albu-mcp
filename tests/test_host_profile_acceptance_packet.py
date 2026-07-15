@@ -71,6 +71,11 @@ def test_packet_contains_deterministic_profile_configs(
         assert codex[server_name]["command"] == str(packet_config.server_python)
         assert codex[server_name]["args"] == expected_args
         assert codex[server_name]["tool_timeout_sec"] == 300
+        assert codex[server_name]["tools"] == {
+            "get_workflow_example": {"approval_mode": "approve"},
+            "run_host_smoke_check": {"approval_mode": "approve"},
+        }
+        assert "default_tools_approval_mode" not in codex[server_name]
         assert desktop[server_name] == {
             "command": str(packet_config.server_python),
             "args": expected_args,
@@ -99,6 +104,7 @@ def test_packet_prompts_cover_profiles_fallback_and_review_loop(
     assert "Do not accept the candidate until the reviewer has inspected" in review
     assert "not beta or adoption evidence" in readme
     assert "does not mutate host configuration" in readme
+    assert "Only the two read-only matrix tools are pre-approved in the Codex config" in readme
 
 
 def test_receipt_template_is_pending_and_privacy_safe(

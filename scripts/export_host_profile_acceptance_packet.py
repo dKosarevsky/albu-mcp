@@ -18,6 +18,7 @@ from albumentationsx_mcp.capabilities import CapabilityProfile
 
 HostName = Literal["Codex", "Claude Desktop"]
 _SUPPORTED_HOSTS: tuple[HostName, ...] = ("Codex", "Claude Desktop")
+_CODEX_MATRIX_APPROVED_TOOLS = ("get_workflow_example", "run_host_smoke_check")
 
 
 class _ServerEntry(TypedDict):
@@ -184,6 +185,14 @@ def _render_codex_config(server_entries: dict[str, _ServerEntry]) -> str:
                 "",
             ]
         )
+        for tool_name in _CODEX_MATRIX_APPROVED_TOOLS:
+            sections.extend(
+                [
+                    f"[mcp_servers.{server_name}.tools.{tool_name}]",
+                    'approval_mode = "approve"',
+                    "",
+                ]
+            )
     return "\n".join(sections)
 
 
@@ -201,6 +210,9 @@ Target hosts: `{hosts}`
 
 This packet does not mutate host configuration or canonical evidence records. Merge only the relevant generated
 configuration into a host after reviewing it, and remove the temporary entries after the run.
+
+Only the two read-only matrix tools are pre-approved in the Codex config. Preview rendering, feedback writes, cleanup,
+and export tools retain the host's normal interactive approval behavior.
 
 ## Execution Order
 
