@@ -10,11 +10,17 @@ import pytest
 from albumentationsx_mcp import cli as legacy_cli
 from albumentationsx_mcp.adapters.cli.activation import SURFACE as ACTIVATION_SURFACE
 from albumentationsx_mcp.adapters.cli.activation import build_activation_parser, handle_activation_command
+from albumentationsx_mcp.adapters.cli.beta import SURFACE as BETA_SURFACE
+from albumentationsx_mcp.adapters.cli.beta import build_beta_parser, handle_beta_command
 from albumentationsx_mcp.adapters.cli.contracts import (
     CliGroupSurface,
     combine_cli_group_surfaces,
     validate_cli_group_surfaces,
 )
+from albumentationsx_mcp.adapters.cli.evidence import SURFACE as EVIDENCE_SURFACE
+from albumentationsx_mcp.adapters.cli.evidence import build_evidence_parser, handle_evidence_command
+from albumentationsx_mcp.adapters.cli.evidence_capture import CAPTURE_COMMANDS
+from albumentationsx_mcp.adapters.cli.evidence_guidance import GUIDANCE_COMMANDS
 from albumentationsx_mcp.adapters.cli.intake import SURFACE as INTAKE_SURFACE
 from albumentationsx_mcp.adapters.cli.intake import build_intake_parser
 from albumentationsx_mcp.adapters.cli.preview import SURFACE as PREVIEW_SURFACE
@@ -123,3 +129,57 @@ def test_activation_adapter_handler_matches_legacy_dispatch(argv: list[str]) -> 
     args = build_activation_parser().parse_args(argv)
 
     assert handle_activation_command(args) == legacy_cli._handle_activation_command(args)
+
+
+def test_evidence_and_beta_adapters_declare_complete_ownership() -> None:
+    assert len(CAPTURE_COMMANDS) == 15
+    assert len(GUIDANCE_COMMANDS) == 18
+    assert EVIDENCE_SURFACE.commands == CAPTURE_COMMANDS + GUIDANCE_COMMANDS
+    assert len(EVIDENCE_SURFACE.commands) == 33
+    assert len(BETA_SURFACE.commands) == 12
+
+
+@pytest.mark.parametrize(
+    ("group", "builder"),
+    [
+        ("evidence", build_evidence_parser),
+        ("beta", build_beta_parser),
+    ],
+)
+def test_evidence_and_beta_parser_matches_canonical_fragment(
+    group: str,
+    builder: Callable[[], argparse.ArgumentParser],
+) -> None:
+    snapshot = json.loads(_SNAPSHOT_PATH.read_text(encoding="utf-8"))
+
+    assert build_parser_contract(builder()) == snapshot["groups"][group]
+
+
+@pytest.mark.parametrize(
+    ("builder", "handler", "legacy_handler", "argv"),
+    [
+        (
+            build_evidence_parser,
+            handle_evidence_command,
+            legacy_cli._handle_evidence_command,
+            ["doctor", "--format", "json"],
+        ),
+        (
+            build_evidence_parser,
+            handle_evidence_command,
+            legacy_cli._handle_evidence_command,
+            ["preflight", "--format", "json"],
+        ),
+        (build_beta_parser, handle_beta_command, legacy_cli._handle_beta_command, ["status"]),
+        (build_beta_parser, handle_beta_command, legacy_cli._handle_beta_command, ["triage", "--format", "json"]),
+    ],
+)
+def test_evidence_and_beta_handler_matches_legacy_dispatch(
+    builder: Callable[[], argparse.ArgumentParser],
+    handler: Callable[[argparse.Namespace], str],
+    legacy_handler: Callable[[argparse.Namespace], str],
+    argv: list[str],
+) -> None:
+    args = builder().parse_args(argv)
+
+    assert handler(args) == legacy_handler(args)
