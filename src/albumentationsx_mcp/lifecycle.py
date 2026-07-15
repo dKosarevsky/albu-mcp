@@ -53,6 +53,8 @@ def _release_health_status(channels: list[dict[str, str]]) -> str:
     statuses = {channel["status"] for channel in channels}
     if statuses <= _READY_RELEASE_STATUSES:
         return "published"
+    if statuses - _READY_RELEASE_STATUSES - _UNOBSERVED_RELEASE_STATUSES:
+        return "attention_required"
     if statuses & _UNOBSERVED_RELEASE_STATUSES:
         return "unknown"
     return "attention_required"

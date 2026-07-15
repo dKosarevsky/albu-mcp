@@ -46,6 +46,21 @@ def test_lifecycle_status_keeps_release_host_and_adoption_independent() -> None:
     assert "Ready for v1" not in render_lifecycle_status_markdown(report)
 
 
+def test_lifecycle_release_failure_takes_priority_over_unobserved_channel() -> None:
+    channels = _release_channels()
+    channels[2]["status"] = "failed"
+    channels[3]["status"] = "unknown"
+
+    report = build_lifecycle_status(
+        version="1.19.0",
+        release_channels=channels,
+        host_blockers=[],
+        experiment=_experiment(),
+    )
+
+    assert report["release_health"]["status"] == "attention_required"
+
+
 @pytest.mark.parametrize(
     ("field", "value", "message"),
     [
