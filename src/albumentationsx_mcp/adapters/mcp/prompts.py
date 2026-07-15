@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from albumentationsx_mcp.adapters.mcp.contracts import AdapterSurface
+from albumentationsx_mcp.adapters.mcp.contracts import AdapterSurface, ProfileSurface
+from albumentationsx_mcp.capabilities import REVIEW_PROFILE_MEMBERSHIP
 from albumentationsx_mcp.prompts import (
     build_robustness_augmentation_session as build_robustness_prompt,
 )
@@ -24,15 +25,17 @@ from albumentationsx_mcp.prompts import (
 if TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
 
+_PROMPTS = (
+    "build_robustness_augmentation_session",
+    "compare_preview_runs_for_feedback",
+    "run_first_preview_review",
+    "tune_pipeline_from_preview_feedback",
+    "export_reproducible_pipeline",
+)
 SURFACE = AdapterSurface(
     adapter="prompts",
-    prompts=(
-        "build_robustness_augmentation_session",
-        "compare_preview_runs_for_feedback",
-        "run_first_preview_review",
-        "tune_pipeline_from_preview_feedback",
-        "export_reproducible_pipeline",
-    ),
+    prompts=_PROMPTS,
+    profile_surfaces=(ProfileSurface(profiles=REVIEW_PROFILE_MEMBERSHIP, prompts=_PROMPTS),),
 )
 
 

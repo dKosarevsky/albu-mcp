@@ -5,7 +5,12 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any
 
-from albumentationsx_mcp.adapters.mcp.contracts import AdapterSurface
+from albumentationsx_mcp.adapters.mcp.contracts import AdapterSurface, ProfileSurface
+from albumentationsx_mcp.capabilities import (
+    CORE_PROFILE_MEMBERSHIP,
+    FULL_PROFILE_MEMBERSHIP,
+    REVIEW_PROFILE_MEMBERSHIP,
+)
 from albumentationsx_mcp.diagnostics import build_diagnostics_guide
 from albumentationsx_mcp.host_smoke import build_host_smoke_report
 from albumentationsx_mcp.models import TargetSpec
@@ -25,23 +30,47 @@ if TYPE_CHECKING:
     from albumentationsx_mcp.diagnostics import DiagnosticsService
     from albumentationsx_mcp.pipeline import PipelineService
 
+_TOOLS = ("diagnose_environment", "run_host_smoke_check", "get_workflow_example")
+_RESOURCES = (
+    "albumentationsx://capabilities",
+    "albumentationsx://diagnostics/guide",
+    "albumentationsx://workflows/catalog",
+    "albumentationsx://workflows/task-profiles",
+    "albumentationsx://workflows/preview-tuning",
+    "albumentationsx://workflows/annotation-preview",
+    "albumentationsx://examples/client-smoke",
+    "albumentationsx://examples/first-preview",
+    "albumentationsx://examples/distortion-review",
+    "albumentationsx://examples/dataset-onboarding",
+    "albumentationsx://examples/diagnostics",
+    "albumentationsx://examples/review-loop",
+    "albumentationsx://examples/report-handoff",
+)
+_CORE_RESOURCES = (
+    "albumentationsx://capabilities",
+    "albumentationsx://diagnostics/guide",
+    "albumentationsx://examples/client-smoke",
+    "albumentationsx://examples/diagnostics",
+)
+_REVIEW_RESOURCES = (
+    "albumentationsx://workflows/catalog",
+    "albumentationsx://workflows/task-profiles",
+    "albumentationsx://workflows/preview-tuning",
+    "albumentationsx://workflows/annotation-preview",
+    "albumentationsx://examples/first-preview",
+    "albumentationsx://examples/distortion-review",
+    "albumentationsx://examples/review-loop",
+    "albumentationsx://examples/report-handoff",
+)
+_FULL_RESOURCES = ("albumentationsx://examples/dataset-onboarding",)
 SURFACE = AdapterSurface(
     adapter="diagnostics",
-    tools=("diagnose_environment", "run_host_smoke_check", "get_workflow_example"),
-    resources=(
-        "albumentationsx://capabilities",
-        "albumentationsx://diagnostics/guide",
-        "albumentationsx://workflows/catalog",
-        "albumentationsx://workflows/task-profiles",
-        "albumentationsx://workflows/preview-tuning",
-        "albumentationsx://workflows/annotation-preview",
-        "albumentationsx://examples/client-smoke",
-        "albumentationsx://examples/first-preview",
-        "albumentationsx://examples/distortion-review",
-        "albumentationsx://examples/dataset-onboarding",
-        "albumentationsx://examples/diagnostics",
-        "albumentationsx://examples/review-loop",
-        "albumentationsx://examples/report-handoff",
+    tools=_TOOLS,
+    resources=_RESOURCES,
+    profile_surfaces=(
+        ProfileSurface(profiles=CORE_PROFILE_MEMBERSHIP, tools=_TOOLS, resources=_CORE_RESOURCES),
+        ProfileSurface(profiles=REVIEW_PROFILE_MEMBERSHIP, resources=_REVIEW_RESOURCES),
+        ProfileSurface(profiles=FULL_PROFILE_MEMBERSHIP, resources=_FULL_RESOURCES),
     ),
 )
 

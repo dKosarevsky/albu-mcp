@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Literal
 
-from albumentationsx_mcp.adapters.mcp.contracts import AdapterSurface
+from albumentationsx_mcp.adapters.mcp.contracts import AdapterSurface, ProfileSurface
+from albumentationsx_mcp.capabilities import REVIEW_PROFILE_MEMBERSHIP
 from albumentationsx_mcp.dataset import score_dataset_preview_candidates as score_dataset_candidates
 from albumentationsx_mcp.mcp_app import (
     PREVIEW_ARTIFACT_URI_TEMPLATE,
@@ -34,20 +35,31 @@ if TYPE_CHECKING:
     from albumentationsx_mcp.sessions import InteractiveTuningSessionStore
     from albumentationsx_mcp.tuning import TuningDecisionStore
 
+_TOOLS = (
+    "validate_preview_request",
+    "render_preview",
+    "render_preview_batch",
+    "compare_preview_runs",
+    "interpret_preview_feedback",
+    "plan_preview_review",
+    "rank_preview_candidates",
+    "export_preview_report",
+)
+_RESOURCES = (PREVIEW_REVIEW_APP_URI,)
+_RESOURCE_TEMPLATES = (PREVIEW_ARTIFACT_URI_TEMPLATE,)
 SURFACE = AdapterSurface(
     adapter="preview",
-    tools=(
-        "validate_preview_request",
-        "render_preview",
-        "render_preview_batch",
-        "compare_preview_runs",
-        "interpret_preview_feedback",
-        "plan_preview_review",
-        "rank_preview_candidates",
-        "export_preview_report",
+    tools=_TOOLS,
+    resources=_RESOURCES,
+    resource_templates=_RESOURCE_TEMPLATES,
+    profile_surfaces=(
+        ProfileSurface(
+            profiles=REVIEW_PROFILE_MEMBERSHIP,
+            tools=_TOOLS,
+            resources=_RESOURCES,
+            resource_templates=_RESOURCE_TEMPLATES,
+        ),
     ),
-    resources=(PREVIEW_REVIEW_APP_URI,),
-    resource_templates=(PREVIEW_ARTIFACT_URI_TEMPLATE,),
 )
 
 

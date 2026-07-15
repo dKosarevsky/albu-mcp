@@ -5,7 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from albumentationsx_mcp.adapters.mcp.contracts import AdapterSurface
+from albumentationsx_mcp.adapters.mcp.contracts import AdapterSurface, ProfileSurface
+from albumentationsx_mcp.capabilities import DATASET_PROFILE_MEMBERSHIP
 from albumentationsx_mcp.dataset import score_dataset_preview_candidates as score_dataset_candidates
 from albumentationsx_mcp.dataset_quality import inspect_dataset_quality
 from albumentationsx_mcp.models import QualityProfileName
@@ -20,14 +21,16 @@ if TYPE_CHECKING:
     from albumentationsx_mcp.pipeline import PipelineService
     from albumentationsx_mcp.preview import PathPolicy, PreviewService
 
+_TOOLS = (
+    "plan_dataset_onboarding",
+    "build_review_packet",
+    "inspect_dataset_quality",
+    "score_dataset_preview_candidates",
+)
 SURFACE = AdapterSurface(
     adapter="dataset",
-    tools=(
-        "plan_dataset_onboarding",
-        "build_review_packet",
-        "inspect_dataset_quality",
-        "score_dataset_preview_candidates",
-    ),
+    tools=_TOOLS,
+    profile_surfaces=(ProfileSurface(profiles=DATASET_PROFILE_MEMBERSHIP, tools=_TOOLS),),
 )
 
 

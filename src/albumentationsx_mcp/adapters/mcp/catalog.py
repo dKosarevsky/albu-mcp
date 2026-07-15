@@ -5,8 +5,9 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any
 
-from albumentationsx_mcp.adapters.mcp.contracts import AdapterSurface
+from albumentationsx_mcp.adapters.mcp.contracts import AdapterSurface, ProfileSurface
 from albumentationsx_mcp.advisor import list_feedback_tags
+from albumentationsx_mcp.capabilities import CORE_PROFILE_MEMBERSHIP
 from albumentationsx_mcp.models import ComposeSpec
 from albumentationsx_mcp.presets import Intensity
 from albumentationsx_mcp.quality import list_quality_profiles
@@ -17,23 +18,34 @@ if TYPE_CHECKING:
 
     from albumentationsx_mcp.catalog import TransformCatalog
 
+_TOOLS = (
+    "search_transforms",
+    "get_transform_schema",
+    "list_feedback_tags",
+    "list_quality_profiles",
+    "recommend_recipe",
+)
+_RESOURCES = (
+    "albumentationsx://transforms/catalog",
+    "albumentationsx://schemas/pipeline",
+    "albumentationsx://feedback-tags",
+    "albumentationsx://quality-profiles",
+    "albumentationsx://recipes/catalog",
+)
+_RESOURCE_TEMPLATES = ("albumentationsx://transforms/{name}",)
 SURFACE = AdapterSurface(
     adapter="catalog",
-    tools=(
-        "search_transforms",
-        "get_transform_schema",
-        "list_feedback_tags",
-        "list_quality_profiles",
-        "recommend_recipe",
+    tools=_TOOLS,
+    resources=_RESOURCES,
+    resource_templates=_RESOURCE_TEMPLATES,
+    profile_surfaces=(
+        ProfileSurface(
+            profiles=CORE_PROFILE_MEMBERSHIP,
+            tools=_TOOLS,
+            resources=_RESOURCES,
+            resource_templates=_RESOURCE_TEMPLATES,
+        ),
     ),
-    resources=(
-        "albumentationsx://transforms/catalog",
-        "albumentationsx://schemas/pipeline",
-        "albumentationsx://feedback-tags",
-        "albumentationsx://quality-profiles",
-        "albumentationsx://recipes/catalog",
-    ),
-    resource_templates=("albumentationsx://transforms/{name}",),
 )
 
 

@@ -5,8 +5,9 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any, Literal
 
-from albumentationsx_mcp.adapters.mcp.contracts import AdapterSurface
+from albumentationsx_mcp.adapters.mcp.contracts import AdapterSurface, ProfileSurface
 from albumentationsx_mcp.advisor import explain_pipeline
+from albumentationsx_mcp.capabilities import CORE_PROFILE_MEMBERSHIP, REVIEW_PROFILE_MEMBERSHIP
 from albumentationsx_mcp.models import ComposeSpec, TargetSpec
 from albumentationsx_mcp.policy_assistant import (
     plan_augmentation_policy,
@@ -23,19 +24,25 @@ if TYPE_CHECKING:
 
 OutputFormat = Literal["python", "json", "yaml"]
 
+_TOOLS = (
+    "validate_pipeline",
+    "recommend_pipeline",
+    "adjust_pipeline",
+    "explain_pipeline",
+    "plan_augmentation_policy",
+    "plan_augmentation_policy_candidates",
+    "plan_policy_iteration",
+    "export_pipeline",
+)
+_RESOURCES = ("albumentationsx://policy-assistant/contract",)
 SURFACE = AdapterSurface(
     adapter="policy",
-    tools=(
-        "validate_pipeline",
-        "recommend_pipeline",
-        "adjust_pipeline",
-        "explain_pipeline",
-        "plan_augmentation_policy",
-        "plan_augmentation_policy_candidates",
-        "plan_policy_iteration",
-        "export_pipeline",
+    tools=_TOOLS,
+    resources=_RESOURCES,
+    profile_surfaces=(
+        ProfileSurface(profiles=CORE_PROFILE_MEMBERSHIP, tools=_TOOLS),
+        ProfileSurface(profiles=REVIEW_PROFILE_MEMBERSHIP, resources=_RESOURCES),
     ),
-    resources=("albumentationsx://policy-assistant/contract",),
 )
 
 

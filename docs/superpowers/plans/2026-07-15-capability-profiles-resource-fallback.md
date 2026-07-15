@@ -64,7 +64,7 @@ Run focused workflow, host-smoke, adapter, contract, Ruff, format, and ty checks
 - Create: `tests/test_mcp_profiles.py`
 - Modify: `tests/test_mcp_adapters.py`
 
-- [ ] **Step 1: Add failing profile declaration tests**
+- [x] **Step 1: Add failing profile declaration tests**
 
 Parameterize `core`, `review`, `dataset`, and `full`. Require complete per-identifier declarations, deterministic order,
 no duplicate profile ownership, and these final counts:
@@ -76,19 +76,19 @@ no duplicate profile ownership, and these final counts:
 | `dataset` | 20 | 9 | 1 | 0 |
 | `full` | 45 | 20 | 2 | 5 |
 
-- [ ] **Step 2: Implement pure profile values and metadata**
+- [x] **Step 2: Implement pure profile values and metadata**
 
 Add a string enum `CapabilityProfile` and immutable `ProfileSurface` declarations. `full` includes all identifiers;
 focused profiles are explicit views, not alternate implementations. Validation rejects unknown, duplicate, missing,
 or out-of-surface profile identifiers.
 
-- [ ] **Step 3: Declare every production identifier**
+- [x] **Step 3: Declare every production identifier**
 
 Catalog and pipeline tools are core. Preview/session/prompt items are review. Dataset tools are dataset. Resources that
 reference both review and dataset tools are full-only. Add dependency-closure assertions for prompt and workflow
 resource tool references.
 
-- [ ] **Step 4: Verify and commit**
+- [x] **Step 4: Verify and commit**
 
 Run profile contract, adapter, Ruff, format, and ty checks. Commit as `feat: declare MCP capability profiles`.
 

@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Literal
 
-from albumentationsx_mcp.adapters.mcp.contracts import AdapterSurface
+from albumentationsx_mcp.adapters.mcp.contracts import AdapterSurface, ProfileSurface
+from albumentationsx_mcp.capabilities import REVIEW_PROFILE_MEMBERSHIP
 from albumentationsx_mcp.models import QualityProfileName
 from albumentationsx_mcp.tuning import build_tuning_session_summary
 
@@ -16,27 +17,29 @@ if TYPE_CHECKING:
     from albumentationsx_mcp.sessions import InteractiveTuningSessionStore
     from albumentationsx_mcp.tuning import TuningDecisionStore
 
+_TOOLS = (
+    "summarize_tuning_session",
+    "start_tuning_session",
+    "record_tuning_session_step",
+    "list_tuning_sessions",
+    "export_tuning_session",
+    "close_tuning_session",
+    "archive_tuning_session",
+    "cleanup_tuning_sessions",
+    "record_preview_feedback",
+    "list_preview_feedback",
+    "record_tuning_decision",
+    "list_tuning_decisions",
+    "export_tuning_report",
+    "list_preview_runs",
+    "get_preview_manifest",
+    "delete_preview_run",
+    "cleanup_preview_runs",
+)
 SURFACE = AdapterSurface(
     adapter="sessions",
-    tools=(
-        "summarize_tuning_session",
-        "start_tuning_session",
-        "record_tuning_session_step",
-        "list_tuning_sessions",
-        "export_tuning_session",
-        "close_tuning_session",
-        "archive_tuning_session",
-        "cleanup_tuning_sessions",
-        "record_preview_feedback",
-        "list_preview_feedback",
-        "record_tuning_decision",
-        "list_tuning_decisions",
-        "export_tuning_report",
-        "list_preview_runs",
-        "get_preview_manifest",
-        "delete_preview_run",
-        "cleanup_preview_runs",
-    ),
+    tools=_TOOLS,
+    profile_surfaces=(ProfileSurface(profiles=REVIEW_PROFILE_MEMBERSHIP, tools=_TOOLS),),
 )
 
 

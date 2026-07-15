@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import pytest
 from mcp.server.fastmcp import FastMCP
@@ -46,6 +46,7 @@ from albumentationsx_mcp.tuning import TuningDecisionStore
 from scripts.export_mcp_contract import build_contract_snapshot
 
 _CONTRACT_SNAPSHOT_PATH = Path("tests/fixtures/snapshots/mcp_contract.json")
+SurfaceField = Literal["tools", "resources", "resource_templates", "prompts"]
 
 
 @dataclass(frozen=True)
@@ -148,10 +149,10 @@ def test_validate_adapter_surfaces_rejects_duplicate_adapter_name() -> None:
     ],
 )
 def test_validate_adapter_surfaces_rejects_duplicate_identifier_within_adapter(
-    field: str,
+    field: SurfaceField,
     identifier: str,
 ) -> None:
-    surface = AdapterSurface(adapter="catalog", **{field: (identifier, identifier)})
+    surface = _surface_with_identifiers("catalog", field, (identifier, identifier))
 
     with pytest.raises(ValueError, match=f"duplicate {field} identifier") as error:
         validate_adapter_surfaces([surface])
@@ -172,12 +173,12 @@ def test_validate_adapter_surfaces_rejects_duplicate_identifier_within_adapter(
     ],
 )
 def test_validate_adapter_surfaces_rejects_identifier_owned_by_two_adapters(
-    field: str,
+    field: SurfaceField,
     identifier: str,
 ) -> None:
     surfaces = [
-        AdapterSurface(adapter="catalog", **{field: (identifier,)}),
-        AdapterSurface(adapter="policy", **{field: (identifier,)}),
+        _surface_with_identifiers("catalog", field, (identifier,)),
+        _surface_with_identifiers("policy", field, (identifier,)),
     ]
 
     with pytest.raises(ValueError, match=f"duplicate {field} identifier") as error:
@@ -370,6 +371,20 @@ def _registered_surface(mcp: FastMCP, *, adapter: str) -> AdapterSurface:
         resource_templates=tuple(mcp._resource_manager._templates),
         prompts=tuple(mcp._prompt_manager._prompts),
     )
+
+
+def _surface_with_identifiers(
+    adapter: str,
+    field: SurfaceField,
+    identifiers: tuple[str, ...],
+) -> AdapterSurface:
+    if field == "tools":
+        return AdapterSurface(adapter=adapter, tools=identifiers)
+    if field == "resources":
+        return AdapterSurface(adapter=adapter, resources=identifiers)
+    if field == "resource_templates":
+        return AdapterSurface(adapter=adapter, resource_templates=identifiers)
+    return AdapterSurface(adapter=adapter, prompts=identifiers)
 
 
 def _mcp_dependencies(dependencies: AdapterTestDependencies) -> McpDependencies:
