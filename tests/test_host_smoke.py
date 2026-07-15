@@ -43,8 +43,7 @@ def test_host_smoke_report_is_preview_ready_when_diagnostics_and_validation_pass
         for instruction in report.workflow_guidance.instructions
     )
     assert all(
-        "use this report directly" not in instruction.lower()
-        for instruction in report.workflow_guidance.instructions
+        "use this report directly" not in instruction.lower() for instruction in report.workflow_guidance.instructions
     )
     assert report.workflow_guidance.fallback_tool is not None
     assert report.workflow_guidance.fallback_tool.tool == "get_workflow_example"

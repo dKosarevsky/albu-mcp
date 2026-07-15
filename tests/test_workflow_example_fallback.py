@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
@@ -67,7 +67,8 @@ def test_workflow_example_fallback_respects_profile_resource_view(
     for example_id in HOST_EXAMPLE_IDS:
         uri = f"albumentationsx://examples/{example_id}"
         if uri in resources:
-            assert tool.fn(example_id=example_id) == json.loads(resources[uri].fn())
+            resource = resources[uri]
+            assert tool.fn(example_id=example_id) == json.loads(cast("Any", resource).fn())
             continue
         with pytest.raises(ValueError, match=f"capability profile {profile.value!r}"):
             tool.fn(example_id=example_id)

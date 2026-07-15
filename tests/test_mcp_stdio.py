@@ -112,10 +112,13 @@ def test_mcp_stdio_review_profile_executes_preview_resource_flow(tmp_path: Path)
     Image.new("RGB", (24, 24), (96, 128, 160)).save(image_path)
 
     async def run_client() -> dict[str, Any]:
-        async with stdio_client(_profile_server_parameters(tmp_path, CapabilityProfile.REVIEW)) as (
-            read,
-            write,
-        ), ClientSession(read, write) as session:
+        async with (
+            stdio_client(_profile_server_parameters(tmp_path, CapabilityProfile.REVIEW)) as (
+                read,
+                write,
+            ),
+            ClientSession(read, write) as session,
+        ):
             await session.initialize()
             tools = await session.list_tools()
             example = await session.read_resource(AnyUrl("albumentationsx://examples/first-preview"))
@@ -149,10 +152,13 @@ def test_mcp_stdio_dataset_profile_executes_onboarding_preview_flow(tmp_path: Pa
     Image.new("RGB", (24, 24), (160, 128, 96)).save(image_path)
 
     async def run_client() -> dict[str, Any]:
-        async with stdio_client(_profile_server_parameters(tmp_path, CapabilityProfile.DATASET)) as (
-            read,
-            write,
-        ), ClientSession(read, write) as session:
+        async with (
+            stdio_client(_profile_server_parameters(tmp_path, CapabilityProfile.DATASET)) as (
+                read,
+                write,
+            ),
+            ClientSession(read, write) as session,
+        ):
             await session.initialize()
             tools = await session.list_tools()
             example = await session.read_resource(AnyUrl("albumentationsx://examples/dataset-onboarding"))

@@ -498,9 +498,7 @@ def _remediation_actions(
                 code="select_preview_capability_profile",
                 severity="info",
                 check_codes=[],
-                summary=(
-                    "Restart with `--capability-profile review`, `dataset`, or `full` before rendering previews."
-                ),
+                summary=("Restart with `--capability-profile review`, `dataset`, or `full` before rendering previews."),
                 command_hint="--capability-profile review",
                 docs_uri=docs_uri,
             )

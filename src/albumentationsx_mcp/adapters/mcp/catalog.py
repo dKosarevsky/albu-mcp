@@ -89,9 +89,7 @@ def register_catalog_adapter(
     @mcp.resource("albumentationsx://recipes/catalog")
     def recipes_catalog_resource() -> str:
         """Return task-aware recipe recommendations as compact JSON."""
-        data = [
-            recipe.model_dump(mode="json") for recipe in list_recipe_catalog(available_tools=available_tools)
-        ]
+        data = [recipe.model_dump(mode="json") for recipe in list_recipe_catalog(available_tools=available_tools)]
         return json.dumps(data, sort_keys=True)
 
     @mcp.tool()
