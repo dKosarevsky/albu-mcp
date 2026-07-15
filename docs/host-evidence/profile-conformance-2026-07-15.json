@@ -2,10 +2,13 @@
   "evidence_classification": "machine_proof_only",
   "profiles": [
     {
+      "diagnostics_ok": true,
+      "diagnostics_reported_capability_profile": "core",
       "failures": [],
       "fallback_matches_resource": true,
       "preview_ready": false,
       "profile": "core",
+      "profile_identity_matches": true,
       "reported_capability_profile": "core",
       "smoke_ok": true,
       "status": "passed",
@@ -23,10 +26,13 @@
       "surface_mismatches": {}
     },
     {
+      "diagnostics_ok": true,
+      "diagnostics_reported_capability_profile": "review",
       "failures": [],
       "fallback_matches_resource": true,
       "preview_ready": true,
       "profile": "review",
+      "profile_identity_matches": true,
       "reported_capability_profile": "review",
       "smoke_ok": true,
       "status": "passed",
@@ -44,10 +50,13 @@
       "surface_mismatches": {}
     },
     {
+      "diagnostics_ok": true,
+      "diagnostics_reported_capability_profile": "dataset",
       "failures": [],
       "fallback_matches_resource": true,
       "preview_ready": true,
       "profile": "dataset",
+      "profile_identity_matches": true,
       "reported_capability_profile": "dataset",
       "smoke_ok": true,
       "status": "passed",
@@ -65,10 +74,13 @@
       "surface_mismatches": {}
     },
     {
+      "diagnostics_ok": true,
+      "diagnostics_reported_capability_profile": "full",
       "failures": [],
       "fallback_matches_resource": true,
       "preview_ready": true,
       "profile": "full",
+      "profile_identity_matches": true,
       "reported_capability_profile": "full",
       "smoke_ok": true,
       "status": "passed",
@@ -87,7 +99,7 @@
     }
   ],
   "schema_version": 2,
-  "source_revision": "c1704df2a4c7c18136e3de95968de8a9fabd2e49",
+  "source_revision": "2d749e42b957d6256b02b76b323ed314a5def368",
   "status": "passed",
   "transport": "stdio"
 }

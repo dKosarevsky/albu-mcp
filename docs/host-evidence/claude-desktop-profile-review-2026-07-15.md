@@ -41,7 +41,8 @@ error. The next profiles were never called.
 The rendered smoke output exposed a product-contract gap: the active profile had to be inferred from remediation text
 and the temporary artifact-root suffix. Follow-up revision `c1704df2a4c7c18136e3de95968de8a9fabd2e49` adds an
 explicit top-level `capability_profile` field to diagnostics and host smoke output. The companion schema-v2 stdio
-conformance report verifies that field for all four profiles. It does not replace a real Claude Desktop rerun.
+conformance report at revision `2d749e42b957d6256b02b76b323ed314a5def368` calls both tools and verifies that field
+for all four profiles. It does not replace a real Claude Desktop rerun.
 
 ## Host Bridge And Quota Boundary
 
