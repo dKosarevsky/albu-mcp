@@ -776,7 +776,7 @@
       }
     },
     {
-      "description": "Return a reviewed workflow example when the MCP host cannot read resources.",
+      "description": "Return an active-profile workflow example when the MCP host cannot read resources.",
       "name": "get_workflow_example",
       "parameters": {
         "properties": {

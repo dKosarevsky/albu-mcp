@@ -6,7 +6,8 @@ from typing import Any
 
 import pytest
 
-from albumentationsx_mcp.server import create_mcp_server
+from albumentationsx_mcp.capabilities import CapabilityProfile
+from albumentationsx_mcp.server import ServerSettings, create_mcp_server
 from albumentationsx_mcp.workflows import HOST_EXAMPLE_IDS, HostExampleId
 from scripts.export_mcp_contract import build_contract_snapshot
 
@@ -46,6 +47,30 @@ def test_workflow_example_tool_schema_uses_closed_identifier_enum(workflow_serve
     tool = next(entry for entry in snapshot["tools"] if entry["name"] == "get_workflow_example")
 
     assert tool["parameters"]["properties"]["example_id"]["enum"] == list(_EXPECTED_EXAMPLE_IDS)
+
+
+@pytest.mark.parametrize("profile", CapabilityProfile)
+def test_workflow_example_fallback_respects_profile_resource_view(
+    tmp_path: Path,
+    profile: CapabilityProfile,
+) -> None:
+    server = create_mcp_server(
+        ServerSettings(
+            allowed_roots=[tmp_path],
+            artifact_root=tmp_path / "artifacts",
+            capability_profile=profile,
+        )
+    )
+    tool = server._tool_manager._tools["get_workflow_example"]
+    resources = server._resource_manager._resources
+
+    for example_id in HOST_EXAMPLE_IDS:
+        uri = f"albumentationsx://examples/{example_id}"
+        if uri in resources:
+            assert tool.fn(example_id=example_id) == json.loads(resources[uri].fn())
+            continue
+        with pytest.raises(ValueError, match=f"capability profile {profile.value!r}"):
+            tool.fn(example_id=example_id)
 
 
 def test_fallback_tool_is_part_of_the_committed_public_contract() -> None:

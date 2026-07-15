@@ -197,5 +197,13 @@ def register_diagnostics_adapter(
 
     @mcp.tool(name="get_workflow_example")
     def get_workflow_example_tool(example_id: HostExampleId) -> dict[str, Any]:
-        """Return a reviewed workflow example when the MCP host cannot read resources."""
+        """Return an active-profile workflow example when the MCP host cannot read resources."""
+        resource_uri = f"albumentationsx://examples/{example_id}"
+        profile = diagnostics_service.public_surface.capability_profile
+        if resource_uri not in diagnostics_service.public_surface.workflow_resources:
+            msg = (
+                f"workflow example {example_id!r} is unavailable in capability profile {profile.value!r}; "
+                f"switch to a profile that exposes {resource_uri}"
+            )
+            raise ValueError(msg)
         return get_host_example(example_id).model_dump(mode="json")
