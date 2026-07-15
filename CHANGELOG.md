@@ -4,6 +4,8 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 ## Unreleased
 
+- Added an explicit `capability_profile` field to environment diagnostics and host smoke reports; the stdio
+  conformance matrix now rejects responses that do not identify the active profile.
 - Added opt-in `core`, `review`, `dataset`, and `full` MCP capability profiles with executable dependency-closure
   checks; `dataset` includes its bounded validation/render/feedback/compare/report path, while `full` remains the
   default. Diagnostics metadata is now derived from the selected profile and rejected if registration dependencies

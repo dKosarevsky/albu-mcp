@@ -126,6 +126,7 @@ class DiagnosticsEnvironment(StrictModel):
 class DiagnosticsReport(StrictModel):
     """Agent-legible diagnostics report."""
 
+    capability_profile: CapabilityProfile
     status: DiagnosticStatus
     checks: list[DiagnosticCheck]
     warnings: list[str]
@@ -189,6 +190,7 @@ class DiagnosticsService:
             preview_tools_available=self.preview_tools_available,
         )
         return DiagnosticsReport(
+            capability_profile=self.public_surface.capability_profile,
             status=_aggregate_status(checks),
             checks=checks,
             warnings=warnings,

@@ -84,12 +84,15 @@ async def check_profile_conformance(
         fallback = _structured_content(fallback_result.structuredContent, label="get_workflow_example")
         resource = _resource_json(resource_result.contents)
         expected_preview_ready = profile is not CapabilityProfile.CORE
+        reported_capability_profile = smoke.get("capability_profile")
+        profile_matches = reported_capability_profile == profile.value
         preview_ready = smoke.get("preview_ready")
-        smoke_ok = smoke_result.isError is not True and preview_ready is expected_preview_ready
+        smoke_ok = smoke_result.isError is not True and profile_matches and preview_ready is expected_preview_ready
         fallback_matches_resource = fallback_result.isError is not True and fallback == resource
         failures = _profile_failures(
             mismatches=mismatches,
             smoke_ok=smoke_ok,
+            profile_matches=profile_matches,
             fallback_matches_resource=fallback_matches_resource,
         )
         return {
@@ -97,6 +100,7 @@ async def check_profile_conformance(
             "fallback_matches_resource": fallback_matches_resource,
             "preview_ready": preview_ready,
             "profile": profile.value,
+            "reported_capability_profile": reported_capability_profile,
             "smoke_ok": smoke_ok,
             "status": "passed" if not failures else "failed",
             "surface": _surface_summary(observed),
@@ -109,6 +113,7 @@ async def check_profile_conformance(
             "fallback_matches_resource": False,
             "preview_ready": None,
             "profile": profile.value,
+            "reported_capability_profile": None,
             "smoke_ok": False,
             "status": "failed",
             "surface": _empty_surface_summary(),
@@ -124,7 +129,7 @@ async def build_profile_conformance_report(config: ProfileConformanceConfig) -> 
     return {
         "evidence_classification": "machine_proof_only",
         "profiles": list(profiles),
-        "schema_version": 1,
+        "schema_version": 2,
         "source_revision": config.source_revision,
         "status": "passed" if all(item["status"] == "passed" for item in profiles) else "failed",
         "transport": "stdio",
@@ -258,11 +263,14 @@ def _profile_failures(
     *,
     mismatches: dict[str, Any],
     smoke_ok: bool,
+    profile_matches: bool,
     fallback_matches_resource: bool,
 ) -> list[str]:
     failures: list[str] = []
     if mismatches:
         failures.append("observed MCP surface differs from the canonical profile")
+    if not profile_matches:
+        failures.append("host smoke result does not report the active capability profile")
     if not smoke_ok:
         failures.append("host smoke result does not match profile preview semantics")
     if not fallback_matches_resource:

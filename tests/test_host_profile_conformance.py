@@ -56,6 +56,7 @@ def test_profile_conformance_matches_exact_stdio_surface_and_fallback(
     }
     assert result["surface_mismatches"] == {}
     assert result["smoke_ok"] is True
+    assert result["reported_capability_profile"] == profile.value
     assert result["preview_ready"] is (profile is not CapabilityProfile.CORE)
     assert result["fallback_matches_resource"] is True
     assert result["failures"] == []
@@ -67,7 +68,7 @@ def test_profile_conformance_report_is_deterministic_and_privacy_safe(
     report = asyncio.run(build_profile_conformance_report(conformance_config))
     rendered = render_profile_conformance_report(report)
 
-    assert report["schema_version"] == 1
+    assert report["schema_version"] == 2
     assert report["status"] == "passed"
     assert report["source_revision"] == conformance_config.source_revision
     assert report["transport"] == "stdio"

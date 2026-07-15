@@ -451,6 +451,7 @@
     "updated_at": "<updated-at>"
   },
   "diagnose_environment_missing_allowed_root": {
+    "capability_profile": "full",
     "checks": [
       {
         "code": "albumentationsx_import",
@@ -566,6 +567,7 @@
     ]
   },
   "diagnose_environment_ok": {
+    "capability_profile": "full",
     "checks": [
       {
         "code": "albumentationsx_import",
@@ -1638,6 +1640,7 @@
     "variant_index": 0
   },
   "run_host_smoke_check_missing_allowed_root": {
+    "capability_profile": "full",
     "checks": [
       {
         "code": "diagnostics",
@@ -1704,6 +1707,7 @@
       }
     ],
     "diagnostics": {
+      "capability_profile": "full",
       "checks": [
         {
           "code": "albumentationsx_import",
@@ -1852,6 +1856,7 @@
     }
   },
   "run_host_smoke_check_ready": {
+    "capability_profile": "full",
     "checks": [
       {
         "code": "diagnostics",
@@ -1915,6 +1920,7 @@
       }
     ],
     "diagnostics": {
+      "capability_profile": "full",
       "checks": [
         {
           "code": "albumentationsx_import",
