@@ -4,6 +4,9 @@ AlbumentationsX MCP adds an MCP Apps review surface to `render_preview` and `ren
 The UI uses progressive enhancement: the render tool contract, preview artifacts, and feedback tools remain usable
 without the UI.
 
+The app is available in the `review`, `dataset`, and `full` capability profiles. Each of those profiles includes
+`record_preview_feedback`; `core` publishes neither the preview app nor local render tools.
+
 ## What Opens
 
 A compatible host reads the packaged resource:

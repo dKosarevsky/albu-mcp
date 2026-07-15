@@ -262,9 +262,7 @@ def test_core_client_smoke_resource_and_fallback_describe_non_preview_profile(tm
     )
     resource = server._resource_manager._resources["albumentationsx://examples/client-smoke"]
     resource_payload = json.loads(cast("Any", resource).fn())
-    fallback_payload = cast("Any", server._tool_manager._tools["get_workflow_example"]).fn(
-        example_id="client-smoke"
-    )
+    fallback_payload = cast("Any", server._tool_manager._tools["get_workflow_example"]).fn(example_id="client-smoke")
 
     assert resource_payload == fallback_payload
     serialized = json.dumps(resource_payload)

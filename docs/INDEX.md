@@ -6,7 +6,9 @@ Use this page for deeper product, operator, adoption, and release material. New 
 ## Product Guides
 
 - [STATUS.md](STATUS.md): current release health, host evidence, and adoption experiment.
+- [RELEASE_HEALTH.json](RELEASE_HEALTH.json): versioned observed PyPI, GitHub Release, CI, and Registry evidence.
 - [INSTALL.md](INSTALL.md): PyPI, MCPB, Claude Desktop, Claude Code, Cursor, Codex, and bounded roots.
+- [CONFIGURATION.md](CONFIGURATION.md): local roots, capability profiles, transport, and resource-read fallback.
 - [FIRST_10_MINUTES.md](FIRST_10_MINUTES.md): shortest path from installation to an accepted preview.
 - [USAGE.md](USAGE.md): end-to-end tools, resources, diagnostics, and operator CLI reference.
 - [RECIPES.md](RECIPES.md): classification, detection, segmentation, OCR, and review recipes.

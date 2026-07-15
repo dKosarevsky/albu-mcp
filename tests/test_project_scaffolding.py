@@ -304,8 +304,9 @@ def test_docs_link_client_smoke_playbook_resource() -> None:
         assert "preview_ready" in content
         assert "preview_request_template" in content
     for content in [readme, install, usage]:
-        assert "when the host exposes resource reads" in content.lower()
-        assert "otherwise call `run_host_smoke_check` directly" in content.lower()
+        assert "resource reads are unavailable" in content.lower()
+        assert "get_workflow_example" in content
+        assert 'example_id="client-smoke"' in content
     assert "client smoke" in install.lower()
     assert "client-smoke" in usage
     assert "client-smoke" in recipes

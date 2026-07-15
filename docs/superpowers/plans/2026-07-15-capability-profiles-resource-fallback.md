@@ -155,18 +155,18 @@ Run server, CLI, profile, stdio, snapshot, Ruff, format, and ty checks. Commit a
 - Modify: `CHANGELOG.md`
 - Modify: `docs/superpowers/plans/2026-07-15-capability-profiles-resource-fallback.md`
 
-- [ ] **Step 1: Document focused opt-in usage**
+- [x] **Step 1: Document focused opt-in usage**
 
 Keep the README concise: mention `full` default, one `review` example, and link to configuration. Document all profiles,
 the environment equivalent, dependency closure, and the resource-blind fallback. State that changing the default is a
 future-major decision.
 
-- [ ] **Step 2: Run full verification**
+- [x] **Step 2: Run full verification**
 
 Run full pytest, Ruff, format, ty, golden evals, contract snapshots, release readiness for `v1.19.0`, MCP App checks,
 package build, MCPB validation, and wheel smoke. Verify only intentional snapshots changed.
 
-- [ ] **Step 3: Review boundaries and complete the plan**
+- [x] **Step 3: Review boundaries and complete the plan**
 
 Run an independent diff review, update architecture budgets if necessary, mark all steps complete, and commit as
 `docs: complete capability profiles and fallback` without creating a tag or release.

@@ -4,12 +4,21 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 ## Unreleased
 
+- Added opt-in `core`, `review`, `dataset`, and `full` MCP capability profiles with executable dependency-closure
+  checks; `dataset` includes its bounded validation/render/feedback/compare/report path, while `full` remains the
+  default. Diagnostics metadata is now derived from the selected profile and rejected if registration dependencies
+  disagree.
+- Added `get_workflow_example` as a typed fallback for hosts without model-visible MCP resource reads, with payload
+  parity for examples exposed by the active profile, a profile-aware `client-smoke` result, and an explicit profile
+  error for unavailable examples.
 - Extracted the monolithic command-line module into focused argparse adapters with a canonical 9-group, 84-command
   contract snapshot and executable dependency boundaries while preserving command behavior and console entrypoints.
 - Extracted monolithic FastMCP registration into focused adapters with declared ownership, explicit dependencies, and
   atomic ordered composition while preserving the canonical MCP and output contracts.
 - Separated current release health, optional host evidence, and adoption measurement into independent lifecycle
-  dimensions used by the launch kit and network growth tracker.
+  dimensions; package, GitHub Release, CI, and Registry status now come from versioned observed evidence and fall back
+  to `unknown` or `not_observed` when that evidence is absent. A known failed channel takes priority over incomplete
+  evidence from another channel.
 - Moved pre-release V1/RC status records behind a dedicated archive while preserving their paths, decisions, and
   deterministic regeneration with explicit historical snapshot banners.
 
