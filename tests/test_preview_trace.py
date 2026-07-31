@@ -123,6 +123,32 @@ def test_normalize_trace_value_bounds_mapping_keys() -> None:
     assert hashlib.sha256(key.encode("utf-8")).hexdigest() in normalized_key
 
 
+def test_normalize_trace_value_preserves_colliding_mapping_values_deterministically() -> None:
+    entries = [(1, {"source": "numeric"}), ("1", {"source": "string"})]
+
+    forward = normalize_trace_value(dict(entries))
+    reverse = normalize_trace_value(dict(reversed(entries)))
+
+    expected = {
+        "1": {
+            "kind": "mapping_key_collision",
+            "item_count": 2,
+            "values": [{"source": "numeric"}, {"source": "string"}],
+        }
+    }
+    assert forward == expected
+    assert reverse == expected
+
+
+def test_normalize_trace_value_bounds_numpy_scalar_mapping_key_with_shared_budget() -> None:
+    result = normalize_trace_value({np.longdouble("1.25"): "value"})
+
+    normalized_key = next(iter(result))
+    assert json.loads(normalized_key)["kind"] == "structural_summary"
+    assert result[normalized_key] == {"kind": "structural_summary", "type": "str", "length": 5}
+    json.dumps(result, allow_nan=False)
+
+
 def test_normalize_trace_value_summarizes_excessive_nesting() -> None:
     value: object = 0
     for _ in range(MAX_TRACE_DEPTH + 1):
