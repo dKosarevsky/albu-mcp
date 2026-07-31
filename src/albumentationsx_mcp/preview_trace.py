@@ -225,7 +225,7 @@ class _TraceOrderTokenBuilder:
         else:
             self._remaining_nodes -= 1
             if isinstance(value, np.generic):
-                order_structure = self._normalize_numpy_scalar(value)
+                order_structure = self._normalize_numpy_scalar(value, depth=depth)
             elif value is None or isinstance(value, (bool, int)):
                 order_structure = {
                     "kind": "scalar",
@@ -271,15 +271,16 @@ class _TraceOrderTokenBuilder:
                 }
         return order_structure
 
-    @staticmethod
-    def _normalize_numpy_scalar(value: np.generic) -> dict[str, Any]:
+    def _normalize_numpy_scalar(self, value: np.generic, *, depth: int) -> dict[str, Any]:
         scalar = np.asarray(value)
         order_structure: dict[str, Any] = {
             "kind": "numpy_scalar",
             "type": type(value).__qualname__,
             "dtype": str(scalar.dtype),
         }
-        if not scalar.dtype.hasobject:
+        if scalar.dtype.hasobject:
+            order_structure["value"] = self._normalize(value.item(), depth=depth + 1)
+        else:
             order_structure["sha256"] = hashlib.sha256(np.ascontiguousarray(scalar).tobytes()).hexdigest()
         return order_structure
 

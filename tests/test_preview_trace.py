@@ -154,6 +154,20 @@ def test_normalize_trace_value_caps_equal_key_tokens_deterministically() -> None
     json.dumps(forward, allow_nan=False, sort_keys=True)
 
 
+def test_normalize_trace_value_caps_object_numpy_scalar_values_deterministically() -> None:
+    dtype = np.dtype([("label", object), ("index", np.int64)])
+    entries = [
+        (bytes([index]), np.array((f"value-{index:02d}", index), dtype=dtype)[()])
+        for index in range(MAX_COLLECTION_ITEMS + 1)
+    ]
+
+    forward = normalize_trace_value(dict(entries))
+    reverse = normalize_trace_value(dict(reversed(entries)))
+
+    assert forward == reverse
+    json.dumps(forward, allow_nan=False, sort_keys=True)
+
+
 def test_normalize_trace_value_bounds_numpy_scalar_mapping_key_with_shared_budget() -> None:
     result = normalize_trace_value({np.longdouble("1.25"): "value"})
 
