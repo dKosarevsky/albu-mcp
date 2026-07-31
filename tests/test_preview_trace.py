@@ -140,6 +140,20 @@ def test_normalize_trace_value_preserves_colliding_mapping_values_deterministica
     assert reverse == expected
 
 
+def test_normalize_trace_value_caps_equal_key_tokens_deterministically() -> None:
+    entries = [(bytes([index]), index) for index in range(MAX_COLLECTION_ITEMS + 1)]
+
+    forward = normalize_trace_value(dict(entries))
+    reverse = normalize_trace_value(dict(reversed(entries)))
+
+    assert forward == reverse
+    collision = next(iter(forward.values()))
+    assert collision["kind"] == "mapping_key_collision"
+    assert collision["item_count"] == MAX_COLLECTION_ITEMS
+    assert len(collision["values"]) == MAX_COLLECTION_ITEMS
+    json.dumps(forward, allow_nan=False, sort_keys=True)
+
+
 def test_normalize_trace_value_bounds_numpy_scalar_mapping_key_with_shared_budget() -> None:
     result = normalize_trace_value({np.longdouble("1.25"): "value"})
 
