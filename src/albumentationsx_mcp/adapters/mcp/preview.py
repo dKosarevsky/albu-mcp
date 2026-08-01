@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Annotated, Any, Literal
+
+from pydantic import Field
 
 from albumentationsx_mcp.adapters.mcp.contracts import AdapterSurface, ProfileSurface
 from albumentationsx_mcp.capabilities import REVIEW_DATASET_PROFILE_MEMBERSHIP, REVIEW_PROFILE_MEMBERSHIP
@@ -107,7 +109,11 @@ def register_preview_adapter(  # noqa: PLR0913
         return preview_service.render_preview(preview_request).model_dump(mode="json")
 
     @mcp.tool()
-    def trace_preview_variant(run_id: str, image_index: int, variant_index: int) -> dict[str, Any]:
+    def trace_preview_variant(
+        run_id: str,
+        image_index: Annotated[int, Field(ge=0)],
+        variant_index: Annotated[int, Field(ge=0)],
+    ) -> dict[str, Any]:
         """Read the applied-transform trace for one rendered preview variant."""
         return get_preview_variant_trace(
             artifact_store,

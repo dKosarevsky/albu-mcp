@@ -1713,6 +1713,8 @@
           },
           "max_images": {
             "default": 8,
+            "maximum": 8,
+            "minimum": 1,
             "title": "Max Images",
             "type": "integer"
           },
@@ -2034,6 +2036,7 @@
       "parameters": {
         "properties": {
           "image_index": {
+            "minimum": 0,
             "title": "Image Index",
             "type": "integer"
           },
@@ -2042,6 +2045,7 @@
             "type": "string"
           },
           "variant_index": {
+            "minimum": 0,
             "title": "Variant Index",
             "type": "integer"
           }

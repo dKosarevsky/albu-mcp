@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Annotated, Any
+
+from pydantic import Field
 
 from albumentationsx_mcp.adapters.mcp.contracts import AdapterSurface, ProfileSurface
 from albumentationsx_mcp.capabilities import DATASET_PROFILE_MEMBERSHIP, REVIEW_DATASET_PROFILE_MEMBERSHIP
@@ -99,7 +101,7 @@ def register_dataset_adapter(  # noqa: PLR0913
         task: str = "classification",
         intensity: Intensity = "low",
         targets: list[str] | None = None,
-        max_images: int = 8,
+        max_images: Annotated[int, Field(ge=1, le=8)] = 8,
     ) -> dict[str, Any]:
         """Run one bounded, validated first preview for a local image or image directory."""
         request = GuidedPreviewRequest(
