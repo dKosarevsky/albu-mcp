@@ -39,7 +39,7 @@ SURFACE = AdapterSurface(
 )
 
 
-def register_prompt_adapter(mcp: FastMCP) -> None:
+def register_prompt_adapter(mcp: FastMCP, *, available_tools: set[str] | None = None) -> None:
     """Register the public agent workflow prompts."""
 
     @mcp.prompt()
@@ -59,7 +59,7 @@ def register_prompt_adapter(mcp: FastMCP) -> None:
         targets: str = "image",
     ) -> str:
         """Guide an assistant through a first local preview with request validation."""
-        return first_preview_prompt(task, input_path, targets)
+        return first_preview_prompt(task, input_path, targets, available_tools=available_tools)
 
     @mcp.prompt()
     def tune_pipeline_from_preview_feedback(task: str, run_id: str, feedback_tags: str) -> str:

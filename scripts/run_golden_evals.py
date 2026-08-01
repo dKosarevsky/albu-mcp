@@ -475,8 +475,12 @@ async def _run_first_preview_smoke(session: ClientSession, scenario: dict[str, A
     expected_steps = [
         "albumentationsx://examples/client-smoke",
         "run_host_smoke_check",
-        "validate_preview_request",
+        "run_first_preview",
+        "trace_preview_variant",
+        "adjust_pipeline",
         "render_preview_batch",
+        "compare_preview_runs",
+        "export_pipeline",
     ]
     if step_tools != expected_steps:
         raise AssertionError(f"{scenario['name']} returned wrong first-preview steps: {playbook}")
@@ -500,12 +504,28 @@ async def _run_first_preview_smoke(session: ClientSession, scenario: dict[str, A
     template = smoke_report.get("preview_request_template")
     if smoke_report["preview_ready"] is not True or template is None:
         raise AssertionError(f"{scenario['name']} host smoke returned no usable template: {smoke_report}")
-    valid_request = await _validate_preview_request_or_fail(
+
+    guided = await _call_tool_json(
         session,
-        scenario,
-        _real_sample_preview_request(template["request"], scenario, image_paths),
+        "run_first_preview",
+        {
+            "dataset_path": str(image_paths[0]),
+            "task": scenario["task"],
+            "intensity": scenario.get("intensity", "low"),
+            "targets": scenario["targets"],
+            "max_images": 1,
+        },
     )
-    preview = await _call_tool_json(session, "render_preview_batch", {"request": valid_request})
+    preview = guided.get("preview")
+    if guided.get("status") != "rendered" or not guided.get("trace_available") or preview is None:
+        raise AssertionError(f"{scenario['name']} guided preview did not render with traces: {guided}")
+    trace = await _call_tool_json(
+        session,
+        "trace_preview_variant",
+        {"run_id": preview["run_id"], "image_index": 0, "variant_index": 0},
+    )
+    if trace.get("available") is not True:
+        raise AssertionError(f"{scenario['name']} guided preview trace was unavailable: {trace}")
     await _delete_preview_run(session, scenario, preview["run_id"])
 
 

@@ -80,8 +80,12 @@ def test_host_examples_cover_review_loop_and_report_handoff() -> None:
     assert [step.tool for step in first_preview.steps] == [
         "albumentationsx://examples/client-smoke",
         "run_host_smoke_check",
-        "validate_preview_request",
+        "run_first_preview",
+        "trace_preview_variant",
+        "adjust_pipeline",
         "render_preview_batch",
+        "compare_preview_runs",
+        "export_pipeline",
     ]
     assert distortion_review.trigger_phrase == "make distorted versions, but example 8 is too noisy"
     assert [step.tool for step in distortion_review.steps] == [
@@ -99,6 +103,26 @@ def test_host_examples_cover_review_loop_and_report_handoff() -> None:
         "adjust_pipeline",
     ]
     assert "export_preview_report" in [step.tool for step in report_handoff.steps]
+
+
+def test_first_preview_host_example_uses_only_review_fallback_tools_without_guided_preview() -> None:
+    first_preview = get_host_example("first-preview", guided_preview_available=False)
+
+    assert [step.tool for step in first_preview.steps] == [
+        "albumentationsx://examples/client-smoke",
+        "run_host_smoke_check",
+        "validate_preview_request",
+        "render_preview_batch",
+        "trace_preview_variant",
+        "adjust_pipeline",
+        "render_preview_batch",
+        "compare_preview_runs",
+        "export_pipeline",
+    ]
+    serialized = first_preview.model_dump_json()
+    assert "run_first_preview" not in serialized
+    assert serialized.index("preview_request_template") < serialized.index("validate_preview_request")
+    assert serialized.index("contact sheet") < serialized.index("trace_preview_variant")
 
 
 def test_unknown_host_example_lists_every_accepted_identifier() -> None:

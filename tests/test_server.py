@@ -133,8 +133,15 @@ def test_host_smoke_preview_readiness_matches_active_profile(
     assert report["capability_profile"] == profile.value
     assert report["preview_ready"] is preview_ready
     assert (report["preview_request_template"] is not None) is preview_ready
-    if preview_ready:
+    if profile in {CapabilityProfile.DATASET, CapabilityProfile.FULL}:
+        assert "run_first_preview" in report["next_actions"][0]
+        assert any("trace_preview_variant" in action for action in report["next_actions"])
+        assert any("run_first_preview" in item for item in report["workflow_guidance"]["instructions"])
+    elif profile is CapabilityProfile.REVIEW:
+        assert "run_first_preview" not in " ".join(report["next_actions"])
+        assert report["next_actions"][0].startswith("Replace the placeholder input path")
         assert any("render_preview_batch" in action for action in report["next_actions"])
+        assert any("trace_preview_variant" in action for action in report["next_actions"])
     else:
         assert report["status"] == "warning"
         assert any("--capability-profile review" in action for action in report["next_actions"])

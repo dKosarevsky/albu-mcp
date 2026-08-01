@@ -157,13 +157,18 @@ class GuidedPreviewService:
         if not trace_available:
             raise RuntimeError(_UNAVAILABLE_FIRST_TRACE)
 
+        success_actions = list(_SUCCESS_NEXT_ACTIONS)
+        completed_onboarding = onboarding.model_copy(
+            deep=True,
+            update={"next_actions": list(success_actions)},
+        )
         return GuidedPreviewResult(
             status="rendered",
-            onboarding=onboarding,
+            onboarding=completed_onboarding,
             validation=validation,
             normalized_request=normalized_snapshot,
             preview=preview,
             contact_sheet=contact_sheets[0],
             trace_available=trace_available,
-            next_actions=list(_SUCCESS_NEXT_ACTIONS),
+            next_actions=success_actions,
         )

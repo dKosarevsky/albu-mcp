@@ -12,6 +12,9 @@ This guide is the shortest path from installation to a useful AlbumentationsX MC
 For full installation details, see [docs/INSTALL.md](INSTALL.md). For the complete tool workflow, see
 [docs/USAGE.md](USAGE.md).
 
+The guided `run_first_preview` workflow requires the default `full` or `dataset` capability profile. The `review`
+profile uses the explicit fallback below, or you can restart with `dataset` or `full`.
+
 ## What you should have after 10 minutes
 
 - a working MCP server process;
@@ -87,18 +90,6 @@ The host should follow this sequence:
 The guided tool includes dataset onboarding, so detection and segmentation folders can still detect common COCO, YOLO,
 COCO segmentation, COCO RLE, and YOLO-seg layouts while keeping masks and bounding boxes aligned with pipeline targets.
 
-### Explicit advanced/fallback path
-
-Use this sequence when the host must inspect or edit the generated request, or when `run_first_preview` is unavailable:
-
-1. call `run_host_smoke_check` and continue only when `preview_ready` is true;
-2. call `plan_dataset_onboarding`;
-3. inspect the returned `preview_request_template`;
-4. call `validate_preview_request` with that request;
-5. Do not render anything until validate_preview_request returns valid=true.
-6. call `render_preview_batch`, then open the contact sheet;
-7. after any adjustment, call `compare_preview_runs` and use `export_pipeline` only when you accept the result.
-
 ## 8-10 minutes: tune and export
 
 Give concrete feedback:
@@ -117,6 +108,19 @@ After tracing the selected result, the host should call:
 
 Ask for Python when you want code for a training pipeline. Ask for JSON or YAML when you want a reviewable configuration
 artifact.
+
+### Explicit fallback
+
+Use this sequence in the `review` profile, or when a `full`/`dataset` host must inspect or edit the generated request:
+
+1. call `run_host_smoke_check` and continue only when `preview_ready` is true;
+2. copy `preview_request_template.request`; a `full`/`dataset` host may call `plan_dataset_onboarding` first;
+3. call `validate_preview_request` with that request;
+4. Do not render anything until validate_preview_request returns valid=true.
+5. call `render_preview_batch`, then open the contact sheet;
+6. when you identify a result, call `trace_preview_variant` with its zero-based indexes;
+7. call `adjust_pipeline`, render the candidate, and use `compare_preview_runs`;
+8. call `export_pipeline` only when you accept the result.
 
 ## Fallback demo path
 

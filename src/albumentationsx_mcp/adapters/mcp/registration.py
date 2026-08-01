@@ -221,7 +221,7 @@ def _register_adapters(mcp: FastMCP, dependencies: McpDependencies) -> None:
         diagnostics_service=dependencies.diagnostics_service,
         pipeline_service=dependencies.pipeline_service,
     )
-    register_prompt_adapter(mcp)
+    register_prompt_adapter(mcp, available_tools=available_tools)
 
 
 def _capture_manager_state(mcp: FastMCP) -> _ManagerState:

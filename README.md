@@ -30,7 +30,8 @@ uvx --from albumentationsx-mcp albumentationsx-mcp \
   --artifact-root /absolute/path/to/albu-artifacts
 ```
 
-`full` is the v1.x default. Add `--capability-profile review` for a preview-focused tool surface; see
+`run_first_preview` requires the default `full` or `dataset` capability profile. The smaller `review` profile uses the
+explicit validate/render fallback in the usage guide, or you can restart with `dataset` or `full`; see
 [configuration](docs/CONFIGURATION.md). Copyable host configurations are in [the install guide](docs/INSTALL.md).
 The repository also contains a native Codex plugin bundle. `npx skills add dKosarevsky/albu-mcp` installs agent guidance, not the MCP server.
 

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from albumentationsx_mcp.adapters.mcp.registration import public_surface_for_profile
+from albumentationsx_mcp.capabilities import CapabilityProfile
 from albumentationsx_mcp.catalog import TransformCatalog
 from albumentationsx_mcp.diagnostics import DiagnosticsService, PublicSurface
 from albumentationsx_mcp.host_smoke import build_host_smoke_report
@@ -21,7 +23,12 @@ def test_host_smoke_report_is_preview_ready_when_diagnostics_and_validation_pass
         public_surface=_complete_public_surface_with_host_smoke(),
     ).diagnose(include_write_probe=True)
 
-    report = build_host_smoke_report(diagnostics=diagnostics, recipe=recipe, validation=validation)
+    report = build_host_smoke_report(
+        diagnostics=diagnostics,
+        recipe=recipe,
+        validation=validation,
+        guided_preview_available=True,
+    )
 
     assert report.status == "ok"
     assert report.capability_profile == "full"
@@ -50,12 +57,13 @@ def test_host_smoke_report_is_preview_ready_when_diagnostics_and_validation_pass
     assert report.workflow_guidance.fallback_tool.tool == "get_workflow_example"
     assert report.workflow_guidance.fallback_tool.example_id == "client-smoke"
     assert any("preview_ready" in instruction for instruction in report.workflow_guidance.instructions)
-    assert any("validate_preview_request" in instruction for instruction in report.workflow_guidance.instructions)
-    assert any("validate_preview_request" in action for action in report.next_actions)
+    assert any("run_first_preview" in instruction for instruction in report.workflow_guidance.instructions)
+    assert any("trace_preview_variant" in instruction for instruction in report.workflow_guidance.instructions)
+    assert "run_first_preview" in report.next_actions[0]
+    assert any("trace_preview_variant" in action for action in report.next_actions)
     assert any(
         "validate_preview_request" in instruction for instruction in report.preview_request_template.instructions
     )
-    assert any("render_preview_batch" in action for action in report.next_actions)
 
 
 def test_host_smoke_report_blocks_preview_when_diagnostics_warn(tmp_path: Path) -> None:
@@ -70,7 +78,12 @@ def test_host_smoke_report_blocks_preview_when_diagnostics_warn(tmp_path: Path) 
         public_surface=_complete_public_surface_with_host_smoke(),
     ).diagnose(include_write_probe=False)
 
-    report = build_host_smoke_report(diagnostics=diagnostics, recipe=recipe, validation=validation)
+    report = build_host_smoke_report(
+        diagnostics=diagnostics,
+        recipe=recipe,
+        validation=validation,
+        guided_preview_available=True,
+    )
 
     assert report.status == "warning"
     assert report.preview_ready is False
@@ -93,10 +106,71 @@ def test_host_smoke_report_keeps_resource_read_optional_when_preview_is_blocked(
         public_surface=_complete_public_surface_with_host_smoke(),
     ).diagnose(include_write_probe=False)
 
-    report = build_host_smoke_report(diagnostics=diagnostics, recipe=recipe, validation=validation)
+    report = build_host_smoke_report(
+        diagnostics=diagnostics,
+        recipe=recipe,
+        validation=validation,
+        guided_preview_available=True,
+    )
 
     assert report.workflow_guidance.resource_access == "optional"
     assert any("preview_ready" in instruction for instruction in report.workflow_guidance.instructions)
+
+
+def test_host_smoke_report_uses_manual_review_fallback_when_guided_tool_is_unavailable(tmp_path: Path) -> None:
+    catalog = TransformCatalog()
+    pipeline_service = PipelineService(catalog)
+    recipe = recommend_recipe("classification", intensity="low", targets=["image"])
+    validation = pipeline_service.validate_pipeline(recipe.pipeline)
+    diagnostics = DiagnosticsService(
+        allowed_roots=[tmp_path],
+        artifact_root=tmp_path / "artifacts",
+        max_preview_runs=100,
+        public_surface=public_surface_for_profile(CapabilityProfile.REVIEW),
+    ).diagnose(include_write_probe=True)
+
+    report = build_host_smoke_report(
+        diagnostics=diagnostics,
+        recipe=recipe,
+        validation=validation,
+        guided_preview_available=False,
+    )
+
+    guidance = " ".join(report.workflow_guidance.instructions)
+    actions = " ".join(report.next_actions)
+    assert report.preview_ready is True
+    assert "run_first_preview" not in guidance
+    assert "run_first_preview" not in actions
+    assert report.next_actions[0].startswith("Replace the placeholder input path")
+    assert actions.index("validate_preview_request") < actions.index("render_preview_batch")
+    assert actions.index("render_preview_batch") < actions.index("trace_preview_variant")
+
+
+def test_host_smoke_report_keeps_core_guidance_free_of_unavailable_preview_tools(tmp_path: Path) -> None:
+    catalog = TransformCatalog()
+    pipeline_service = PipelineService(catalog)
+    recipe = recommend_recipe("classification", intensity="low", targets=["image"])
+    validation = pipeline_service.validate_pipeline(recipe.pipeline)
+    diagnostics = DiagnosticsService(
+        allowed_roots=[tmp_path],
+        artifact_root=tmp_path / "artifacts",
+        max_preview_runs=100,
+        public_surface=public_surface_for_profile(CapabilityProfile.CORE),
+    ).diagnose(include_write_probe=True)
+
+    report = build_host_smoke_report(
+        diagnostics=diagnostics,
+        recipe=recipe,
+        validation=validation,
+        preview_tools_available=False,
+        guided_preview_available=False,
+    )
+
+    guidance = " ".join(report.workflow_guidance.instructions)
+    assert report.preview_ready is False
+    for tool in ["run_first_preview", "validate_preview_request", "render_preview_batch", "trace_preview_variant"]:
+        assert tool not in guidance
+    assert report.remediation_actions == diagnostics.remediation_actions
 
 
 def _complete_public_surface_with_host_smoke() -> PublicSurface:

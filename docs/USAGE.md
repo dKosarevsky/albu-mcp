@@ -16,7 +16,8 @@ After connecting a new host, read `albumentationsx://examples/client-smoke`; whe
 When preview setup is unclear, read `albumentationsx://diagnostics/guide` and call `diagnose_environment` before
 changing augmentation pipelines.
 For a single read-only preflight, call `run_host_smoke_check` and continue only when `preview_ready` is true. Then prefer
-`run_first_preview` for one real local image or image directory.
+`run_first_preview` for one real local image or image directory in the default `full` or `dataset` profile. The `review`
+profile uses the explicit manual fallback below, or the host can restart with `dataset` or `full`.
 
 Use `examples/claude_desktop_config.json` as a starting point and replace `/path/to/albu-mcp` with the repository path:
 
@@ -44,6 +45,9 @@ By default, the artifact index keeps the latest 100 preview runs. Set `ALBU_MCP_
 retention limit for long-running MCP hosts.
 
 ## Agent Workflow
+
+The guided preview steps below require the default `full` or `dataset` capability profile. In `review`, follow the
+explicit manual fallback and rejoin the workflow at selected-variant tracing.
 
 1. Call `recommend_recipe` for the target task, intensity, quality profile, feedback tags, explanations, and next tools.
 2. Call `plan_augmentation_policy` when the user asks for a task/objective policy rather than a generic recipe.
@@ -214,15 +218,16 @@ Read `albumentationsx://diagnostics/guide` for the canonical troubleshooting flo
 
 Use `run_host_smoke_check` after connecting a host and before the first local preview. It combines
 `diagnose_environment`, `recommend_recipe`, and `validate_pipeline` into one read-only report. When `preview_ready` is
-true, call `run_first_preview` for one image or directory under an allowed root. When `preview_ready` is false, follow
-`remediation_actions` before rendering. Its `workflow_guidance` is complete even when the host can list MCP resources
-but does not expose resource reads directly to the model; `fallback_tool` contains the canonical
-`get_workflow_example` call.
+true, its profile-aware guidance starts with `run_first_preview` in `full`/`dataset`, or with the returned
+`preview_request_template` followed by validation and rendering in `review`. When `preview_ready` is false, follow
+`remediation_actions` before rendering. The template remains available as a manual fallback. If resource reads are not
+available to the model, `fallback_tool` contains the canonical `get_workflow_example` call.
 
 ## Guided First Preview: `run_first_preview`
 
-`run_first_preview` is the preferred bounded, validated one-call path for a first preview. It coordinates dataset
-onboarding, request validation, one conservative render, and contact-sheet creation:
+`run_first_preview` is the preferred bounded, validated one-call path for a first preview in the default `full` or
+`dataset` profile. It coordinates dataset onboarding, request validation, one conservative render, and contact-sheet
+creation:
 
 ```json
 {
@@ -249,14 +254,21 @@ represented by bounded deterministic summaries instead of unbounded payloads.
 Traces are execution evidence, not semantic acceptance decisions. Human review still decides whether to accept or
 reject a result before adjustment or export.
 
-## Advanced First-Preview Fallback
+## Explicit Manual First-Preview Fallback
 
-Use this path when the host must inspect or edit the generated request, or when `run_first_preview` is unavailable. Keep
-the explicit `plan_dataset_onboarding` -> `validate_preview_request` -> `render_preview_batch` sequence:
+Use this path in the `review` profile, where `run_first_preview` is unavailable. Call `run_host_smoke_check`, continue
+only when `preview_ready=true`, copy `preview_request_template.request`, replace its placeholder path, call
+`validate_preview_request`, and call `render_preview_batch` only when `valid=true`.
+
+For a `full`/`dataset` host that must inspect or edit onboarding, keep the explicit advanced
+`plan_dataset_onboarding` -> `validate_preview_request` -> `render_preview_batch` sequence:
 
 1. Call `plan_dataset_onboarding` and inspect `preview_request_template.request`.
 2. Call `validate_preview_request` with that request and continue only when `valid=true`.
 3. Call `render_preview_batch` with the normalized request and inspect its contact sheet.
+
+After either manual path, call `trace_preview_variant` for the selected zero-based indexes before `adjust_pipeline`,
+then render the candidate, call `compare_preview_runs`, and use `export_pipeline` only after human acceptance.
 
 ## Dataset Onboarding
 
@@ -552,8 +564,8 @@ uv run pytest tests/test_output_contract_snapshots.py -q
 - `albumentationsx://workflows/annotation-preview`: annotation-aware preview workflow.
 - `albumentationsx://examples/client-smoke`: post-install host smoke playbook for capabilities, recipes, recommendation,
   and validation.
-- `albumentationsx://examples/first-preview`: first local preview playbook with host smoke, request validation, and
-  bounded rendering.
+- `albumentationsx://examples/first-preview`: profile-aware first local preview playbook using the guided call when
+  available and the explicit manual fallback in `review`.
 - `albumentationsx://examples/distortion-review`: robustness preview loop for rejected noisy or distorted examples.
 - `albumentationsx://examples/diagnostics`: troubleshooting playbook for preview setup and local root issues.
 - `albumentationsx://examples/review-loop`: concrete example feedback loop for prompts like "example 8 is too noisy".
@@ -562,7 +574,8 @@ uv run pytest tests/test_output_contract_snapshots.py -q
 ## Prompts
 
 - `build_robustness_augmentation_session`: guide preview-driven robustness augmentation work.
-- `run_first_preview_review`: guide the first local preview through host smoke and request validation.
+- `run_first_preview_review`: profile-aware first local preview guidance using the guided call when available and the
+  smoke-template validation/render fallback otherwise.
 - `compare_preview_runs_for_feedback`: compare two preview runs before choosing feedback tags.
 - `tune_pipeline_from_preview_feedback`: adjust and re-render from a concrete preview run.
 - `export_reproducible_pipeline`: export an accepted run with reproducibility context.

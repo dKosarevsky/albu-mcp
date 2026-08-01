@@ -35,7 +35,15 @@ _PROMPT_TOOL_DEPENDENCIES = {
         "adjust_pipeline",
     },
     "compare_preview_runs_for_feedback": {"compare_preview_runs", "interpret_preview_feedback"},
-    "run_first_preview_review": {"validate_preview_request", "render_preview_batch"},
+    "run_first_preview_review": {
+        "adjust_pipeline",
+        "compare_preview_runs",
+        "export_pipeline",
+        "render_preview_batch",
+        "run_host_smoke_check",
+        "trace_preview_variant",
+        "validate_preview_request",
+    },
     "tune_pipeline_from_preview_feedback": {"adjust_pipeline", "record_preview_feedback"},
     "export_reproducible_pipeline": {"export_pipeline", "get_preview_manifest"},
 }
@@ -71,7 +79,11 @@ _WORKFLOW_RESOURCE_TOOL_DEPENDENCIES = {
         "run_host_smoke_check",
     },
     "albumentationsx://examples/first-preview": {
+        "adjust_pipeline",
+        "compare_preview_runs",
+        "export_pipeline",
         "run_host_smoke_check",
+        "trace_preview_variant",
         "validate_preview_request",
         "render_preview_batch",
     },
@@ -306,6 +318,70 @@ def test_core_client_smoke_resource_and_fallback_describe_non_preview_profile(tm
     assert "preview_ready=true" not in serialized
     assert "preview_ready=false" in serialized
     assert "--capability-profile review" in serialized
+
+
+@pytest.mark.parametrize(
+    ("profile", "expected_steps"),
+    [
+        (
+            CapabilityProfile.REVIEW,
+            [
+                "albumentationsx://examples/client-smoke",
+                "run_host_smoke_check",
+                "validate_preview_request",
+                "render_preview_batch",
+                "trace_preview_variant",
+                "adjust_pipeline",
+                "render_preview_batch",
+                "compare_preview_runs",
+                "export_pipeline",
+            ],
+        ),
+        (
+            CapabilityProfile.FULL,
+            [
+                "albumentationsx://examples/client-smoke",
+                "run_host_smoke_check",
+                "run_first_preview",
+                "trace_preview_variant",
+                "adjust_pipeline",
+                "render_preview_batch",
+                "compare_preview_runs",
+                "export_pipeline",
+            ],
+        ),
+    ],
+)
+def test_first_preview_resource_fallback_tool_and_prompt_match_active_profile(
+    tmp_path: Path,
+    profile: CapabilityProfile,
+    expected_steps: list[str],
+) -> None:
+    server = create_mcp_server(
+        ServerSettings(
+            allowed_roots=[tmp_path],
+            artifact_root=tmp_path / "artifacts",
+            capability_profile=profile,
+        )
+    )
+    tools = set(server._tool_manager._tools)
+    resource = server._resource_manager._resources["albumentationsx://examples/first-preview"]
+    resource_payload = json.loads(cast("Any", resource).fn())
+    fallback_payload = cast("Any", server._tool_manager._tools["get_workflow_example"]).fn(
+        example_id="first-preview"
+    )
+    prompt = cast("Any", server._prompt_manager._prompts["run_first_preview_review"]).fn()
+
+    assert resource_payload == fallback_payload
+    assert [step["tool"] for step in resource_payload["steps"]] == expected_steps
+    assert {reference for kind, reference in _iter_capability_references(resource_payload) if kind == "tool"} <= tools
+    if profile is CapabilityProfile.FULL:
+        assert "run_first_preview" in prompt
+        assert prompt.index("run_first_preview") < prompt.index("trace_preview_variant")
+    else:
+        assert "run_first_preview" not in prompt
+        assert prompt.index("validate_preview_request") < prompt.index("render_preview_batch")
+        assert prompt.index("render_preview_batch") < prompt.index("trace_preview_variant")
 
 
 @pytest.mark.parametrize("profile", CapabilityProfile)

@@ -264,6 +264,7 @@ def test_guided_preview_detaches_validator_input_from_onboarding_template(
     assert template is not None
     template_params = template.request["pipeline"]["transforms"][0]["params"]
     template_params["isolation"] = {"owner": "template"}
+    original_onboarding_actions = list(onboarding.next_actions)
     validator = EchoMutatingValidator(valid=valid)
     renderer = StubRenderer(_preview_with_contact_sheet() if valid else None)
     service = GuidedPreviewService(
@@ -278,7 +279,13 @@ def test_guided_preview_detaches_validator_input_from_onboarding_template(
     result = service.run(GuidedPreviewRequest(dataset_path=dataset_path, max_images=1))
 
     assert result.status == expected_status
-    assert result.onboarding is onboarding
+    if valid:
+        assert result.onboarding is not onboarding
+        assert result.onboarding.next_actions == result.next_actions
+        assert "validate_preview_request" not in " ".join(result.onboarding.next_actions)
+        assert "render_preview_batch" not in " ".join(result.onboarding.next_actions)
+    else:
+        assert result.onboarding is onboarding
     assert validator.report is result.validation
     assert validator.calls[0][0] is not template.request
     assert template_params["isolation"] == {"owner": "template"}
@@ -299,6 +306,11 @@ def test_guided_preview_detaches_validator_input_from_onboarding_template(
 
     assert len(renderer.calls) == int(valid)
     assert result.trace_available is valid
+    assert onboarding.next_actions == original_onboarding_actions
+    if valid:
+        result.onboarding.next_actions.append("caller mutation")
+        assert result.next_actions[-1] != "caller mutation"
+        assert onboarding.next_actions == original_onboarding_actions
 
 
 def test_guided_preview_renders_bounded_safe_template_with_traceable_contact_sheet(tmp_path: Path) -> None:

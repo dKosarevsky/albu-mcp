@@ -368,31 +368,54 @@ def _diagnostics_missing_allowed_root(root: Path) -> dict[str, Any]:
 def _host_smoke_ready(root: Path) -> dict[str, Any]:
     images_root = root / "host-smoke" / "images"
     images_root.mkdir(parents=True)
+    public_surface = _diagnostics_public_surface()
     diagnostics = DiagnosticsService(
         allowed_roots=[images_root],
         artifact_root=root / "host-smoke" / "artifacts",
         max_preview_runs=100,
-        public_surface=_diagnostics_public_surface(),
+        public_surface=public_surface,
     ).diagnose(include_write_probe=True)
-    return _normalize_host_smoke_report(_host_smoke_report(diagnostics).model_dump(mode="json"), root)
+    report = _host_smoke_report(
+        diagnostics,
+        guided_preview_available="run_first_preview" in public_surface.tools,
+        trace_preview_available="trace_preview_variant" in public_surface.tools,
+    )
+    return _normalize_host_smoke_report(report.model_dump(mode="json"), root)
 
 
 def _host_smoke_missing_allowed_root(root: Path) -> dict[str, Any]:
+    public_surface = _diagnostics_public_surface()
     diagnostics = DiagnosticsService(
         allowed_roots=[root / "host-smoke" / "missing-images"],
         artifact_root=root / "host-smoke-missing-root" / "artifacts",
         max_preview_runs=100,
-        public_surface=_diagnostics_public_surface(),
+        public_surface=public_surface,
     ).diagnose(include_write_probe=False)
-    return _normalize_host_smoke_report(_host_smoke_report(diagnostics).model_dump(mode="json"), root)
+    report = _host_smoke_report(
+        diagnostics,
+        guided_preview_available="run_first_preview" in public_surface.tools,
+        trace_preview_available="trace_preview_variant" in public_surface.tools,
+    )
+    return _normalize_host_smoke_report(report.model_dump(mode="json"), root)
 
 
-def _host_smoke_report(diagnostics_report: DiagnosticsReport) -> HostSmokeReport:
+def _host_smoke_report(
+    diagnostics_report: DiagnosticsReport,
+    *,
+    guided_preview_available: bool,
+    trace_preview_available: bool,
+) -> HostSmokeReport:
     catalog = TransformCatalog()
     pipeline_service = PipelineService(catalog)
     recipe = recommend_recipe("classification", intensity="low", targets=["image"])
     validation = pipeline_service.validate_pipeline(recipe.pipeline, TargetSpec(targets=recipe.targets))
-    return build_host_smoke_report(diagnostics=diagnostics_report, recipe=recipe, validation=validation)
+    return build_host_smoke_report(
+        diagnostics=diagnostics_report,
+        recipe=recipe,
+        validation=validation,
+        guided_preview_available=guided_preview_available,
+        trace_preview_available=trace_preview_available,
+    )
 
 
 def _dataset_onboarding_ready(root: Path) -> dict[str, Any]:
