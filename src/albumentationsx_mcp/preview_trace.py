@@ -24,7 +24,7 @@ MAX_VARIANT_TRACE_JSON_BYTES = 8 * 1024
 # Bound both hashing work and any contiguous array copy.
 MAX_ARRAY_HASH_BYTES = 1024 * 1024
 # Stay comfortably below Python's configurable decimal digit limit.
-MAX_INLINE_INTEGER_BITS = 4096
+MAX_INLINE_INTEGER_BITS = 2048
 
 _HASHABLE_ARRAY_KINDS = frozenset("biufcmMSU")
 
@@ -192,15 +192,20 @@ class _TraceNormalizer:
             return _mapping_summary(value)
 
         item_depth = depth + 1
-        items = sorted(
-            value.items(),
-            key=lambda pair: (
-                _trace_order_token(pair[0], depth=item_depth),
-                _trace_order_token(pair[1], depth=item_depth),
-            ),
-        )
+        token_builder = _TraceOrderTokenBuilder()
+        tokenized_items: list[tuple[str, str, Any, Any]] = []
+        for key, item in value.items():
+            key_token, key_complete = token_builder.build(key, depth=item_depth)
+            if not key_complete:
+                return _mapping_summary(value)
+            item_token, item_complete = token_builder.build(item, depth=item_depth)
+            if not item_complete:
+                return _mapping_summary(value)
+            tokenized_items.append((key_token, item_token, key, item))
+        tokenized_items.sort(key=lambda tokenized: (tokenized[0], tokenized[1]))
+
         grouped_values: dict[str, list[Any]] = {}
-        for key, item in items[:MAX_COLLECTION_ITEMS]:
+        for _, _, key, item in tokenized_items:
             normalized_key = self._normalize_mapping_key(key, depth=depth + 1)
             normalized_value = self.normalize(item, depth=depth + 1)
             grouped_values.setdefault(normalized_key, []).append(normalized_value)
@@ -243,68 +248,69 @@ class _TraceNormalizer:
 class _TraceOrderTokenBuilder:
     def __init__(self) -> None:
         self._remaining_nodes = MAX_TRACE_NODES
+        self._complete = True
 
-    def build(self, value: Any, *, depth: int = 0) -> str:
+    def build(self, value: Any, *, depth: int = 0) -> tuple[str, bool]:
         """Build a bounded canonical sort key without spending output-normalization nodes."""
-        return _canonical_json(self._normalize(value, depth=depth))
+        normalized = self._normalize(value, depth=depth)
+        if not self._complete:
+            return "", False
+        return _canonical_json(normalized), True
+
+    def _consume_node(self) -> bool:
+        if self._remaining_nodes <= 0:
+            self._complete = False
+            return False
+        self._remaining_nodes -= 1
+        return True
 
     def _normalize(self, value: Any, *, depth: int) -> Any:
-        if self._remaining_nodes <= 0 or depth >= MAX_TRACE_DEPTH:
+        if not self._consume_node() or depth >= MAX_TRACE_DEPTH:
             order_structure = _structural_summary(value)
+        elif isinstance(value, np.generic):
+            order_structure = self._normalize_numpy_scalar(value, depth=depth)
+        elif value is None or isinstance(value, bool):
+            order_structure = {
+                "kind": "scalar",
+                "type": type(value).__qualname__,
+                "value": value,
+            }
+        elif isinstance(value, int):
+            order_structure = {
+                "kind": "scalar",
+                "type": type(value).__qualname__,
+                "value": _normalize_integer(value),
+            }
+        elif isinstance(value, float):
+            normalized_float = _normalize_float(value)
+            order_structure = {
+                "kind": "float",
+                "type": type(value).__qualname__,
+                "value": value.hex() if isinstance(normalized_float, float) else normalized_float,
+            }
+        elif isinstance(value, str):
+            order_structure = {
+                "kind": "string",
+                "type": type(value).__qualname__,
+                "value": _normalize_string(value),
+            }
+        elif isinstance(value, Path):
+            order_structure = {
+                "kind": "path",
+                "type": type(value).__qualname__,
+                "value": _normalize_string(str(value)),
+            }
+        elif isinstance(value, np.ndarray):
+            order_structure = self._normalize_array(value, depth=depth)
+        elif isinstance(value, Mapping):
+            order_structure = self._normalize_mapping(value, depth=depth)
+        elif isinstance(value, (list, tuple)):
+            order_structure = self._normalize_sequence(value, depth=depth)
         else:
-            self._remaining_nodes -= 1
-            if isinstance(value, np.generic):
-                order_structure = self._normalize_numpy_scalar(value, depth=depth)
-            elif value is None or isinstance(value, bool):
-                order_structure = {
-                    "kind": "scalar",
-                    "type": type(value).__qualname__,
-                    "value": value,
-                }
-            elif isinstance(value, int):
-                order_structure = {
-                    "kind": "scalar",
-                    "type": type(value).__qualname__,
-                    "value": _normalize_integer(value),
-                }
-            elif isinstance(value, float):
-                normalized_float = _normalize_float(value)
-                order_structure = {
-                    "kind": "float",
-                    "type": type(value).__qualname__,
-                    "value": value.hex() if isinstance(normalized_float, float) else normalized_float,
-                }
-            elif isinstance(value, str):
-                order_structure = {
-                    "kind": "string",
-                    "type": type(value).__qualname__,
-                    "value": _normalize_string(value),
-                }
-            elif isinstance(value, Path):
-                order_structure = {
-                    "kind": "path",
-                    "type": type(value).__qualname__,
-                    "value": _normalize_string(str(value)),
-                }
-            elif isinstance(value, np.ndarray):
-                order_structure = self._normalize_array(value, depth=depth)
-            elif isinstance(value, Mapping):
-                order_structure = self._normalize_mapping(value, depth=depth)
-            elif isinstance(value, (list, tuple)):
-                order_structure = {
-                    "kind": "sequence",
-                    "type": type(value).__qualname__,
-                    "item_count": len(value),
-                    "items": [
-                        self._normalize(item, depth=depth + 1)
-                        for item in value[:MAX_COLLECTION_ITEMS]
-                    ],
-                }
-            else:
-                order_structure = {
-                    "kind": "unsupported",
-                    "type": type(value).__qualname__,
-                }
+            order_structure = {
+                "kind": "unsupported",
+                "type": type(value).__qualname__,
+            }
         return order_structure
 
     def _normalize_numpy_scalar(self, value: np.generic, *, depth: int) -> dict[str, Any]:
@@ -331,25 +337,32 @@ class _TraceOrderTokenBuilder:
             order_structure["value"] = _large_array_summary(value)
         return order_structure
 
+    def _normalize_sequence(self, value: list[Any] | tuple[Any, ...], *, depth: int) -> dict[str, Any]:
+        items: list[Any] = []
+        for item in value[:MAX_COLLECTION_ITEMS]:
+            items.append(self._normalize(item, depth=depth + 1))
+            if not self._complete:
+                break
+        return {
+            "kind": "sequence",
+            "type": type(value).__qualname__,
+            "item_count": len(value),
+            "items": items,
+        }
+
     def _normalize_mapping(self, value: Mapping[Any, Any], *, depth: int) -> dict[str, Any]:
         if len(value) > MAX_COLLECTION_ITEMS:
             return _mapping_summary(value)
 
-        item_depth = depth + 1
-        items = sorted(
-            value.items(),
-            key=lambda pair: (
-                _trace_order_token(pair[0], depth=item_depth),
-                _trace_order_token(pair[1], depth=item_depth),
-            ),
-        )
-        normalized_items = [
-            [
-                self._normalize(key, depth=depth + 1),
-                self._normalize(item, depth=depth + 1),
-            ]
-            for key, item in items[:MAX_COLLECTION_ITEMS]
-        ]
+        normalized_items: list[list[Any]] = []
+        for key, item in value.items():
+            normalized_key = self._normalize(key, depth=depth + 1)
+            if not self._complete:
+                return _mapping_summary(value)
+            normalized_item = self._normalize(item, depth=depth + 1)
+            if not self._complete:
+                return _mapping_summary(value)
+            normalized_items.append([normalized_key, normalized_item])
         normalized_items.sort(key=_canonical_json)
         return {
             "kind": "mapping",
@@ -357,10 +370,6 @@ class _TraceOrderTokenBuilder:
             "item_count": len(value),
             "items": normalized_items,
         }
-
-
-def _trace_order_token(value: Any, *, depth: int) -> str:
-    return _TraceOrderTokenBuilder().build(value, depth=depth)
 
 
 def normalize_trace_value(value: Any) -> Any:

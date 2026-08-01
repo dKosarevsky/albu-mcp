@@ -1,6 +1,7 @@
 import hashlib
 import json
 import math
+import sys
 from collections.abc import ItemsView, Iterator, Mapping
 from pathlib import Path
 
@@ -58,7 +59,7 @@ def test_trace_limits_are_stable() -> None:
     assert MAX_APPLIED_TRANSFORMS == 32
     assert MAX_VARIANT_TRACE_JSON_BYTES == 8 * 1024
     assert preview_trace.MAX_ARRAY_HASH_BYTES == 1024 * 1024
-    assert preview_trace.MAX_INLINE_INTEGER_BITS == 4096
+    assert preview_trace.MAX_INLINE_INTEGER_BITS == 2048
 
 
 @pytest.mark.parametrize(
@@ -342,6 +343,46 @@ def test_normalize_trace_value_bounds_recursive_mapping_order_tokens() -> None:
     assert "structural_summary" in encoded
 
 
+def test_normalize_trace_value_bounds_shared_nested_mapping_order_work(monkeypatch: pytest.MonkeyPatch) -> None:
+    leaf = {f"leaf-{index:02d}": index for index in range(MAX_COLLECTION_ITEMS)}
+    branch = {f"branch-{index:02d}": leaf for index in range(MAX_COLLECTION_ITEMS)}
+    value = {f"root-{index:02d}": branch for index in range(MAX_COLLECTION_ITEMS)}
+    builder_count = 0
+    token_work = 0
+    original_init = preview_trace._TraceOrderTokenBuilder.__init__
+    original_normalize = preview_trace._TraceOrderTokenBuilder._normalize
+
+    def counting_init(builder: preview_trace._TraceOrderTokenBuilder) -> None:
+        nonlocal builder_count
+        builder_count += 1
+        original_init(builder)
+
+    def counting_normalize(
+        builder: preview_trace._TraceOrderTokenBuilder,
+        item: object,
+        *,
+        depth: int,
+    ) -> object:
+        nonlocal token_work
+        token_work += 1
+        if token_work > MAX_TRACE_NODES + 1:
+            message = "trace ordering exceeded its shared node budget"
+            raise AssertionError(message)
+        return original_normalize(builder, item, depth=depth)
+
+    monkeypatch.setattr(preview_trace._TraceOrderTokenBuilder, "__init__", counting_init)
+    monkeypatch.setattr(preview_trace._TraceOrderTokenBuilder, "_normalize", counting_normalize)
+
+    assert normalize_trace_value(value) == {
+        "kind": "mapping_summary",
+        "type": "dict",
+        "item_count": MAX_COLLECTION_ITEMS,
+        "truncated": True,
+    }
+    assert builder_count == 1
+    assert token_work <= MAX_TRACE_NODES + 1
+
+
 def test_normalize_trace_value_bounds_numpy_scalar_without_starving_sibling() -> None:
     scalar = np.longdouble("1.25")
 
@@ -372,6 +413,31 @@ def test_normalize_trace_value_summarizes_huge_integer_for_strict_json() -> None
         }
     }
     json.dumps(result, allow_nan=False, sort_keys=True)
+
+
+def test_normalize_trace_value_respects_low_json_integer_digit_limit() -> None:
+    set_digit_limit = getattr(sys, "set_int_max_str_digits", None)
+    get_digit_limit = getattr(sys, "get_int_max_str_digits", None)
+    if set_digit_limit is None or get_digit_limit is None:
+        pytest.skip("Python does not expose an integer digit limit")
+
+    original_limit = get_digit_limit()
+    try:
+        set_digit_limit(640)
+        value = 1 << 3000
+
+        result = normalize_trace_value({"value": value})
+
+        assert result == {
+            "value": {
+                "kind": "integer_summary",
+                "sign": 1,
+                "bit_length": 3001,
+            }
+        }
+        json.dumps(result, allow_nan=False, sort_keys=True)
+    finally:
+        set_digit_limit(original_limit)
 
 
 def test_normalize_trace_value_summarizes_excessive_nesting() -> None:
