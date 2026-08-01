@@ -28,6 +28,8 @@ All notable public changes to AlbumentationsX MCP are tracked here.
   evidence from another channel.
 - Moved pre-release V1/RC status records behind a dedicated archive while preserving their paths, decisions, and
   deterministic regeneration with explicit historical snapshot banners.
+- Updated the MCP App dependency chain to patched MCP SDK, Hono, and `fast-uri` releases with no production audit
+  findings.
 
 ## 1.19.0 - 2026-07-14
 
