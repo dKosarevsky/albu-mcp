@@ -1,3 +1,10 @@
+import ast
+import re
+from pathlib import Path
+
+import pytest
+
+from albumentationsx_mcp.guided_preview import GuidedPreviewRequest
 from albumentationsx_mcp.prompts import run_first_preview_review
 
 _COMMON_REVIEW_TOOLS = {
@@ -28,6 +35,34 @@ def test_first_preview_prompt_defaults_to_guided_workflow_when_tool_is_available
     assert prompt.index("trace_preview_variant") < prompt.index("adjust_pipeline")
     assert prompt.index("adjust_pipeline") < prompt.index("compare_preview_runs")
     assert prompt.index("compare_preview_runs") < prompt.index("export_pipeline")
+
+
+@pytest.mark.parametrize(
+    ("targets", "expected"),
+    [
+        (None, ["image"]),
+        (" image, bboxes ", ["image", "bboxes"]),
+        (" , ", None),
+    ],
+    ids=["default", "comma-separated", "empty"],
+)
+def test_first_preview_prompt_emits_schema_valid_guided_targets(
+    targets: str | None,
+    expected: list[str] | None,
+) -> None:
+    prompt = run_first_preview_review() if targets is None else run_first_preview_review(targets=targets)
+    guided_call = prompt.split("Call run_first_preview", maxsplit=1)[1].split("Show the returned", maxsplit=1)[0]
+    match = re.search(r"\btargets=(\[[^]]*\])", guided_call)
+    payload: dict[str, object] = {"dataset_path": Path("/absolute/path/to/images")}
+    if expected is None:
+        assert "targets=" not in guided_call
+    else:
+        assert match is not None
+        payload["targets"] = ast.literal_eval(match.group(1))
+
+    request = GuidedPreviewRequest.model_validate(payload)
+
+    assert request.targets == expected
 
 
 def test_first_preview_prompt_uses_manual_review_fallback_without_guided_tool() -> None:

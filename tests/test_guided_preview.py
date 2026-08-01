@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from inspect import signature
 from pathlib import Path
 from typing import Any
@@ -311,6 +312,78 @@ def test_guided_preview_detaches_validator_input_from_onboarding_template(
         result.onboarding.next_actions.append("caller mutation")
         assert result.next_actions[-1] != "caller mutation"
         assert onboarding.next_actions == original_onboarding_actions
+
+
+def test_guided_preview_success_rewrites_all_nested_guidance_without_mutating_onboarding(tmp_path: Path) -> None:
+    dataset_dir = tmp_path / "dataset"
+    _write_image(dataset_dir / "images" / "sample.png")
+    annotations_dir = dataset_dir / "annotations"
+    annotations_dir.mkdir()
+    (annotations_dir / "instances.json").write_text(
+        json.dumps(
+            {
+                "images": [{"id": 1, "file_name": "images/sample.png"}],
+                "annotations": [{"id": 1, "image_id": 1, "bbox": [2, 3, 10, 8], "category_id": 7}],
+                "categories": [{"id": 7, "name": "car"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    path_policy = PathPolicy([tmp_path])
+    pipeline_service = PipelineService(TransformCatalog())
+    onboarding = build_dataset_onboarding_report(
+        dataset_path=dataset_dir,
+        task="object_detection",
+        intensity="low",
+        targets=["image", "bboxes"],
+        path_policy=path_policy,
+        pipeline_service=pipeline_service,
+        recipe_builder=recommend_recipe,
+        max_images=1,
+    )
+    source_template = onboarding.preview_request_template
+    assert source_template is not None
+    source_snapshot = onboarding.model_dump(mode="python")
+    service = GuidedPreviewService(
+        path_policy=path_policy,
+        pipeline_service=pipeline_service,
+        recipe_builder=recommend_recipe,
+        preview_validator=StubValidator(),
+        preview_service=StubRenderer(_preview_with_contact_sheet()),
+        onboarding_builder=StubOnboardingBuilder(onboarding),
+    )
+
+    result = service.run(GuidedPreviewRequest(dataset_path=dataset_dir, targets=["image", "bboxes"], max_images=1))
+
+    assert result.status == "rendered"
+    completed_template = result.onboarding.preview_request_template
+    assert completed_template is not None
+    for guidance in (
+        result.onboarding.next_actions,
+        completed_template.instructions,
+        result.onboarding.review_brief,
+    ):
+        normalized = " ".join(guidance).casefold()
+        assert "validate_preview_request" not in normalized
+        assert "render_preview_batch" not in normalized
+        assert "validate preview_request_template.request before rendering" not in normalized
+    assert all(
+        anchor in " ".join(completed_template.instructions).casefold()
+        for anchor in ("contact sheet", "trace_preview_variant", "adjust")
+    )
+    assert all(
+        anchor in " ".join(result.onboarding.review_brief).casefold()
+        for anchor in ("contact sheet", "trace_preview_variant", "adjust")
+    )
+    assert any("Annotation-aware template" in item for item in completed_template.instructions)
+    assert any("overlay_contact_sheet" in item for item in completed_template.instructions)
+    assert any("Bounding boxes require" in item for item in result.onboarding.review_brief)
+    assert any("Annotation coverage" in item for item in result.onboarding.review_brief)
+    assert completed_template.request == source_template.request
+    assert completed_template.annotation_summary == source_template.annotation_summary
+    assert onboarding.model_dump(mode="python") == source_snapshot
+    assert "validate_preview_request" in " ".join(source_template.instructions)
+    assert "Validate preview_request_template.request before rendering." in onboarding.review_brief
 
 
 def test_guided_preview_renders_bounded_safe_template_with_traceable_contact_sheet(tmp_path: Path) -> None:

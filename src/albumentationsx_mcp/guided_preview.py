@@ -23,6 +23,15 @@ _SUCCESS_NEXT_ACTIONS = (
     "Call `trace_preview_variant` for image_index=0 and variant_index=0.",
     "Use `adjust_pipeline` only after reviewing the contact sheet and first-variant trace evidence.",
 )
+_SUCCESS_TEMPLATE_STATE = "The bounded preview request has already completed validation and rendering."
+_SUCCESS_TRACE_ACTION = (
+    "Call `trace_preview_variant` for the selected zero-based image and variant indexes before adjusting the pipeline."
+)
+_SUCCESS_REVIEW_BRIEF = (
+    "The bounded preview is complete; inspect the rendered contact sheet, call `trace_preview_variant` for the "
+    "selected result, and use `adjust_pipeline` only after review."
+)
+_STALE_PREVIEW_TOOLS = ("validate_preview_request", "render_preview_batch")
 
 
 class PreviewValidator(Protocol):
@@ -158,9 +167,17 @@ class GuidedPreviewService:
             raise RuntimeError(_UNAVAILABLE_FIRST_TRACE)
 
         success_actions = list(_SUCCESS_NEXT_ACTIONS)
+        completed_template = template.model_copy(
+            deep=True,
+            update={"instructions": _completed_template_instructions(template.instructions)},
+        )
         completed_onboarding = onboarding.model_copy(
             deep=True,
-            update={"next_actions": list(success_actions)},
+            update={
+                "next_actions": list(success_actions),
+                "preview_request_template": completed_template,
+                "review_brief": _completed_review_brief(onboarding.review_brief),
+            },
         )
         return GuidedPreviewResult(
             status="rendered",
@@ -172,3 +189,30 @@ class GuidedPreviewService:
             trace_available=trace_available,
             next_actions=success_actions,
         )
+
+
+def _completed_template_instructions(instructions: list[str]) -> list[str]:
+    preserved = [instruction for instruction in instructions if not _has_stale_preview_command(instruction)]
+    completed = [_SUCCESS_TEMPLATE_STATE]
+    trace_inserted = False
+    for instruction in preserved:
+        completed.append(instruction)
+        if not trace_inserted and "contact sheet" in instruction.casefold():
+            completed.append(_SUCCESS_TRACE_ACTION)
+            trace_inserted = True
+    if not trace_inserted:
+        completed.extend([_SUCCESS_NEXT_ACTIONS[0], _SUCCESS_TRACE_ACTION])
+    return completed
+
+
+def _completed_review_brief(review_brief: list[str]) -> list[str]:
+    completed = [item for item in review_brief if not _has_stale_preview_command(item)]
+    completed.append(_SUCCESS_REVIEW_BRIEF)
+    return completed
+
+
+def _has_stale_preview_command(text: str) -> bool:
+    normalized = text.casefold()
+    return any(tool in normalized for tool in _STALE_PREVIEW_TOOLS) or (
+        normalized.startswith("validate ") and "before rendering" in normalized
+    )

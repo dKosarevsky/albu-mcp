@@ -48,17 +48,25 @@ def run_first_preview_review(
 ) -> str:
     """Guide an assistant through the active profile's first-preview path."""
     tools = _DEFAULT_FIRST_PREVIEW_TOOLS if available_tools is None else frozenset(available_tools)
+    normalized_targets = _normalize_prompt_targets(targets)
+    smoke_targets = f" with targets {normalized_targets!r}" if normalized_targets is not None else ""
     parts = [
         "Use AlbumentationsX MCP to run the first local preview safely. "
         "Read albumentationsx://examples/client-smoke when the host exposes resource reads; if resource reads are "
         'unavailable, call get_workflow_example with example_id="client-smoke". Then call run_host_smoke_check '
-        f"for task {task!r} with targets {targets!r}. Continue only when preview_ready is true. "
+        f"for task {task!r}{smoke_targets}. Continue only when preview_ready is true. "
     ]
     if "run_first_preview" in tools:
+        guided_arguments = [
+            f"dataset_path={input_path!r}",
+            f"task={task!r}",
+            "intensity='low'",
+        ]
+        if normalized_targets is not None:
+            guided_arguments.append(f"targets={normalized_targets!r}")
+        guided_arguments.append("max_images=8")
         parts.append(
-            "Call run_first_preview with "
-            f"dataset_path={input_path!r}, task={task!r}, intensity='low', targets={targets!r}, and max_images=8. "
-            "Show the returned contact sheet. "
+            f"Call run_first_preview with {', '.join(guided_arguments)}. Show the returned contact sheet. "
         )
     elif {"validate_preview_request", "render_preview_batch"} <= tools:
         parts.append(
@@ -83,6 +91,11 @@ def run_first_preview_review(
     if "export_pipeline" in tools:
         parts.append("Call export_pipeline only after the user accepts the comparison.")
     return "".join(parts)
+
+
+def _normalize_prompt_targets(targets: str) -> list[str] | None:
+    normalized = [target.strip() for target in targets.split(",") if target.strip()]
+    return normalized or None
 
 
 def tune_pipeline_from_preview_feedback(task: str, run_id: str, feedback_tags: str) -> str:
