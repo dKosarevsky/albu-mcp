@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from pathlib import Path
 from typing import Any, Literal, Protocol
 
@@ -12,7 +13,6 @@ from albumentationsx_mcp.onboarding import DatasetOnboardingReport, RecipeBuilde
 from albumentationsx_mcp.pipeline import PipelineService
 from albumentationsx_mcp.presets import Intensity
 from albumentationsx_mcp.preview import PathPolicy
-from albumentationsx_mcp.preview_trace import PreviewVariantTraceResult
 from albumentationsx_mcp.preview_validation import PreviewRequestValidationReport
 
 _MALFORMED_NORMALIZED_REQUEST = "Validated preview request is malformed"
@@ -25,7 +25,9 @@ _SUCCESS_NEXT_ACTIONS = (
 )
 
 
-class _PreviewValidator(Protocol):
+class PreviewValidator(Protocol):
+    """Validate and normalize one preview request without rendering it."""
+
     def validate(
         self,
         request: dict[str, Any],
@@ -34,7 +36,9 @@ class _PreviewValidator(Protocol):
     ) -> PreviewRequestValidationReport: ...
 
 
-class _PreviewRenderer(Protocol):
+class PreviewRenderer(Protocol):
+    """Render one validated preview request."""
+
     def render_preview(self, request: PreviewRequest) -> PreviewResult: ...
 
 
@@ -53,18 +57,6 @@ class OnboardingBuilder(Protocol):
         recipe_builder: RecipeBuilder,
         max_images: int = 8,
     ) -> DatasetOnboardingReport: ...
-
-
-class TraceLookup(Protocol):
-    """Look up one trace from a rendered preview run."""
-
-    def __call__(
-        self,
-        run_id: str,
-        *,
-        image_index: int,
-        variant_index: int,
-    ) -> PreviewVariantTraceResult: ...
 
 
 class GuidedPreviewRequest(StrictModel):
@@ -99,9 +91,8 @@ class GuidedPreviewService:
         path_policy: PathPolicy,
         pipeline_service: PipelineService,
         recipe_builder: RecipeBuilder,
-        preview_validator: _PreviewValidator,
-        preview_service: _PreviewRenderer,
-        trace_lookup: TraceLookup,
+        preview_validator: PreviewValidator,
+        preview_service: PreviewRenderer,
         onboarding_builder: OnboardingBuilder = build_dataset_onboarding_report,
     ) -> None:
         self.path_policy = path_policy
@@ -109,7 +100,6 @@ class GuidedPreviewService:
         self.recipe_builder = recipe_builder
         self.preview_validator = preview_validator
         self.preview_service = preview_service
-        self.trace_lookup = trace_lookup
         self.onboarding_builder = onboarding_builder
 
     def run(self, request: GuidedPreviewRequest) -> GuidedPreviewResult:
@@ -142,21 +132,26 @@ class GuidedPreviewService:
                 status="blocked",
                 onboarding=onboarding,
                 validation=validation,
+                normalized_request=deepcopy(normalized_request),
                 next_actions=validation.next_actions,
             )
 
         try:
-            preview_request = PreviewRequest.model_validate(normalized_request)
+            canonical_request = PreviewRequest.model_validate(deepcopy(normalized_request))
         except ValidationError:
             raise ValueError(_MALFORMED_NORMALIZED_REQUEST) from None
 
-        preview = self.preview_service.render_preview(preview_request)
+        normalized_snapshot = deepcopy(canonical_request.model_dump(mode="json", exclude_none=True))
+        preview_request = canonical_request.model_copy(deep=True)
+        rendered_preview = self.preview_service.render_preview(preview_request)
+        preview = rendered_preview.model_copy(deep=True)
         contact_sheets = [artifact for artifact in preview.artifacts if artifact.kind == "contact_sheet"]
         if len(contact_sheets) != 1:
             raise RuntimeError(_INVALID_CONTACT_SHEET_COUNT)
 
-        trace_result = self.trace_lookup(preview.run_id, image_index=0, variant_index=0)
-        trace_available = _is_first_variant_trace_available(trace_result, run_id=preview.run_id)
+        trace_available = (
+            preview.variant_trace_count > 0 and preview.variant_trace_count == onboarding.sampled_image_count
+        )
         if not trace_available:
             raise RuntimeError(_UNAVAILABLE_FIRST_TRACE)
 
@@ -164,22 +159,9 @@ class GuidedPreviewService:
             status="rendered",
             onboarding=onboarding,
             validation=validation,
-            normalized_request=normalized_request,
+            normalized_request=normalized_snapshot,
             preview=preview,
             contact_sheet=contact_sheets[0],
             trace_available=trace_available,
             next_actions=list(_SUCCESS_NEXT_ACTIONS),
         )
-
-
-def _is_first_variant_trace_available(result: PreviewVariantTraceResult, *, run_id: str) -> bool:
-    trace = result.trace
-    return (
-        result.available
-        and trace is not None
-        and result.run_id == run_id
-        and result.image_index == 0
-        and result.variant_index == 0
-        and trace.image_index == 0
-        and trace.variant_index == 0
-    )

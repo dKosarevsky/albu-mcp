@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-from functools import partial
+from inspect import signature
 from pathlib import Path
 from typing import Any
 
@@ -9,6 +8,7 @@ import pytest
 from PIL import Image
 from pydantic import ValidationError
 
+import albumentationsx_mcp.guided_preview as guided_preview_module
 from albumentationsx_mcp.catalog import TransformCatalog
 from albumentationsx_mcp.guided_preview import GuidedPreviewRequest, GuidedPreviewResult, GuidedPreviewService
 from albumentationsx_mcp.models import (
@@ -23,11 +23,6 @@ from albumentationsx_mcp.onboarding import DatasetOnboardingReport, RecipeBuilde
 from albumentationsx_mcp.pipeline import PipelineService
 from albumentationsx_mcp.presets import Intensity
 from albumentationsx_mcp.preview import ArtifactStore, PathPolicy, PreviewService
-from albumentationsx_mcp.preview_trace import (
-    PreviewVariantTrace,
-    PreviewVariantTraceResult,
-    get_preview_variant_trace,
-)
 from albumentationsx_mcp.preview_validation import PreviewRequestValidationReport, PreviewRequestValidator
 from albumentationsx_mcp.recipes import recommend_recipe
 
@@ -136,38 +131,22 @@ class StubRenderer:
         return self.result
 
 
-class StubTraceLookup:
-    def __init__(
-        self,
-        result: PreviewVariantTraceResult | None = None,
-        *,
-        delegate: Callable[..., PreviewVariantTraceResult] | None = None,
-        error: Exception | None = None,
-    ) -> None:
-        self.result = result
-        self.delegate = delegate
-        self.error = error
-        self.calls: list[tuple[str, int, int]] = []
-        self.results: list[PreviewVariantTraceResult] = []
+class MutatingRenderer(StubRenderer):
+    def render_preview(self, request: PreviewRequest) -> PreviewResult:
+        marker = request.pipeline.transforms[0].params["isolation"]
+        assert isinstance(marker, dict)
+        marker["owner"] = "renderer"
+        return super().render_preview(request)
 
-    def __call__(
-        self,
-        run_id: str,
-        *,
-        image_index: int,
-        variant_index: int,
-    ) -> PreviewVariantTraceResult:
-        self.calls.append((run_id, image_index, variant_index))
-        if self.error is not None:
-            raise self.error
-        result = (
-            self.delegate(run_id, image_index=image_index, variant_index=variant_index)
-            if self.delegate is not None
-            else self.result
-        )
-        assert result is not None
-        self.results.append(result)
-        return result
+
+class RecordingArtifactStore(ArtifactStore):
+    def __init__(self, root: Path) -> None:
+        super().__init__(root)
+        self.read_manifest_calls: list[str] = []
+
+    def read_manifest(self, run_id: str) -> dict[str, Any]:
+        self.read_manifest_calls.append(run_id)
+        return super().read_manifest(run_id)
 
 
 def test_guided_preview_injects_onboarding_builder_and_blocks_ready_report_without_template(tmp_path: Path) -> None:
@@ -185,14 +164,12 @@ def test_guided_preview_injects_onboarding_builder_and_blocks_ready_report_witho
     recipe_builder = RecipeSpy()
     validator = StubValidator()
     renderer = StubRenderer()
-    trace_lookup = StubTraceLookup()
     service = GuidedPreviewService(
         path_policy=path_policy,
         pipeline_service=pipeline_service,
         recipe_builder=recipe_builder,
         preview_validator=validator,
         preview_service=renderer,
-        trace_lookup=trace_lookup,
         onboarding_builder=onboarding_builder,
     )
     request = GuidedPreviewRequest(
@@ -225,7 +202,16 @@ def test_guided_preview_injects_onboarding_builder_and_blocks_ready_report_witho
     assert recipe_builder.calls == []
     assert validator.calls == []
     assert renderer.calls == []
-    assert trace_lookup.calls == []
+
+
+def test_guided_preview_service_uses_atomic_render_evidence_without_trace_lookup() -> None:
+    assert "trace_lookup" not in signature(GuidedPreviewService).parameters
+
+
+def test_guided_preview_exports_public_collaborator_protocols() -> None:
+    assert guided_preview_module.PreviewValidator.__name__ == "PreviewValidator"
+    assert guided_preview_module.PreviewRenderer.__name__ == "PreviewRenderer"
+    assert guided_preview_module.OnboardingBuilder.__name__ == "OnboardingBuilder"
 
 
 def test_guided_preview_renders_bounded_safe_template_with_traceable_contact_sheet(tmp_path: Path) -> None:
@@ -235,12 +221,11 @@ def test_guided_preview_renders_bounded_safe_template_with_traceable_contact_she
 
     path_policy = PathPolicy([dataset_path])
     pipeline_service = PipelineService(TransformCatalog())
-    artifact_store = ArtifactStore(tmp_path / "artifacts")
+    artifact_store = RecordingArtifactStore(tmp_path / "artifacts")
     validator = RecordingValidator(
         PreviewRequestValidator(pipeline_service=pipeline_service, path_policy=path_policy),
     )
     renderer = RecordingRenderer(PreviewService(pipeline_service, path_policy, artifact_store))
-    trace_lookup = StubTraceLookup(delegate=partial(get_preview_variant_trace, artifact_store))
     recipe_builder = RecipeSpy()
     service = GuidedPreviewService(
         path_policy=path_policy,
@@ -248,7 +233,6 @@ def test_guided_preview_renders_bounded_safe_template_with_traceable_contact_she
         recipe_builder=recipe_builder,
         preview_validator=validator,
         preview_service=renderer,
-        trace_lookup=trace_lookup,
     )
 
     result = service.run(GuidedPreviewRequest(dataset_path=dataset_path, max_images=8))
@@ -272,12 +256,14 @@ def test_guided_preview_renders_bounded_safe_template_with_traceable_contact_she
     assert result.contact_sheet is contact_sheet
     assert result.contact_sheet == contact_sheet
     assert result.trace_available is True
+    assert result.preview.variant_trace_count == result.onboarding.sampled_image_count
     assert result.next_actions == [
         "Inspect the rendered contact sheet.",
         "Call `trace_preview_variant` for image_index=0 and variant_index=0.",
         "Use `adjust_pipeline` only after reviewing the contact sheet and first-variant trace evidence.",
     ]
 
+    assert artifact_store.read_manifest_calls == []
     manifest = artifact_store.read_manifest(result.preview.run_id)
     assert manifest["summary"]["variant_trace_count"] == result.onboarding.sampled_image_count
     assert len(manifest["variant_traces"]) == result.onboarding.sampled_image_count
@@ -285,8 +271,7 @@ def test_guided_preview_renders_bounded_safe_template_with_traceable_contact_she
         (index, 0) for index in range(8)
     }
     assert {trace["effective_seed"] for trace in manifest["variant_traces"]} == {0}
-    assert trace_lookup.calls == [(result.preview.run_id, 0, 0)]
-    assert trace_lookup.results[0].trace == PreviewVariantTrace.model_validate(manifest["variant_traces"][0])
+    assert artifact_store.read_manifest_calls == [result.preview.run_id]
 
     assert recipe_builder.calls == [{"task": "classification", "intensity": "low", "targets": None}]
     assert len(validator.calls) == 1
@@ -300,17 +285,15 @@ def test_guided_preview_blocks_missing_dataset_before_validation_or_render(tmp_p
     artifact_root = tmp_path / "artifacts"
     validator = StubValidator()
     renderer = StubRenderer()
-    trace_lookup = StubTraceLookup()
     service = _service(
         path_policy=PathPolicy([tmp_path]),
         validator=validator,
         renderer=renderer,
-        trace_lookup=trace_lookup,
     )
 
     result = service.run(GuidedPreviewRequest(dataset_path=tmp_path / "missing"))
 
-    _assert_onboarding_blocked(result, validator=validator, renderer=renderer, trace_lookup=trace_lookup)
+    _assert_onboarding_blocked(result, validator=validator, renderer=renderer)
     assert result.onboarding.checks[0].code == "dataset_path_missing"
     assert not artifact_root.exists()
 
@@ -322,17 +305,15 @@ def test_guided_preview_blocks_outside_allowed_root_before_validation_or_render(
     artifact_root = tmp_path / "artifacts"
     validator = StubValidator()
     renderer = StubRenderer()
-    trace_lookup = StubTraceLookup()
     service = _service(
         path_policy=PathPolicy([allowed_root]),
         validator=validator,
         renderer=renderer,
-        trace_lookup=trace_lookup,
     )
 
     result = service.run(GuidedPreviewRequest(dataset_path=outside_path))
 
-    _assert_onboarding_blocked(result, validator=validator, renderer=renderer, trace_lookup=trace_lookup)
+    _assert_onboarding_blocked(result, validator=validator, renderer=renderer)
     assert result.onboarding.checks[0].code == "dataset_path_outside_allowed_root"
     assert not artifact_root.exists()
 
@@ -343,17 +324,15 @@ def test_guided_preview_blocks_empty_directory_before_validation_or_render(tmp_p
     artifact_root = tmp_path / "artifacts"
     validator = StubValidator()
     renderer = StubRenderer()
-    trace_lookup = StubTraceLookup()
     service = _service(
         path_policy=PathPolicy([tmp_path]),
         validator=validator,
         renderer=renderer,
-        trace_lookup=trace_lookup,
     )
 
     result = service.run(GuidedPreviewRequest(dataset_path=dataset_path))
 
-    _assert_onboarding_blocked(result, validator=validator, renderer=renderer, trace_lookup=trace_lookup)
+    _assert_onboarding_blocked(result, validator=validator, renderer=renderer)
     assert "dataset_images_missing" in {check.code for check in result.onboarding.checks}
     assert not artifact_root.exists()
 
@@ -368,20 +347,51 @@ def test_guided_preview_returns_injected_invalid_validation_report_without_rende
     )
     validator = StubValidator(validation)
     renderer = StubRenderer()
-    trace_lookup = StubTraceLookup()
     service = _service(
         path_policy=PathPolicy([tmp_path]),
         validator=validator,
         renderer=renderer,
-        trace_lookup=trace_lookup,
     )
 
     result = service.run(GuidedPreviewRequest(dataset_path=dataset_path))
 
-    _assert_validation_blocked(result, validation=validation, renderer=renderer, trace_lookup=trace_lookup)
+    _assert_validation_blocked(result, validation=validation, renderer=renderer)
     assert len(validator.calls) == 1
     assert result.next_actions == validation.next_actions
     assert not artifact_root.exists()
+
+
+def test_guided_preview_preserves_detached_invalid_normalized_request_without_rendering(tmp_path: Path) -> None:
+    dataset_path = _write_image(tmp_path / "dataset" / "sample.png")
+    normalized_request = {"unexpected": {"owner": "validation"}}
+    validation = _validation_report(
+        valid=False,
+        normalized_request=normalized_request,
+        next_actions=["Fix the invalid normalized request."],
+    )
+    validator = StubValidator(validation)
+    renderer = StubRenderer()
+    service = _service(
+        path_policy=PathPolicy([tmp_path]),
+        validator=validator,
+        renderer=renderer,
+    )
+
+    result = service.run(GuidedPreviewRequest(dataset_path=dataset_path))
+
+    assert result.status == "blocked"
+    assert result.validation is validation
+    assert result.normalized_request == validation.normalized_request
+    assert result.normalized_request is not validation.normalized_request
+    assert result.normalized_request is not None
+    result.normalized_request["unexpected"]["owner"] = "caller"
+    assert validation.normalized_request == {"unexpected": {"owner": "validation"}}
+    assert normalized_request == {"unexpected": {"owner": "validation"}}
+    assert result.preview is None
+    assert result.contact_sheet is None
+    assert result.trace_available is False
+    assert result.next_actions == validation.next_actions
+    assert renderer.calls == []
 
 
 def test_guided_preview_blocks_valid_validation_without_normalized_request(tmp_path: Path) -> None:
@@ -394,17 +404,15 @@ def test_guided_preview_blocks_valid_validation_without_normalized_request(tmp_p
     )
     validator = StubValidator(validation)
     renderer = StubRenderer()
-    trace_lookup = StubTraceLookup()
     service = _service(
         path_policy=PathPolicy([tmp_path]),
         validator=validator,
         renderer=renderer,
-        trace_lookup=trace_lookup,
     )
 
     result = service.run(GuidedPreviewRequest(dataset_path=dataset_path))
 
-    _assert_validation_blocked(result, validation=validation, renderer=renderer, trace_lookup=trace_lookup)
+    _assert_validation_blocked(result, validation=validation, renderer=renderer)
     assert result.next_actions == validation.next_actions
     assert not artifact_root.exists()
 
@@ -419,12 +427,10 @@ def test_guided_preview_rejects_malformed_normalized_request_stably_before_rende
     )
     validator = StubValidator(validation)
     renderer = StubRenderer()
-    trace_lookup = StubTraceLookup()
     service = _service(
         path_policy=PathPolicy([tmp_path]),
         validator=validator,
         renderer=renderer,
-        trace_lookup=trace_lookup,
     )
 
     with pytest.raises(ValueError, match=r"^Validated preview request is malformed$") as exc_info:
@@ -432,7 +438,6 @@ def test_guided_preview_rejects_malformed_normalized_request_stably_before_rende
 
     assert sensitive_value not in str(exc_info.value)
     assert renderer.calls == []
-    assert trace_lookup.calls == []
     assert not artifact_root.exists()
 
 
@@ -451,12 +456,10 @@ def test_guided_preview_requires_exactly_one_rendered_contact_sheet(
         pipeline={},
     )
     renderer = StubRenderer(preview)
-    trace_lookup = StubTraceLookup()
     service = _service(
         path_policy=PathPolicy([tmp_path]),
         validator=validator,
         renderer=renderer,
-        trace_lookup=trace_lookup,
     )
 
     with pytest.raises(
@@ -468,52 +471,101 @@ def test_guided_preview_requires_exactly_one_rendered_contact_sheet(
     assert type(exc_info.value) is RuntimeError
     assert str(exc_info.value) == "Rendered preview must contain exactly one contact_sheet artifact"
     assert len(renderer.calls) == 1
-    assert trace_lookup.calls == []
 
 
-def test_guided_preview_accepts_available_first_variant_trace_and_calls_lookup_once(tmp_path: Path) -> None:
+def test_guided_preview_accepts_consistent_atomic_trace_evidence(tmp_path: Path) -> None:
     dataset_path = _write_image(tmp_path / "dataset" / "sample.png")
-    renderer = StubRenderer(_preview_with_contact_sheet())
-    trace_lookup = StubTraceLookup(_trace_result(available=True, trace_variant_index=0))
+    renderer = StubRenderer(_preview_with_contact_sheet(variant_trace_count=1))
     service = _service(
         path_policy=PathPolicy([tmp_path]),
         validator=StubValidator(),
         renderer=renderer,
-        trace_lookup=trace_lookup,
     )
 
     result = service.run(GuidedPreviewRequest(dataset_path=dataset_path))
 
     assert result.status == "rendered"
     assert result.trace_available is True
-    assert trace_lookup.calls == [("fake-run", 0, 0)]
+    assert result.preview is not None
+    assert result.preview.variant_trace_count == 1
 
 
-@pytest.mark.parametrize(
-    ("available", "trace_variant_index"),
-    [
-        (False, None),
-        (True, None),
-        (False, 0),
-        (True, 1),
-    ],
-)
-def test_guided_preview_rejects_unavailable_or_inconsistent_first_variant_trace(
-    tmp_path: Path,
-    available: object,
-    trace_variant_index: int | None,
-) -> None:
-    assert isinstance(available, bool)
+def test_guided_preview_detaches_validation_render_and_result_object_graphs(tmp_path: Path) -> None:
     dataset_path = _write_image(tmp_path / "dataset" / "sample.png")
-    renderer = StubRenderer(_preview_with_contact_sheet())
-    trace_lookup = StubTraceLookup(
-        _trace_result(available=available, trace_variant_index=trace_variant_index),
+    path_policy = PathPolicy([tmp_path])
+    pipeline_service = PipelineService(TransformCatalog())
+    onboarding = build_dataset_onboarding_report(
+        dataset_path=dataset_path,
+        task="classification",
+        intensity="low",
+        targets=None,
+        path_policy=path_policy,
+        pipeline_service=pipeline_service,
+        recipe_builder=recommend_recipe,
+        max_images=1,
     )
+    template = onboarding.preview_request_template
+    assert template is not None
+    template_params = template.request["pipeline"]["transforms"][0]["params"]
+    template_params["isolation"] = {"owner": "template"}
+    validation = _validation_report(valid=True, normalized_request=template.request)
+    renderer_preview = PreviewResult(
+        run_id="renderer-owned-run",
+        artifacts=[_artifact("image", "image.png"), _artifact("contact_sheet", "contact-sheet.png")],
+        manifest=_artifact("manifest", "manifest.json"),
+        pipeline={"nested": {"owner": "renderer-result"}},
+        variant_trace_count=1,
+    )
+    renderer_contact = next(artifact for artifact in renderer_preview.artifacts if artifact.kind == "contact_sheet")
+    renderer = MutatingRenderer(renderer_preview)
+    service = GuidedPreviewService(
+        path_policy=path_policy,
+        pipeline_service=pipeline_service,
+        recipe_builder=recommend_recipe,
+        preview_validator=StubValidator(validation),
+        preview_service=renderer,
+        onboarding_builder=StubOnboardingBuilder(onboarding),
+    )
+
+    result = service.run(GuidedPreviewRequest(dataset_path=dataset_path, max_images=1))
+
+    assert result.status == "rendered"
+    assert result.normalized_request is not None
+    assert result.normalized_request is not validation.normalized_request
+    assert result.normalized_request["pipeline"]["transforms"][0]["params"]["isolation"] == {"owner": "template"}
+    assert validation.normalized_request is not None
+    assert validation.normalized_request["pipeline"]["transforms"][0]["params"]["isolation"] == {"owner": "template"}
+    assert template.request["pipeline"]["transforms"][0]["params"]["isolation"] == {"owner": "template"}
+    assert renderer.calls[0].pipeline.transforms[0].params["isolation"] == {"owner": "renderer"}
+    assert result.preview is not None
+    assert result.preview is not renderer_preview
+    assert result.contact_sheet is next(
+        artifact for artifact in result.preview.artifacts if artifact.kind == "contact_sheet"
+    )
+    assert result.contact_sheet is not renderer_contact
+
+    result.normalized_request["pipeline"]["transforms"][0]["params"]["isolation"]["owner"] = "caller"
+    result.preview.pipeline["nested"]["owner"] = "caller"
+    assert result.contact_sheet is not None
+    result.contact_sheet.path = "/caller/contact-sheet.png"
+
+    assert validation.normalized_request["pipeline"]["transforms"][0]["params"]["isolation"] == {"owner": "template"}
+    assert template.request["pipeline"]["transforms"][0]["params"]["isolation"] == {"owner": "template"}
+    assert renderer_preview.pipeline == {"nested": {"owner": "renderer-result"}}
+    assert renderer_contact.path == "/artifacts/fake-run/contact-sheet.png"
+
+
+@pytest.mark.parametrize("variant_trace_count", [0, 2])
+def test_guided_preview_rejects_missing_or_inconsistent_atomic_trace_evidence(
+    tmp_path: Path,
+    variant_trace_count: int,
+) -> None:
+    dataset_path = _write_image(tmp_path / "dataset" / "sample.png")
+    renderer = StubRenderer(_preview_with_contact_sheet(variant_trace_count=variant_trace_count))
     service = _service(
         path_policy=PathPolicy([tmp_path]),
         validator=StubValidator(),
         renderer=renderer,
-        trace_lookup=trace_lookup,
     )
 
     with pytest.raises(
@@ -524,45 +576,22 @@ def test_guided_preview_rejects_unavailable_or_inconsistent_first_variant_trace(
 
     assert type(exc_info.value) is RuntimeError
     assert str(exc_info.value) == "Rendered preview first variant trace is unavailable or inconsistent"
-    assert trace_lookup.calls == [("fake-run", 0, 0)]
-
-
-def test_guided_preview_does_not_swallow_unexpected_trace_lookup_failure(tmp_path: Path) -> None:
-    dataset_path = _write_image(tmp_path / "dataset" / "sample.png")
-    failure = RuntimeError("trace lookup failed")
-    renderer = StubRenderer(_preview_with_contact_sheet())
-    trace_lookup = StubTraceLookup(error=failure)
-    service = _service(
-        path_policy=PathPolicy([tmp_path]),
-        validator=StubValidator(),
-        renderer=renderer,
-        trace_lookup=trace_lookup,
-    )
-
-    with pytest.raises(RuntimeError) as exc_info:
-        service.run(GuidedPreviewRequest(dataset_path=dataset_path))
-
-    assert exc_info.value is failure
-    assert trace_lookup.calls == [("fake-run", 0, 0)]
 
 
 def test_guided_preview_does_not_swallow_unexpected_preview_failure(tmp_path: Path) -> None:
     dataset_path = _write_image(tmp_path / "dataset" / "sample.png")
     failure = RuntimeError("preview service failed")
     renderer = StubRenderer(error=failure)
-    trace_lookup = StubTraceLookup()
     service = _service(
         path_policy=PathPolicy([tmp_path]),
         validator=StubValidator(),
         renderer=renderer,
-        trace_lookup=trace_lookup,
     )
 
     with pytest.raises(RuntimeError) as exc_info:
         service.run(GuidedPreviewRequest(dataset_path=dataset_path))
 
     assert exc_info.value is failure
-    assert trace_lookup.calls == []
 
 
 @pytest.mark.parametrize("max_images", [0, 9])
@@ -610,7 +639,6 @@ def _service(
     path_policy: PathPolicy,
     validator: StubValidator,
     renderer: StubRenderer,
-    trace_lookup: StubTraceLookup,
 ) -> GuidedPreviewService:
     return GuidedPreviewService(
         path_policy=path_policy,
@@ -618,7 +646,6 @@ def _service(
         recipe_builder=recommend_recipe,
         preview_validator=validator,
         preview_service=renderer,
-        trace_lookup=trace_lookup,
     )
 
 
@@ -644,7 +671,6 @@ def _assert_onboarding_blocked(
     *,
     validator: StubValidator,
     renderer: StubRenderer,
-    trace_lookup: StubTraceLookup,
 ) -> None:
     assert result.status == "blocked"
     assert result.onboarding.preview_ready is False
@@ -656,7 +682,6 @@ def _assert_onboarding_blocked(
     assert result.next_actions == result.onboarding.next_actions
     assert validator.calls == []
     assert renderer.calls == []
-    assert trace_lookup.calls == []
 
 
 def _assert_validation_blocked(
@@ -664,7 +689,6 @@ def _assert_validation_blocked(
     *,
     validation: PreviewRequestValidationReport,
     renderer: StubRenderer,
-    trace_lookup: StubTraceLookup,
 ) -> None:
     assert result.status == "blocked"
     assert result.onboarding.preview_ready is True
@@ -675,7 +699,6 @@ def _assert_validation_blocked(
     assert result.trace_available is False
     assert result.next_actions == validation.next_actions
     assert renderer.calls == []
-    assert trace_lookup.calls == []
 
 
 def _blocked_onboarding(tmp_path: Path) -> DatasetOnboardingReport:
@@ -701,34 +724,13 @@ def _artifact(kind: ArtifactKind, filename: str) -> ArtifactRef:
     )
 
 
-def _preview_with_contact_sheet() -> PreviewResult:
+def _preview_with_contact_sheet(*, variant_trace_count: int = 1) -> PreviewResult:
     return PreviewResult(
         run_id="fake-run",
         artifacts=[_artifact("image", "image.png"), _artifact("contact_sheet", "contact-sheet.png")],
         manifest=_artifact("manifest", "manifest.json"),
         pipeline={},
-    )
-
-
-def _trace_result(*, available: bool, trace_variant_index: int | None) -> PreviewVariantTraceResult:
-    trace = (
-        PreviewVariantTrace(
-            image_index=0,
-            variant_index=trace_variant_index,
-            source_path="/dataset/input.png",
-            artifact_uri="artifact://fake-run/image.png",
-            effective_seed=0,
-        )
-        if trace_variant_index is not None
-        else None
-    )
-    return PreviewVariantTraceResult(
-        run_id="fake-run",
-        image_index=0,
-        variant_index=0,
-        available=available,
-        trace=trace,
-        message="Trace lookup fixture.",
+        variant_trace_count=variant_trace_count,
     )
 
 

@@ -520,6 +520,7 @@ class PreviewService:
             artifacts=artifacts,
             manifest=manifest,
             pipeline=request.pipeline.model_dump(mode="json", exclude_none=True),
+            variant_trace_count=len(variant_traces),
         )
 
     def compare_preview_runs(

@@ -66,6 +66,7 @@ def test_preview_rendering_records_queryable_run_index(tmp_path: Path) -> None:
     assert manifest["summary"]["transform_names"] == ["HorizontalFlip"]
     assert manifest["summary"]["artifact_counts"]["image"] == 2
     assert manifest["summary"]["variant_trace_count"] == 2
+    assert result.variant_trace_count == 2
     assert typed_summary.variant_trace_count == 2
     assert [trace["effective_seed"] for trace in manifest["variant_traces"]] == [31, 31]
     assert all(trace["applied_transforms"] == [] for trace in manifest["variant_traces"])
@@ -100,6 +101,7 @@ def test_preview_rendering_records_ordered_applied_transform_traces_and_request_
     image_artifacts = [artifact for artifact in manifest["artifacts"] if artifact["kind"] == "image"]
 
     assert manifest["summary"]["variant_trace_count"] == 4
+    assert result.variant_trace_count == 4
     assert [(trace["image_index"], trace["variant_index"]) for trace in traces] == [
         (0, 0),
         (0, 1),
