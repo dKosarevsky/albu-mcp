@@ -20,9 +20,11 @@ from albumentationsx_mcp.adapters.mcp.registration import (
 from albumentationsx_mcp.capabilities import CapabilityProfile, parse_capability_profile
 from albumentationsx_mcp.catalog import TransformCatalog
 from albumentationsx_mcp.diagnostics import DiagnosticsService
+from albumentationsx_mcp.guided_preview import GuidedPreviewService
 from albumentationsx_mcp.pipeline import PipelineService
 from albumentationsx_mcp.preview import ArtifactStore, PathPolicy, PreviewService
 from albumentationsx_mcp.preview_validation import PreviewRequestValidator
+from albumentationsx_mcp.recipes import recommend_recipe
 from albumentationsx_mcp.reports import PreviewReportService
 from albumentationsx_mcp.review import PreviewFeedbackStore
 from albumentationsx_mcp.sessions import InteractiveTuningSessionStore
@@ -61,6 +63,7 @@ OutputFormat = Literal["python", "json", "yaml"]
 def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:
     """Construct application services and register the public MCP surface."""
     settings = settings or settings_from_environment()
+    public_surface = public_surface_for_profile(settings.capability_profile)
     catalog = TransformCatalog()
     pipeline_service = PipelineService(catalog)
     path_policy = PathPolicy(settings.allowed_roots)
@@ -70,6 +73,16 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:
         pipeline_service=pipeline_service,
         path_policy=path_policy,
     )
+    guided_preview_service = GuidedPreviewService(
+        path_policy=path_policy,
+        pipeline_service=pipeline_service,
+        recipe_builder=lambda **kwargs: recommend_recipe(
+            **kwargs,
+            available_tools=set(public_surface.tools),
+        ),
+        preview_validator=preview_validator,
+        preview_service=preview_service,
+    )
     tuning_store = TuningDecisionStore(settings.artifact_root)
     session_store = InteractiveTuningSessionStore(settings.artifact_root)
     feedback_store = PreviewFeedbackStore(settings.artifact_root)
@@ -78,7 +91,7 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:
         allowed_roots=settings.allowed_roots,
         artifact_root=settings.artifact_root,
         max_preview_runs=settings.max_preview_runs,
-        public_surface=public_surface_for_profile(settings.capability_profile),
+        public_surface=public_surface,
     )
     dependencies = McpDependencies(
         catalog=catalog,
@@ -87,6 +100,7 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:
         artifact_store=artifact_store,
         preview_service=preview_service,
         preview_validator=preview_validator,
+        guided_preview_service=guided_preview_service,
         tuning_store=tuning_store,
         session_store=session_store,
         feedback_store=feedback_store,

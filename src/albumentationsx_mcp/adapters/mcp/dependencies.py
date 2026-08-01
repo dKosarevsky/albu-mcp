@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from albumentationsx_mcp.catalog import TransformCatalog
     from albumentationsx_mcp.diagnostics import DiagnosticsService
+    from albumentationsx_mcp.guided_preview import GuidedPreviewService
     from albumentationsx_mcp.pipeline import PipelineService
     from albumentationsx_mcp.preview import ArtifactStore, PathPolicy, PreviewService
     from albumentationsx_mcp.preview_validation import PreviewRequestValidator
@@ -27,6 +28,7 @@ class McpDependencies:
     artifact_store: ArtifactStore
     preview_service: PreviewService
     preview_validator: PreviewRequestValidator
+    guided_preview_service: GuidedPreviewService
     tuning_store: TuningDecisionStore
     session_store: InteractiveTuningSessionStore
     feedback_store: PreviewFeedbackStore

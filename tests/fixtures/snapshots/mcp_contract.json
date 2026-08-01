@@ -1693,6 +1693,60 @@
       }
     },
     {
+      "description": "Run one bounded, validated first preview for a local image or image directory.",
+      "name": "run_first_preview",
+      "parameters": {
+        "properties": {
+          "dataset_path": {
+            "title": "Dataset Path",
+            "type": "string"
+          },
+          "intensity": {
+            "default": "low",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Intensity",
+            "type": "string"
+          },
+          "max_images": {
+            "default": 8,
+            "maximum": 8,
+            "minimum": 1,
+            "title": "Max Images",
+            "type": "integer"
+          },
+          "targets": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Targets"
+          },
+          "task": {
+            "default": "classification",
+            "title": "Task",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dataset_path"
+        ],
+        "title": "run_first_previewArguments",
+        "type": "object"
+      }
+    },
+    {
       "description": "Run a read-only host preflight; reading the client-smoke resource is optional.",
       "name": "run_host_smoke_check",
       "parameters": {
@@ -1973,6 +2027,35 @@
           "candidate_run_id"
         ],
         "title": "summarize_tuning_sessionArguments",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Read the applied-transform trace for one rendered preview variant.",
+      "name": "trace_preview_variant",
+      "parameters": {
+        "properties": {
+          "image_index": {
+            "minimum": 0,
+            "title": "Image Index",
+            "type": "integer"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "variant_index": {
+            "minimum": 0,
+            "title": "Variant Index",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "run_id",
+          "image_index",
+          "variant_index"
+        ],
+        "title": "trace_preview_variantArguments",
         "type": "object"
       }
     },

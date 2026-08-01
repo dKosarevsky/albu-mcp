@@ -218,18 +218,26 @@ The same preview-ready shape is available in
 
 ## First Preview Workflow
 
-After configuring Claude Desktop, Claude Code, Cursor, or Codex, use the same first-preview flow:
+The guided `run_first_preview` path requires the default `full` or `dataset` capability profile. After configuring
+Claude Desktop, Claude Code, Cursor, or Codex:
 
 1. Read `albumentationsx://examples/client-smoke`; when resource reads are unavailable, call
    `get_workflow_example` with `example_id="client-smoke"`.
 2. Call `run_host_smoke_check` next.
 3. Continue only when `preview_ready` is true.
-4. Copy `preview_request_template.request` and replace the placeholder image path.
-5. Call `validate_preview_request`.
-6. Call `render_preview_batch` only when the request is valid.
+4. Call `run_first_preview` with low intensity and no more than eight images.
+5. Inspect the contact sheet, then call `trace_preview_variant` for the selected result.
+6. Use `adjust_pipeline`, render the candidate, call `compare_preview_runs`, and export only after acceptance.
+
+In the smaller `review` profile, use the explicit manual fallback: copy `preview_request_template.request` from the
+smoke report, replace its path, call `validate_preview_request`, and call `render_preview_batch` only when `valid=true`.
+Inspect the contact sheet and trace the selected variant before adjustment. Alternatively, restart with `dataset` or
+`full` for the guided call.
 
 The copyable prompt is in [examples/first_preview_workflow.md](../examples/first_preview_workflow.md).
-MCP-native hosts can also read `albumentationsx://examples/first-preview` or use the `run_first_preview_review` prompt.
+In `full` and `review`, MCP-native hosts can also read the profile-aware
+`albumentationsx://examples/first-preview` resource or use the `run_first_preview_review` prompt. The `dataset` profile
+uses the same guided tools directly.
 For the common robustness loop where a user rejects one noisy preview, read
 `albumentationsx://examples/distortion-review` or copy [examples/distortion_review_workflow.md](../examples/distortion_review_workflow.md).
 
@@ -297,8 +305,9 @@ After wiring a host, ask it to read `albumentationsx://examples/client-smoke`; w
 call `get_workflow_example` with `example_id="client-smoke"`. Then call `run_host_smoke_check`. Both example access paths
 return the same profile-aware client smoke playbook. In `review`, `dataset`, or `full`, a healthy host smoke report
 returns `preview_ready: true`, `workflow_guidance`, and a `preview_request_template`. Healthy `core` installations return
-`preview_ready: false` and recommend a preview-capable profile. After replacing the sample path, call
-`validate_preview_request` before `render_preview_batch`.
+`preview_ready: false` and recommend a preview-capable profile. Healthy `full`/`dataset` guidance calls
+`run_first_preview`; `review` guidance replaces the sample path, calls `validate_preview_request`, and then calls
+`render_preview_batch` only for a valid request.
 
 If the host connects but previews fail, ask it to read `albumentationsx://diagnostics/guide` and call
 `diagnose_environment`. The report checks AlbumentationsX import/version, `--allowed-root`, `--artifact-root`,

@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any, cast
 
 import pytest
+from PIL import Image
 
 from albumentationsx_mcp import server as server_module
 from albumentationsx_mcp.adapters.mcp.registration import PUBLIC_WORKFLOW_RESOURCES, surface_for_profile
@@ -71,6 +72,39 @@ def test_create_mcp_server_exposes_exact_profile_and_capabilities(
     assert diagnostics["status"] == "ok"
 
 
+def test_create_mcp_server_reuses_one_profile_surface_for_guided_preview(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    image_path = tmp_path / "guided.png"
+    Image.new("RGB", (24, 24), (96, 128, 160)).save(image_path)
+    calls: list[CapabilityProfile] = []
+    original = server_module.public_surface_for_profile
+
+    def recording_public_surface(profile: CapabilityProfile) -> Any:
+        calls.append(profile)
+        return original(profile)
+
+    monkeypatch.setattr(server_module, "public_surface_for_profile", recording_public_surface)
+    server = create_mcp_server(
+        ServerSettings(
+            allowed_roots=[tmp_path],
+            artifact_root=tmp_path / "artifacts",
+            capability_profile=CapabilityProfile.DATASET,
+        )
+    )
+
+    result = cast("Any", server._tool_manager._tools["run_first_preview"]).fn(
+        dataset_path=str(image_path),
+        max_images=1,
+    )
+    capabilities = json.loads(cast("Any", server._resource_manager._resources["albumentationsx://capabilities"]).fn())
+
+    assert calls == [CapabilityProfile.DATASET]
+    assert result["status"] == "rendered"
+    assert set(result["onboarding"]["recipe"]["recommended_tools"]) <= set(capabilities["tools"])
+
+
 @pytest.mark.parametrize(
     ("profile", "expected_state"),
     [
@@ -99,8 +133,15 @@ def test_host_smoke_preview_readiness_matches_active_profile(
     assert report["capability_profile"] == profile.value
     assert report["preview_ready"] is preview_ready
     assert (report["preview_request_template"] is not None) is preview_ready
-    if preview_ready:
+    if profile in {CapabilityProfile.DATASET, CapabilityProfile.FULL}:
+        assert "run_first_preview" in report["next_actions"][0]
+        assert any("trace_preview_variant" in action for action in report["next_actions"])
+        assert any("run_first_preview" in item for item in report["workflow_guidance"]["instructions"])
+    elif profile is CapabilityProfile.REVIEW:
+        assert "run_first_preview" not in " ".join(report["next_actions"])
+        assert report["next_actions"][0].startswith("Replace the placeholder input path")
         assert any("render_preview_batch" in action for action in report["next_actions"])
+        assert any("trace_preview_variant" in action for action in report["next_actions"])
     else:
         assert report["status"] == "warning"
         assert any("--capability-profile review" in action for action in report["next_actions"])
@@ -130,6 +171,7 @@ def test_server_exposes_documented_tool_names() -> None:
         "list_feedback_tags",
         "render_preview",
         "render_preview_batch",
+        "trace_preview_variant",
         "compare_preview_runs",
         "interpret_preview_feedback",
         "plan_preview_review",
@@ -161,6 +203,7 @@ def test_server_exposes_documented_tool_names() -> None:
         "validate_preview_request",
         "plan_dataset_onboarding",
         "build_review_packet",
+        "run_first_preview",
         "inspect_dataset_quality",
     }.issubset(tool_names)
 
@@ -227,6 +270,7 @@ def test_server_exposes_agent_workflow_resources() -> None:
         "compare_preview_runs_for_feedback",
         "interpret_preview_feedback",
         "plan_preview_review",
+        "trace_preview_variant",
         "run_first_preview_review",
         "summarize_tuning_session",
         "start_tuning_session",
@@ -250,6 +294,7 @@ def test_server_exposes_agent_workflow_resources() -> None:
         "validate_preview_request",
         "plan_dataset_onboarding",
         "build_review_packet",
+        "run_first_preview",
         "inspect_dataset_quality",
         "albumentationsx://diagnostics/guide",
         "albumentationsx://recipes/catalog",

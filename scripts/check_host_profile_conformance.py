@@ -7,8 +7,10 @@ import asyncio
 import hashlib
 import json
 import os
+import re
+import subprocess
 import sys
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -24,6 +26,16 @@ if not __package__:
 from albumentationsx_mcp.adapters.mcp.contracts import AdapterSurface, CombinedSurface
 from albumentationsx_mcp.adapters.mcp.registration import surface_for_profile
 from albumentationsx_mcp.capabilities import CapabilityProfile
+
+_FULL_COMMIT_ID = re.compile(r"[0-9a-f]{40}")
+_GIT_TIMEOUT_SECONDS = 5
+_PROFILE_CONFORMANCE_RELEVANT_PATHS = (
+    "src/albumentationsx_mcp",
+    "scripts/check_host_profile_conformance.py",
+    "pyproject.toml",
+    "uv.lock",
+)
+_GIT_PROVENANCE_FAILURE = "Git provenance validation failed"
 
 
 @dataclass(frozen=True)
@@ -160,6 +172,65 @@ def profile_conformance_exit_code(report: dict[str, Any]) -> int:
     return 0 if report.get("status") == "passed" else 1
 
 
+def source_head_revision(source_root: Path) -> str:
+    """Return the full commit id for source_root HEAD."""
+    head = _resolve_git_commit(source_root, "HEAD")
+    if head is None:
+        msg = "source_root Git HEAD is unavailable"
+        raise ValueError(msg)
+    return head
+
+
+def validate_generation_revision(*, source_root: Path, source_revision: str) -> str:
+    """Require publication to label the exact source-root HEAD it executes."""
+    revision = _validated_source_revision(source_revision)
+    resolved_revision = _resolve_git_commit(source_root, revision)
+    if resolved_revision is None:
+        msg = "source_revision does not identify a commit in source_root"
+        raise ValueError(msg)
+    head = source_head_revision(source_root)
+    if resolved_revision != head:
+        msg = "source_revision must equal source_root Git HEAD"
+        raise ValueError(msg)
+    return head
+
+
+def validate_committed_report_provenance(
+    report: Mapping[str, Any],
+    *,
+    source_root: Path,
+) -> str:
+    """Validate that committed evidence still describes current relevant sources."""
+    revision = _validated_source_revision(report.get("source_revision"))
+    resolved_revision = _resolve_git_commit(source_root, revision)
+    if resolved_revision is None:
+        msg = "source_revision does not identify a commit in source_root"
+        raise ValueError(msg)
+    head = source_head_revision(source_root)
+
+    ancestor_status = _git_status(source_root, "merge-base", "--is-ancestor", resolved_revision, head)
+    if ancestor_status == 1:
+        msg = "evidence source_revision is not an ancestor of source_root Git HEAD"
+        raise ValueError(msg)
+    if ancestor_status != 0:
+        raise ValueError(_GIT_PROVENANCE_FAILURE)
+
+    drift_status = _git_status(
+        source_root,
+        "diff",
+        "--quiet",
+        f"{resolved_revision}..{head}",
+        "--",
+        *_PROFILE_CONFORMANCE_RELEVANT_PATHS,
+    )
+    if drift_status == 1:
+        msg = "profile-conformance-relevant sources changed after evidence revision"
+        raise ValueError(msg)
+    if drift_status != 0:
+        raise ValueError(_GIT_PROVENANCE_FAILURE)
+    return resolved_revision
+
+
 def main() -> None:
     """Run the profile matrix and write a privacy-safe JSON report."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -178,6 +249,15 @@ def main() -> None:
         allowed_root=args.allowed_root,
         artifact_root=args.artifact_root,
     )
+    _validate_config(config)
+    try:
+        validate_generation_revision(
+            source_root=config.source_root,
+            source_revision=config.source_revision,
+        )
+    except ValueError as exc:
+        sys.stderr.write(f"host profile conformance error: {exc}\n")
+        raise SystemExit(2) from None
     report = asyncio.run(build_profile_conformance_report(config))
     if not args.output.is_absolute():
         msg = "output must be absolute"
@@ -215,6 +295,55 @@ def _require_absolute(path: Path, field: str) -> None:
     if not path.is_absolute():
         msg = f"{field} must be absolute"
         raise ValueError(msg)
+
+
+def _validated_source_revision(value: Any) -> str:
+    if not isinstance(value, str) or _FULL_COMMIT_ID.fullmatch(value) is None:
+        msg = "source_revision must be a full Git commit id"
+        raise ValueError(msg)
+    return value
+
+
+def _resolve_git_commit(source_root: Path, revision: str) -> str | None:
+    try:
+        result = subprocess.run(  # noqa: S603 - fixed Git executable with argument-list inputs only.
+            [  # noqa: S607 - Git is resolved from the controlled publication environment.
+                "git",
+                "-C",
+                str(source_root),
+                "rev-parse",
+                "--verify",
+                "--quiet",
+                f"{revision}^{{commit}}",
+            ],
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=_GIT_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        raise ValueError(_GIT_PROVENANCE_FAILURE) from None
+    if result.returncode != 0:
+        return None
+    commit_id = result.stdout.strip()
+    if _FULL_COMMIT_ID.fullmatch(commit_id) is None:
+        raise ValueError(_GIT_PROVENANCE_FAILURE)
+    return commit_id
+
+
+def _git_status(source_root: Path, *args: str) -> int:
+    try:
+        result = subprocess.run(  # noqa: S603 - fixed Git executable with argument-list inputs only.
+            ["git", "-C", str(source_root), *args],  # noqa: S607 - controlled publication environment.
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=_GIT_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        raise ValueError(_GIT_PROVENANCE_FAILURE) from None
+    return result.returncode
 
 
 def _surface_mismatches(

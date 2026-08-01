@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -19,6 +20,8 @@ _GUIDE_REQUIRED_PHRASES = (
     "examples/first_10_minutes_prompt.md",
     "docs/assets/demo/demo_report.md",
     "run_host_smoke_check",
+    "run_first_preview",
+    "trace_preview_variant",
     "plan_dataset_onboarding",
     "validate_preview_request",
     "render_preview_batch",
@@ -29,12 +32,39 @@ _GUIDE_REQUIRED_PHRASES = (
 )
 _PROMPT_REQUIRED_PHRASES = (
     "run_host_smoke_check",
+    "run_first_preview",
+    "trace_preview_variant",
     "plan_dataset_onboarding",
     "Do not render anything until validate_preview_request returns valid=true.",
     "render_preview_batch",
     "compare_preview_runs",
     "export_pipeline",
     "docs/assets/demo/demo_report.md",
+)
+_PRIMARY_WORKFLOW_ANCHORS = (
+    "run_host_smoke_check",
+    "run_first_preview",
+    "contact sheet",
+    "trace_preview_variant",
+    "adjust_pipeline",
+    "compare_preview_runs",
+    "export_pipeline",
+)
+_FALLBACK_WORKFLOW_ANCHORS = (
+    "run_host_smoke_check",
+    "preview_request_template",
+    "plan_dataset_onboarding",
+    "validate_preview_request",
+    "render_preview_batch",
+    "contact sheet",
+    "trace_preview_variant",
+    "adjust_pipeline",
+    "compare_preview_runs",
+    "export_pipeline",
+)
+_FALLBACK_MARKER_PATTERN = re.compile(
+    r"^\s*(?:#{1,6}\s*)?explicit (?:advanced/)?fallback(?: path)?:?\s*$",
+    flags=re.IGNORECASE | re.MULTILINE,
 )
 
 
@@ -78,8 +108,8 @@ def check_first_10_minutes(config: FirstTenMinutesConfig | None = None) -> First
     config = config or FirstTenMinutesConfig()
     checks = [
         _check_readme_entrypoint(config.readme_path),
-        _check_required_text("quickstart_guide", config.guide_path, required_phrases=_GUIDE_REQUIRED_PHRASES),
-        _check_required_text("host_prompt", config.prompt_path, required_phrases=_PROMPT_REQUIRED_PHRASES),
+        _check_workflow_text("quickstart_guide", config.guide_path, required_phrases=_GUIDE_REQUIRED_PHRASES),
+        _check_workflow_text("host_prompt", config.prompt_path, required_phrases=_PROMPT_REQUIRED_PHRASES),
         _check_demo_artifacts(config.demo_manifest_path, config.demo_report_path),
     ]
     return FirstTenMinutesReport(checks=checks)
@@ -129,14 +159,17 @@ def _check_readme_entrypoint(path: Path) -> FirstTenMinutesCheck:
             ok=False,
             message=f"README must link to {required_target}",
         )
+    profile_error = _guided_profile_error(text)
+    if profile_error is not None:
+        return FirstTenMinutesCheck(name="readme_entrypoint", ok=False, message=f"{path}: {profile_error}")
     return FirstTenMinutesCheck(
         name="readme_entrypoint",
         ok=True,
-        message="README links to the first-10-minutes guide",
+        message="README links to the first-10-minutes guide and names compatible guided profiles",
     )
 
 
-def _check_required_text(name: str, path: Path, *, required_phrases: tuple[str, ...]) -> FirstTenMinutesCheck:
+def _check_workflow_text(name: str, path: Path, *, required_phrases: tuple[str, ...]) -> FirstTenMinutesCheck:
     try:
         text = path.read_text(encoding="utf-8")
     except OSError as exc:
@@ -148,7 +181,83 @@ def _check_required_text(name: str, path: Path, *, required_phrases: tuple[str, 
             ok=False,
             message=f"{path} is missing required phrases: {', '.join(missing)}",
         )
-    return FirstTenMinutesCheck(name=name, ok=True, message=f"{path} has the required workflow anchors")
+    marker = _FALLBACK_MARKER_PATTERN.search(text)
+    if marker is None:
+        return FirstTenMinutesCheck(
+            name=name,
+            ok=False,
+            message=f"{path} must include an explicit fallback marker such as 'Explicit fallback:'",
+        )
+    primary = text[: marker.start()]
+    fallback = text[marker.end() :]
+    semantic_errors = (
+        _guided_profile_error(primary),
+        _ordered_workflow_error(
+            primary,
+            anchors=_PRIMARY_WORKFLOW_ANCHORS,
+            label="primary guided workflow",
+        ),
+        _ordered_workflow_error(
+            fallback,
+            anchors=_FALLBACK_WORKFLOW_ANCHORS,
+            label="fallback workflow",
+        ),
+    )
+    semantic_error = next((error for error in semantic_errors if error is not None), None)
+    if semantic_error is not None:
+        return FirstTenMinutesCheck(name=name, ok=False, message=f"{path}: {semantic_error}")
+    return FirstTenMinutesCheck(
+        name=name,
+        ok=True,
+        message=f"{path} has compatible ordered primary and fallback workflows",
+    )
+
+
+def _guided_profile_error(text: str) -> str | None:
+    segments = re.split(r"[\n.!?]+", text.casefold())
+    compatible = any(
+        "profile" in segment
+        and re.search(r"\bfull\b", segment)
+        and re.search(r"\bdataset\b", segment)
+        and ("guided" in segment or "run_first_preview" in segment)
+        for segment in segments
+    )
+    incompatible_review = any(
+        "profile" in segment
+        and re.search(r"\breview\b", segment)
+        and "run_first_preview" in segment
+        and not any(negation in segment for negation in ("not", "unavailable", "cannot", "does not", "without"))
+        for segment in segments
+    )
+    if not compatible or incompatible_review:
+        return (
+            "primary guided workflow must state that run_first_preview requires the default full or dataset "
+            "capability profile; review must use the explicit fallback or restart"
+        )
+    return None
+
+
+def _ordered_workflow_error(text: str, *, anchors: tuple[str, ...], label: str) -> str | None:
+    normalized = text.casefold()
+    cursor = 0
+    missing: list[str] = []
+    out_of_order = False
+    for anchor in anchors:
+        position = normalized.find(anchor.casefold(), cursor)
+        if position < 0:
+            if anchor.casefold() in normalized:
+                out_of_order = True
+            else:
+                missing.append(anchor)
+            continue
+        cursor = position + len(anchor)
+    if missing:
+        return f"{label} is missing required anchors: {', '.join(missing)}"
+    if out_of_order:
+        sequence = " -> ".join(anchors)
+        ordered_label = "primary workflow" if label.startswith("primary") else label
+        return f"ordered {ordered_label} must be: {sequence}"
+    return None
 
 
 def _check_demo_artifacts(manifest_path: Path, report_path: Path) -> FirstTenMinutesCheck:

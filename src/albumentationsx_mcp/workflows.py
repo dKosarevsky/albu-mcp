@@ -284,7 +284,7 @@ _HOST_EXAMPLES = {
     ),
     "first-preview": HostExample(
         name="first-preview",
-        goal="Run the first local preview only after host smoke and preview request validation pass.",
+        goal="Run, inspect, and trace the first bounded local preview before adjusting or exporting it.",
         trigger_phrase="run the first AlbumentationsX preview",
         steps=[
             HostExampleStep(
@@ -303,25 +303,52 @@ _HOST_EXAMPLES = {
             ),
             HostExampleStep(
                 order=3,
-                tool="validate_preview_request",
+                tool="run_first_preview",
                 instruction=(
-                    "Copy preview_request_template.request, replace the placeholder input path with one small image "
-                    "under an allowed root, and validate the filled request."
+                    "Call run_first_preview for the user's local image or directory with low intensity and at most "
+                    "eight images."
                 ),
-                expected_result="A valid request with normalized_request and no remediation_actions.",
+                expected_result="A bounded validated preview run with a contact sheet and trace evidence.",
             ),
             HostExampleStep(
                 order=4,
+                tool="trace_preview_variant",
+                instruction=(
+                    "After the user selects a contact-sheet result, trace it with the returned run id and zero-based "
+                    "image and variant indexes."
+                ),
+                expected_result="Ordered applied-transform execution evidence for the selected result.",
+            ),
+            HostExampleStep(
+                order=5,
+                tool="adjust_pipeline",
+                instruction="Adjust the pipeline only after the trace and concrete human feedback are available.",
+                expected_result="A candidate pipeline that addresses the selected result's feedback.",
+            ),
+            HostExampleStep(
+                order=6,
                 tool="render_preview_batch",
-                instruction="Render the validated request and show the contact sheet before increasing scope.",
-                expected_result="A preview run with contact sheet artifacts and a readable manifest.",
+                instruction="Render the candidate with the same bounded input set and deterministic seed policy.",
+                expected_result="A candidate contact sheet that can be compared with the baseline.",
+            ),
+            HostExampleStep(
+                order=7,
+                tool="compare_preview_runs",
+                instruction="Compare the baseline and candidate before asking for an acceptance decision.",
+                expected_result="A reproducible comparison with quality findings and artifact references.",
+            ),
+            HostExampleStep(
+                order=8,
+                tool="export_pipeline",
+                instruction="Export only after the user accepts the compared candidate.",
+                expected_result="An accepted reproducible pipeline with run and seed context.",
             ),
         ],
         success_criteria=[
-            "The host does not render until run_host_smoke_check returns preview_ready=true.",
-            "validate_preview_request returns valid=true for the filled local image path.",
-            "render_preview_batch uses the validated request and writes artifacts under the artifact root.",
-            "The user reviews the first contact sheet before changing intensity, batch size, or variants.",
+            "run_host_smoke_check returns preview_ready=true before run_first_preview is called.",
+            "run_first_preview returns a contact sheet for a bounded allowed-root input set.",
+            "The selected variant is traced before adjust_pipeline changes the pipeline.",
+            "The user accepts the compared candidate before export_pipeline is called.",
         ],
     ),
     "distortion-review": HostExample(
@@ -611,7 +638,12 @@ def list_host_examples() -> list[HostExample]:
     return sorted(_HOST_EXAMPLES.values(), key=lambda example: example.name)
 
 
-def get_host_example(name: str, *, preview_tools_available: bool = True) -> HostExample:
+def get_host_example(
+    name: str,
+    *,
+    preview_tools_available: bool = True,
+    guided_preview_available: bool = True,
+) -> HostExample:
     """Return one host interaction example adapted to active preview capabilities."""
     try:
         example = _HOST_EXAMPLES[name]
@@ -647,4 +679,72 @@ def get_host_example(name: str, *, preview_tools_available: bool = True) -> Host
                 ],
             }
         )
+    if name == "first-preview" and not guided_preview_available:
+        return _manual_first_preview_example(example)
     return example
+
+
+def _manual_first_preview_example(example: HostExample) -> HostExample:
+    steps = [
+        *(step.model_copy(deep=True) for step in example.steps[:2]),
+        HostExampleStep(
+            order=3,
+            tool="validate_preview_request",
+            instruction=(
+                "Copy preview_request_template.request from run_host_smoke_check, replace the placeholder input path "
+                "with one small image under an allowed root, and validate the filled request."
+            ),
+            expected_result="A valid request with normalized_request and no remediation_actions.",
+        ),
+        HostExampleStep(
+            order=4,
+            tool="render_preview_batch",
+            instruction="Render the validated request and show the contact sheet before increasing scope.",
+            expected_result="A preview run with contact sheet artifacts and a readable manifest.",
+        ),
+        HostExampleStep(
+            order=5,
+            tool="trace_preview_variant",
+            instruction=(
+                "After the user selects a contact-sheet result, trace it with the run id and zero-based image and "
+                "variant indexes."
+            ),
+            expected_result="Ordered applied-transform execution evidence for the selected result.",
+        ),
+        HostExampleStep(
+            order=6,
+            tool="adjust_pipeline",
+            instruction="Adjust the pipeline only after the trace and concrete human feedback are available.",
+            expected_result="A candidate pipeline that addresses the selected result's feedback.",
+        ),
+        HostExampleStep(
+            order=7,
+            tool="render_preview_batch",
+            instruction="Render the candidate with the same bounded input set and deterministic seed policy.",
+            expected_result="A candidate contact sheet that can be compared with the baseline.",
+        ),
+        HostExampleStep(
+            order=8,
+            tool="compare_preview_runs",
+            instruction="Compare the baseline and candidate before asking for an acceptance decision.",
+            expected_result="A reproducible comparison with quality findings and artifact references.",
+        ),
+        HostExampleStep(
+            order=9,
+            tool="export_pipeline",
+            instruction="Export only after the user accepts the compared candidate.",
+            expected_result="An accepted reproducible pipeline with run and seed context.",
+        ),
+    ]
+    return example.model_copy(
+        update={
+            "goal": "Run, inspect, and trace the first local preview through the explicit validated review path.",
+            "steps": steps,
+            "success_criteria": [
+                "run_host_smoke_check returns preview_ready=true and a preview_request_template before validation.",
+                "validate_preview_request returns valid=true before render_preview_batch is called.",
+                "The selected variant is traced before adjust_pipeline changes the pipeline.",
+                "The user accepts the compared candidate before export_pipeline is called.",
+            ],
+        }
+    )

@@ -12,6 +12,8 @@ from typing import Any
 
 from PIL import Image
 
+from albumentationsx_mcp.adapters.mcp.registration import public_surface_for_profile
+from albumentationsx_mcp.capabilities import CapabilityProfile
 from albumentationsx_mcp.catalog import TransformCatalog
 from albumentationsx_mcp.dataset import score_dataset_preview_candidates
 from albumentationsx_mcp.dataset_quality import inspect_dataset_quality
@@ -368,31 +370,54 @@ def _diagnostics_missing_allowed_root(root: Path) -> dict[str, Any]:
 def _host_smoke_ready(root: Path) -> dict[str, Any]:
     images_root = root / "host-smoke" / "images"
     images_root.mkdir(parents=True)
+    public_surface = _diagnostics_public_surface()
     diagnostics = DiagnosticsService(
         allowed_roots=[images_root],
         artifact_root=root / "host-smoke" / "artifacts",
         max_preview_runs=100,
-        public_surface=_diagnostics_public_surface(),
+        public_surface=public_surface,
     ).diagnose(include_write_probe=True)
-    return _normalize_host_smoke_report(_host_smoke_report(diagnostics).model_dump(mode="json"), root)
+    report = _host_smoke_report(
+        diagnostics,
+        guided_preview_available="run_first_preview" in public_surface.tools,
+        trace_preview_available="trace_preview_variant" in public_surface.tools,
+    )
+    return _normalize_host_smoke_report(report.model_dump(mode="json"), root)
 
 
 def _host_smoke_missing_allowed_root(root: Path) -> dict[str, Any]:
+    public_surface = _diagnostics_public_surface()
     diagnostics = DiagnosticsService(
         allowed_roots=[root / "host-smoke" / "missing-images"],
         artifact_root=root / "host-smoke-missing-root" / "artifacts",
         max_preview_runs=100,
-        public_surface=_diagnostics_public_surface(),
+        public_surface=public_surface,
     ).diagnose(include_write_probe=False)
-    return _normalize_host_smoke_report(_host_smoke_report(diagnostics).model_dump(mode="json"), root)
+    report = _host_smoke_report(
+        diagnostics,
+        guided_preview_available="run_first_preview" in public_surface.tools,
+        trace_preview_available="trace_preview_variant" in public_surface.tools,
+    )
+    return _normalize_host_smoke_report(report.model_dump(mode="json"), root)
 
 
-def _host_smoke_report(diagnostics_report: DiagnosticsReport) -> HostSmokeReport:
+def _host_smoke_report(
+    diagnostics_report: DiagnosticsReport,
+    *,
+    guided_preview_available: bool,
+    trace_preview_available: bool,
+) -> HostSmokeReport:
     catalog = TransformCatalog()
     pipeline_service = PipelineService(catalog)
     recipe = recommend_recipe("classification", intensity="low", targets=["image"])
     validation = pipeline_service.validate_pipeline(recipe.pipeline, TargetSpec(targets=recipe.targets))
-    return build_host_smoke_report(diagnostics=diagnostics_report, recipe=recipe, validation=validation)
+    return build_host_smoke_report(
+        diagnostics=diagnostics_report,
+        recipe=recipe,
+        validation=validation,
+        guided_preview_available=guided_preview_available,
+        trace_preview_available=trace_preview_available,
+    )
 
 
 def _dataset_onboarding_ready(root: Path) -> dict[str, Any]:
@@ -552,73 +577,7 @@ def _preview_request(image_path: Path) -> dict[str, Any]:
 
 
 def _diagnostics_public_surface() -> PublicSurface:
-    return PublicSurface(
-        tools=[
-            "search_transforms",
-            "get_transform_schema",
-            "validate_pipeline",
-            "recommend_pipeline",
-            "adjust_pipeline",
-            "explain_pipeline",
-            "list_feedback_tags",
-            "render_preview",
-            "render_preview_batch",
-            "compare_preview_runs",
-            "interpret_preview_feedback",
-            "plan_preview_review",
-            "summarize_tuning_session",
-            "start_tuning_session",
-            "record_tuning_session_step",
-            "list_tuning_sessions",
-            "export_tuning_session",
-            "close_tuning_session",
-            "archive_tuning_session",
-            "cleanup_tuning_sessions",
-            "rank_preview_candidates",
-            "score_dataset_preview_candidates",
-            "list_quality_profiles",
-            "recommend_recipe",
-            "record_preview_feedback",
-            "list_preview_feedback",
-            "record_tuning_decision",
-            "list_tuning_decisions",
-            "export_tuning_report",
-            "export_preview_report",
-            "list_preview_runs",
-            "get_preview_manifest",
-            "delete_preview_run",
-            "cleanup_preview_runs",
-            "export_pipeline",
-            "diagnose_environment",
-            "run_host_smoke_check",
-            "validate_preview_request",
-            "plan_dataset_onboarding",
-            "build_review_packet",
-            "inspect_dataset_quality",
-        ],
-        prompts=[
-            "build_robustness_augmentation_session",
-            "run_first_preview_review",
-            "compare_preview_runs_for_feedback",
-            "tune_pipeline_from_preview_feedback",
-            "export_reproducible_pipeline",
-        ],
-        workflow_resources=[
-            "albumentationsx://workflows/catalog",
-            "albumentationsx://workflows/preview-tuning",
-            "albumentationsx://workflows/annotation-preview",
-            "albumentationsx://workflows/task-profiles",
-            "albumentationsx://recipes/catalog",
-            "albumentationsx://diagnostics/guide",
-            "albumentationsx://examples/client-smoke",
-            "albumentationsx://examples/first-preview",
-            "albumentationsx://examples/distortion-review",
-            "albumentationsx://examples/dataset-onboarding",
-            "albumentationsx://examples/diagnostics",
-            "albumentationsx://examples/review-loop",
-            "albumentationsx://examples/report-handoff",
-        ],
-    )
+    return public_surface_for_profile(CapabilityProfile.FULL)
 
 
 def _normalize_feedback_record(record: PreviewFeedbackRecord) -> dict[str, Any]:

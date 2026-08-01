@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+import scripts.check_host_profile_conformance as profile_conformance
 from albumentationsx_mcp.adapters.mcp.registration import surface_for_profile
 from albumentationsx_mcp.capabilities import CapabilityProfile
 from scripts.check_host_profile_conformance import (
@@ -119,16 +120,75 @@ def test_profile_conformance_report_is_deterministic_and_privacy_safe(
 def test_committed_profile_conformance_report_matches_current_contract(tmp_path: Path) -> None:
     report_path = Path("docs/host-evidence/profile-conformance-2026-07-15.json")
     committed = json.loads(report_path.read_text(encoding="utf-8"))
+    source_root = Path.cwd().resolve()
+    profile_conformance.validate_committed_report_provenance(committed, source_root=source_root)
+    current_revision = _git_stdout(source_root, "rev-parse", "HEAD")
     allowed_root = Path("docs/assets/demo/inputs").resolve()
     config = ProfileConformanceConfig(
         server_python=Path(sys.executable).absolute(),
-        source_root=Path.cwd().resolve(),
-        source_revision=committed["source_revision"],
+        source_root=source_root,
+        source_revision=current_revision,
         allowed_root=allowed_root,
         artifact_root=tmp_path / "artifacts",
     )
 
-    assert asyncio.run(build_profile_conformance_report(config)) == committed
+    current = asyncio.run(build_profile_conformance_report(config))
+    assert current["profiles"] == committed["profiles"]
+    assert {key: value for key, value in current.items() if key != "source_revision"} == {
+        key: value for key, value in committed.items() if key != "source_revision"
+    }
+    assert current["source_revision"] == current_revision
+
+
+@pytest.mark.parametrize(
+    ("revision", "expected_error"),
+    [
+        ("not-a-commit", "source_revision must be a full Git commit id"),
+        ("f" * 40, "source_revision does not identify a commit in source_root"),
+    ],
+)
+def test_committed_profile_conformance_provenance_rejects_fake_revision(
+    revision: str,
+    expected_error: str,
+) -> None:
+    with pytest.raises(ValueError, match=rf"^{expected_error}$") as exc_info:
+        profile_conformance.validate_committed_report_provenance(
+            {"source_revision": revision},
+            source_root=Path.cwd().resolve(),
+        )
+
+    assert str(exc_info.value) == expected_error
+    assert revision not in str(exc_info.value)
+
+
+def test_committed_profile_conformance_provenance_rejects_relevant_source_drift(tmp_path: Path) -> None:
+    source_root = tmp_path / "source"
+    source_root.mkdir()
+    _run_git(source_root, "init", "--quiet")
+    _run_git(source_root, "config", "user.name", "Profile Conformance Test")
+    _run_git(source_root, "config", "user.email", "profile-conformance@example.invalid")
+    runtime_source = source_root / "src" / "albumentationsx_mcp" / "runtime.py"
+    runtime_source.parent.mkdir(parents=True)
+    runtime_source.write_text("STATE = 'before'\n", encoding="utf-8")
+    _run_git(source_root, "add", "--", "src/albumentationsx_mcp/runtime.py")
+    _run_git(source_root, "commit", "--quiet", "-m", "test: baseline")
+    evidence_revision = _git_stdout(source_root, "rev-parse", "HEAD")
+    runtime_source.write_text("STATE = 'after'\n", encoding="utf-8")
+    _run_git(source_root, "add", "--", "src/albumentationsx_mcp/runtime.py")
+    _run_git(source_root, "commit", "--quiet", "-m", "test: relevant drift")
+
+    with pytest.raises(
+        ValueError,
+        match=r"^profile-conformance-relevant sources changed after evidence revision$",
+    ) as exc_info:
+        profile_conformance.validate_committed_report_provenance(
+            {"source_revision": evidence_revision},
+            source_root=source_root,
+        )
+
+    assert str(exc_info.value) == "profile-conformance-relevant sources changed after evidence revision"
+    assert str(source_root) not in str(exc_info.value)
+    assert evidence_revision not in str(exc_info.value)
 
 
 def test_profile_conformance_exit_code_rejects_failed_report() -> None:
@@ -140,6 +200,7 @@ def test_profile_conformance_cli_writes_passed_report(
     tmp_path: Path,
 ) -> None:
     output = tmp_path / "profile-conformance.json"
+    current_revision = _git_stdout(conformance_config.source_root, "rev-parse", "HEAD")
 
     result = subprocess.run(  # noqa: S603 - static script with controlled fixture paths.
         [
@@ -150,7 +211,7 @@ def test_profile_conformance_cli_writes_passed_report(
             "--source-root",
             str(conformance_config.source_root),
             "--revision",
-            conformance_config.source_revision,
+            current_revision,
             "--allowed-root",
             str(conformance_config.allowed_root),
             "--artifact-root",
@@ -164,9 +225,62 @@ def test_profile_conformance_cli_writes_passed_report(
     )
 
     assert result.stdout == f"host profile conformance passed; wrote report to {output}\n"
-    assert json.loads(output.read_text(encoding="utf-8"))["status"] == "passed"
+    written = json.loads(output.read_text(encoding="utf-8"))
+    assert written["status"] == "passed"
+    assert written["source_revision"] == current_revision
+
+
+def test_profile_conformance_cli_rejects_revision_that_is_not_head(
+    conformance_config: ProfileConformanceConfig,
+    tmp_path: Path,
+) -> None:
+    output = tmp_path / "profile-conformance.json"
+    ancestor_revision = _git_stdout(conformance_config.source_root, "rev-parse", "HEAD^")
+
+    result = subprocess.run(  # noqa: S603 - static script with controlled fixture paths.
+        [
+            sys.executable,
+            "scripts/check_host_profile_conformance.py",
+            "--server-python",
+            str(conformance_config.server_python),
+            "--source-root",
+            str(conformance_config.source_root),
+            "--revision",
+            ancestor_revision,
+            "--allowed-root",
+            str(conformance_config.allowed_root),
+            "--artifact-root",
+            str(conformance_config.artifact_root),
+            "--output",
+            str(output),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 2
+    assert result.stdout == ""
+    assert result.stderr == "host profile conformance error: source_revision must equal source_root Git HEAD\n"
+    assert ancestor_revision not in result.stderr
+    assert str(conformance_config.source_root) not in result.stderr
+    assert not output.exists()
 
 
 def _surface_digest(values: tuple[str, ...]) -> str:
     encoded = json.dumps(list(values), ensure_ascii=True, separators=(",", ":")).encode()
     return hashlib.sha256(encoded).hexdigest()
+
+
+def _run_git(source_root: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(  # noqa: S603 - fixed Git executable with argument-list inputs only.
+        ["git", "-C", str(source_root), *args],  # noqa: S607 - test environment Git.
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=5,
+    )
+
+
+def _git_stdout(source_root: Path, *args: str) -> str:
+    return _run_git(source_root, *args).stdout.strip()

@@ -85,6 +85,7 @@ def test_render_preview_records_annotation_observations(tmp_path: Path) -> None:
     manifest = service.artifact_store.read_manifest(result.run_id)
 
     assert manifest["summary"]["annotation_observation_count"] == 1
+    assert manifest["summary"]["variant_trace_count"] == 1
     assert manifest["annotation_observations"] == [
         {
             "image_index": 0,
@@ -97,6 +98,10 @@ def test_render_preview_records_annotation_observations(tmp_path: Path) -> None:
             "output_mask_coverage": 0.25,
         }
     ]
+    assert len(manifest["variant_traces"]) == 1
+    assert manifest["variant_traces"][0]["image_index"] == 0
+    assert manifest["variant_traces"][0]["variant_index"] == 0
+    assert manifest["variant_traces"][0]["applied_transforms"] == []
 
 
 def test_render_preview_rasterizes_polygon_masks_for_overlay_observations(tmp_path: Path) -> None:

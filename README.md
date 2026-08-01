@@ -30,7 +30,8 @@ uvx --from albumentationsx-mcp albumentationsx-mcp \
   --artifact-root /absolute/path/to/albu-artifacts
 ```
 
-`full` is the v1.x default. Add `--capability-profile review` for a preview-focused tool surface; see
+`run_first_preview` requires the default `full` or `dataset` capability profile. The smaller `review` profile uses the
+explicit validate/render fallback in the usage guide, or you can restart with `dataset` or `full`; see
 [configuration](docs/CONFIGURATION.md). Copyable host configurations are in [the install guide](docs/INSTALL.md).
 The repository also contains a native Codex plugin bundle. `npx skills add dKosarevsky/albu-mcp` installs agent guidance, not the MCP server.
 
@@ -39,15 +40,18 @@ The repository also contains a native Codex plugin bundle. `npx skills add dKosa
 After connecting the server, ask your host:
 
 ```text
-Use AlbumentationsX MCP on /absolute/path/to/images.
-Run the smoke check, start with a low-intensity pipeline, validate the request,
-render one variant per image, and show me the contact sheet before exporting anything.
+Run the host smoke check. If preview_ready is true, call run_first_preview for /absolute/path/to/images with low
+intensity and at most 8 images. Show me the contact sheet. When I mention a specific result, call
+trace_preview_variant before adjusting it.
 ```
 
-1. Read `albumentationsx://examples/client-smoke`; if resource reads are unavailable, call `get_workflow_example` with `example_id="client-smoke"`.
-2. Call `run_host_smoke_check`; continue only when `preview_ready` is true, using its `preview_request_template`.
-3. Call `validate_preview_request` before rendering and compare preview runs before accepting a candidate.
-4. Give concrete feedback such as `too_noisy:high` or `exposure_too_weak:medium`, then export the final pipeline.
+`run_host_smoke_check` returns `preview_ready` and a `preview_request_template`. If resource reads are unavailable, call
+`get_workflow_example` with `example_id="client-smoke"`.
+
+Follow the [First 10 Minutes guide](docs/FIRST_10_MINUTES.md). Detailed guided and advanced workflows, including the
+explicit `validate_preview_request` fallback, batch previews, and how to compare preview runs, are in
+[Usage](docs/USAGE.md). Give concrete feedback such as `too_noisy:high` or `exposure_too_weak:medium` before accepting a
+result.
 
 If setup fails, read `albumentationsx://diagnostics/guide` and call `diagnose_environment` for bounded remediation actions.
 

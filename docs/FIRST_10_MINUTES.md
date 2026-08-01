@@ -5,19 +5,23 @@ This guide is the shortest path from installation to a useful AlbumentationsX MC
 1. start the server with bounded local access;
 2. connect it to an MCP host;
 3. run the host smoke check;
-4. render a small preview batch;
-5. give feedback;
-6. export the accepted pipeline.
+4. run one guided first preview;
+5. inspect the contact sheet and trace a selected result;
+6. adjust, compare, and export the accepted pipeline.
 
 For full installation details, see [docs/INSTALL.md](INSTALL.md). For the complete tool workflow, see
 [docs/USAGE.md](USAGE.md).
+
+The guided `run_first_preview` workflow requires the default `full` or `dataset` capability profile. The `review`
+profile uses the explicit fallback below, or you can restart with `dataset` or `full`.
 
 ## What you should have after 10 minutes
 
 - a working MCP server process;
 - a host-visible `run_host_smoke_check` result;
-- a validated preview request for one local image or a small image directory;
+- a bounded, validated `run_first_preview` result for one local image or a small image directory;
 - a contact sheet or a reference demo report;
+- an applied-transform trace for a selected result;
 - one feedback-driven candidate pipeline;
 - an exported Python or JSON pipeline.
 
@@ -68,21 +72,23 @@ Continue only if preview_ready is true. If it is not ready, explain the remediat
 The smoke check verifies environment basics, bounded preview roots, artifact output, recipe recommendation, pipeline
 validation, and a preview request template. Fix this before rendering any local image paths.
 
-## 6-8 minutes: render a first preview
+## 6-8 minutes: render and trace a first preview
 
 Use the copyable prompt in [examples/first_10_minutes_prompt.md](../examples/first_10_minutes_prompt.md). Replace the
 dataset path with a folder under `--allowed-root`.
 
 The host should follow this sequence:
 
-1. call `plan_dataset_onboarding`;
-2. inspect the returned `preview_request_template`;
-3. call `validate_preview_request`;
-4. call `render_preview_batch` only after validation succeeds;
-5. open the contact sheet and summarize what changed.
+1. call `run_first_preview` with low intensity and `max_images` no greater than 8;
+2. open the returned contact sheet, or follow `next_actions` if the result is blocked;
+3. when you identify a specific result, call `trace_preview_variant` with the returned run id and its zero-based image
+   and variant indexes;
+4. summarize the applied transforms before making an adjustment.
 
-For detection and segmentation folders, onboarding can detect common COCO, YOLO, COCO segmentation, COCO RLE, and
-YOLO-seg layouts. The generated template keeps masks and bounding boxes aligned with the declared pipeline targets.
+`max_images` must be from 1 through 8, and the image or directory path must be under an allowed root.
+
+The guided tool includes dataset onboarding, so detection and segmentation folders can still detect common COCO, YOLO,
+COCO segmentation, COCO RLE, and YOLO-seg layouts while keeping masks and bounding boxes aligned with pipeline targets.
 
 ## 8-10 minutes: tune and export
 
@@ -93,7 +99,7 @@ The geometric variation is useful, but examples 3 and 8 are too noisy. Reduce no
 Compare the adjusted preview with the baseline before exporting anything.
 ```
 
-The host should then call:
+After tracing the selected result, the host should call:
 
 1. `adjust_pipeline` to create a candidate;
 2. `render_preview_batch` to render the candidate;
@@ -102,6 +108,19 @@ The host should then call:
 
 Ask for Python when you want code for a training pipeline. Ask for JSON or YAML when you want a reviewable configuration
 artifact.
+
+### Explicit fallback
+
+Use this sequence in the `review` profile, or when a `full`/`dataset` host must inspect or edit the generated request:
+
+1. call `run_host_smoke_check` and continue only when `preview_ready` is true;
+2. copy `preview_request_template.request`; a `full`/`dataset` host may call `plan_dataset_onboarding` first;
+3. call `validate_preview_request` with that request;
+4. Do not render anything until validate_preview_request returns valid=true.
+5. call `render_preview_batch`, then open the contact sheet;
+6. when you identify a result, call `trace_preview_variant` with its zero-based indexes;
+7. call `adjust_pipeline`, render the candidate, and use `compare_preview_runs`;
+8. call `export_pipeline` only when you accept the result.
 
 ## Fallback demo path
 
@@ -136,7 +155,7 @@ After a real MCP host completes this workflow, record the result separately from
 ```bash
 uv run python scripts/record_host_manual_run.py --kind first-10-minutes --host Codex --status passed \
   --date 2026-06-22 \
-  --evidence "Codex completed smoke check, preview validation, baseline and candidate render, comparison, and export." \
+  --evidence "Codex completed smoke check, guided preview, selected-variant trace, adjustment, comparison, and export." \
   --artifact docs/assets/demo/demo_report.md
 uv run python scripts/check_first_10_minutes_replay.py --host Codex
 ```

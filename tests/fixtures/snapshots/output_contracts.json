@@ -1847,9 +1847,10 @@
       },
       "instructions": [
         "Read albumentationsx://examples/client-smoke when the host exposes resource reads; if resource reads are unavailable, call get_workflow_example with example_id=\"client-smoke\".",
-        "Continue to preview validation and rendering only when preview_ready is true.",
-        "Call validate_preview_request before render_preview_batch.",
-        "Keep the first preview bounded to one small image and one variant."
+        "Continue only when preview_ready is true.",
+        "Call run_first_preview for one local image or directory under an allowed root with low intensity and at most eight images.",
+        "Inspect the contact sheet, then call trace_preview_variant for the selected zero-based image and variant indexes before adjustment.",
+        "For explicit manual control, use preview_request_template.request as a fallback: call validate_preview_request before render_preview_batch."
       ],
       "resource_access": "optional",
       "resource_uri": "albumentationsx://examples/client-smoke"
@@ -2041,10 +2042,11 @@
       "warnings": []
     },
     "next_actions": [
-      "Replace the placeholder input path with one small image under an allowed root.",
-      "Call `validate_preview_request` with `preview_request_template.request`.",
-      "Call `render_preview_batch` with `preview_request_template.request`.",
-      "Inspect the contact sheet before increasing variants, intensity, or batch size."
+      "Call `run_first_preview` for one local image or directory under an allowed root with `intensity=low` and `max_images<=8`.",
+      "Inspect the returned contact sheet before changing the pipeline.",
+      "Call `trace_preview_variant` for the selected zero-based image and variant indexes.",
+      "Use `adjust_pipeline` only after the trace and human feedback are available.",
+      "Call `compare_preview_runs`, then `export_pipeline` only after the user accepts the candidate."
     ],
     "preview_ready": true,
     "preview_request_template": {
@@ -2120,9 +2122,10 @@
       },
       "instructions": [
         "Read albumentationsx://examples/client-smoke when the host exposes resource reads; if resource reads are unavailable, call get_workflow_example with example_id=\"client-smoke\".",
-        "Continue to preview validation and rendering only when preview_ready is true.",
-        "Call validate_preview_request before render_preview_batch.",
-        "Keep the first preview bounded to one small image and one variant."
+        "Continue only when preview_ready is true.",
+        "Call run_first_preview for one local image or directory under an allowed root with low intensity and at most eight images.",
+        "Inspect the contact sheet, then call trace_preview_variant for the selected zero-based image and variant indexes before adjustment.",
+        "For explicit manual control, use preview_request_template.request as a fallback: call validate_preview_request before render_preview_batch."
       ],
       "resource_access": "optional",
       "resource_uri": "albumentationsx://examples/client-smoke"

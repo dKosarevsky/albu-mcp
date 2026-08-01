@@ -2,6 +2,21 @@
 
 from __future__ import annotations
 
+from collections.abc import Collection
+
+_DEFAULT_FIRST_PREVIEW_TOOLS = frozenset(
+    {
+        "adjust_pipeline",
+        "compare_preview_runs",
+        "export_pipeline",
+        "render_preview_batch",
+        "run_first_preview",
+        "run_host_smoke_check",
+        "trace_preview_variant",
+        "validate_preview_request",
+    }
+)
+
 
 def build_robustness_augmentation_session(task: str, targets: str = "image") -> str:
     """Guide preview-driven augmentation tuning for a robustness dataset pass."""
@@ -28,18 +43,57 @@ def run_first_preview_review(
     task: str = "classification",
     input_path: str = "/absolute/path/to/images/sample.jpg",
     targets: str = "image",
+    *,
+    available_tools: Collection[str] | None = None,
 ) -> str:
-    """Guide an assistant through the first local preview with pre-render validation."""
-    return (
+    """Guide an assistant through the active profile's first-preview path."""
+    tools = _DEFAULT_FIRST_PREVIEW_TOOLS if available_tools is None else frozenset(available_tools)
+    normalized_targets = _normalize_prompt_targets(targets)
+    smoke_targets = f" with targets {normalized_targets!r}" if normalized_targets is not None else ""
+    parts = [
         "Use AlbumentationsX MCP to run the first local preview safely. "
         "Read albumentationsx://examples/client-smoke when the host exposes resource reads; if resource reads are "
         'unavailable, call get_workflow_example with example_id="client-smoke". Then call run_host_smoke_check '
-        f"for task {task!r} with targets {targets!r}. Continue only when preview_ready is true. "
-        "Copy preview_request_template.request, replace its input_paths value with "
-        f"{input_path!r}, call validate_preview_request, and call render_preview_batch only when "
-        "the validation report has valid=true. Show the contact sheet before increasing intensity, "
-        "batch size, or variants."
-    )
+        f"for task {task!r}{smoke_targets}. Continue only when preview_ready is true. "
+    ]
+    if "run_first_preview" in tools:
+        guided_arguments = [
+            f"dataset_path={input_path!r}",
+            f"task={task!r}",
+            "intensity='low'",
+        ]
+        if normalized_targets is not None:
+            guided_arguments.append(f"targets={normalized_targets!r}")
+        guided_arguments.append("max_images=8")
+        parts.append(f"Call run_first_preview with {', '.join(guided_arguments)}. Show the returned contact sheet. ")
+    elif {"validate_preview_request", "render_preview_batch"} <= tools:
+        parts.append(
+            "Copy preview_request_template.request, replace its input_paths value with "
+            f"{input_path!r}, call validate_preview_request, and call render_preview_batch only when "
+            "the validation report has valid=true. Show the contact sheet. "
+        )
+    else:
+        parts.append("Follow the smoke report's remediation actions before attempting a local preview. ")
+
+    if "trace_preview_variant" in tools:
+        parts.append(
+            "When the user selects a contact sheet result, call trace_preview_variant with the returned run id and "
+            "zero-based image_index and variant_index before adjusting the pipeline. "
+        )
+    if "adjust_pipeline" in tools:
+        parts.append(
+            "After trace evidence and human feedback are available, call adjust_pipeline and render a candidate. "
+        )
+    if "compare_preview_runs" in tools:
+        parts.append("Call compare_preview_runs before asking the user to accept the candidate. ")
+    if "export_pipeline" in tools:
+        parts.append("Call export_pipeline only after the user accepts the comparison.")
+    return "".join(parts)
+
+
+def _normalize_prompt_targets(targets: str) -> list[str] | None:
+    normalized = [target.strip() for target in targets.split(",") if target.strip()]
+    return normalized or None
 
 
 def tune_pipeline_from_preview_feedback(task: str, run_id: str, feedback_tags: str) -> str:

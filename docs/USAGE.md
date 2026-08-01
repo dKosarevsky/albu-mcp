@@ -15,9 +15,9 @@ After connecting a new host, read `albumentationsx://examples/client-smoke`; whe
 `get_workflow_example` with `example_id="client-smoke"`. Then call `run_host_smoke_check` before rendering local previews.
 When preview setup is unclear, read `albumentationsx://diagnostics/guide` and call `diagnose_environment` before
 changing augmentation pipelines.
-For a single read-only preflight, call `run_host_smoke_check` and continue only when `preview_ready` is true. For one
-real local image or an image directory, read `albumentationsx://examples/dataset-onboarding` and call
-`plan_dataset_onboarding` before rendering.
+For a single read-only preflight, call `run_host_smoke_check` and continue only when `preview_ready` is true. Then prefer
+`run_first_preview` for one real local image or image directory in the default `full` or `dataset` profile. The `review`
+profile uses the explicit manual fallback below, or the host can restart with `dataset` or `full`.
 
 Use `examples/claude_desktop_config.json` as a starting point and replace `/path/to/albu-mcp` with the repository path:
 
@@ -46,33 +46,36 @@ retention limit for long-running MCP hosts.
 
 ## Agent Workflow
 
+The guided preview steps below require the default `full` or `dataset` capability profile. In `review`, follow the
+explicit manual fallback and rejoin the workflow at selected-variant tracing.
+
 1. Call `recommend_recipe` for the target task, intensity, quality profile, feedback tags, explanations, and next tools.
 2. Call `plan_augmentation_policy` when the user asks for a task/objective policy rather than a generic recipe.
 3. Call `plan_policy_iteration` when concrete candidate feedback should drive the next preview-gated policy loop.
 4. Call `diagnose_environment` if roots, artifacts, or host discovery are uncertain.
 5. Call `validate_pipeline` before rendering or exporting.
-6. Call `run_host_smoke_check`; when `preview_ready` is true, replace the placeholder path in
-   `preview_request_template.request`.
-7. For one real image or a directory, call `plan_dataset_onboarding` with `dataset_path`, task, targets, and `max_images`.
-8. Call `validate_preview_request` after filling or receiving local image paths and before rendering.
-9. Call `explain_pipeline` to identify likely preview risks and feedback tags.
-10. Call `render_preview_batch` on a small local image set.
-11. Review the generated `contact_sheet` artifact.
-12. Use `compare_preview_runs` when comparing a baseline preview to an adjusted candidate preview.
-13. Review `suggested_feedback_tags` as candidates, then ask the user which tags match the contact sheets.
-14. Call `adjust_pipeline` with tags from `list_feedback_tags`, for example `too_noisy`, `too_noisy:high`, or
+6. Call `explain_pipeline` to identify likely preview risks and feedback tags.
+7. Call `run_host_smoke_check` and continue only when `preview_ready` is true.
+8. Call `run_first_preview` for one real image or directory with low intensity and at most eight images.
+9. Review the generated `contact_sheet` artifact.
+10. When the user identifies a result, call `trace_preview_variant` with its run id and zero-based image and variant
+    indexes.
+11. Review `suggested_feedback_tags` as candidates, then ask the user which tags match the contact sheet.
+12. Call `adjust_pipeline` with tags from `list_feedback_tags`, for example `too_noisy`, `too_noisy:high`, or
    `too_distorted`.
-15. Re-render one or more candidates with the same input set.
-16. Call `rank_preview_candidates` when multiple candidates need comparison.
-17. Call `score_dataset_preview_candidates` to inspect cross-candidate metric ranges and finding counts.
-18. Call `record_preview_feedback` when the user points to a concrete image and variant, for example
+13. Re-render one or more candidates with `render_preview_batch` and the same input set.
+14. Use `compare_preview_runs` to compare the baseline with each adjusted candidate.
+15. Call `rank_preview_candidates` when multiple candidates need comparison.
+16. Call `score_dataset_preview_candidates` to inspect cross-candidate metric ranges and finding counts.
+17. Call `record_preview_feedback` when the user points to a concrete image and variant, for example
     "example 8 is too noisy".
-19. Call `list_preview_feedback` and reuse `aggregated_feedback_tags` for the next `adjust_pipeline` call.
-20. Call `start_tuning_session` when the review will take multiple user feedback turns.
-21. Call `record_tuning_session_step` after each baseline-to-candidate comparison.
-22. Call `record_tuning_decision` for one-off accepted or rejected candidate decisions.
-23. Call `export_preview_report` for a visual Markdown or HTML handoff that includes matching concrete feedback.
-24. Call `export_tuning_session` or `export_tuning_report`, then `export_pipeline` once the preview set is acceptable.
+18. Call `list_preview_feedback` and reuse `aggregated_feedback_tags` for the next `adjust_pipeline` call.
+19. Call `start_tuning_session` when the review will take multiple user feedback turns.
+20. Call `record_tuning_session_step` after each baseline-to-candidate comparison.
+21. Call `record_tuning_decision` for one-off accepted or rejected candidate decisions.
+22. Call `export_preview_report` for a visual Markdown or HTML handoff that includes matching concrete feedback.
+23. Call `export_tuning_session` or `export_tuning_report` for the review record.
+24. Call `export_pipeline` once the preview set is acceptable.
 
 ## Operator CLI
 
@@ -215,11 +218,57 @@ Read `albumentationsx://diagnostics/guide` for the canonical troubleshooting flo
 
 Use `run_host_smoke_check` after connecting a host and before the first local preview. It combines
 `diagnose_environment`, `recommend_recipe`, and `validate_pipeline` into one read-only report. When `preview_ready` is
-true, copy `preview_request_template.request`, replace the placeholder input path with one small image under an allowed
-root, call `validate_preview_request`, then call `render_preview_batch`. When `preview_ready` is false, follow
-`remediation_actions` before rendering. Its `workflow_guidance` is complete even when the host can list MCP resources
-but does not expose resource reads directly to the model; `fallback_tool` contains the canonical
-`get_workflow_example` call.
+true, its profile-aware guidance starts with `run_first_preview` in `full`/`dataset`, or with the returned
+`preview_request_template` followed by validation and rendering in `review`. When `preview_ready` is false, follow
+`remediation_actions` before rendering. The template remains available as a manual fallback. If resource reads are not
+available to the model, `fallback_tool` contains the canonical `get_workflow_example` call.
+
+## Guided First Preview: `run_first_preview`
+
+`run_first_preview` is the preferred bounded, validated one-call path for a first preview in the default `full` or
+`dataset` profile. It coordinates dataset onboarding, request validation, one conservative render, and contact-sheet
+creation:
+
+```json
+{
+  "dataset_path": "/absolute/path/to/images",
+  "intensity": "low",
+  "max_images": 8
+}
+```
+
+`max_images` accepts only 1 through 8. The dataset path and rendered inputs must stay under configured allowed roots;
+invalid paths return a blocked result before rendering. On success, use `contact_sheet` for review and `preview.run_id`
+for the selected-variant trace.
+
+The natural next flow is: inspect the contact sheet -> call `trace_preview_variant` for the selected result ->
+`adjust_pipeline` -> render the candidate -> `compare_preview_runs` -> `export_pipeline` after acceptance.
+
+## Preview Variant Traces: `trace_preview_variant`
+
+Call `trace_preview_variant` with a preview `run_id`, `image_index`, and `variant_index`; both indexes are zero-based.
+It returns the effective seed and ordered applied transforms with sampled parameters for that rendered result. Legacy
+manifests without trace metadata return `available=false` rather than fabricating evidence. Large array values are
+represented by bounded deterministic summaries instead of unbounded payloads.
+
+Traces are execution evidence, not semantic acceptance decisions. Human review still decides whether to accept or
+reject a result before adjustment or export.
+
+## Explicit Manual First-Preview Fallback
+
+Use this path in the `review` profile, where `run_first_preview` is unavailable. Call `run_host_smoke_check`, continue
+only when `preview_ready=true`, copy `preview_request_template.request`, replace its placeholder path, call
+`validate_preview_request`, and call `render_preview_batch` only when `valid=true`.
+
+For a `full`/`dataset` host that must inspect or edit onboarding, keep the explicit advanced
+`plan_dataset_onboarding` -> `validate_preview_request` -> `render_preview_batch` sequence:
+
+1. Call `plan_dataset_onboarding` and inspect `preview_request_template.request`.
+2. Call `validate_preview_request` with that request and continue only when `valid=true`.
+3. Call `render_preview_batch` with the normalized request and inspect its contact sheet.
+
+After either manual path, call `trace_preview_variant` for the selected zero-based indexes before `adjust_pipeline`,
+then render the candidate, call `compare_preview_runs`, and use `export_pipeline` only after human acceptance.
 
 ## Dataset Onboarding
 
@@ -515,8 +564,8 @@ uv run pytest tests/test_output_contract_snapshots.py -q
 - `albumentationsx://workflows/annotation-preview`: annotation-aware preview workflow.
 - `albumentationsx://examples/client-smoke`: post-install host smoke playbook for capabilities, recipes, recommendation,
   and validation.
-- `albumentationsx://examples/first-preview`: first local preview playbook with host smoke, request validation, and
-  bounded rendering.
+- `albumentationsx://examples/first-preview`: profile-aware first local preview playbook using the guided call when
+  available and the explicit manual fallback in `review`.
 - `albumentationsx://examples/distortion-review`: robustness preview loop for rejected noisy or distorted examples.
 - `albumentationsx://examples/diagnostics`: troubleshooting playbook for preview setup and local root issues.
 - `albumentationsx://examples/review-loop`: concrete example feedback loop for prompts like "example 8 is too noisy".
@@ -525,7 +574,8 @@ uv run pytest tests/test_output_contract_snapshots.py -q
 ## Prompts
 
 - `build_robustness_augmentation_session`: guide preview-driven robustness augmentation work.
-- `run_first_preview_review`: guide the first local preview through host smoke and request validation.
+- `run_first_preview_review`: profile-aware first local preview guidance using the guided call when available and the
+  smoke-template validation/render fallback otherwise.
 - `compare_preview_runs_for_feedback`: compare two preview runs before choosing feedback tags.
 - `tune_pipeline_from_preview_feedback`: adjust and re-render from a concrete preview run.
 - `export_reproducible_pipeline`: export an accepted run with reproducibility context.

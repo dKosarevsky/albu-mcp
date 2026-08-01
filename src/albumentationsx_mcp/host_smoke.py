@@ -67,12 +67,14 @@ class HostSmokeReport(StrictModel):
     preview_request_template: HostPreviewRequestTemplate | None = None
 
 
-def build_host_smoke_report(
+def build_host_smoke_report(  # noqa: PLR0913
     *,
     diagnostics: DiagnosticsReport,
     recipe: RecipeRecommendation,
     validation: PipelineValidationReport,
+    guided_preview_available: bool = True,
     preview_tools_available: bool = True,
+    trace_preview_available: bool = True,
 ) -> HostSmokeReport:
     """Build a read-only host smoke report from existing typed service outputs."""
     preview_ready = diagnostics.status == "ok" and validation.valid and preview_tools_available
@@ -92,12 +94,18 @@ def build_host_smoke_report(
         capability_profile=diagnostics.capability_profile,
         status=_aggregate_status(checks),
         preview_ready=preview_ready,
-        workflow_guidance=_workflow_guidance(),
+        workflow_guidance=_workflow_guidance(
+            preview_tools_available=preview_tools_available,
+            guided_preview_available=guided_preview_available,
+            trace_preview_available=trace_preview_available,
+        ),
         checks=checks,
         diagnostics=diagnostics,
         next_actions=_next_actions(
             preview_ready=preview_ready,
             preview_tools_available=preview_tools_available,
+            guided_preview_available=guided_preview_available,
+            trace_preview_available=trace_preview_available,
             diagnostics=diagnostics,
             validation=validation,
         ),
@@ -106,19 +114,66 @@ def build_host_smoke_report(
     )
 
 
-def _workflow_guidance() -> HostWorkflowGuidance:
+def _workflow_guidance(
+    *,
+    preview_tools_available: bool,
+    guided_preview_available: bool,
+    trace_preview_available: bool,
+) -> HostWorkflowGuidance:
+    instructions = [
+        (
+            "Read albumentationsx://examples/client-smoke when the host exposes resource reads; "
+            "if resource reads are unavailable, call get_workflow_example with "
+            'example_id="client-smoke".'
+        )
+    ]
+    if not preview_tools_available:
+        instructions.append(
+            "The active profile does not expose preview validation and rendering; keep preview_ready false and "
+            "follow the report's capability-profile remediation action."
+        )
+    elif guided_preview_available:
+        instructions.extend(
+            [
+                "Continue only when preview_ready is true.",
+                (
+                    "Call run_first_preview for one local image or directory under an allowed root with low "
+                    "intensity and at most eight images."
+                ),
+            ]
+        )
+        if trace_preview_available:
+            instructions.append(
+                "Inspect the contact sheet, then call trace_preview_variant for the selected zero-based image "
+                "and variant indexes before adjustment."
+            )
+        instructions.append(
+            "For explicit manual control, use preview_request_template.request as a fallback: call "
+            "validate_preview_request before render_preview_batch."
+        )
+    elif trace_preview_available:
+        instructions.extend(
+            [
+                "Continue only when preview_ready is true.",
+                "Copy preview_request_template.request and replace its placeholder with an allowed-root image.",
+                "Call validate_preview_request before render_preview_batch.",
+                (
+                    "Inspect the contact sheet, then call trace_preview_variant for the selected zero-based image "
+                    "and variant indexes before adjustment."
+                ),
+            ]
+        )
+    else:
+        instructions.extend(
+            [
+                "Continue to preview validation and rendering only when preview_ready is true.",
+                "Call validate_preview_request before render_preview_batch.",
+                "Keep the first preview bounded to one small image and one variant.",
+            ]
+        )
     return HostWorkflowGuidance(
         fallback_tool=HostWorkflowExampleFallback(),
-        instructions=[
-            (
-                "Read albumentationsx://examples/client-smoke when the host exposes resource reads; "
-                "if resource reads are unavailable, call get_workflow_example with "
-                'example_id="client-smoke".'
-            ),
-            "Continue to preview validation and rendering only when preview_ready is true.",
-            "Call validate_preview_request before render_preview_batch.",
-            "Keep the first preview bounded to one small image and one variant.",
-        ],
+        instructions=instructions,
     )
 
 
@@ -240,20 +295,46 @@ def _preview_request_template(
     )
 
 
-def _next_actions(
+def _next_actions(  # noqa: PLR0913
     *,
     preview_ready: bool,
     preview_tools_available: bool,
+    guided_preview_available: bool,
+    trace_preview_available: bool,
     diagnostics: DiagnosticsReport,
     validation: PipelineValidationReport,
 ) -> list[str]:
     if preview_ready:
-        return [
+        if guided_preview_available:
+            return [
+                (
+                    "Call `run_first_preview` for one local image or directory under an allowed root with "
+                    "`intensity=low` and `max_images<=8`."
+                ),
+                "Inspect the returned contact sheet before changing the pipeline.",
+                "Call `trace_preview_variant` for the selected zero-based image and variant indexes.",
+                "Use `adjust_pipeline` only after the trace and human feedback are available.",
+                "Call `compare_preview_runs`, then `export_pipeline` only after the user accepts the candidate.",
+            ]
+        actions = [
             "Replace the placeholder input path with one small image under an allowed root.",
             "Call `validate_preview_request` with `preview_request_template.request`.",
             "Call `render_preview_batch` with `preview_request_template.request`.",
-            "Inspect the contact sheet before increasing variants, intensity, or batch size.",
         ]
+        if not trace_preview_available:
+            actions.append("Inspect the contact sheet before increasing variants, intensity, or batch size.")
+            return actions
+        actions.extend(
+            [
+                "Inspect the contact sheet before changing the pipeline.",
+                "Call `trace_preview_variant` for the selected zero-based image and variant indexes.",
+                (
+                    "Use `adjust_pipeline`, `compare_preview_runs`, and `export_pipeline` only after trace-backed "
+                    "human review."
+                ),
+            ]
+        )
+        return actions
     actions = list(diagnostics.next_actions)
     if not preview_tools_available and not any("--capability-profile" in action for action in actions):
         actions.append("Restart with `--capability-profile review`, `dataset`, or `full` before rendering previews.")

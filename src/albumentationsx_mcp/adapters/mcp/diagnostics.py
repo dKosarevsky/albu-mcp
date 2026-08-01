@@ -143,7 +143,10 @@ def register_diagnostics_adapter(
     @mcp.resource("albumentationsx://examples/first-preview")
     def first_preview_example() -> str:
         """Return the MCP first local preview host example."""
-        return get_host_example("first-preview").model_dump_json()
+        return get_host_example(
+            "first-preview",
+            guided_preview_available="run_first_preview" in diagnostics_service.public_surface.tools,
+        ).model_dump_json()
 
     @mcp.resource("albumentationsx://examples/distortion-review")
     def distortion_review_example() -> str:
@@ -196,6 +199,8 @@ def register_diagnostics_adapter(
             recipe=recipe,
             validation=validation,
             preview_tools_available=diagnostics_service.preview_tools_available,
+            guided_preview_available="run_first_preview" in diagnostics_service.public_surface.tools,
+            trace_preview_available="trace_preview_variant" in diagnostics_service.public_surface.tools,
         ).model_dump(mode="json")
 
     @mcp.tool(name="get_workflow_example")
@@ -212,4 +217,5 @@ def register_diagnostics_adapter(
         return get_host_example(
             example_id,
             preview_tools_available=diagnostics_service.preview_tools_available,
+            guided_preview_available="run_first_preview" in diagnostics_service.public_surface.tools,
         ).model_dump(mode="json")

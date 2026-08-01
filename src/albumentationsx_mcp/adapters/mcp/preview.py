@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Annotated, Any, Literal
+
+from pydantic import Field
 
 from albumentationsx_mcp.adapters.mcp.contracts import AdapterSurface, ProfileSurface
 from albumentationsx_mcp.capabilities import REVIEW_DATASET_PROFILE_MEMBERSHIP, REVIEW_PROFILE_MEMBERSHIP
@@ -21,6 +23,7 @@ from albumentationsx_mcp.models import (
     QualityProfileName,
     TargetSpec,
 )
+from albumentationsx_mcp.preview_trace import get_preview_variant_trace
 from albumentationsx_mcp.ranking import rank_preview_candidates as rank_candidates
 from albumentationsx_mcp.review_agent import build_review_agent_plan
 from albumentationsx_mcp.review_agent import interpret_preview_feedback as interpret_feedback_note
@@ -39,6 +42,7 @@ _TOOLS = (
     "validate_preview_request",
     "render_preview",
     "render_preview_batch",
+    "trace_preview_variant",
     "compare_preview_runs",
     "interpret_preview_feedback",
     "plan_preview_review",
@@ -48,6 +52,7 @@ _TOOLS = (
 _DATASET_TOOLS = (
     "validate_preview_request",
     "render_preview_batch",
+    "trace_preview_variant",
     "compare_preview_runs",
     "export_preview_report",
 )
@@ -102,6 +107,20 @@ def register_preview_adapter(  # noqa: PLR0913
         """Render deterministic batch preview artifacts and contact sheets for local input images."""
         preview_request = PreviewRequest.model_validate(request)
         return preview_service.render_preview(preview_request).model_dump(mode="json")
+
+    @mcp.tool()
+    def trace_preview_variant(
+        run_id: str,
+        image_index: Annotated[int, Field(ge=0)],
+        variant_index: Annotated[int, Field(ge=0)],
+    ) -> dict[str, Any]:
+        """Read the applied-transform trace for one rendered preview variant."""
+        return get_preview_variant_trace(
+            artifact_store,
+            run_id,
+            image_index=image_index,
+            variant_index=variant_index,
+        ).model_dump(mode="json", exclude_none=True)
 
     @mcp.tool()
     def compare_preview_runs(

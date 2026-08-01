@@ -40,8 +40,15 @@ def test_output_contract_snapshot_includes_host_smoke_examples() -> None:
     ready = snapshot["run_host_smoke_check_ready"]
     blocked = snapshot["run_host_smoke_check_missing_allowed_root"]
     assert ready["preview_ready"] is True
+    assert ready["capability_profile"] == "full"
     assert ready["preview_request_template"]["tool"] == "render_preview_batch"
     assert ready["preview_request_template"]["request"]["variants_per_image"] == 1
+    guidance = " ".join(ready["workflow_guidance"]["instructions"])
+    actions = " ".join(ready["next_actions"])
+    assert "run_first_preview" in guidance
+    assert "trace_preview_variant" in guidance
+    assert "run_first_preview" in actions
+    assert "trace_preview_variant" in actions
     assert blocked["preview_ready"] is False
     assert blocked["preview_request_template"] is None
 

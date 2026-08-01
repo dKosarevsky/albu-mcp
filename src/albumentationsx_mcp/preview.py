@@ -39,6 +39,7 @@ from albumentationsx_mcp.models import (
     QualityProfileName,
 )
 from albumentationsx_mcp.preview_analysis import compare_preview_manifests
+from albumentationsx_mcp.preview_trace import PreviewVariantTrace, build_variant_trace, validate_effective_seed
 from albumentationsx_mcp.quality import compare_manifest_quality
 
 _RUN_ID_PATTERN = re.compile(r"^[0-9a-f]{32}$")
@@ -387,6 +388,7 @@ class PreviewService:
 
     def render_preview(self, request: PreviewRequest) -> PreviewResult:
         """Apply the pipeline to local images and write preview artifacts."""
+        _validate_effective_variant_seeds(request)
         run_id, run_dir = self.artifact_store.create_run_dir()
         try:
             return self._render_preview_in_run_dir(request, run_id, run_dir)
@@ -400,6 +402,7 @@ class PreviewService:
         image_paths: list[Path] = []
         overlay_paths: list[Path] = []
         annotation_observations: list[AnnotationObservation] = []
+        variant_traces: list[PreviewVariantTrace] = []
         source_paths = [self.path_policy.resolve_input(path) for path in request.input_paths]
         annotations = self._resolve_annotations(request)
 
@@ -432,7 +435,18 @@ class PreviewService:
                 output = run_dir / f"{source_index:03d}-{variant_index:03d}.png"
                 Image.fromarray(result["image"]).save(output)
                 image_paths.append(output)
-                artifacts.append(self.artifact_store.artifact_ref(output, kind="image", mime_type="image/png"))
+                image_artifact = self.artifact_store.artifact_ref(output, kind="image", mime_type="image/png")
+                artifacts.append(image_artifact)
+                variant_traces.append(
+                    build_variant_trace(
+                        image_index=source_index,
+                        variant_index=variant_index,
+                        source_path=source_path,
+                        artifact_uri=image_artifact.uri,
+                        effective_seed=_effective_variant_seed(request, variant_index),
+                        applied_transforms=result.get("applied_transforms"),
+                    ),
+                )
                 if annotation_has_content(annotation):
                     overlay_output = run_dir / f"{source_index:03d}-{variant_index:03d}-overlay.png"
                     render_overlay(result).save(overlay_output)
@@ -490,11 +504,13 @@ class PreviewService:
                 ],
                 "warnings": [],
                 "annotation_observation_count": len(annotation_observations),
+                "variant_trace_count": len(variant_traces),
             },
             "artifacts": [artifact.model_dump(mode="json") for artifact in artifacts],
             "annotation_observations": [
                 observation.model_dump(mode="json", exclude_none=True) for observation in annotation_observations
             ],
+            "variant_traces": [trace.model_dump(mode="json") for trace in variant_traces],
         }
         manifest_path.write_text(json.dumps(manifest_data, indent=2, sort_keys=True), encoding="utf-8")
         self.artifact_store.record_run(manifest_data)
@@ -504,6 +520,7 @@ class PreviewService:
             artifacts=artifacts,
             manifest=manifest,
             pipeline=request.pipeline.model_dump(mode="json", exclude_none=True),
+            variant_trace_count=len(variant_traces),
         )
 
     def compare_preview_runs(
@@ -593,3 +610,14 @@ def _mask_coverage(mask: Any) -> float | None:
     if data.size == 0:
         return None
     return round(float((data > 0).mean()), 6)
+
+
+def _effective_variant_seed(request: PreviewRequest, variant_index: int) -> int | None:
+    if request.seed is not None:
+        return request.seed + variant_index
+    return request.pipeline.seed
+
+
+def _validate_effective_variant_seeds(request: PreviewRequest) -> None:
+    for variant_index in range(request.variants_per_image):
+        validate_effective_seed(_effective_variant_seed(request, variant_index))

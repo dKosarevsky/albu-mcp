@@ -4,6 +4,9 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 ## Unreleased
 
+- Added the guided `run_first_preview` use case for a bounded, validated path from host smoke to contact-sheet review.
+- Added per-variant applied-transform traces as additive preview evidence through `trace_preview_variant`, with bounded
+  deterministic summaries and explicit legacy-run unavailability.
 - Added an explicit `capability_profile` field to environment diagnostics and host smoke reports; the stdio
   conformance matrix now rejects responses that do not identify the active profile.
 - Added opt-in `core`, `review`, `dataset`, and `full` MCP capability profiles with executable dependency-closure

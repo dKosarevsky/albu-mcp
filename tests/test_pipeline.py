@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+import albumentations as A
+import numpy as np
 import pytest
 
 from albumentationsx_mcp.catalog import TransformCatalog
@@ -15,6 +17,7 @@ from albumentationsx_mcp.models import (
     TransformSpec,
 )
 from albumentationsx_mcp.pipeline import PipelineService
+from albumentationsx_mcp.preview_trace import build_variant_trace
 
 
 class DummyTransform:
@@ -123,6 +126,41 @@ def test_build_pipeline_adapts_public_bbox_format_for_runtime() -> None:
     pipeline = service.build_pipeline(spec)
 
     assert pipeline is not None
+
+
+def test_build_pipeline_records_applied_params_without_changing_seeded_output() -> None:
+    image = np.arange(16 * 16 * 3, dtype=np.uint8).reshape((16, 16, 3))
+    spec = ComposeSpec(
+        transforms=[
+            TransformSpec(name="HorizontalFlip", p=1.0),
+            TransformSpec(name="GaussNoise", params={"std_range": (0.01, 0.02)}, p=1.0),
+        ],
+        seed=17,
+    )
+    ordinary_result = A.Compose(
+        [A.HorizontalFlip(p=1.0), A.GaussNoise(std_range=(0.01, 0.02), p=1.0)],
+        seed=17,
+    )(image=image)
+
+    instrumented_result = PipelineService(TransformCatalog()).build_pipeline(spec)(image=image)
+
+    assert instrumented_result["image"].tobytes() == ordinary_result["image"].tobytes()
+    applied_transforms = instrumented_result["applied_transforms"]
+    assert type(applied_transforms) is list
+    assert all(type(entry) is tuple and type(entry[1]) is dict for entry in applied_transforms)
+    assert [name for name, _ in applied_transforms] == [
+        "HorizontalFlip",
+        "GaussNoise",
+    ]
+    trace = build_variant_trace(
+        image_index=0,
+        variant_index=0,
+        source_path="source.png",
+        artifact_uri="artifact://run/000-000.png",
+        effective_seed=17,
+        applied_transforms=applied_transforms,
+    )
+    assert [transform.name for transform in trace.applied_transforms] == ["HorizontalFlip", "GaussNoise"]
 
 
 def test_export_python_adapts_public_bbox_format_for_runtime() -> None:
