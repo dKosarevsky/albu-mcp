@@ -37,45 +37,6 @@ def _normalize_string(value: str) -> str | dict[str, int | str]:
     }
 
 
-def _bounded_order_text(value: str) -> str:
-    if len(value) <= MAX_INLINE_STRING_CHARS:
-        return value
-    digest = hashlib.sha256(value.encode("utf-8")).hexdigest()
-    return f"{len(value)}:{digest}"
-
-
-def _mapping_key_order_token(key: Any, *, depth: int = 0) -> str:
-    if depth >= MAX_TRACE_DEPTH:
-        order_value = f"{type(key).__qualname__}:depth_limit"
-    elif isinstance(key, np.generic):
-        scalar = np.asarray(key)
-        if scalar.dtype.hasobject:
-            order_value = f"numpy:{scalar.dtype}:{type(key).__qualname__}"
-        else:
-            digest = hashlib.sha256(np.ascontiguousarray(scalar).tobytes()).hexdigest()
-            order_value = f"numpy:{scalar.dtype}:{digest}"
-    elif isinstance(key, str):
-        order_value = f"str:{_bounded_order_text(key)}"
-    elif isinstance(key, Path):
-        order_value = f"path:{_bounded_order_text(str(key))}"
-    elif key is None:
-        order_value = "none"
-    elif isinstance(key, bool):
-        order_value = f"bool:{int(key)}"
-    elif isinstance(key, int):
-        order_value = f"int:{key}"
-    elif isinstance(key, float):
-        order_value = f"float:{key.hex() if math.isfinite(key) else str(key)}"
-    elif isinstance(key, tuple):
-        parts = [_mapping_key_order_token(item, depth=depth + 1) for item in key[:MAX_COLLECTION_ITEMS]]
-        encoded = _canonical_json(parts)
-        digest = hashlib.sha256(encoded.encode("utf-8")).hexdigest()
-        order_value = f"tuple:{len(key)}:{digest}"
-    else:
-        order_value = f"unsupported:{type(key).__qualname__}"
-    return order_value
-
-
 def _structural_summary(value: Any) -> dict[str, Any]:
     summary: dict[str, Any] = {
         "kind": "structural_summary",
@@ -171,11 +132,12 @@ class _TraceNormalizer:
         }
 
     def _normalize_mapping(self, value: Mapping[Any, Any], *, depth: int) -> dict[str, Any]:
+        item_depth = depth + 1
         items = sorted(
             value.items(),
             key=lambda pair: (
-                _mapping_key_order_token(pair[0]),
-                _TraceOrderTokenBuilder().build(pair[1]),
+                _trace_order_token(pair[0], depth=item_depth),
+                _trace_order_token(pair[1], depth=item_depth),
             ),
         )
         grouped_values: dict[str, list[Any]] = {}
@@ -223,9 +185,9 @@ class _TraceOrderTokenBuilder:
     def __init__(self) -> None:
         self._remaining_nodes = MAX_TRACE_NODES
 
-    def build(self, value: Any) -> str:
+    def build(self, value: Any, *, depth: int = 0) -> str:
         """Build a bounded canonical sort key without spending output-normalization nodes."""
-        return _canonical_json(self._normalize(value, depth=0))
+        return _canonical_json(self._normalize(value, depth=depth))
 
     def _normalize(self, value: Any, *, depth: int) -> Any:
         if self._remaining_nodes <= 0 or depth >= MAX_TRACE_DEPTH:
@@ -313,11 +275,12 @@ class _TraceOrderTokenBuilder:
         return order_structure
 
     def _normalize_mapping(self, value: Mapping[Any, Any], *, depth: int) -> dict[str, Any]:
+        item_depth = depth + 1
         items = sorted(
             value.items(),
             key=lambda pair: (
-                _mapping_key_order_token(pair[0]),
-                self._shallow_order_value(pair[1]),
+                _trace_order_token(pair[0], depth=item_depth),
+                _trace_order_token(pair[1], depth=item_depth),
             ),
         )
         normalized_items = [
@@ -335,30 +298,9 @@ class _TraceOrderTokenBuilder:
             "items": normalized_items,
         }
 
-    @staticmethod
-    def _shallow_order_value(value: Any) -> str:
-        if value is None or isinstance(value, (bool, int)):
-            order_value = f"{type(value).__qualname__}:{value}"
-        elif isinstance(value, float):
-            order_value = f"{type(value).__qualname__}:{value.hex() if math.isfinite(value) else str(value)}"
-        elif isinstance(value, str):
-            order_value = f"str:{_bounded_order_text(value)}"
-        elif isinstance(value, Path):
-            order_value = f"path:{_bounded_order_text(str(value))}"
-        elif isinstance(value, np.generic):
-            scalar = np.asarray(value)
-            if scalar.dtype.hasobject:
-                order_value = f"numpy:{scalar.dtype}:{type(value).__qualname__}"
-            else:
-                digest = hashlib.sha256(np.ascontiguousarray(scalar).tobytes()).hexdigest()
-                order_value = f"numpy:{scalar.dtype}:{digest}"
-        elif isinstance(value, np.ndarray):
-            order_value = f"ndarray:{value.dtype}:{tuple(int(item) for item in value.shape)}"
-        elif isinstance(value, (Mapping, list, tuple)):
-            order_value = f"{type(value).__qualname__}:{len(value)}"
-        else:
-            order_value = f"unsupported:{type(value).__qualname__}"
-        return order_value
+
+def _trace_order_token(value: Any, *, depth: int) -> str:
+    return _TraceOrderTokenBuilder().build(value, depth=depth)
 
 
 def normalize_trace_value(value: Any) -> Any:

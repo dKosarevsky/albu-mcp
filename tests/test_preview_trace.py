@@ -201,6 +201,36 @@ def test_normalize_trace_value_orders_inline_object_arrays_beyond_collection_pre
     json.dumps(forward, allow_nan=False, sort_keys=True)
 
 
+def test_normalize_trace_value_orders_nested_mapping_values_canonically() -> None:
+    def nested_value(unique_value: int) -> dict[bytes, dict[str, object]]:
+        common: list[tuple[bytes, dict[str, object]]] = [
+            (bytes([index]), {"payload": f"common-{index:02d}"})
+            for index in range(MAX_COLLECTION_ITEMS)
+        ]
+        return dict([*common, (bytes([MAX_COLLECTION_ITEMS]), {"payload": unique_value})])
+
+    entries = [
+        (bytes([index]), nested_value(index))
+        for index in range(MAX_COLLECTION_ITEMS + 1)
+    ]
+
+    forward = normalize_trace_value(dict(entries))
+    reverse = normalize_trace_value(dict(reversed(entries)))
+
+    assert forward == reverse
+    json.dumps(forward, allow_nan=False, sort_keys=True)
+
+
+def test_normalize_trace_value_bounds_recursive_mapping_order_tokens() -> None:
+    recursive: dict[str, object] = {}
+    recursive["self"] = recursive
+
+    result = normalize_trace_value({b"recursive": recursive})
+    encoded = json.dumps(result, allow_nan=False, sort_keys=True)
+
+    assert "structural_summary" in encoded
+
+
 def test_normalize_trace_value_bounds_numpy_scalar_mapping_key_with_shared_budget() -> None:
     result = normalize_trace_value({np.longdouble("1.25"): "value"})
 
