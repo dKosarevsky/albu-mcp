@@ -1,6 +1,7 @@
 import hashlib
 import json
 import math
+import re
 import sys
 from collections.abc import ItemsView, Iterator, Mapping
 from pathlib import Path
@@ -55,6 +56,11 @@ def _serialized_trace_size(trace: PreviewVariantTrace) -> int:
     return len(encoded.encode("utf-8"))
 
 
+def _trace_string_digest_token(field_code: str, value: str) -> str:
+    digest = hashlib.sha256(value.encode("utf-8", errors="surrogatepass")).hexdigest()
+    return f"~{field_code}:{len(value):016x}:{digest}"
+
+
 def test_trace_limits_are_stable() -> None:
     assert MAX_INLINE_ARRAY_ELEMENTS == 64
     assert MAX_COLLECTION_ITEMS == 32
@@ -65,6 +71,9 @@ def test_trace_limits_are_stable() -> None:
     assert MAX_VARIANT_TRACE_JSON_BYTES == 8 * 1024
     assert preview_trace.MAX_ARRAY_HASH_BYTES == 1024 * 1024
     assert preview_trace.MAX_INLINE_INTEGER_BITS == 2048
+    assert preview_trace.MAX_TRACE_INDEX == (1 << 63) - 1
+    assert preview_trace.MIN_TRACE_SEED == -(1 << 63)
+    assert preview_trace.MAX_TRACE_SEED == (1 << 63) - 1
 
 
 @pytest.mark.parametrize(
@@ -574,25 +583,80 @@ def test_build_variant_trace_summarizes_parameters_to_fit_json_budget() -> None:
     assert _serialized_trace_size(first) <= MAX_VARIANT_TRACE_JSON_BYTES
 
 
-def test_build_variant_trace_has_bounded_fallback_for_unusually_large_metadata() -> None:
+def test_build_variant_trace_final_fallback_preserves_all_capped_transform_identities() -> None:
     long_value = "private-segment/" + "x" * (MAX_VARIANT_TRACE_JSON_BYTES * 2)
+    transform_names = [f"Transform{index:02d}-{long_value}" for index in range(MAX_APPLIED_TRANSFORMS)]
 
     trace = preview_trace.build_variant_trace(
-        image_index=0,
-        variant_index=0,
+        image_index=preview_trace.MAX_TRACE_INDEX,
+        variant_index=preview_trace.MAX_TRACE_INDEX,
         source_path=long_value,
         artifact_uri=f"artifact://{long_value}",
-        effective_seed=7,
-        applied_transforms=[(long_value, {"value": long_value})],
+        effective_seed=preview_trace.MIN_TRACE_SEED,
+        applied_transforms=[(name, {"value": long_value}) for name in transform_names],
     )
     encoded = json.dumps(trace.model_dump(mode="json"), allow_nan=False, sort_keys=True)
 
     assert trace.parameters_truncated is True
-    assert trace.source_path.startswith("sha256:")
-    assert trace.artifact_uri.startswith("sha256:")
-    assert trace.applied_transforms[0].name.startswith("sha256:")
+    assert trace.source_path == _trace_string_digest_token("source_path", long_value)
+    assert trace.artifact_uri == _trace_string_digest_token("artifact_uri", f"artifact://{long_value}")
+    assert [item.name for item in trace.applied_transforms] == [
+        _trace_string_digest_token("transform_name", name) for name in transform_names
+    ]
+    assert all(item.params == {} for item in trace.applied_transforms)
+    assert len(trace.applied_transforms) == MAX_APPLIED_TRANSFORMS
+    assert trace.truncated_transform_count == 0
     assert long_value not in encoded
     assert len(encoded.encode("utf-8")) <= MAX_VARIANT_TRACE_JSON_BYTES
+    assert preview_trace._MAX_FINAL_VARIANT_TRACE_JSON_BYTES <= MAX_VARIANT_TRACE_JSON_BYTES
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "expected_message"),
+    [
+        (
+            "image_index",
+            10**5000,
+            f"image_index must be an integer between 0 and {(1 << 63) - 1}",
+        ),
+        (
+            "variant_index",
+            10**5000,
+            f"variant_index must be an integer between 0 and {(1 << 63) - 1}",
+        ),
+        (
+            "effective_seed",
+            10**5000,
+            f"effective_seed must be None or an integer between {-(1 << 63)} and {(1 << 63) - 1}",
+        ),
+        (
+            "effective_seed",
+            -(10**5000),
+            f"effective_seed must be None or an integer between {-(1 << 63)} and {(1 << 63) - 1}",
+        ),
+    ],
+    ids=["image-too-large", "variant-too-large", "seed-too-large", "seed-too-small"],
+)
+def test_build_variant_trace_rejects_unbounded_integer_metadata_before_json(
+    field: str,
+    value: int,
+    expected_message: str,
+) -> None:
+    private_path = "/private/customer/input.png"
+
+    with pytest.raises(ValueError, match=re.escape(expected_message)) as exc_info:
+        preview_trace.build_variant_trace(
+            image_index=value if field == "image_index" else 0,
+            variant_index=value if field == "variant_index" else 0,
+            source_path=private_path,
+            artifact_uri="artifact://run/000-000.png",
+            effective_seed=value if field == "effective_seed" else 0,
+            applied_transforms=[("HorizontalFlip", {"p": 1.0})],
+        )
+
+    assert str(exc_info.value) == expected_message
+    assert private_path not in str(exc_info.value)
+    assert len(str(exc_info.value)) < 128
 
 
 def test_build_variant_trace_rejects_non_collection_without_repr() -> None:

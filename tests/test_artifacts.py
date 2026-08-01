@@ -435,6 +435,46 @@ def test_get_preview_variant_trace_rejects_malformed_entry_without_path_leak(tmp
     assert str(store.root) not in str(exc_info.value)
 
 
+def test_get_preview_variant_trace_rejects_malformed_nonmatching_entry(tmp_path: Path) -> None:
+    store, result = _render_real_preview_fixture(tmp_path)
+    manifest_path = store.root / result.run_id / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    private_path = str(tmp_path / "private" / "nonmatching.png")
+    manifest["variant_traces"].append(
+        {
+            "image_index": 9,
+            "variant_index": 9,
+            "source_path": private_path,
+        }
+    )
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(
+        ValueError,
+        match=r"^Preview manifest variant_traces contain malformed entries$",
+    ) as exc_info:
+        preview_trace.get_preview_variant_trace(store, result.run_id, image_index=0, variant_index=0)
+
+    assert private_path not in str(exc_info.value)
+    assert str(store.root) not in str(exc_info.value)
+
+
+def test_get_preview_variant_trace_rejects_duplicate_matching_entries(tmp_path: Path) -> None:
+    store, result = _render_real_preview_fixture(tmp_path)
+    manifest_path = store.root / result.run_id / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["variant_traces"].append(dict(manifest["variant_traces"][0]))
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(
+        ValueError,
+        match=r"^Preview manifest contains multiple traces for the requested image and variant$",
+    ) as exc_info:
+        preview_trace.get_preview_variant_trace(store, result.run_id, image_index=0, variant_index=0)
+
+    assert str(store.root) not in str(exc_info.value)
+
+
 def test_get_preview_variant_trace_rejects_unknown_pair(tmp_path: Path) -> None:
     store, result = _render_real_preview_fixture(tmp_path)
 

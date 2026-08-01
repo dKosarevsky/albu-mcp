@@ -24,23 +24,48 @@ MAX_TRACE_NODES = 128
 MAX_INLINE_STRING_CHARS = 256
 MAX_APPLIED_TRANSFORMS = 32
 MAX_VARIANT_TRACE_JSON_BYTES = 8 * 1024
+# Preview rendering indexes and seeds use practical signed 64-bit bounds.
+MAX_TRACE_INDEX = (1 << 63) - 1
+MIN_TRACE_SEED = -(1 << 63)
+MAX_TRACE_SEED = (1 << 63) - 1
 # Bound both hashing work and any contiguous array copy.
 MAX_ARRAY_HASH_BYTES = 1024 * 1024
 # Stay comfortably below Python's configurable decimal digit limit.
 MAX_INLINE_INTEGER_BITS = 2048
 
 _HASHABLE_ARRAY_KINDS = frozenset("biufcmMSU")
-_FALLBACK_TEXT_JSON_BYTES = 96
+_MAX_COMPACT_STRING_JSON_BYTES = 112
 _APPLIED_TRANSFORM_ENTRY_ITEMS = 2
 _APPLIED_TRANSFORMS_COLLECTION_ERROR = "applied_transforms must be an ordered collection of (name, params) tuples"
 _APPLIED_TRANSFORMS_ENTRY_ERROR = (
     "applied_transforms entries must be (name, params) tuples with string names and mapping params"
 )
 _MALFORMED_MANIFEST_TRACES_ERROR = "Preview manifest variant_traces contain malformed entries"
+_DUPLICATE_MANIFEST_TRACE_ERROR = "Preview manifest contains multiple traces for the requested image and variant"
 
 
 def _canonical_json(value: Any) -> str:
     return json.dumps(value, allow_nan=False, ensure_ascii=True, separators=(",", ":"), sort_keys=True)
+
+
+def _final_trace_json_upper_bound() -> int:
+    """Return the exact maximum for 32 compact entries and signed 64-bit metadata."""
+    widest_compact_text = "x" * (_MAX_COMPACT_STRING_JSON_BYTES - 2)
+    payload = {
+        "image_index": MAX_TRACE_INDEX,
+        "variant_index": MAX_TRACE_INDEX,
+        "source_path": widest_compact_text,
+        "artifact_uri": widest_compact_text,
+        "effective_seed": MIN_TRACE_SEED,
+        "applied_transforms": [{"name": widest_compact_text, "params": {}} for _ in range(MAX_APPLIED_TRANSFORMS)],
+        "truncated_transform_count": MAX_TRACE_INDEX,
+        "parameters_truncated": True,
+    }
+    return len(json.dumps(payload, allow_nan=False, sort_keys=True).encode("utf-8"))
+
+
+_MAX_FINAL_VARIANT_TRACE_JSON_BYTES = _final_trace_json_upper_bound()
+assert _MAX_FINAL_VARIANT_TRACE_JSON_BYTES <= MAX_VARIANT_TRACE_JSON_BYTES  # noqa: S101
 
 
 def _normalize_integer(value: int) -> int | dict[str, int | str]:
@@ -394,6 +419,11 @@ def build_variant_trace(  # noqa: PLR0913
     applied_transforms: Any = None,
 ) -> PreviewVariantTrace:
     """Build one deterministic, size-bounded applied-transform trace."""
+    _validate_trace_scalar_metadata(
+        image_index=image_index,
+        variant_index=variant_index,
+        effective_seed=effective_seed,
+    )
     validated = _validate_applied_transforms(applied_transforms)
     retained = validated[:MAX_APPLIED_TRANSFORMS]
     truncated_transform_count = len(validated) - len(retained)
@@ -434,27 +464,31 @@ def build_variant_trace(  # noqa: PLR0913
     if _trace_fits_json_budget(summarized_trace):
         return summarized_trace
 
-    bounded_transforms = [
-        transform.model_copy(update={"name": _bounded_trace_text(transform.name)})
+    compacted_transforms = [
+        transform.model_copy(
+            update={"name": _compact_trace_text(transform.name, field_type="transform_name")},
+        )
         for transform in summarized_transforms
     ]
-    omitted_for_size = 0
-    while True:
-        fallback = summarized_trace.model_copy(
-            update={
-                "source_path": _bounded_trace_text(summarized_trace.source_path),
-                "artifact_uri": _bounded_trace_text(summarized_trace.artifact_uri),
-                "applied_transforms": bounded_transforms,
-                "truncated_transform_count": truncated_transform_count + omitted_for_size,
-            },
-        )
-        if _trace_fits_json_budget(fallback):
-            return fallback
-        if not bounded_transforms:
-            msg = "Preview variant trace metadata exceeds the JSON size limit"
-            raise ValueError(msg)
-        bounded_transforms = bounded_transforms[:-1]
-        omitted_for_size += 1
+    compacted_trace = summarized_trace.model_copy(
+        update={
+            "source_path": _compact_trace_text(summarized_trace.source_path, field_type="source_path"),
+            "artifact_uri": _compact_trace_text(summarized_trace.artifact_uri, field_type="artifact_uri"),
+            "applied_transforms": compacted_transforms,
+        },
+    )
+    if _trace_fits_json_budget(compacted_trace):
+        return compacted_trace
+
+    final_trace = compacted_trace.model_copy(
+        update={
+            "applied_transforms": [transform.model_copy(update={"params": {}}) for transform in compacted_transforms],
+        },
+    )
+    if _trace_fits_json_budget(final_trace):
+        return final_trace
+    msg = "Preview variant trace exceeded its bounded fallback invariant"
+    raise ValueError(msg)
 
 
 def get_preview_variant_trace(
@@ -468,6 +502,8 @@ def get_preview_variant_trace(
     if image_index < 0 or variant_index < 0:
         msg = "image_index and variant_index must be non-negative"
         raise ValueError(msg)
+    _validate_trace_index("image_index", image_index)
+    _validate_trace_index("variant_index", variant_index)
 
     manifest = artifact_store.read_manifest(run_id)
     if "variant_traces" not in manifest:
@@ -484,13 +520,13 @@ def get_preview_variant_trace(
         msg = "Preview manifest variant_traces must be a list"
         raise ValueError(msg)  # noqa: TRY004 - public API requires one stable validation error type.
     traces = _validate_variant_traces(raw_traces)
-    trace = next(
-        (item for item in traces if item.image_index == image_index and item.variant_index == variant_index),
-        None,
-    )
-    if trace is None:
+    matches = [item for item in traces if item.image_index == image_index and item.variant_index == variant_index]
+    if not matches:
         msg = f"Preview variant trace is unavailable for image {image_index}, variant {variant_index}"
         raise ValueError(msg)
+    if len(matches) > 1:
+        raise ValueError(_DUPLICATE_MANIFEST_TRACE_ERROR)
+    trace = matches[0]
     return PreviewVariantTraceResult(
         run_id=run_id,
         image_index=image_index,
@@ -531,12 +567,12 @@ def _parameter_summary(params: dict[str, Any], *, item_count: int) -> dict[str, 
     }
 
 
-def _bounded_trace_text(value: str) -> str:
+def _compact_trace_text(value: str, *, field_type: str) -> str:
     encoded = json.dumps(value, ensure_ascii=True).encode("utf-8")
-    if len(encoded) <= _FALLBACK_TEXT_JSON_BYTES:
+    if len(encoded) <= _MAX_COMPACT_STRING_JSON_BYTES:
         return value
     digest = hashlib.sha256(value.encode("utf-8", errors="surrogatepass")).hexdigest()
-    return f"sha256:{digest}"
+    return f"~{field_type}:{len(value):016x}:{digest}"
 
 
 def _trace_fits_json_budget(trace: PreviewVariantTrace) -> bool:
@@ -554,7 +590,39 @@ def _validate_variant_traces(raw_traces: list[Any]) -> list[PreviewVariantTrace]
             trace = PreviewVariantTrace.model_validate(raw_trace)
         except (TypeError, ValidationError, ValueError, OverflowError):
             raise ValueError(_MALFORMED_MANIFEST_TRACES_ERROR) from None
+        try:
+            _validate_trace_scalar_metadata(
+                image_index=trace.image_index,
+                variant_index=trace.variant_index,
+                effective_seed=trace.effective_seed,
+            )
+        except ValueError:
+            raise ValueError(_MALFORMED_MANIFEST_TRACES_ERROR) from None
         if not _trace_fits_json_budget(trace):
             raise ValueError(_MALFORMED_MANIFEST_TRACES_ERROR)
         traces.append(trace)
     return traces
+
+
+def _validate_trace_scalar_metadata(
+    *,
+    image_index: int,
+    variant_index: int,
+    effective_seed: int | None,
+) -> None:
+    _validate_trace_index("image_index", image_index)
+    _validate_trace_index("variant_index", variant_index)
+    if effective_seed is not None and (
+        isinstance(effective_seed, bool)
+        or not isinstance(effective_seed, int)
+        or effective_seed < MIN_TRACE_SEED
+        or effective_seed > MAX_TRACE_SEED
+    ):
+        msg = f"effective_seed must be None or an integer between {MIN_TRACE_SEED} and {MAX_TRACE_SEED}"
+        raise ValueError(msg)
+
+
+def _validate_trace_index(field: str, value: int) -> None:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0 or value > MAX_TRACE_INDEX:
+        msg = f"{field} must be an integer between 0 and {MAX_TRACE_INDEX}"
+        raise ValueError(msg)
