@@ -123,7 +123,7 @@ class GuidedPreviewService:
             )
 
         validation = self.preview_validator.validate(
-            template.request,
+            deepcopy(template.request),
             target=TargetSpec(targets=onboarding.recipe.targets),
         )
         normalized_request = validation.normalized_request
@@ -141,9 +141,8 @@ class GuidedPreviewService:
         except ValidationError:
             raise ValueError(_MALFORMED_NORMALIZED_REQUEST) from None
 
-        normalized_snapshot = deepcopy(canonical_request.model_dump(mode="json", exclude_none=True))
-        preview_request = canonical_request.model_copy(deep=True)
-        rendered_preview = self.preview_service.render_preview(preview_request)
+        normalized_snapshot = canonical_request.model_dump(mode="json", exclude_none=True)
+        rendered_preview = self.preview_service.render_preview(canonical_request)
         preview = rendered_preview.model_copy(deep=True)
         contact_sheets = [artifact for artifact in preview.artifacts if artifact.kind == "contact_sheet"]
         if len(contact_sheets) != 1:

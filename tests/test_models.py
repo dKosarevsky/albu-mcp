@@ -38,13 +38,27 @@ def test_preview_result_tracks_variant_trace_count_with_zero_default() -> None:
     assert traced_result.variant_trace_count == 3
 
 
+@pytest.mark.parametrize("variant_trace_count", [0, 1, MAX_SIGNED_64])
+def test_preview_result_accepts_strict_integer_trace_count_bounds(variant_trace_count: int) -> None:
+    result = PreviewResult.model_validate(_preview_result_payload(variant_trace_count=variant_trace_count))
+
+    assert result.variant_trace_count == variant_trace_count
+    assert type(result.variant_trace_count) is int
+
+
+@pytest.mark.parametrize("variant_trace_count", [True, 1.0, "1"])
+def test_preview_result_rejects_coercive_trace_count_values(variant_trace_count: object) -> None:
+    with pytest.raises(ValidationError):
+        PreviewResult.model_validate(_preview_result_payload(variant_trace_count=variant_trace_count))
+
+
 @pytest.mark.parametrize("variant_trace_count", [-1, MAX_SIGNED_64 + 1])
 def test_preview_result_bounds_variant_trace_count(variant_trace_count: int) -> None:
     with pytest.raises(ValidationError):
         PreviewResult.model_validate(_preview_result_payload(variant_trace_count=variant_trace_count))
 
 
-def _preview_result_payload(*, variant_trace_count: int | None = None) -> dict[str, object]:
+def _preview_result_payload(*, variant_trace_count: object | None = None) -> dict[str, object]:
     payload: dict[str, object] = {
         "run_id": "preview-run",
         "artifacts": [],

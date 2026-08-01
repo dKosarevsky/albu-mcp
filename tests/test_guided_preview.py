@@ -102,6 +102,31 @@ class StubValidator:
         return _validation_report(valid=True, normalized_request=request)
 
 
+class EchoMutatingValidator:
+    def __init__(self, *, valid: bool) -> None:
+        self.valid = valid
+        self.calls: list[tuple[dict[str, Any], TargetSpec]] = []
+        self.report: PreviewRequestValidationReport | None = None
+
+    def validate(
+        self,
+        request: dict[str, Any],
+        *,
+        target: TargetSpec | None = None,
+    ) -> PreviewRequestValidationReport:
+        assert target is not None
+        self.calls.append((request, target))
+        marker = request["pipeline"]["transforms"][0]["params"]["isolation"]
+        assert isinstance(marker, dict)
+        marker["owner"] = "validator"
+        self.report = _validation_report(
+            valid=self.valid,
+            normalized_request=request,
+            next_actions=["Fix the validator evidence."] if not self.valid else [],
+        )
+        return self.report
+
+
 class RecordingRenderer:
     def __init__(self, delegate: PreviewService) -> None:
         self.delegate = delegate
@@ -212,6 +237,67 @@ def test_guided_preview_exports_public_collaborator_protocols() -> None:
     assert guided_preview_module.PreviewValidator.__name__ == "PreviewValidator"
     assert guided_preview_module.PreviewRenderer.__name__ == "PreviewRenderer"
     assert guided_preview_module.OnboardingBuilder.__name__ == "OnboardingBuilder"
+
+
+@pytest.mark.parametrize(("valid", "expected_status"), [(False, "blocked"), (True, "rendered")])
+def test_guided_preview_detaches_validator_input_from_onboarding_template(
+    tmp_path: Path,
+    valid: object,
+    expected_status: str,
+) -> None:
+    assert isinstance(valid, bool)
+    dataset_path = _write_image(tmp_path / "dataset" / "sample.png")
+    path_policy = PathPolicy([tmp_path])
+    pipeline_service = PipelineService(TransformCatalog())
+    onboarding = build_dataset_onboarding_report(
+        dataset_path=dataset_path,
+        task="classification",
+        intensity="low",
+        targets=None,
+        path_policy=path_policy,
+        pipeline_service=pipeline_service,
+        recipe_builder=recommend_recipe,
+        max_images=1,
+    )
+    template = onboarding.preview_request_template
+    assert template is not None
+    template_params = template.request["pipeline"]["transforms"][0]["params"]
+    template_params["isolation"] = {"owner": "template"}
+    validator = EchoMutatingValidator(valid=valid)
+    renderer = StubRenderer(_preview_with_contact_sheet() if valid else None)
+    service = GuidedPreviewService(
+        path_policy=path_policy,
+        pipeline_service=pipeline_service,
+        recipe_builder=recommend_recipe,
+        preview_validator=validator,
+        preview_service=renderer,
+        onboarding_builder=StubOnboardingBuilder(onboarding),
+    )
+
+    result = service.run(GuidedPreviewRequest(dataset_path=dataset_path, max_images=1))
+
+    assert result.status == expected_status
+    assert result.onboarding is onboarding
+    assert validator.report is result.validation
+    assert validator.calls[0][0] is not template.request
+    assert template_params["isolation"] == {"owner": "template"}
+    assert result.validation is not None
+    assert result.validation.normalized_request is not None
+    validation_params = result.validation.normalized_request["pipeline"]["transforms"][0]["params"]
+    assert validation_params["isolation"] == {"owner": "validator"}
+    assert result.normalized_request is not None
+    result_params = result.normalized_request["pipeline"]["transforms"][0]["params"]
+    assert result_params["isolation"] == {"owner": "validator"}
+
+    validation_params["isolation"]["owner"] = "validation-caller"
+    assert template_params["isolation"] == {"owner": "template"}
+    assert result_params["isolation"] == {"owner": "validator"}
+    template_params["isolation"]["owner"] = "template-caller"
+    assert validation_params["isolation"] == {"owner": "validation-caller"}
+    assert result_params["isolation"] == {"owner": "validator"}
+
+    assert len(renderer.calls) == int(valid)
+    assert result.trace_available is valid
 
 
 def test_guided_preview_renders_bounded_safe_template_with_traceable_contact_sheet(tmp_path: Path) -> None:

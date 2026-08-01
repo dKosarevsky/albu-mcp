@@ -158,7 +158,7 @@ class PreviewResult(StrictModel):
     artifacts: list[ArtifactRef]
     manifest: ArtifactRef
     pipeline: dict[str, Any]
-    variant_trace_count: int = Field(default=0, ge=0, le=MAX_SIGNED_64)
+    variant_trace_count: int = Field(default=0, ge=0, le=MAX_SIGNED_64, strict=True)
 
 
 class PreviewRunSummary(StrictModel):
