@@ -101,9 +101,11 @@ def test_ci_workflow_uses_node24_ready_actions() -> None:
     workflow = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
     steps = workflow["jobs"]["test"]["steps"]
     actions = {step["name"]: step["uses"] for step in steps if "uses" in step}
+    checkout = next(step for step in steps if step.get("name") == "Check out repository")
     setup_uv = next(step for step in steps if step.get("name") == "Install uv")
 
     assert actions["Check out repository"] == "actions/checkout@v5"
+    assert checkout["with"]["fetch-depth"] == 0
     assert actions["Install uv"] == "astral-sh/setup-uv@v7"
     assert actions["Set up Python"] == "actions/setup-python@v6"
     assert setup_uv["with"]["enable-cache"] is False
