@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
-from pydantic import Field, ValidationError
+from pydantic import ConfigDict, Field, ValidationError
 
 from albumentationsx_mcp.models import StrictModel
 
@@ -34,7 +34,9 @@ MAX_ARRAY_HASH_BYTES = 1024 * 1024
 MAX_INLINE_INTEGER_BITS = 2048
 
 _HASHABLE_ARRAY_KINDS = frozenset("biufcmMSU")
-_MAX_COMPACT_STRING_JSON_BYTES = 112
+_MAX_COMPACT_STRING_JSON_BYTES = 128
+_COMPACT_STRING_PREFIX = "~compact:"
+_LITERAL_STRING_PREFIX = "~literal:"
 _APPLIED_TRANSFORM_ENTRY_ITEMS = 2
 _APPLIED_TRANSFORMS_COLLECTION_ERROR = "applied_transforms must be an ordered collection of (name, params) tuples"
 _APPLIED_TRANSFORMS_ENTRY_ERROR = (
@@ -157,12 +159,16 @@ def _structural_summary(value: Any) -> dict[str, Any]:
 class AppliedTransformTrace(StrictModel):
     """One applied transform and its bounded sampled parameters."""
 
+    model_config = ConfigDict(extra="forbid", strict=True)
+
     name: str
     params: dict[str, Any] = Field(default_factory=dict)
 
 
 class PreviewVariantTrace(StrictModel):
     """Applied-transform trace for one rendered preview variant."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
 
     image_index: int = Field(ge=0)
     variant_index: int = Field(ge=0)
@@ -176,6 +182,8 @@ class PreviewVariantTrace(StrictModel):
 
 class PreviewVariantTraceResult(StrictModel):
     """Result of querying one preview variant trace."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
 
     run_id: str
     image_index: int = Field(ge=0)
@@ -499,6 +507,8 @@ def get_preview_variant_trace(
     variant_index: int,
 ) -> PreviewVariantTraceResult:
     """Read and validate one variant trace from a controlled preview manifest."""
+    _validate_trace_index_type("image_index", image_index)
+    _validate_trace_index_type("variant_index", variant_index)
     if image_index < 0 or variant_index < 0:
         msg = "image_index and variant_index must be non-negative"
         raise ValueError(msg)
@@ -569,10 +579,21 @@ def _parameter_summary(params: dict[str, Any], *, item_count: int) -> dict[str, 
 
 def _compact_trace_text(value: str, *, field_type: str) -> str:
     encoded = json.dumps(value, ensure_ascii=True).encode("utf-8")
-    if len(encoded) <= _MAX_COMPACT_STRING_JSON_BYTES:
+    if len(encoded) > _MAX_COMPACT_STRING_JSON_BYTES:
+        return _compact_trace_text_digest(value, field_type=field_type)
+    if not value.startswith((_COMPACT_STRING_PREFIX, _LITERAL_STRING_PREFIX)):
         return value
+
+    escaped = f"{_LITERAL_STRING_PREFIX}{value}"
+    escaped_json = json.dumps(escaped, ensure_ascii=True).encode("utf-8")
+    if len(escaped_json) <= _MAX_COMPACT_STRING_JSON_BYTES:
+        return escaped
+    return _compact_trace_text_digest(value, field_type=field_type)
+
+
+def _compact_trace_text_digest(value: str, *, field_type: str) -> str:
     digest = hashlib.sha256(value.encode("utf-8", errors="surrogatepass")).hexdigest()
-    return f"~{field_type}:{len(value):016x}:{digest}"
+    return f"{_COMPACT_STRING_PREFIX}{field_type}:{len(value):016x}:{digest}"
 
 
 def _trace_fits_json_budget(trace: PreviewVariantTrace) -> bool:
@@ -626,3 +647,9 @@ def _validate_trace_index(field: str, value: int) -> None:
     if isinstance(value, bool) or not isinstance(value, int) or value < 0 or value > MAX_TRACE_INDEX:
         msg = f"{field} must be an integer between 0 and {MAX_TRACE_INDEX}"
         raise ValueError(msg)
+
+
+def _validate_trace_index_type(field: str, value: Any) -> None:
+    if isinstance(value, bool) or not isinstance(value, int):
+        msg = f"{field} must be an integer between 0 and {MAX_TRACE_INDEX}"
+        raise ValueError(msg)  # noqa: TRY004 - public API requires one stable validation error type.

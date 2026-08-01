@@ -1,5 +1,6 @@
 import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -459,6 +460,74 @@ def test_get_preview_variant_trace_rejects_malformed_nonmatching_entry(tmp_path:
     assert str(store.root) not in str(exc_info.value)
 
 
+def test_get_preview_variant_trace_rejects_coercible_numeric_string_in_nonmatching_entry(tmp_path: Path) -> None:
+    store, result = _render_real_preview_fixture(tmp_path)
+    manifest_path = store.root / result.run_id / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    nonmatching = dict(manifest["variant_traces"][0])
+    nonmatching["image_index"] = "9"
+    nonmatching["variant_index"] = 9
+    manifest["variant_traces"].append(nonmatching)
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(
+        ValueError,
+        match=r"^Preview manifest variant_traces contain malformed entries$",
+    ):
+        preview_trace.get_preview_variant_trace(store, result.run_id, image_index=0, variant_index=0)
+
+
+@pytest.mark.parametrize(
+    ("target", "value"),
+    [
+        ("image_index", "0"),
+        ("variant_index", False),
+        ("effective_seed", "17"),
+        ("truncated_transform_count", "0"),
+        ("parameters_truncated", "false"),
+        ("source_path", 7),
+        ("artifact_uri", 7),
+        ("transform_name", 7),
+        ("applied_transforms", {}),
+        ("transform_params", []),
+    ],
+    ids=[
+        "numeric-image-string",
+        "boolean-variant",
+        "numeric-seed-string",
+        "numeric-count-string",
+        "boolean-string",
+        "numeric-source-path",
+        "numeric-artifact-uri",
+        "numeric-transform-name",
+        "mapping-transform-container",
+        "sequence-params-container",
+    ],
+)
+def test_get_preview_variant_trace_rejects_coercive_manifest_fields(
+    tmp_path: Path,
+    target: str,
+    value: Any,
+) -> None:
+    store, result = _render_real_preview_fixture(tmp_path)
+    manifest_path = store.root / result.run_id / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    trace = manifest["variant_traces"][0]
+    if target == "transform_name":
+        trace["applied_transforms"][0]["name"] = value
+    elif target == "transform_params":
+        trace["applied_transforms"][0]["params"] = value
+    else:
+        trace[target] = value
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(
+        ValueError,
+        match=r"^Preview manifest variant_traces contain malformed entries$",
+    ):
+        preview_trace.get_preview_variant_trace(store, result.run_id, image_index=0, variant_index=0)
+
+
 def test_get_preview_variant_trace_rejects_duplicate_matching_entries(tmp_path: Path) -> None:
     store, result = _render_real_preview_fixture(tmp_path)
     manifest_path = store.root / result.run_id / "manifest.json"
@@ -503,6 +572,33 @@ def test_get_preview_variant_trace_rejects_negative_indexes_before_manifest_read
             image_index=image_index,
             variant_index=variant_index,
         )
+
+
+@pytest.mark.parametrize("field", ["image_index", "variant_index"])
+@pytest.mark.parametrize(
+    "invalid_value",
+    ["0", 0.0, True, 10**5000],
+    ids=["string", "float", "bool", "huge-int"],
+)
+def test_get_preview_variant_trace_rejects_invalid_index_types_before_manifest_read(
+    tmp_path: Path,
+    field: str,
+    invalid_value: Any,
+) -> None:
+    store = ArtifactStore(tmp_path / "private-artifacts")
+    expected_message = f"{field} must be an integer between 0 and {(1 << 63) - 1}"
+
+    with pytest.raises(ValueError, match=re.escape(expected_message)) as exc_info:
+        preview_trace.get_preview_variant_trace(
+            store,
+            "0" * 32,
+            image_index=invalid_value if field == "image_index" else 0,
+            variant_index=invalid_value if field == "variant_index" else 0,
+        )
+
+    assert str(exc_info.value) == expected_message
+    assert str(store.root) not in str(exc_info.value)
+    assert len(str(exc_info.value)) < 128
 
 
 def _render_preview_fixture(tmp_path: Path) -> tuple[ArtifactStore, PreviewResult]:

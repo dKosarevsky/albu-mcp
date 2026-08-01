@@ -58,7 +58,7 @@ def _serialized_trace_size(trace: PreviewVariantTrace) -> int:
 
 def _trace_string_digest_token(field_code: str, value: str) -> str:
     digest = hashlib.sha256(value.encode("utf-8", errors="surrogatepass")).hexdigest()
-    return f"~{field_code}:{len(value):016x}:{digest}"
+    return f"~compact:{field_code}:{len(value):016x}:{digest}"
 
 
 def test_trace_limits_are_stable() -> None:
@@ -611,6 +611,55 @@ def test_build_variant_trace_final_fallback_preserves_all_capped_transform_ident
     assert preview_trace._MAX_FINAL_VARIANT_TRACE_JSON_BYTES <= MAX_VARIANT_TRACE_JSON_BYTES
 
 
+def test_build_variant_trace_compaction_does_not_collide_with_compact_token_literal() -> None:
+    long_name = "Transform-" + "x" * (MAX_VARIANT_TRACE_JSON_BYTES * 2)
+    compact_token_literal = _trace_string_digest_token("transform_name", long_name)
+
+    trace = preview_trace.build_variant_trace(
+        image_index=0,
+        variant_index=0,
+        source_path="source.png",
+        artifact_uri="artifact://run/000-000.png",
+        effective_seed=7,
+        applied_transforms=[(long_name, {}), (compact_token_literal, {})],
+    )
+
+    assert [item.name for item in trace.applied_transforms] == [
+        _trace_string_digest_token("transform_name", long_name),
+        f"~literal:{compact_token_literal}",
+    ]
+    assert trace.applied_transforms[0].name != trace.applied_transforms[1].name
+    assert _serialized_trace_size(trace) <= MAX_VARIANT_TRACE_JSON_BYTES
+
+
+def test_build_variant_trace_escapes_reserved_prefixes_during_fallback() -> None:
+    long_value = "x" * (MAX_VARIANT_TRACE_JSON_BYTES * 2)
+    compact_literal = _trace_string_digest_token("transform_name", long_value)
+    reserved_names = [
+        compact_literal,
+        f"~literal:{compact_literal}",
+        "~literal:~literal:ordinary",
+        "HorizontalFlip",
+    ]
+
+    trace = preview_trace.build_variant_trace(
+        image_index=0,
+        variant_index=0,
+        source_path=long_value,
+        artifact_uri=f"artifact://{long_value}",
+        effective_seed=7,
+        applied_transforms=[(name, {}) for name in reserved_names],
+    )
+
+    assert [item.name for item in trace.applied_transforms] == [
+        f"~literal:{compact_literal}",
+        f"~literal:~literal:{compact_literal}",
+        "~literal:~literal:~literal:ordinary",
+        "HorizontalFlip",
+    ]
+    assert _serialized_trace_size(trace) <= MAX_VARIANT_TRACE_JSON_BYTES
+
+
 @pytest.mark.parametrize(
     ("field", "value", "expected_message"),
     [
@@ -753,3 +802,30 @@ def test_preview_variant_trace_result_rejects_negative_indexes(field: str, value
 def test_trace_models_reject_unknown_fields() -> None:
     with pytest.raises(ValidationError):
         AppliedTransformTrace.model_validate({"name": "Blur", "unknown": True})
+
+
+def test_trace_models_reject_coercive_values_and_containers() -> None:
+    with pytest.raises(ValidationError):
+        AppliedTransformTrace.model_validate({"name": b"Blur", "params": {}})
+
+    with pytest.raises(ValidationError):
+        PreviewVariantTrace.model_validate(
+            {
+                "image_index": 0,
+                "variant_index": 0,
+                "source_path": "source.png",
+                "artifact_uri": "albumentationsx://runs/run-1/images/0/0",
+                "applied_transforms": (),
+            }
+        )
+
+    with pytest.raises(ValidationError):
+        PreviewVariantTraceResult.model_validate(
+            {
+                "run_id": "run-1",
+                "image_index": 0,
+                "variant_index": 0,
+                "available": "false",
+                "message": "Trace unavailable.",
+            }
+        )
