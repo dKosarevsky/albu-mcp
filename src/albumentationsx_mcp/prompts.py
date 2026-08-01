@@ -65,9 +65,7 @@ def run_first_preview_review(
         if normalized_targets is not None:
             guided_arguments.append(f"targets={normalized_targets!r}")
         guided_arguments.append("max_images=8")
-        parts.append(
-            f"Call run_first_preview with {', '.join(guided_arguments)}. Show the returned contact sheet. "
-        )
+        parts.append(f"Call run_first_preview with {', '.join(guided_arguments)}. Show the returned contact sheet. ")
     elif {"validate_preview_request", "render_preview_batch"} <= tools:
         parts.append(
             "Copy preview_request_template.request, replace its input_paths value with "

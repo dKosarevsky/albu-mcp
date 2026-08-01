@@ -367,9 +367,7 @@ def test_first_preview_resource_fallback_tool_and_prompt_match_active_profile(
     tools = set(server._tool_manager._tools)
     resource = server._resource_manager._resources["albumentationsx://examples/first-preview"]
     resource_payload = json.loads(cast("Any", resource).fn())
-    fallback_payload = cast("Any", server._tool_manager._tools["get_workflow_example"]).fn(
-        example_id="first-preview"
-    )
+    fallback_payload = cast("Any", server._tool_manager._tools["get_workflow_example"]).fn(example_id="first-preview")
     prompt = cast("Any", server._prompt_manager._prompts["run_first_preview_review"]).fn()
 
     assert resource_payload == fallback_payload
