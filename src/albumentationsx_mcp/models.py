@@ -186,6 +186,7 @@ class PreviewManifestSummary(StrictModel):
     contact_sheet_paths: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
     annotation_observation_count: int = 0
+    variant_trace_count: int = Field(default=0, ge=0, le=(1 << 63) - 1)
 
 
 class ImageQualityMetrics(StrictModel):

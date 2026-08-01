@@ -21,6 +21,7 @@ def preview_manifest(*, run_id: str, transform_name: str, seed: int | None = Non
             "artifact_counts": {"image": 2, "contact_sheet": 1},
             "contact_sheet_paths": [f"/artifacts/{run_id}/contact_sheet.png"],
             "warnings": [],
+            "variant_trace_count": 2,
         },
         "artifacts": [
             {"kind": "image", "path": f"/artifacts/{run_id}/000-000.png"},
@@ -40,6 +41,16 @@ def test_preview_manifest_summary_is_agent_legible() -> None:
     assert summary.transform_names == ["HorizontalFlip"]
     assert summary.artifact_counts == {"image": 2, "contact_sheet": 1}
     assert summary.contact_sheet_paths == ["/artifacts/baseline/contact_sheet.png"]
+    assert summary.variant_trace_count == 2
+
+
+def test_preview_manifest_summary_defaults_legacy_variant_trace_count_to_zero() -> None:
+    manifest = preview_manifest(run_id="legacy", transform_name="HorizontalFlip", seed=10)
+    manifest["summary"].pop("variant_trace_count")
+
+    summary = summarize_preview_manifest(manifest)
+
+    assert summary.variant_trace_count == 0
 
 
 def test_compare_preview_manifests_reports_reproducibility_differences() -> None:

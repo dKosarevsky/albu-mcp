@@ -39,7 +39,7 @@ from albumentationsx_mcp.models import (
     QualityProfileName,
 )
 from albumentationsx_mcp.preview_analysis import compare_preview_manifests
-from albumentationsx_mcp.preview_trace import PreviewVariantTrace, build_variant_trace
+from albumentationsx_mcp.preview_trace import PreviewVariantTrace, build_variant_trace, validate_effective_seed
 from albumentationsx_mcp.quality import compare_manifest_quality
 
 _RUN_ID_PATTERN = re.compile(r"^[0-9a-f]{32}$")
@@ -388,6 +388,7 @@ class PreviewService:
 
     def render_preview(self, request: PreviewRequest) -> PreviewResult:
         """Apply the pipeline to local images and write preview artifacts."""
+        _validate_effective_variant_seeds(request)
         run_id, run_dir = self.artifact_store.create_run_dir()
         try:
             return self._render_preview_in_run_dir(request, run_id, run_dir)
@@ -531,10 +532,7 @@ class PreviewService:
         """Compare two recorded preview manifests."""
         baseline = self.artifact_store.read_manifest(baseline_run_id)
         candidate = self.artifact_store.read_manifest(candidate_run_id)
-        comparison = compare_preview_manifests(
-            _manifest_for_comparison(baseline),
-            _manifest_for_comparison(candidate),
-        )
+        comparison = compare_preview_manifests(baseline, candidate)
         quality_summary, quality_warnings = compare_manifest_quality(
             baseline,
             candidate,
@@ -619,10 +617,6 @@ def _effective_variant_seed(request: PreviewRequest, variant_index: int) -> int 
     return request.pipeline.seed
 
 
-def _manifest_for_comparison(manifest: dict[str, Any]) -> dict[str, Any]:
-    summary = manifest.get("summary")
-    if not isinstance(summary, dict) or "variant_trace_count" not in summary:
-        return manifest
-    comparison_summary = dict(summary)
-    comparison_summary.pop("variant_trace_count")
-    return {**manifest, "summary": comparison_summary}
+def _validate_effective_variant_seeds(request: PreviewRequest) -> None:
+    for variant_index in range(request.variants_per_image):
+        validate_effective_seed(_effective_variant_seed(request, variant_index))

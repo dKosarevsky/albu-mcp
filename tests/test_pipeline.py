@@ -17,6 +17,7 @@ from albumentationsx_mcp.models import (
     TransformSpec,
 )
 from albumentationsx_mcp.pipeline import PipelineService
+from albumentationsx_mcp.preview_trace import build_variant_trace
 
 
 class DummyTransform:
@@ -144,10 +145,22 @@ def test_build_pipeline_records_applied_params_without_changing_seeded_output() 
     instrumented_result = PipelineService(TransformCatalog()).build_pipeline(spec)(image=image)
 
     assert instrumented_result["image"].tobytes() == ordinary_result["image"].tobytes()
-    assert [name for name, _ in instrumented_result["applied_transforms"]] == [
+    applied_transforms = instrumented_result["applied_transforms"]
+    assert type(applied_transforms) is list
+    assert all(type(entry) is tuple and type(entry[1]) is dict for entry in applied_transforms)
+    assert [name for name, _ in applied_transforms] == [
         "HorizontalFlip",
         "GaussNoise",
     ]
+    trace = build_variant_trace(
+        image_index=0,
+        variant_index=0,
+        source_path="source.png",
+        artifact_uri="artifact://run/000-000.png",
+        effective_seed=17,
+        applied_transforms=applied_transforms,
+    )
+    assert [transform.name for transform in trace.applied_transforms] == ["HorizontalFlip", "GaussNoise"]
 
 
 def test_export_python_adapts_public_bbox_format_for_runtime() -> None:

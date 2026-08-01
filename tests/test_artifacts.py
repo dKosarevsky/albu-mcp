@@ -13,6 +13,7 @@ from albumentationsx_mcp.catalog import TransformCatalog
 from albumentationsx_mcp.models import ComposeSpec, PreviewRequest, PreviewResult, TransformSpec
 from albumentationsx_mcp.pipeline import PipelineService
 from albumentationsx_mcp.preview import ArtifactStore, PathPolicy, PreviewService
+from albumentationsx_mcp.preview_analysis import summarize_preview_manifest
 
 
 class IdentityPipelineService:
@@ -54,6 +55,7 @@ def test_preview_rendering_records_queryable_run_index(tmp_path: Path) -> None:
 
     runs = store.list_runs()
     manifest = store.read_manifest(result.run_id)
+    typed_summary = summarize_preview_manifest(manifest)
 
     assert runs[0].run_id == result.run_id
     assert runs[0].artifact_count == len(result.artifacts)
@@ -64,6 +66,7 @@ def test_preview_rendering_records_queryable_run_index(tmp_path: Path) -> None:
     assert manifest["summary"]["transform_names"] == ["HorizontalFlip"]
     assert manifest["summary"]["artifact_counts"]["image"] == 2
     assert manifest["summary"]["variant_trace_count"] == 2
+    assert typed_summary.variant_trace_count == 2
     assert [trace["effective_seed"] for trace in manifest["variant_traces"]] == [31, 31]
     assert all(trace["applied_transforms"] == [] for trace in manifest["variant_traces"])
     assert any(artifact["kind"] == "contact_sheet" for artifact in manifest["artifacts"])
@@ -395,6 +398,69 @@ def test_get_preview_variant_trace_returns_legacy_unavailable(tmp_path: Path) ->
     assert lookup.message == "Variant traces are unavailable for this legacy preview run."
 
 
+@pytest.mark.parametrize("present_marker", ["variant_traces", "variant_trace_count"])
+def test_get_preview_variant_trace_rejects_exactly_one_trace_marker(
+    tmp_path: Path,
+    present_marker: str,
+) -> None:
+    store, result = _render_real_preview_fixture(tmp_path)
+    manifest_path = store.root / result.run_id / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if present_marker == "variant_traces":
+        manifest["summary"].pop("variant_trace_count")
+    else:
+        manifest.pop("variant_traces")
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(ValueError, match=r"^Preview manifest trace metadata is malformed$"):
+        preview_trace.get_preview_variant_trace(store, result.run_id, image_index=0, variant_index=0)
+
+
+def test_get_preview_variant_trace_rejects_non_mapping_summary_without_path_leak(tmp_path: Path) -> None:
+    store, result = _render_real_preview_fixture(tmp_path)
+    manifest_path = store.root / result.run_id / "manifest.json"
+    private_path = str(tmp_path / "private" / "summary.json")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["summary"] = [private_path]
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(ValueError, match=r"^Preview manifest trace metadata is malformed$") as exc_info:
+        preview_trace.get_preview_variant_trace(store, result.run_id, image_index=0, variant_index=0)
+
+    assert private_path not in str(exc_info.value)
+    assert str(store.root) not in str(exc_info.value)
+
+
+@pytest.mark.parametrize(
+    "trace_count",
+    ["1", True, preview_trace.MAX_TRACE_INDEX + 1],
+    ids=["numeric-string", "boolean", "oversized"],
+)
+def test_get_preview_variant_trace_rejects_non_strict_or_oversized_summary_count(
+    tmp_path: Path,
+    trace_count: Any,
+) -> None:
+    store, result = _render_real_preview_fixture(tmp_path)
+    manifest_path = store.root / result.run_id / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["summary"]["variant_trace_count"] = trace_count
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(ValueError, match=r"^Preview manifest trace metadata is malformed$"):
+        preview_trace.get_preview_variant_trace(store, result.run_id, image_index=0, variant_index=0)
+
+
+def test_get_preview_variant_trace_rejects_summary_count_mismatch(tmp_path: Path) -> None:
+    store, result = _render_real_preview_fixture(tmp_path)
+    manifest_path = store.root / result.run_id / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["summary"]["variant_trace_count"] = 0
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(ValueError, match=r"^Preview manifest trace metadata is malformed$"):
+        preview_trace.get_preview_variant_trace(store, result.run_id, image_index=0, variant_index=0)
+
+
 def test_get_preview_variant_trace_rejects_non_list_metadata_without_path_leak(tmp_path: Path) -> None:
     store, result = _render_real_preview_fixture(tmp_path)
     manifest_path = store.root / result.run_id / "manifest.json"
@@ -461,6 +527,7 @@ def test_get_preview_variant_trace_rejects_malformed_nonmatching_entry(tmp_path:
             "source_path": private_path,
         }
     )
+    manifest["summary"]["variant_trace_count"] += 1
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
 
     with pytest.raises(
@@ -481,6 +548,7 @@ def test_get_preview_variant_trace_rejects_coercible_numeric_string_in_nonmatchi
     nonmatching["image_index"] = "9"
     nonmatching["variant_index"] = 9
     manifest["variant_traces"].append(nonmatching)
+    manifest["summary"]["variant_trace_count"] += 1
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
 
     with pytest.raises(
@@ -573,11 +641,32 @@ def test_get_preview_variant_trace_rejects_duplicate_matching_entries(tmp_path: 
     manifest_path = store.root / result.run_id / "manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     manifest["variant_traces"].append(dict(manifest["variant_traces"][0]))
+    manifest["summary"]["variant_trace_count"] += 1
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
 
     with pytest.raises(
         ValueError,
-        match=r"^Preview manifest contains multiple traces for the requested image and variant$",
+        match=r"^Preview manifest contains duplicate image and variant traces$",
+    ) as exc_info:
+        preview_trace.get_preview_variant_trace(store, result.run_id, image_index=0, variant_index=0)
+
+    assert str(store.root) not in str(exc_info.value)
+
+
+def test_get_preview_variant_trace_rejects_duplicate_unrelated_pair(tmp_path: Path) -> None:
+    store, result = _render_real_preview_fixture(tmp_path)
+    manifest_path = store.root / result.run_id / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    unrelated = dict(manifest["variant_traces"][0])
+    unrelated["image_index"] = 9
+    unrelated["variant_index"] = 9
+    manifest["variant_traces"].extend([unrelated, dict(unrelated)])
+    manifest["summary"]["variant_trace_count"] += 2
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(
+        ValueError,
+        match=r"^Preview manifest contains duplicate image and variant traces$",
     ) as exc_info:
         preview_trace.get_preview_variant_trace(store, result.run_id, image_index=0, variant_index=0)
 
@@ -639,6 +728,38 @@ def test_get_preview_variant_trace_rejects_invalid_index_types_before_manifest_r
     assert str(exc_info.value) == expected_message
     assert str(store.root) not in str(exc_info.value)
     assert len(str(exc_info.value)) < 128
+
+
+def test_render_preview_rejects_effective_seed_overflow_before_run_allocation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    store = ArtifactStore(tmp_path / "artifacts")
+    service = PreviewService(IdentityPipelineService(), PathPolicy([tmp_path]), store)
+    failure_message = "run allocation must not occur"
+
+    def fail_create_run_dir() -> None:
+        raise AssertionError(failure_message)
+
+    monkeypatch.setattr(store, "create_run_dir", fail_create_run_dir)
+    expected_message = (
+        f"effective_seed must be None or an integer between {preview_trace.MIN_TRACE_SEED} "
+        f"and {preview_trace.MAX_TRACE_SEED}"
+    )
+
+    with pytest.raises(ValueError, match=re.escape(expected_message)) as exc_info:
+        service.render_preview(
+            PreviewRequest(
+                input_paths=[tmp_path / "missing.png"],
+                pipeline=ComposeSpec(transforms=[TransformSpec(name="HorizontalFlip", p=1.0)]),
+                variants_per_image=2,
+                seed=preview_trace.MAX_TRACE_SEED,
+            )
+        )
+
+    assert str(exc_info.value) == expected_message
+    assert list(store.root.iterdir()) == []
+    assert not store.index_path.exists()
 
 
 def _render_preview_fixture(tmp_path: Path) -> tuple[ArtifactStore, PreviewResult]:

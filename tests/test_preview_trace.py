@@ -3,7 +3,7 @@ import json
 import math
 import re
 import sys
-from collections.abc import ItemsView, Iterator, Mapping
+from collections.abc import ItemsView, Iterator, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -52,6 +52,31 @@ class CountingMapping(Mapping[str, object]):
         return self._values.items()
 
 
+class GuardedSequence(Sequence[object]):
+    def __init__(self, private_path: str) -> None:
+        self.private_path = private_path
+
+    def __getitem__(self, index: int | slice) -> Any:
+        raise AssertionError(self.private_path)
+
+    def __len__(self) -> int:
+        raise AssertionError(self.private_path)
+
+
+class GuardedMapping(Mapping[str, object]):
+    def __init__(self, private_path: str) -> None:
+        self.private_path = private_path
+
+    def __getitem__(self, key: str) -> object:
+        raise AssertionError(self.private_path)
+
+    def __iter__(self) -> Iterator[str]:
+        raise AssertionError(self.private_path)
+
+    def __len__(self) -> int:
+        raise AssertionError(self.private_path)
+
+
 def _serialized_trace_size(trace: PreviewVariantTrace) -> int:
     encoded = json.dumps(trace.model_dump(mode="json"), allow_nan=False, sort_keys=True)
     return len(encoded.encode("utf-8"))
@@ -62,6 +87,17 @@ def _trace_string_digest_token(field_code: str, value: str) -> str:
     return f"~compact:{field_code}:{len(value):016x}:{digest}"
 
 
+@pytest.mark.parametrize(
+    "value",
+    ["", 'quote"slash\\', "\x00\x1f\x7f", "é", "😀", "\udcff"],
+    ids=["empty", "escaped-ascii", "ascii-boundaries", "bmp", "non-bmp", "surrogate"],
+)
+def test_json_text_size_matches_standard_encoder_boundaries(value: str) -> None:
+    expected = len(json.dumps(value, ensure_ascii=True).encode("utf-8"))
+
+    assert preview_trace._json_text_size(value) == expected
+
+
 def test_trace_limits_are_stable() -> None:
     assert MAX_INLINE_ARRAY_ELEMENTS == 64
     assert MAX_COLLECTION_ITEMS == 32
@@ -70,6 +106,9 @@ def test_trace_limits_are_stable() -> None:
     assert MAX_INLINE_STRING_CHARS == 256
     assert MAX_APPLIED_TRANSFORMS == 32
     assert MAX_VARIANT_TRACE_JSON_BYTES == 8 * 1024
+    assert preview_trace.MAX_APPLIED_TRANSFORM_INPUTS == 1024
+    assert preview_trace.MAX_TRACE_INPUT_TEXT_CHARS == 32 * 1024
+    assert preview_trace.MAX_TRACE_STRING_HASH_CHARS == 64 * 1024
     assert preview_trace.MAX_ARRAY_HASH_BYTES == 1024 * 1024
     assert preview_trace.MAX_INLINE_INTEGER_BITS == 2048
     assert preview_trace.MAX_TRACE_INDEX == (1 << 63) - 1
@@ -164,6 +203,24 @@ def test_normalize_trace_value_summarizes_long_string() -> None:
         "kind": "string_summary",
         "length": len(value),
         "sha256": hashlib.sha256(value.encode("utf-8")).hexdigest(),
+    }
+
+
+def test_normalize_trace_value_omits_hash_for_string_above_hash_bound(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    value = "x" * (preview_trace.MAX_TRACE_STRING_HASH_CHARS + 1)
+    failure_message = "hashing must remain bounded"
+
+    def fail_hash(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError(failure_message)
+
+    monkeypatch.setattr(preview_trace.hashlib, "sha256", fail_hash)
+
+    assert normalize_trace_value(value) == {
+        "kind": "string_summary",
+        "length": len(value),
+        "content_omitted": True,
     }
 
 
@@ -537,6 +594,85 @@ def test_build_variant_trace_accepts_missing_applied_transforms() -> None:
     assert trace.parameters_truncated is False
 
 
+@pytest.mark.parametrize("collection_type", [list, tuple], ids=["list", "tuple"])
+def test_build_variant_trace_accepts_bounded_concrete_transform_collections(collection_type: type) -> None:
+    applied_transforms = collection_type(
+        [("HorizontalFlip", {}) for _ in range(preview_trace.MAX_APPLIED_TRANSFORM_INPUTS)]
+    )
+
+    trace = preview_trace.build_variant_trace(
+        image_index=0,
+        variant_index=0,
+        source_path=Path("source.png"),
+        artifact_uri="artifact://run/000-000.png",
+        effective_seed=7,
+        applied_transforms=applied_transforms,
+    )
+
+    assert len(trace.applied_transforms) == MAX_APPLIED_TRANSFORMS
+    assert trace.truncated_transform_count == preview_trace.MAX_APPLIED_TRANSFORM_INPUTS - MAX_APPLIED_TRANSFORMS
+
+
+def test_build_variant_trace_rejects_custom_sequence_without_probing_it() -> None:
+    private_path = "/private/customer/guarded-sequence"
+
+    with pytest.raises(
+        ValueError,
+        match=r"^applied_transforms must be an ordered collection of \(name, params\) tuples$",
+    ) as exc_info:
+        preview_trace.build_variant_trace(
+            image_index=0,
+            variant_index=0,
+            source_path="source.png",
+            artifact_uri="artifact://run/000-000.png",
+            effective_seed=7,
+            applied_transforms=GuardedSequence(private_path),
+        )
+
+    assert private_path not in str(exc_info.value)
+    assert exc_info.value.__cause__ is None
+
+
+def test_build_variant_trace_rejects_oversized_transform_input_before_iteration() -> None:
+    oversized = [UnsupportedValue()] * (preview_trace.MAX_APPLIED_TRANSFORM_INPUTS + 1)
+    expected_message = f"applied_transforms must contain at most {preview_trace.MAX_APPLIED_TRANSFORM_INPUTS} entries"
+
+    with pytest.raises(ValueError, match=re.escape(expected_message)) as exc_info:
+        preview_trace.build_variant_trace(
+            image_index=0,
+            variant_index=0,
+            source_path="source.png",
+            artifact_uri="artifact://run/000-000.png",
+            effective_seed=7,
+            applied_transforms=oversized,
+        )
+
+    assert str(exc_info.value) == expected_message
+    assert exc_info.value.__cause__ is None
+
+
+def test_build_variant_trace_rejects_custom_mapping_in_malformed_tail_without_path_leak() -> None:
+    private_path = "/private/customer/guarded-mapping"
+    applied_transforms: list[object] = [(f"Transform{index:02d}", {}) for index in range(MAX_APPLIED_TRANSFORMS)]
+    applied_transforms.append(("TailTransform", GuardedMapping(private_path)))
+
+    with pytest.raises(
+        ValueError,
+        match=(r"^applied_transforms entries must be \(name, params\) tuples with string names and mapping params$"),
+    ) as exc_info:
+        preview_trace.build_variant_trace(
+            image_index=0,
+            variant_index=0,
+            source_path="source.png",
+            artifact_uri="artifact://run/000-000.png",
+            effective_seed=7,
+            applied_transforms=applied_transforms,
+        )
+
+    assert private_path not in str(exc_info.value)
+    assert exc_info.value.__cause__ is None
+
+
 @pytest.mark.parametrize(
     ("field", "value", "expected_message"),
     [
@@ -564,6 +700,94 @@ def test_build_variant_trace_rejects_invalid_string_metadata(
 
     assert str(exc_info.value) == expected_message
     assert len(str(exc_info.value)) < 128
+
+
+@pytest.mark.parametrize(
+    ("field", "expected_message"),
+    [
+        ("source_path", "source_path must not exceed 32768 characters"),
+        ("artifact_uri", "artifact_uri must not exceed 32768 characters"),
+    ],
+)
+def test_build_variant_trace_rejects_oversized_path_and_uri_text(field: str, expected_message: str) -> None:
+    oversized = "x" * (preview_trace.MAX_TRACE_INPUT_TEXT_CHARS + 1)
+
+    with pytest.raises(ValueError, match=re.escape(expected_message)) as exc_info:
+        preview_trace.build_variant_trace(
+            image_index=0,
+            variant_index=0,
+            source_path=oversized if field == "source_path" else "source.png",
+            artifact_uri=oversized if field == "artifact_uri" else "artifact://run/000-000.png",
+            effective_seed=7,
+            applied_transforms=[],
+        )
+
+    assert str(exc_info.value) == expected_message
+    assert oversized not in str(exc_info.value)
+
+
+def test_build_variant_trace_rejects_one_megabyte_name_before_hash_or_serialization(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    private_name = "/private/customer/" + "x" * (1024 * 1024)
+    expected_message = "applied transform names must not exceed 32768 characters"
+    failure_message = "expensive trace work must not run"
+
+    def fail_expensive_work(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError(failure_message)
+
+    monkeypatch.setattr(preview_trace, "_compact_trace_text_digest", fail_expensive_work)
+    monkeypatch.setattr(preview_trace, "_trace_fits_json_budget", fail_expensive_work)
+
+    with pytest.raises(ValueError, match=re.escape(expected_message)) as exc_info:
+        preview_trace.build_variant_trace(
+            image_index=0,
+            variant_index=0,
+            source_path="source.png",
+            artifact_uri="artifact://run/000-000.png",
+            effective_seed=7,
+            applied_transforms=[(private_name, {})],
+        )
+
+    assert str(exc_info.value) == expected_message
+    assert private_name not in str(exc_info.value)
+    assert exc_info.value.__cause__ is None
+
+
+def test_build_variant_trace_precompacts_accepted_worst_case_before_first_serialization(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    max_chars = preview_trace.MAX_TRACE_INPUT_TEXT_CHARS
+    transform_names = [f"{index:02d}" + "n" * (max_chars - 2) for index in range(MAX_APPLIED_TRANSFORMS)]
+    serialized_text_lengths: list[int] = []
+    original_fits = preview_trace._trace_fits_json_budget
+
+    def record_serialized_text_lengths(trace: PreviewVariantTrace) -> bool:
+        serialized_text_lengths.append(
+            max(
+                len(trace.source_path),
+                len(trace.artifact_uri),
+                *(len(transform.name) for transform in trace.applied_transforms),
+            )
+        )
+        return original_fits(trace)
+
+    monkeypatch.setattr(preview_trace, "_trace_fits_json_budget", record_serialized_text_lengths)
+
+    trace = preview_trace.build_variant_trace(
+        image_index=preview_trace.MAX_TRACE_INDEX,
+        variant_index=preview_trace.MAX_TRACE_INDEX,
+        source_path="s" * max_chars,
+        artifact_uri="a" * max_chars,
+        effective_seed=preview_trace.MIN_TRACE_SEED,
+        applied_transforms=[(name, {}) for name in transform_names],
+    )
+
+    assert len(trace.applied_transforms) == MAX_APPLIED_TRANSFORMS
+    assert trace.parameters_truncated is True
+    assert serialized_text_lengths
+    assert serialized_text_lengths[0] <= preview_trace._MAX_COMPACT_STRING_JSON_BYTES
+    assert _serialized_trace_size(trace) <= MAX_VARIANT_TRACE_JSON_BYTES
 
 
 def test_build_variant_trace_caps_applied_transforms() -> None:
