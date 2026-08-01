@@ -3,10 +3,11 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import pytest
 from mcp.server.fastmcp import FastMCP
+from PIL import Image
 
 from albumentationsx_mcp.adapters.mcp import registration as registration_module
 from albumentationsx_mcp.adapters.mcp.catalog import SURFACE as CATALOG_SURFACE
@@ -39,9 +40,12 @@ from albumentationsx_mcp.adapters.mcp.sessions import register_session_adapter
 from albumentationsx_mcp.capabilities import CapabilityProfile
 from albumentationsx_mcp.catalog import TransformCatalog
 from albumentationsx_mcp.diagnostics import DiagnosticsService, PublicSurface
+from albumentationsx_mcp.guided_preview import GuidedPreviewRequest, GuidedPreviewService
 from albumentationsx_mcp.pipeline import PipelineService
 from albumentationsx_mcp.preview import ArtifactStore, PathPolicy, PreviewService
+from albumentationsx_mcp.preview_trace import get_preview_variant_trace
 from albumentationsx_mcp.preview_validation import PreviewRequestValidator
+from albumentationsx_mcp.recipes import recommend_recipe
 from albumentationsx_mcp.reports import PreviewReportService
 from albumentationsx_mcp.review import PreviewFeedbackStore
 from albumentationsx_mcp.sessions import InteractiveTuningSessionStore
@@ -60,6 +64,7 @@ class AdapterTestDependencies:
     artifact_store: ArtifactStore
     preview_service: PreviewService
     preview_validator: PreviewRequestValidator
+    guided_preview_service: GuidedPreviewService
     tuning_store: TuningDecisionStore
     session_store: InteractiveTuningSessionStore
     feedback_store: PreviewFeedbackStore
@@ -83,6 +88,17 @@ def adapter_dependencies(tmp_path: Path) -> AdapterTestDependencies:
         pipeline_service=pipeline_service,
         path_policy=path_policy,
     )
+    public_surface = public_surface_for_profile(CapabilityProfile.FULL)
+    guided_preview_service = GuidedPreviewService(
+        path_policy=path_policy,
+        pipeline_service=pipeline_service,
+        recipe_builder=lambda **kwargs: recommend_recipe(
+            **kwargs,
+            available_tools=set(public_surface.tools),
+        ),
+        preview_validator=preview_validator,
+        preview_service=preview_service,
+    )
     diagnostics_service = DiagnosticsService(
         allowed_roots=[tmp_path],
         artifact_root=artifact_root,
@@ -96,6 +112,7 @@ def adapter_dependencies(tmp_path: Path) -> AdapterTestDependencies:
         artifact_store=artifact_store,
         preview_service=preview_service,
         preview_validator=preview_validator,
+        guided_preview_service=guided_preview_service,
         tuning_store=TuningDecisionStore(artifact_root),
         session_store=InteractiveTuningSessionStore(artifact_root),
         feedback_store=PreviewFeedbackStore(artifact_root),
@@ -223,6 +240,7 @@ def test_dataset_adapter_registers_its_exact_declared_surface(
         path_policy=adapter_dependencies.path_policy,
         pipeline_service=adapter_dependencies.pipeline_service,
         preview_service=adapter_dependencies.preview_service,
+        guided_preview_service=adapter_dependencies.guided_preview_service,
     )
 
     assert _registered_surface(mcp, adapter="dataset") == DATASET_SURFACE
@@ -273,6 +291,68 @@ def test_preview_adapter_registers_its_exact_declared_surface(
     _assert_registered_contract_matches_snapshot(mcp, PREVIEW_SURFACE)
 
 
+def test_dataset_adapter_run_first_preview_handler_renders(
+    tmp_path: Path,
+    adapter_dependencies: AdapterTestDependencies,
+) -> None:
+    image_path = tmp_path / "guided.png"
+    Image.new("RGB", (24, 24), (96, 128, 160)).save(image_path)
+    mcp = FastMCP("guided-preview-handler-test")
+    register_dataset_adapter(
+        mcp,
+        path_policy=adapter_dependencies.path_policy,
+        pipeline_service=adapter_dependencies.pipeline_service,
+        preview_service=adapter_dependencies.preview_service,
+        guided_preview_service=adapter_dependencies.guided_preview_service,
+    )
+
+    result = cast("Any", mcp._tool_manager._tools["run_first_preview"]).fn(
+        dataset_path=str(image_path),
+        max_images=1,
+    )
+
+    assert result["status"] == "rendered"
+    assert result["trace_available"] is True
+    assert result["preview"]["run_id"]
+
+
+def test_preview_adapter_trace_handler_returns_trace_from_guided_run(
+    tmp_path: Path,
+    adapter_dependencies: AdapterTestDependencies,
+) -> None:
+    image_path = tmp_path / "traced.png"
+    Image.new("RGB", (24, 24), (160, 128, 96)).save(image_path)
+    guided = adapter_dependencies.guided_preview_service.run(
+        GuidedPreviewRequest(dataset_path=image_path, max_images=1),
+    )
+    assert guided.preview is not None
+    mcp = FastMCP("preview-trace-handler-test")
+    register_preview_adapter(
+        mcp,
+        artifact_store=adapter_dependencies.artifact_store,
+        preview_service=adapter_dependencies.preview_service,
+        preview_validator=adapter_dependencies.preview_validator,
+        tuning_store=adapter_dependencies.tuning_store,
+        session_store=adapter_dependencies.session_store,
+        feedback_store=adapter_dependencies.feedback_store,
+        report_service=adapter_dependencies.report_service,
+    )
+    expected = get_preview_variant_trace(
+        adapter_dependencies.artifact_store,
+        guided.preview.run_id,
+        image_index=0,
+        variant_index=0,
+    ).model_dump(mode="json", exclude_none=True)
+
+    result = cast("Any", mcp._tool_manager._tools["trace_preview_variant"]).fn(
+        run_id=guided.preview.run_id,
+        image_index=0,
+        variant_index=0,
+    )
+
+    assert result == expected
+
+
 def test_session_adapter_registers_its_exact_declared_surface(
     adapter_dependencies: AdapterTestDependencies,
 ) -> None:
@@ -300,7 +380,7 @@ def test_combined_adapter_surface_matches_canonical_counts() -> None:
         "diagnostics",
         "prompts",
     )
-    assert len(COMBINED_SURFACE.tools) == 45
+    assert len(COMBINED_SURFACE.tools) == 47
     assert len(COMBINED_SURFACE.resources) == 20
     assert len(COMBINED_SURFACE.resource_templates) == 2
     assert len(COMBINED_SURFACE.prompts) == 5
@@ -471,6 +551,7 @@ def _mcp_dependencies(
         artifact_store=dependencies.artifact_store,
         preview_service=dependencies.preview_service,
         preview_validator=dependencies.preview_validator,
+        guided_preview_service=dependencies.guided_preview_service,
         tuning_store=dependencies.tuning_store,
         session_store=dependencies.session_store,
         feedback_store=dependencies.feedback_store,

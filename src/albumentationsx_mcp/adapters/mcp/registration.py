@@ -56,6 +56,7 @@ PUBLIC_TOOLS = (
     "list_feedback_tags",
     "render_preview",
     "render_preview_batch",
+    "trace_preview_variant",
     "compare_preview_runs",
     "interpret_preview_feedback",
     "plan_preview_review",
@@ -91,6 +92,7 @@ PUBLIC_TOOLS = (
     "validate_preview_request",
     "plan_dataset_onboarding",
     "build_review_packet",
+    "run_first_preview",
     "inspect_dataset_quality",
 )
 PUBLIC_PROMPTS = (
@@ -194,6 +196,7 @@ def _register_adapters(mcp: FastMCP, dependencies: McpDependencies) -> None:
         path_policy=dependencies.path_policy,
         pipeline_service=dependencies.pipeline_service,
         preview_service=dependencies.preview_service,
+        guided_preview_service=dependencies.guided_preview_service,
         available_tools=available_tools,
     )
     register_preview_adapter(

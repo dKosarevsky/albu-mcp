@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any, cast
 
 import pytest
+from PIL import Image
 
 from albumentationsx_mcp import server as server_module
 from albumentationsx_mcp.adapters.mcp.registration import PUBLIC_WORKFLOW_RESOURCES, surface_for_profile
@@ -71,6 +72,39 @@ def test_create_mcp_server_exposes_exact_profile_and_capabilities(
     assert diagnostics["status"] == "ok"
 
 
+def test_create_mcp_server_reuses_one_profile_surface_for_guided_preview(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    image_path = tmp_path / "guided.png"
+    Image.new("RGB", (24, 24), (96, 128, 160)).save(image_path)
+    calls: list[CapabilityProfile] = []
+    original = server_module.public_surface_for_profile
+
+    def recording_public_surface(profile: CapabilityProfile) -> Any:
+        calls.append(profile)
+        return original(profile)
+
+    monkeypatch.setattr(server_module, "public_surface_for_profile", recording_public_surface)
+    server = create_mcp_server(
+        ServerSettings(
+            allowed_roots=[tmp_path],
+            artifact_root=tmp_path / "artifacts",
+            capability_profile=CapabilityProfile.DATASET,
+        )
+    )
+
+    result = cast("Any", server._tool_manager._tools["run_first_preview"]).fn(
+        dataset_path=str(image_path),
+        max_images=1,
+    )
+    capabilities = json.loads(cast("Any", server._resource_manager._resources["albumentationsx://capabilities"]).fn())
+
+    assert calls == [CapabilityProfile.DATASET]
+    assert result["status"] == "rendered"
+    assert set(result["onboarding"]["recipe"]["recommended_tools"]) <= set(capabilities["tools"])
+
+
 @pytest.mark.parametrize(
     ("profile", "expected_state"),
     [
@@ -130,6 +164,7 @@ def test_server_exposes_documented_tool_names() -> None:
         "list_feedback_tags",
         "render_preview",
         "render_preview_batch",
+        "trace_preview_variant",
         "compare_preview_runs",
         "interpret_preview_feedback",
         "plan_preview_review",
@@ -161,6 +196,7 @@ def test_server_exposes_documented_tool_names() -> None:
         "validate_preview_request",
         "plan_dataset_onboarding",
         "build_review_packet",
+        "run_first_preview",
         "inspect_dataset_quality",
     }.issubset(tool_names)
 
@@ -227,6 +263,7 @@ def test_server_exposes_agent_workflow_resources() -> None:
         "compare_preview_runs_for_feedback",
         "interpret_preview_feedback",
         "plan_preview_review",
+        "trace_preview_variant",
         "run_first_preview_review",
         "summarize_tuning_session",
         "start_tuning_session",
@@ -250,6 +287,7 @@ def test_server_exposes_agent_workflow_resources() -> None:
         "validate_preview_request",
         "plan_dataset_onboarding",
         "build_review_packet",
+        "run_first_preview",
         "inspect_dataset_quality",
         "albumentationsx://diagnostics/guide",
         "albumentationsx://recipes/catalog",

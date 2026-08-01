@@ -18,9 +18,9 @@ from albumentationsx_mcp.server import ServerSettings, create_mcp_server
 
 _EXPECTED_COUNTS = {
     CapabilityProfile.CORE: (16, 9, 1, 0),
-    CapabilityProfile.REVIEW: (42, 19, 2, 5),
-    CapabilityProfile.DATASET: (25, 11, 2, 0),
-    CapabilityProfile.FULL: (45, 20, 2, 5),
+    CapabilityProfile.REVIEW: (43, 19, 2, 5),
+    CapabilityProfile.DATASET: (27, 11, 2, 0),
+    CapabilityProfile.FULL: (47, 20, 2, 5),
 }
 
 _SINGLE_TOOL_REFERENCE_KEYS = {"primary_tool", "recommended_next_tool", "tool", "v2_tool"}
@@ -125,12 +125,24 @@ def test_full_profile_preserves_canonical_registration_order() -> None:
         (
             CapabilityProfile.CORE,
             {"search_transforms", "adjust_pipeline", "diagnose_environment", "get_workflow_example"},
-            {"render_preview", "plan_dataset_onboarding", "start_tuning_session"},
+            {
+                "render_preview",
+                "plan_dataset_onboarding",
+                "run_first_preview",
+                "start_tuning_session",
+                "trace_preview_variant",
+            },
         ),
         (
             CapabilityProfile.REVIEW,
-            {"render_preview", "compare_preview_runs", "start_tuning_session", "export_preview_report"},
-            {"plan_dataset_onboarding", "inspect_dataset_quality"},
+            {
+                "render_preview",
+                "compare_preview_runs",
+                "start_tuning_session",
+                "export_preview_report",
+                "trace_preview_variant",
+            },
+            {"plan_dataset_onboarding", "inspect_dataset_quality", "run_first_preview"},
         ),
         (
             CapabilityProfile.DATASET,
@@ -142,6 +154,8 @@ def test_full_profile_preserves_canonical_registration_order() -> None:
                 "plan_dataset_onboarding",
                 "record_preview_feedback",
                 "render_preview_batch",
+                "run_first_preview",
+                "trace_preview_variant",
                 "validate_preview_request",
             },
             {"render_preview", "start_tuning_session"},
@@ -157,6 +171,29 @@ def test_focused_profile_tool_membership(
 
     assert included_tools <= tools
     assert excluded_tools.isdisjoint(tools)
+
+
+@pytest.mark.parametrize(
+    ("tool_name", "expected_profiles"),
+    [
+        ("run_first_preview", {CapabilityProfile.DATASET, CapabilityProfile.FULL}),
+        (
+            "trace_preview_variant",
+            {CapabilityProfile.REVIEW, CapabilityProfile.DATASET, CapabilityProfile.FULL},
+        ),
+    ],
+)
+def test_guided_preview_tool_profile_membership_is_exact(
+    tool_name: str,
+    expected_profiles: set[CapabilityProfile],
+) -> None:
+    actual_profiles = {
+        profile
+        for profile in CapabilityProfile
+        if tool_name in combine_adapter_surfaces_for_profile(ADAPTER_SURFACES, profile).tools
+    }
+
+    assert actual_profiles == expected_profiles
 
 
 def test_production_profile_declarations_are_complete() -> None:

@@ -9,6 +9,7 @@ from albumentationsx_mcp.adapters.mcp.contracts import AdapterSurface, ProfileSu
 from albumentationsx_mcp.capabilities import DATASET_PROFILE_MEMBERSHIP, REVIEW_DATASET_PROFILE_MEMBERSHIP
 from albumentationsx_mcp.dataset import score_dataset_preview_candidates as score_dataset_candidates
 from albumentationsx_mcp.dataset_quality import inspect_dataset_quality
+from albumentationsx_mcp.guided_preview import GuidedPreviewRequest
 from albumentationsx_mcp.models import QualityProfileName
 from albumentationsx_mcp.onboarding import build_dataset_onboarding_report
 from albumentationsx_mcp.presets import Intensity
@@ -18,12 +19,14 @@ from albumentationsx_mcp.review_packet import build_review_packet
 if TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
 
+    from albumentationsx_mcp.guided_preview import GuidedPreviewService
     from albumentationsx_mcp.pipeline import PipelineService
     from albumentationsx_mcp.preview import PathPolicy, PreviewService
 
 _TOOLS = (
     "plan_dataset_onboarding",
     "build_review_packet",
+    "run_first_preview",
     "inspect_dataset_quality",
     "score_dataset_preview_candidates",
 )
@@ -39,12 +42,13 @@ SURFACE = AdapterSurface(
 )
 
 
-def register_dataset_adapter(
+def register_dataset_adapter(  # noqa: PLR0913
     mcp: FastMCP,
     *,
     path_policy: PathPolicy,
     pipeline_service: PipelineService,
     preview_service: PreviewService,
+    guided_preview_service: GuidedPreviewService,
     available_tools: set[str] | None = None,
 ) -> None:
     """Register bounded dataset onboarding, review, quality, and scoring tools."""
@@ -88,6 +92,24 @@ def register_dataset_adapter(
             pipeline_service=pipeline_service,
             recipe_builder=lambda **kwargs: recommend_recipe(**kwargs, available_tools=available_tools),
         ).model_dump(mode="json", exclude_none=True)
+
+    @mcp.tool()
+    def run_first_preview(
+        dataset_path: str,
+        task: str = "classification",
+        intensity: Intensity = "low",
+        targets: list[str] | None = None,
+        max_images: int = 8,
+    ) -> dict[str, Any]:
+        """Run one bounded, validated first preview for a local image or image directory."""
+        request = GuidedPreviewRequest(
+            dataset_path=Path(dataset_path),
+            task=task,
+            intensity=intensity,
+            targets=targets,
+            max_images=max_images,
+        )
+        return guided_preview_service.run(request).model_dump(mode="json", exclude_none=True)
 
     @mcp.tool(name="inspect_dataset_quality")
     def inspect_dataset_quality_tool(dataset_path: str, max_images: int = 8) -> dict[str, Any]:
