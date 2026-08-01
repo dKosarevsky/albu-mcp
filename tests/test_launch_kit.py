@@ -25,11 +25,11 @@ def test_launch_kit_contains_public_distribution_assets() -> None:
     assert "docs/NETWORK_GROWTH_TRACKER.md" in markdown
     assert "docs/PUBLIC_ADOPTION_LOOP.md" in markdown
     assert "dataset-health.yml" in markdown
-    assert kit["lifecycle"]["release_health"]["status"] == "unknown"
+    assert kit["lifecycle"]["release_health"]["status"] == "published"
     assert kit["lifecycle"]["host_evidence"]["status"] == "partial"
     assert kit["lifecycle"]["adoption_experiment"]["status"] == "measuring"
     assert "Ready for v1" not in markdown
-    assert "Release health: `unknown`" in markdown
+    assert "Release health: `published`" in markdown
     assert "Adoption experiment: `measuring`" in markdown
 
 

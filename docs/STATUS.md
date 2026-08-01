@@ -4,16 +4,16 @@ Release publication, host evidence, and adoption measurement are independent dim
 
 ## Release Health
 
-Status: `unknown`
+Status: `published`
 
 Version: `1.20.0`
 
 | Channel | Status | URL |
 | --- | --- | --- |
-| pypi | `unknown` | https://pypi.org/project/albumentationsx-mcp/1.20.0/ |
-| github_release | `unknown` | https://github.com/dKosarevsky/albu-mcp/releases/tag/v1.20.0 |
-| ci | `not_observed` | https://github.com/dKosarevsky/albu-mcp/actions/workflows/ci.yml |
-| official_registry | `unknown` | https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.dKosarevsky/albu-mcp |
+| pypi | `published` | https://pypi.org/project/albumentationsx-mcp/1.20.0/ |
+| github_release | `published` | https://github.com/dKosarevsky/albu-mcp/releases/tag/v1.20.0 |
+| ci | `passed` | https://github.com/dKosarevsky/albu-mcp/actions/runs/30700390926 |
+| official_registry | `listed` | https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.dKosarevsky/albu-mcp |
 
 ## Host Evidence
 
