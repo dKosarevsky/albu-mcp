@@ -1,25 +1,25 @@
 {
   "schema_version": 1,
-  "version": "1.19.0",
-  "observed_at": "2026-07-14",
+  "version": "1.20.0",
+  "observed_at": "2026-08-01",
   "channels": [
     {
       "id": "pypi",
       "status": "published",
-      "url": "https://pypi.org/project/albumentationsx-mcp/1.19.0/",
-      "evidence_url": "https://pypi.org/pypi/albumentationsx-mcp/1.19.0/json"
+      "url": "https://pypi.org/project/albumentationsx-mcp/1.20.0/",
+      "evidence_url": "https://pypi.org/pypi/albumentationsx-mcp/1.20.0/json"
     },
     {
       "id": "github_release",
       "status": "published",
-      "url": "https://github.com/dKosarevsky/albu-mcp/releases/tag/v1.19.0",
-      "evidence_url": "https://github.com/dKosarevsky/albu-mcp/releases/tag/v1.19.0"
+      "url": "https://github.com/dKosarevsky/albu-mcp/releases/tag/v1.20.0",
+      "evidence_url": "https://github.com/dKosarevsky/albu-mcp/releases/tag/v1.20.0"
     },
     {
       "id": "ci",
       "status": "passed",
-      "url": "https://github.com/dKosarevsky/albu-mcp/actions/runs/29330162104",
-      "evidence_url": "https://github.com/dKosarevsky/albu-mcp/actions/runs/29330162104"
+      "url": "https://github.com/dKosarevsky/albu-mcp/actions/runs/30700390926",
+      "evidence_url": "https://github.com/dKosarevsky/albu-mcp/actions/runs/30700390926"
     },
     {
       "id": "official_registry",
