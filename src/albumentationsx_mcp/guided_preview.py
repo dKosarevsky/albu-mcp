@@ -16,6 +16,7 @@ from albumentationsx_mcp.preview import PathPolicy
 from albumentationsx_mcp.preview_validation import PreviewRequestValidationReport
 
 _MALFORMED_NORMALIZED_REQUEST = "Validated preview request is malformed"
+_INVALID_GUIDED_REQUEST_BOUNDS = "Validated preview request violates guided first-preview bounds"
 _INVALID_CONTACT_SHEET_COUNT = "Rendered preview must contain exactly one contact_sheet artifact"
 _UNAVAILABLE_FIRST_TRACE = "Rendered preview first variant trace is unavailable or inconsistent"
 _SUCCESS_NEXT_ACTIONS = (
@@ -150,6 +151,18 @@ class GuidedPreviewService:
         except ValidationError:
             raise ValueError(_MALFORMED_NORMALIZED_REQUEST) from None
 
+        input_count = len(canonical_request.input_paths)
+        sampled_paths = [Path(path) for path in onboarding.sample_paths]
+        if (
+            input_count < 1
+            or input_count > request.max_images
+            or input_count != onboarding.sampled_image_count
+            or canonical_request.variants_per_image != 1
+            or canonical_request.input_paths != sampled_paths
+        ):
+            raise ValueError(_INVALID_GUIDED_REQUEST_BOUNDS)
+
+        expected_render_count = input_count * canonical_request.variants_per_image
         normalized_snapshot = canonical_request.model_dump(mode="json", exclude_none=True)
         rendered_preview = self.preview_service.render_preview(canonical_request)
         try:
@@ -160,9 +173,7 @@ class GuidedPreviewService:
         if len(contact_sheets) != 1:
             raise RuntimeError(_INVALID_CONTACT_SHEET_COUNT)
 
-        trace_available = (
-            preview.variant_trace_count > 0 and preview.variant_trace_count == onboarding.sampled_image_count
-        )
+        trace_available = preview.variant_trace_count == expected_render_count
         if not trace_available:
             raise RuntimeError(_UNAVAILABLE_FIRST_TRACE)
 

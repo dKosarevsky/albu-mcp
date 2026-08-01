@@ -613,6 +613,125 @@ def test_guided_preview_rejects_malformed_normalized_request_stably_before_rende
     assert not artifact_root.exists()
 
 
+def test_guided_preview_rejects_validator_mutated_variants_before_render(tmp_path: Path) -> None:
+    dataset_path = _write_image(tmp_path / "dataset" / "sample.png")
+    path_policy = PathPolicy([tmp_path])
+    onboarding = _ready_onboarding(dataset_path, path_policy=path_policy, max_images=1)
+    template = onboarding.preview_request_template
+    assert template is not None
+    validation = _validation_report(
+        valid=True,
+        normalized_request={**template.request, "variants_per_image": 2},
+    )
+    renderer = StubRenderer(_preview_with_contact_sheet(variant_trace_count=1))
+    service = GuidedPreviewService(
+        path_policy=path_policy,
+        pipeline_service=PipelineService(TransformCatalog()),
+        recipe_builder=recommend_recipe,
+        preview_validator=StubValidator(validation),
+        preview_service=renderer,
+        onboarding_builder=StubOnboardingBuilder(onboarding),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"^Validated preview request violates guided first-preview bounds$",
+    ) as exc_info:
+        service.run(GuidedPreviewRequest(dataset_path=dataset_path, max_images=1))
+
+    assert type(exc_info.value) is ValueError
+    assert str(exc_info.value) == "Validated preview request violates guided first-preview bounds"
+    assert renderer.calls == []
+
+
+@pytest.mark.parametrize("mutation", ["expansion", "substitution"])
+def test_guided_preview_rejects_validator_mutated_input_paths_before_render(
+    tmp_path: Path,
+    mutation: str,
+) -> None:
+    dataset_path = _write_image(tmp_path / "dataset" / "sample.png")
+    path_policy = PathPolicy([tmp_path])
+    onboarding = _ready_onboarding(dataset_path, path_policy=path_policy, max_images=1)
+    replacement = _write_image(tmp_path / "private" / "replacement.png")
+    template = onboarding.preview_request_template
+    assert template is not None
+    normalized_request = dict(template.request)
+    normalized_request["input_paths"] = (
+        [*template.request["input_paths"], str(replacement)] if mutation == "expansion" else [str(replacement)]
+    )
+    validation = _validation_report(valid=True, normalized_request=normalized_request)
+    renderer = StubRenderer(_preview_with_contact_sheet(variant_trace_count=1))
+    service = GuidedPreviewService(
+        path_policy=path_policy,
+        pipeline_service=PipelineService(TransformCatalog()),
+        recipe_builder=recommend_recipe,
+        preview_validator=StubValidator(validation),
+        preview_service=renderer,
+        onboarding_builder=StubOnboardingBuilder(onboarding),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"^Validated preview request violates guided first-preview bounds$",
+    ) as exc_info:
+        service.run(GuidedPreviewRequest(dataset_path=dataset_path, max_images=2))
+
+    assert str(replacement) not in str(exc_info.value)
+    assert renderer.calls == []
+
+
+def test_guided_preview_rejects_canonical_inputs_over_requested_max_without_rendering(tmp_path: Path) -> None:
+    dataset_path = tmp_path / "dataset"
+    _write_image(dataset_path / "first.png")
+    _write_image(dataset_path / "second.png")
+    path_policy = PathPolicy([tmp_path])
+    onboarding = _ready_onboarding(dataset_path, path_policy=path_policy, max_images=2)
+    renderer = StubRenderer(_preview_with_contact_sheet(variant_trace_count=2))
+    service = GuidedPreviewService(
+        path_policy=path_policy,
+        pipeline_service=PipelineService(TransformCatalog()),
+        recipe_builder=recommend_recipe,
+        preview_validator=StubValidator(),
+        preview_service=renderer,
+        onboarding_builder=StubOnboardingBuilder(onboarding),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"^Validated preview request violates guided first-preview bounds$",
+    ):
+        service.run(GuidedPreviewRequest(dataset_path=dataset_path, max_images=1))
+
+    assert onboarding.sampled_image_count == 2
+    assert renderer.calls == []
+
+
+def test_guided_preview_rejects_renderer_trace_undercount_for_canonical_request(tmp_path: Path) -> None:
+    dataset_path = tmp_path / "dataset"
+    _write_image(dataset_path / "first.png")
+    _write_image(dataset_path / "second.png")
+    path_policy = PathPolicy([tmp_path])
+    onboarding = _ready_onboarding(dataset_path, path_policy=path_policy, max_images=2)
+    renderer = StubRenderer(_preview_with_contact_sheet(variant_trace_count=1))
+    service = GuidedPreviewService(
+        path_policy=path_policy,
+        pipeline_service=PipelineService(TransformCatalog()),
+        recipe_builder=recommend_recipe,
+        preview_validator=StubValidator(),
+        preview_service=renderer,
+        onboarding_builder=StubOnboardingBuilder(onboarding),
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match=r"^Rendered preview first variant trace is unavailable or inconsistent$",
+    ):
+        service.run(GuidedPreviewRequest(dataset_path=dataset_path, max_images=2))
+
+    assert renderer.calls[0].input_paths == [Path(path) for path in onboarding.sample_paths]
+    assert len(renderer.calls[0].input_paths) * renderer.calls[0].variants_per_image == 2
+
+
 @pytest.mark.parametrize("contact_sheet_count", [0, 2])
 def test_guided_preview_requires_exactly_one_rendered_contact_sheet(
     tmp_path: Path,
@@ -934,6 +1053,24 @@ def _blocked_onboarding(tmp_path: Path) -> DatasetOnboardingReport:
         path_policy=PathPolicy([tmp_path]),
         pipeline_service=PipelineService(TransformCatalog()),
         recipe_builder=recommend_recipe,
+    )
+
+
+def _ready_onboarding(
+    dataset_path: Path,
+    *,
+    path_policy: PathPolicy,
+    max_images: int,
+) -> DatasetOnboardingReport:
+    return build_dataset_onboarding_report(
+        dataset_path=dataset_path,
+        task="classification",
+        intensity="low",
+        targets=None,
+        path_policy=path_policy,
+        pipeline_service=PipelineService(TransformCatalog()),
+        recipe_builder=recommend_recipe,
+        max_images=max_images,
     )
 
 
