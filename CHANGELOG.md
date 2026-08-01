@@ -4,6 +4,8 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 ## Unreleased
 
+## 1.20.0 - 2026-08-01
+
 - Added the guided `run_first_preview` use case for a bounded, validated path from host smoke to contact-sheet review.
 - Added per-variant applied-transform traces as additive preview evidence through `trace_preview_variant`, with bounded
   deterministic summaries and explicit legacy-run unavailability.
