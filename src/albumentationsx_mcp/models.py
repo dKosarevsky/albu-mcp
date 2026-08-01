@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, computed_field
 ArtifactKind = Literal["image", "manifest", "contact_sheet", "overlay", "overlay_contact_sheet", "report"]
 RiskLevel = Literal["low", "medium", "high"]
 QualityProfileName = Literal["balanced", "classification", "detection", "segmentation", "ocr"]
+MAX_SIGNED_64 = (1 << 63) - 1
 
 
 class StrictModel(BaseModel):
@@ -186,7 +187,7 @@ class PreviewManifestSummary(StrictModel):
     contact_sheet_paths: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
     annotation_observation_count: int = 0
-    variant_trace_count: int = Field(default=0, ge=0, le=(1 << 63) - 1)
+    variant_trace_count: int = Field(default=0, ge=0, le=MAX_SIGNED_64, strict=True)
 
 
 class ImageQualityMetrics(StrictModel):

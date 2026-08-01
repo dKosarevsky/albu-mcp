@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 from pydantic import ConfigDict, Field, ValidationError
 
-from albumentationsx_mcp.models import StrictModel
+from albumentationsx_mcp.models import MAX_SIGNED_64, StrictModel
 
 if TYPE_CHECKING:
     from albumentationsx_mcp.preview import ArtifactStore
@@ -28,9 +28,9 @@ MAX_VARIANT_TRACE_JSON_BYTES = 8 * 1024
 MAX_TRACE_INPUT_TEXT_CHARS = 32 * 1024
 MAX_TRACE_STRING_HASH_CHARS = 64 * 1024
 # Preview rendering indexes and seeds use practical signed 64-bit bounds.
-MAX_TRACE_INDEX = (1 << 63) - 1
-MIN_TRACE_SEED = -(1 << 63)
-MAX_TRACE_SEED = (1 << 63) - 1
+MAX_TRACE_INDEX = MAX_SIGNED_64
+MIN_TRACE_SEED = -MAX_SIGNED_64 - 1
+MAX_TRACE_SEED = MAX_SIGNED_64
 # Bound both hashing work and any contiguous array copy.
 MAX_ARRAY_HASH_BYTES = 1024 * 1024
 # Stay comfortably below Python's configurable decimal digit limit.
@@ -472,7 +472,7 @@ def build_variant_trace(  # noqa: PLR0913
             )
             for name, params in retained
         ]
-    except (OSError, OverflowError, RuntimeError, TypeError, ValueError):
+    except Exception:  # noqa: BLE001 - untrusted nested values may raise arbitrary ordinary exceptions.
         raise ValueError(_APPLIED_TRANSFORMS_NORMALIZATION_ERROR) from None
 
     if _raw_trace_text_exceeds_json_budget(
@@ -814,14 +814,20 @@ def _validate_trace_string_metadata(*, source_path: Any, artifact_uri: Any) -> t
     if not isinstance(artifact_uri, str):
         raise ValueError(_ARTIFACT_URI_ERROR)  # noqa: TRY004 - public API uses stable ValueError validation.
     try:
-        source_path_text = str(source_path)
-    except (OSError, RuntimeError, TypeError, ValueError):
+        source_path_text = str.__str__(str(source_path))
+        source_path_length = len(source_path_text)
+    except Exception:  # noqa: BLE001 - Path subclasses may raise arbitrary ordinary exceptions.
         raise ValueError(_SOURCE_PATH_ERROR) from None
-    if len(source_path_text) > MAX_TRACE_INPUT_TEXT_CHARS:
+    try:
+        artifact_uri_text = str.__str__(str(artifact_uri))
+        artifact_uri_length = len(artifact_uri_text)
+    except Exception:  # noqa: BLE001 - str subclasses may raise arbitrary ordinary exceptions.
+        raise ValueError(_ARTIFACT_URI_ERROR) from None
+    if source_path_length > MAX_TRACE_INPUT_TEXT_CHARS:
         raise ValueError(_SOURCE_PATH_LENGTH_ERROR) from None
-    if len(artifact_uri) > MAX_TRACE_INPUT_TEXT_CHARS:
+    if artifact_uri_length > MAX_TRACE_INPUT_TEXT_CHARS:
         raise ValueError(_ARTIFACT_URI_LENGTH_ERROR) from None
-    return source_path_text, artifact_uri
+    return source_path_text, artifact_uri_text
 
 
 def _validate_trace_index(field: str, value: int) -> None:

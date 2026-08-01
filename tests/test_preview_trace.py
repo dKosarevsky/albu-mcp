@@ -4,8 +4,8 @@ import math
 import re
 import sys
 from collections.abc import ItemsView, Iterator, Mapping, Sequence
-from pathlib import Path
-from typing import Any
+from pathlib import Path, PosixPath
+from typing import Any, NoReturn
 
 import numpy as np
 import pytest
@@ -75,6 +75,55 @@ class GuardedMapping(Mapping[str, object]):
 
     def __len__(self) -> int:
         raise AssertionError(self.private_path)
+
+
+class FailingNestedMapping(Mapping[str, object]):
+    def __init__(self, stage: str, exception_type: type[BaseException], private_path: str) -> None:
+        self.stage = stage
+        self.exception_type = exception_type
+        self.private_path = private_path
+
+    def __getitem__(self, key: str) -> object:
+        return 1
+
+    def __iter__(self) -> Iterator[str]:
+        if self.stage == "iteration":
+            self._fail()
+        return iter(("value",))
+
+    def __len__(self) -> int:
+        if self.stage == "len":
+            self._fail()
+        return 1
+
+    def items(self) -> ItemsView[str, object]:
+        if self.stage == "items":
+            self._fail()
+        return super().items()
+
+    def _fail(self) -> NoReturn:
+        raise self.exception_type(self.private_path)
+
+
+class FailingPath(PosixPath):
+    private_path = "/private/customer/path-subclass.png"
+
+    def __str__(self) -> str:
+        raise KeyError(self.private_path)
+
+
+class FailingLengthString(str):
+    __slots__ = ()
+
+    private_path = "/private/customer/string-subclass.txt"
+
+    def __len__(self) -> int:
+        raise KeyError(self.private_path)
+
+
+class NestedStringPath(PosixPath):
+    def __str__(self) -> str:
+        return FailingLengthString("source.png")
 
 
 def _serialized_trace_size(trace: PreviewVariantTrace) -> int:
@@ -673,6 +722,45 @@ def test_build_variant_trace_rejects_custom_mapping_in_malformed_tail_without_pa
     assert exc_info.value.__cause__ is None
 
 
+@pytest.mark.parametrize("stage", ["len", "items", "iteration"])
+def test_build_variant_trace_contains_nested_mapping_exceptions_without_path_leak(stage: str) -> None:
+    private_path = f"/private/customer/nested-{stage}.json"
+    nested = FailingNestedMapping(stage, KeyError, private_path)
+
+    with pytest.raises(
+        ValueError,
+        match=r"^applied_transforms could not be normalized safely$",
+    ) as exc_info:
+        preview_trace.build_variant_trace(
+            image_index=0,
+            variant_index=0,
+            source_path="source.png",
+            artifact_uri="artifact://run/000-000.png",
+            effective_seed=7,
+            applied_transforms=[("HorizontalFlip", {"nested": nested})],
+        )
+
+    assert private_path not in str(exc_info.value)
+    assert exc_info.value.__cause__ is None
+
+
+@pytest.mark.parametrize("exception_type", [KeyboardInterrupt, SystemExit])
+def test_build_variant_trace_does_not_swallow_normalization_base_exceptions(
+    exception_type: type[BaseException],
+) -> None:
+    nested = FailingNestedMapping("len", exception_type, "/private/customer/base-exception")
+
+    with pytest.raises(exception_type):
+        preview_trace.build_variant_trace(
+            image_index=0,
+            variant_index=0,
+            source_path="source.png",
+            artifact_uri="artifact://run/000-000.png",
+            effective_seed=7,
+            applied_transforms=[("HorizontalFlip", {"nested": nested})],
+        )
+
+
 @pytest.mark.parametrize(
     ("field", "value", "expected_message"),
     [
@@ -700,6 +788,40 @@ def test_build_variant_trace_rejects_invalid_string_metadata(
 
     assert str(exc_info.value) == expected_message
     assert len(str(exc_info.value)) < 128
+
+
+def test_build_variant_trace_contains_path_subclass_string_exception() -> None:
+    source_path = FailingPath("source.png")
+
+    with pytest.raises(
+        ValueError,
+        match=r"^source_path must be a string or pathlib\.Path$",
+    ) as exc_info:
+        preview_trace.build_variant_trace(
+            image_index=0,
+            variant_index=0,
+            source_path=source_path,
+            artifact_uri="artifact://run/000-000.png",
+            effective_seed=7,
+            applied_transforms=[],
+        )
+
+    assert FailingPath.private_path not in str(exc_info.value)
+    assert exc_info.value.__cause__ is None
+
+
+def test_build_variant_trace_canonicalizes_path_string_subclass_inside_boundary() -> None:
+    trace = preview_trace.build_variant_trace(
+        image_index=0,
+        variant_index=0,
+        source_path=NestedStringPath("source.png"),
+        artifact_uri="artifact://run/000-000.png",
+        effective_seed=7,
+        applied_transforms=[],
+    )
+
+    assert trace.source_path == "source.png"
+    assert type(trace.source_path) is str
 
 
 @pytest.mark.parametrize(

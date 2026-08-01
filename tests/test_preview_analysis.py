@@ -1,3 +1,7 @@
+import pytest
+from pydantic import ValidationError
+
+from albumentationsx_mcp import models, preview_trace
 from albumentationsx_mcp.preview_analysis import compare_preview_manifests, summarize_preview_manifest
 
 
@@ -51,6 +55,29 @@ def test_preview_manifest_summary_defaults_legacy_variant_trace_count_to_zero() 
     summary = summarize_preview_manifest(manifest)
 
     assert summary.variant_trace_count == 0
+
+
+@pytest.mark.parametrize("value", [True, "1", 1.0], ids=["boolean", "string", "float"])
+def test_preview_manifest_summary_rejects_coercive_variant_trace_count(value: object) -> None:
+    manifest = preview_manifest(run_id="invalid", transform_name="HorizontalFlip", seed=10)
+    manifest["summary"]["variant_trace_count"] = value
+
+    with pytest.raises(ValidationError):
+        summarize_preview_manifest(manifest)
+
+
+def test_preview_manifest_summary_accepts_signed64_variant_trace_count_boundary() -> None:
+    manifest = preview_manifest(run_id="boundary", transform_name="HorizontalFlip", seed=10)
+    manifest["summary"]["variant_trace_count"] = (1 << 63) - 1
+
+    summary = summarize_preview_manifest(manifest)
+
+    assert summary.variant_trace_count == (1 << 63) - 1
+
+
+def test_preview_trace_uses_shared_signed64_bound() -> None:
+    assert models.MAX_SIGNED_64 == (1 << 63) - 1
+    assert preview_trace.MAX_TRACE_INDEX == models.MAX_SIGNED_64
 
 
 def test_compare_preview_manifests_reports_reproducibility_differences() -> None:
