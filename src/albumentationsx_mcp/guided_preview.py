@@ -12,10 +12,12 @@ from albumentationsx_mcp.onboarding import DatasetOnboardingReport, RecipeBuilde
 from albumentationsx_mcp.pipeline import PipelineService
 from albumentationsx_mcp.presets import Intensity
 from albumentationsx_mcp.preview import PathPolicy
+from albumentationsx_mcp.preview_trace import PreviewVariantTraceResult
 from albumentationsx_mcp.preview_validation import PreviewRequestValidationReport
 
 _MALFORMED_NORMALIZED_REQUEST = "Validated preview request is malformed"
 _INVALID_CONTACT_SHEET_COUNT = "Rendered preview must contain exactly one contact_sheet artifact"
+_UNAVAILABLE_FIRST_TRACE = "Rendered preview first variant trace is unavailable or inconsistent"
 _SUCCESS_NEXT_ACTIONS = (
     "Inspect the rendered contact sheet before changing the pipeline.",
     "Query the first variant trace at image_index=0 and variant_index=0 before adjusting or rerendering.",
@@ -33,6 +35,35 @@ class _PreviewValidator(Protocol):
 
 class _PreviewRenderer(Protocol):
     def render_preview(self, request: PreviewRequest) -> PreviewResult: ...
+
+
+class OnboardingBuilder(Protocol):
+    """Build one read-only dataset onboarding report."""
+
+    def __call__(  # noqa: PLR0913
+        self,
+        *,
+        dataset_path: Path,
+        task: str,
+        intensity: Intensity,
+        targets: list[str] | None,
+        path_policy: PathPolicy,
+        pipeline_service: PipelineService,
+        recipe_builder: RecipeBuilder,
+        max_images: int = 8,
+    ) -> DatasetOnboardingReport: ...
+
+
+class TraceLookup(Protocol):
+    """Look up one trace from a rendered preview run."""
+
+    def __call__(
+        self,
+        run_id: str,
+        *,
+        image_index: int,
+        variant_index: int,
+    ) -> PreviewVariantTraceResult: ...
 
 
 class GuidedPreviewRequest(StrictModel):
@@ -61,7 +92,7 @@ class GuidedPreviewResult(StrictModel):
 class GuidedPreviewService:
     """Coordinate onboarding, validation, and one bounded preview render."""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         path_policy: PathPolicy,
@@ -69,16 +100,20 @@ class GuidedPreviewService:
         recipe_builder: RecipeBuilder,
         preview_validator: _PreviewValidator,
         preview_service: _PreviewRenderer,
+        trace_lookup: TraceLookup,
+        onboarding_builder: OnboardingBuilder = build_dataset_onboarding_report,
     ) -> None:
         self.path_policy = path_policy
         self.pipeline_service = pipeline_service
         self.recipe_builder = recipe_builder
         self.preview_validator = preview_validator
         self.preview_service = preview_service
+        self.trace_lookup = trace_lookup
+        self.onboarding_builder = onboarding_builder
 
     def run(self, request: GuidedPreviewRequest) -> GuidedPreviewResult:
         """Render the onboarding template only after every read-only gate passes."""
-        onboarding = build_dataset_onboarding_report(
+        onboarding = self.onboarding_builder(
             dataset_path=request.dataset_path,
             task=request.task,
             intensity=request.intensity,
@@ -119,6 +154,11 @@ class GuidedPreviewService:
         if len(contact_sheets) != 1:
             raise ValueError(_INVALID_CONTACT_SHEET_COUNT)
 
+        trace_result = self.trace_lookup(preview.run_id, image_index=0, variant_index=0)
+        trace_available = _is_first_variant_trace_available(trace_result, run_id=preview.run_id)
+        if not trace_available:
+            raise ValueError(_UNAVAILABLE_FIRST_TRACE)
+
         return GuidedPreviewResult(
             status="rendered",
             onboarding=onboarding,
@@ -126,6 +166,19 @@ class GuidedPreviewService:
             normalized_request=normalized_request,
             preview=preview,
             contact_sheet=contact_sheets[0],
-            trace_available=True,
+            trace_available=trace_available,
             next_actions=list(_SUCCESS_NEXT_ACTIONS),
         )
+
+
+def _is_first_variant_trace_available(result: PreviewVariantTraceResult, *, run_id: str) -> bool:
+    trace = result.trace
+    return (
+        result.available
+        and trace is not None
+        and result.run_id == run_id
+        and result.image_index == 0
+        and result.variant_index == 0
+        and trace.image_index == 0
+        and trace.variant_index == 0
+    )
