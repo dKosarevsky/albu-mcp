@@ -12,6 +12,7 @@ import albumentationsx_mcp.guided_preview as guided_preview_module
 from albumentationsx_mcp.catalog import TransformCatalog
 from albumentationsx_mcp.guided_preview import GuidedPreviewRequest, GuidedPreviewResult, GuidedPreviewService
 from albumentationsx_mcp.models import (
+    MAX_SIGNED_64,
     ArtifactKind,
     ArtifactRef,
     PreviewRequest,
@@ -561,7 +562,9 @@ def test_guided_preview_requires_exactly_one_rendered_contact_sheet(
 
 def test_guided_preview_accepts_consistent_atomic_trace_evidence(tmp_path: Path) -> None:
     dataset_path = _write_image(tmp_path / "dataset" / "sample.png")
-    renderer = StubRenderer(_preview_with_contact_sheet(variant_trace_count=1))
+    renderer_preview = _preview_with_contact_sheet(variant_trace_count=0)
+    renderer_preview.variant_trace_count = 1
+    renderer = StubRenderer(renderer_preview)
     service = _service(
         path_policy=PathPolicy([tmp_path]),
         validator=StubValidator(),
@@ -574,6 +577,56 @@ def test_guided_preview_accepts_consistent_atomic_trace_evidence(tmp_path: Path)
     assert result.trace_available is True
     assert result.preview is not None
     assert result.preview.variant_trace_count == 1
+    assert result.preview is not renderer_preview
+
+
+@pytest.mark.parametrize("variant_trace_count", [True, 1.0, "1", -1, MAX_SIGNED_64 + 1])
+def test_guided_preview_revalidates_mutated_renderer_trace_count(
+    tmp_path: Path,
+    variant_trace_count: Any,
+) -> None:
+    dataset_path = _write_image(tmp_path / "dataset" / "sample.png")
+    renderer_preview = _preview_with_contact_sheet(variant_trace_count=1)
+    renderer_preview.variant_trace_count = variant_trace_count
+    renderer = StubRenderer(renderer_preview)
+    service = _service(
+        path_policy=PathPolicy([tmp_path]),
+        validator=StubValidator(),
+        renderer=renderer,
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match=r"^Rendered preview first variant trace is unavailable or inconsistent$",
+    ) as exc_info:
+        service.run(GuidedPreviewRequest(dataset_path=dataset_path))
+
+    assert type(exc_info.value) is RuntimeError
+    assert str(exc_info.value) == "Rendered preview first variant trace is unavailable or inconsistent"
+
+
+def test_guided_preview_revalidates_mutated_renderer_artifact_without_leaking_value(tmp_path: Path) -> None:
+    dataset_path = _write_image(tmp_path / "dataset" / "sample.png")
+    renderer_preview = _preview_with_contact_sheet(variant_trace_count=1)
+    sensitive_value = "private-invalid-artifact-kind"
+    mutated_kind: Any = sensitive_value
+    renderer_preview.artifacts[0].kind = mutated_kind
+    renderer = StubRenderer(renderer_preview)
+    service = _service(
+        path_policy=PathPolicy([tmp_path]),
+        validator=StubValidator(),
+        renderer=renderer,
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match=r"^Rendered preview first variant trace is unavailable or inconsistent$",
+    ) as exc_info:
+        service.run(GuidedPreviewRequest(dataset_path=dataset_path))
+
+    assert type(exc_info.value) is RuntimeError
+    assert str(exc_info.value) == "Rendered preview first variant trace is unavailable or inconsistent"
+    assert sensitive_value not in str(exc_info.value)
 
 
 def test_guided_preview_detaches_validation_render_and_result_object_graphs(tmp_path: Path) -> None:

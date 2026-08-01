@@ -143,7 +143,10 @@ class GuidedPreviewService:
 
         normalized_snapshot = canonical_request.model_dump(mode="json", exclude_none=True)
         rendered_preview = self.preview_service.render_preview(canonical_request)
-        preview = rendered_preview.model_copy(deep=True)
+        try:
+            preview = PreviewResult.model_validate(deepcopy(rendered_preview.model_dump(mode="python", warnings=False)))
+        except ValidationError:
+            raise RuntimeError(_UNAVAILABLE_FIRST_TRACE) from None
         contact_sheets = [artifact for artifact in preview.artifacts if artifact.kind == "contact_sheet"]
         if len(contact_sheets) != 1:
             raise RuntimeError(_INVALID_CONTACT_SHEET_COUNT)
