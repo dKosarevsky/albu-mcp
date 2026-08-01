@@ -99,7 +99,7 @@
     }
   ],
   "schema_version": 2,
-  "source_revision": "8456042cc67fe55425390c682225ca573c249686",
+  "source_revision": "608c395b384a0df9efc02102a9bb0fec89dd2f34",
   "status": "passed",
   "transport": "stdio"
 }

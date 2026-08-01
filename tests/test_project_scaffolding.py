@@ -82,6 +82,15 @@ def test_release_workflow_builds_ui_before_python_distributions() -> None:
     assert ui_build < python_build < bundle_check
 
 
+def test_release_workflow_fetches_history_for_provenance_checks() -> None:
+    workflow = yaml.safe_load(Path(".github/workflows/release.yml").read_text(encoding="utf-8"))
+    steps = workflow["jobs"]["build"]["steps"]
+    checkout = next(step for step in steps if step.get("name") == "Check out repository")
+
+    assert checkout["uses"] == "actions/checkout@v5"
+    assert checkout["with"]["fetch-depth"] == 0
+
+
 def test_mcp_registry_watchdog_workflow_checks_latest_registry_entry() -> None:
     workflow_path = Path(".github/workflows/mcp-registry-watchdog.yml")
     workflow_text = workflow_path.read_text(encoding="utf-8")
@@ -228,8 +237,8 @@ def test_v1_readiness_tracks_current_product_gate() -> None:
     readiness = Path("docs/V1_READINESS.md").read_text(encoding="utf-8")
 
     for term in [
-        "v1.19.0",
-        "albumentationsx-mcp==1.19.0",
+        "v1.20.0",
+        "albumentationsx-mcp==1.20.0",
         "MCP Registry",
         "build_review_packet",
         "review_packet_flow",
