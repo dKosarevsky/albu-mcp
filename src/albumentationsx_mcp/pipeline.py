@@ -78,6 +78,7 @@ class PipelineService:
             is_check_shapes=pipeline.is_check_shapes,
             strict=pipeline.strict,
             seed=pipeline.seed,
+            save_applied_params=True,
         )
 
     def export_pipeline(

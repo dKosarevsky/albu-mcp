@@ -50,6 +50,11 @@ class CountingMapping(Mapping[str, object]):
         return self._values.items()
 
 
+def _serialized_trace_size(trace: PreviewVariantTrace) -> int:
+    encoded = json.dumps(trace.model_dump(mode="json"), allow_nan=False, sort_keys=True)
+    return len(encoded.encode("utf-8"))
+
+
 def test_trace_limits_are_stable() -> None:
     assert MAX_INLINE_ARRAY_ELEMENTS == 64
     assert MAX_COLLECTION_ITEMS == 32
@@ -205,10 +210,7 @@ def test_normalize_trace_value_summarizes_oversized_mapping() -> None:
 
 def test_normalize_trace_value_does_not_iterate_oversized_mapping_values() -> None:
     value = CountingMapping(
-        {
-            f"key-{index:02d}": {"nested": [index] * MAX_COLLECTION_ITEMS}
-            for index in range(MAX_COLLECTION_ITEMS + 1)
-        }
+        {f"key-{index:02d}": {"nested": [index] * MAX_COLLECTION_ITEMS} for index in range(MAX_COLLECTION_ITEMS + 1)}
     )
 
     assert normalize_trace_value({"oversized": value}) == {
@@ -284,10 +286,7 @@ def test_normalize_trace_value_orders_object_numpy_scalars_at_depth_boundary() -
         value = np.array((list(range(index)),), dtype=dtype)[()]
         return [[[value]]]
 
-    entries = [
-        (bytes([index]), nested_scalar(index))
-        for index in range(MAX_COLLECTION_ITEMS)
-    ]
+    entries = [(bytes([index]), nested_scalar(index)) for index in range(MAX_COLLECTION_ITEMS)]
 
     forward = normalize_trace_value(dict(entries))
     reverse = normalize_trace_value(dict(reversed(entries)))
@@ -316,15 +315,11 @@ def test_normalize_trace_value_orders_inline_object_arrays_beyond_collection_pre
 def test_normalize_trace_value_orders_nested_mapping_values_canonically() -> None:
     def nested_value(unique_value: int) -> dict[bytes, dict[str, object]]:
         common: list[tuple[bytes, dict[str, object]]] = [
-            (bytes([index]), {"payload": f"common-{index:02d}"})
-            for index in range(2)
+            (bytes([index]), {"payload": f"common-{index:02d}"}) for index in range(2)
         ]
         return dict([*common, (bytes([2]), {"payload": unique_value})])
 
-    entries = [
-        (bytes([index]), nested_value(index))
-        for index in range(MAX_COLLECTION_ITEMS)
-    ]
+    entries = [(bytes([index]), nested_value(index)) for index in range(MAX_COLLECTION_ITEMS)]
 
     forward = normalize_trace_value(dict(entries))
     reverse = normalize_trace_value(dict(reversed(entries)))
@@ -489,6 +484,152 @@ def test_normalized_trace_value_is_strict_json_serializable() -> None:
     encoded = json.dumps(normalize_trace_value(value), allow_nan=False, sort_keys=True)
 
     assert json.loads(encoded)["non_finite"] == {"kind": "non_finite_float", "value": "nan"}
+
+
+def test_build_variant_trace_preserves_transform_order_and_normalizes_params() -> None:
+    trace = preview_trace.build_variant_trace(
+        image_index=1,
+        variant_index=2,
+        source_path=Path("source.png"),
+        artifact_uri="artifact://run/001-002.png",
+        effective_seed=19,
+        applied_transforms=[
+            ("HorizontalFlip", {"p": np.float32(1.0)}),
+            ("GaussNoise", {"noise": np.arange(3, dtype=np.int16)}),
+        ],
+    )
+
+    assert trace.image_index == 1
+    assert trace.variant_index == 2
+    assert trace.source_path == "source.png"
+    assert trace.artifact_uri == "artifact://run/001-002.png"
+    assert trace.effective_seed == 19
+    assert [item.name for item in trace.applied_transforms] == ["HorizontalFlip", "GaussNoise"]
+    assert trace.applied_transforms[0].params == {"p": 1.0}
+    assert trace.applied_transforms[1].params == {"noise": [0, 1, 2]}
+    assert trace.truncated_transform_count == 0
+    assert trace.parameters_truncated is False
+    assert _serialized_trace_size(trace) <= MAX_VARIANT_TRACE_JSON_BYTES
+
+
+def test_build_variant_trace_accepts_missing_applied_transforms() -> None:
+    trace = preview_trace.build_variant_trace(
+        image_index=0,
+        variant_index=0,
+        source_path="source.png",
+        artifact_uri="artifact://run/000-000.png",
+        effective_seed=None,
+        applied_transforms=None,
+    )
+
+    assert trace.applied_transforms == []
+    assert trace.truncated_transform_count == 0
+    assert trace.parameters_truncated is False
+
+
+def test_build_variant_trace_caps_applied_transforms() -> None:
+    applied_transforms = [(f"Transform{index:02d}", {"index": index}) for index in range(MAX_APPLIED_TRANSFORMS + 5)]
+
+    trace = preview_trace.build_variant_trace(
+        image_index=0,
+        variant_index=0,
+        source_path="source.png",
+        artifact_uri="artifact://run/000-000.png",
+        effective_seed=7,
+        applied_transforms=applied_transforms,
+    )
+
+    assert [item.name for item in trace.applied_transforms] == [
+        f"Transform{index:02d}" for index in range(MAX_APPLIED_TRANSFORMS)
+    ]
+    assert trace.truncated_transform_count == 5
+    assert _serialized_trace_size(trace) <= MAX_VARIANT_TRACE_JSON_BYTES
+
+
+def test_build_variant_trace_summarizes_parameters_to_fit_json_budget() -> None:
+    params = {f"parameter-{index:02d}": "x" * MAX_INLINE_STRING_CHARS for index in range(MAX_COLLECTION_ITEMS)}
+
+    first = preview_trace.build_variant_trace(
+        image_index=0,
+        variant_index=0,
+        source_path="source.png",
+        artifact_uri="artifact://run/000-000.png",
+        effective_seed=7,
+        applied_transforms=[("LargeParameters", params)],
+    )
+    second = preview_trace.build_variant_trace(
+        image_index=0,
+        variant_index=0,
+        source_path="source.png",
+        artifact_uri="artifact://run/000-000.png",
+        effective_seed=7,
+        applied_transforms=[("LargeParameters", dict(reversed(list(params.items()))))],
+    )
+
+    assert first == second
+    assert first.parameters_truncated is True
+    assert first.applied_transforms[0].name == "LargeParameters"
+    assert first.applied_transforms[0].params["kind"] == "parameter_summary"
+    assert len(first.applied_transforms[0].params["sha256"]) == 64
+    assert _serialized_trace_size(first) <= MAX_VARIANT_TRACE_JSON_BYTES
+
+
+def test_build_variant_trace_has_bounded_fallback_for_unusually_large_metadata() -> None:
+    long_value = "private-segment/" + "x" * (MAX_VARIANT_TRACE_JSON_BYTES * 2)
+
+    trace = preview_trace.build_variant_trace(
+        image_index=0,
+        variant_index=0,
+        source_path=long_value,
+        artifact_uri=f"artifact://{long_value}",
+        effective_seed=7,
+        applied_transforms=[(long_value, {"value": long_value})],
+    )
+    encoded = json.dumps(trace.model_dump(mode="json"), allow_nan=False, sort_keys=True)
+
+    assert trace.parameters_truncated is True
+    assert trace.source_path.startswith("sha256:")
+    assert trace.artifact_uri.startswith("sha256:")
+    assert trace.applied_transforms[0].name.startswith("sha256:")
+    assert long_value not in encoded
+    assert len(encoded.encode("utf-8")) <= MAX_VARIANT_TRACE_JSON_BYTES
+
+
+def test_build_variant_trace_rejects_non_collection_without_repr() -> None:
+    with pytest.raises(
+        ValueError,
+        match=r"^applied_transforms must be an ordered collection of \(name, params\) tuples$",
+    ):
+        preview_trace.build_variant_trace(
+            image_index=0,
+            variant_index=0,
+            source_path="source.png",
+            artifact_uri="artifact://run/000-000.png",
+            effective_seed=None,
+            applied_transforms=UnsupportedValue(),
+        )
+
+
+def test_build_variant_trace_rejects_malformed_entries_without_leaking_values() -> None:
+    private_name = "/private/customer/input.png"
+
+    with pytest.raises(
+        ValueError,
+        match=(r"^applied_transforms entries must be \(name, params\) tuples with string names and mapping params$"),
+    ) as exc_info:
+        preview_trace.build_variant_trace(
+            image_index=0,
+            variant_index=0,
+            source_path="source.png",
+            artifact_uri="artifact://run/000-000.png",
+            effective_seed=None,
+            applied_transforms=[(private_name, UnsupportedValue())],
+        )
+
+    assert str(exc_info.value) == (
+        "applied_transforms entries must be (name, params) tuples with string names and mapping params"
+    )
+    assert private_name not in str(exc_info.value)
 
 
 def test_trace_models_use_independent_default_collections() -> None:

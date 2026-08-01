@@ -39,6 +39,7 @@ from albumentationsx_mcp.models import (
     QualityProfileName,
 )
 from albumentationsx_mcp.preview_analysis import compare_preview_manifests
+from albumentationsx_mcp.preview_trace import PreviewVariantTrace, build_variant_trace
 from albumentationsx_mcp.quality import compare_manifest_quality
 
 _RUN_ID_PATTERN = re.compile(r"^[0-9a-f]{32}$")
@@ -400,6 +401,7 @@ class PreviewService:
         image_paths: list[Path] = []
         overlay_paths: list[Path] = []
         annotation_observations: list[AnnotationObservation] = []
+        variant_traces: list[PreviewVariantTrace] = []
         source_paths = [self.path_policy.resolve_input(path) for path in request.input_paths]
         annotations = self._resolve_annotations(request)
 
@@ -432,7 +434,18 @@ class PreviewService:
                 output = run_dir / f"{source_index:03d}-{variant_index:03d}.png"
                 Image.fromarray(result["image"]).save(output)
                 image_paths.append(output)
-                artifacts.append(self.artifact_store.artifact_ref(output, kind="image", mime_type="image/png"))
+                image_artifact = self.artifact_store.artifact_ref(output, kind="image", mime_type="image/png")
+                artifacts.append(image_artifact)
+                variant_traces.append(
+                    build_variant_trace(
+                        image_index=source_index,
+                        variant_index=variant_index,
+                        source_path=source_path,
+                        artifact_uri=image_artifact.uri,
+                        effective_seed=_effective_variant_seed(request, variant_index),
+                        applied_transforms=result.get("applied_transforms"),
+                    ),
+                )
                 if annotation_has_content(annotation):
                     overlay_output = run_dir / f"{source_index:03d}-{variant_index:03d}-overlay.png"
                     render_overlay(result).save(overlay_output)
@@ -490,11 +503,13 @@ class PreviewService:
                 ],
                 "warnings": [],
                 "annotation_observation_count": len(annotation_observations),
+                "variant_trace_count": len(variant_traces),
             },
             "artifacts": [artifact.model_dump(mode="json") for artifact in artifacts],
             "annotation_observations": [
                 observation.model_dump(mode="json", exclude_none=True) for observation in annotation_observations
             ],
+            "variant_traces": [trace.model_dump(mode="json") for trace in variant_traces],
         }
         manifest_path.write_text(json.dumps(manifest_data, indent=2, sort_keys=True), encoding="utf-8")
         self.artifact_store.record_run(manifest_data)
@@ -516,7 +531,10 @@ class PreviewService:
         """Compare two recorded preview manifests."""
         baseline = self.artifact_store.read_manifest(baseline_run_id)
         candidate = self.artifact_store.read_manifest(candidate_run_id)
-        comparison = compare_preview_manifests(baseline, candidate)
+        comparison = compare_preview_manifests(
+            _manifest_for_comparison(baseline),
+            _manifest_for_comparison(candidate),
+        )
         quality_summary, quality_warnings = compare_manifest_quality(
             baseline,
             candidate,
@@ -593,3 +611,18 @@ def _mask_coverage(mask: Any) -> float | None:
     if data.size == 0:
         return None
     return round(float((data > 0).mean()), 6)
+
+
+def _effective_variant_seed(request: PreviewRequest, variant_index: int) -> int | None:
+    if request.seed is not None:
+        return request.seed + variant_index
+    return request.pipeline.seed
+
+
+def _manifest_for_comparison(manifest: dict[str, Any]) -> dict[str, Any]:
+    summary = manifest.get("summary")
+    if not isinstance(summary, dict) or "variant_trace_count" not in summary:
+        return manifest
+    comparison_summary = dict(summary)
+    comparison_summary.pop("variant_trace_count")
+    return {**manifest, "summary": comparison_summary}

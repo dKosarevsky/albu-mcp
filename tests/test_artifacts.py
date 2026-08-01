@@ -7,7 +7,10 @@ import numpy as np
 import pytest
 from PIL import Image
 
+from albumentationsx_mcp import preview_trace
+from albumentationsx_mcp.catalog import TransformCatalog
 from albumentationsx_mcp.models import ComposeSpec, PreviewRequest, PreviewResult, TransformSpec
+from albumentationsx_mcp.pipeline import PipelineService
 from albumentationsx_mcp.preview import ArtifactStore, PathPolicy, PreviewService
 
 
@@ -43,7 +46,7 @@ def test_preview_rendering_records_queryable_run_index(tmp_path: Path) -> None:
     result = service.render_preview(
         PreviewRequest(
             input_paths=[image_path],
-            pipeline=ComposeSpec(transforms=[TransformSpec(name="HorizontalFlip", p=1.0)]),
+            pipeline=ComposeSpec(transforms=[TransformSpec(name="HorizontalFlip", p=1.0)], seed=31),
             variants_per_image=2,
         ),
     )
@@ -59,7 +62,58 @@ def test_preview_rendering_records_queryable_run_index(tmp_path: Path) -> None:
     assert manifest["summary"]["variants_per_image"] == 2
     assert manifest["summary"]["transform_names"] == ["HorizontalFlip"]
     assert manifest["summary"]["artifact_counts"]["image"] == 2
+    assert manifest["summary"]["variant_trace_count"] == 2
+    assert [trace["effective_seed"] for trace in manifest["variant_traces"]] == [31, 31]
+    assert all(trace["applied_transforms"] == [] for trace in manifest["variant_traces"])
     assert any(artifact["kind"] == "contact_sheet" for artifact in manifest["artifacts"])
+
+
+def test_preview_rendering_records_ordered_applied_transform_traces_and_request_seeds(tmp_path: Path) -> None:
+    first_path = tmp_path / "first.png"
+    second_path = tmp_path / "second.png"
+    image = np.arange(16 * 16 * 3, dtype=np.uint8).reshape((16, 16, 3))
+    Image.fromarray(image).save(first_path)
+    Image.fromarray(np.flip(image, axis=1).copy()).save(second_path)
+    store = ArtifactStore(tmp_path / "artifacts")
+    service = PreviewService(PipelineService(TransformCatalog()), PathPolicy([tmp_path]), store)
+
+    result = service.render_preview(
+        PreviewRequest(
+            input_paths=[first_path, second_path],
+            pipeline=ComposeSpec(
+                transforms=[
+                    TransformSpec(name="HorizontalFlip", p=1.0),
+                    TransformSpec(name="GaussNoise", params={"std_range": (0.01, 0.02)}, p=1.0),
+                ],
+                seed=900,
+            ),
+            variants_per_image=2,
+            seed=23,
+        ),
+    )
+    manifest = store.read_manifest(result.run_id)
+    traces = manifest["variant_traces"]
+    image_artifacts = [artifact for artifact in manifest["artifacts"] if artifact["kind"] == "image"]
+
+    assert manifest["summary"]["variant_trace_count"] == 4
+    assert [(trace["image_index"], trace["variant_index"]) for trace in traces] == [
+        (0, 0),
+        (0, 1),
+        (1, 0),
+        (1, 1),
+    ]
+    assert [trace["effective_seed"] for trace in traces] == [23, 24, 23, 24]
+    assert [trace["source_path"] for trace in traces] == [
+        str(first_path.resolve()),
+        str(first_path.resolve()),
+        str(second_path.resolve()),
+        str(second_path.resolve()),
+    ]
+    assert [trace["artifact_uri"] for trace in traces] == [artifact["uri"] for artifact in image_artifacts]
+    assert [item["name"] for item in traces[0]["applied_transforms"]] == [
+        "HorizontalFlip",
+        "GaussNoise",
+    ]
 
 
 def test_preview_rendering_cleans_up_unindexed_run_dir_on_path_failure(tmp_path: Path) -> None:
@@ -313,6 +367,104 @@ def test_preview_service_compare_includes_quality_summary(tmp_path: Path) -> Non
     assert comparison.quality_warnings == []
 
 
+def test_get_preview_variant_trace_returns_matching_trace(tmp_path: Path) -> None:
+    store, result = _render_real_preview_fixture(tmp_path)
+
+    lookup = preview_trace.get_preview_variant_trace(store, result.run_id, image_index=0, variant_index=0)
+
+    assert lookup.available is True
+    assert lookup.message == "Applied transform trace is available."
+    assert lookup.trace is not None
+    assert lookup.trace.artifact_uri == next(artifact.uri for artifact in result.artifacts if artifact.kind == "image")
+    assert [item.name for item in lookup.trace.applied_transforms] == ["HorizontalFlip", "GaussNoise"]
+
+
+def test_get_preview_variant_trace_returns_legacy_unavailable(tmp_path: Path) -> None:
+    store, result = _render_real_preview_fixture(tmp_path)
+    manifest_path = store.root / result.run_id / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest.pop("variant_traces")
+    manifest["summary"].pop("variant_trace_count")
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    lookup = preview_trace.get_preview_variant_trace(store, result.run_id, image_index=0, variant_index=0)
+
+    assert lookup.available is False
+    assert lookup.trace is None
+    assert lookup.message == "Variant traces are unavailable for this legacy preview run."
+
+
+def test_get_preview_variant_trace_rejects_non_list_metadata_without_path_leak(tmp_path: Path) -> None:
+    store, result = _render_real_preview_fixture(tmp_path)
+    manifest_path = store.root / result.run_id / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    private_path = str(tmp_path / "private" / "customer.png")
+    manifest["variant_traces"] = {"source_path": private_path}
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(ValueError, match=r"^Preview manifest variant_traces must be a list$") as exc_info:
+        preview_trace.get_preview_variant_trace(store, result.run_id, image_index=0, variant_index=0)
+
+    assert str(exc_info.value) == "Preview manifest variant_traces must be a list"
+    assert private_path not in str(exc_info.value)
+    assert str(store.root) not in str(exc_info.value)
+
+
+def test_get_preview_variant_trace_rejects_malformed_entry_without_path_leak(tmp_path: Path) -> None:
+    store, result = _render_real_preview_fixture(tmp_path)
+    manifest_path = store.root / result.run_id / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    private_path = str(tmp_path / "private" / "customer.png")
+    manifest["variant_traces"] = [
+        {
+            "image_index": 0,
+            "variant_index": 0,
+            "source_path": private_path,
+        }
+    ]
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(
+        ValueError,
+        match=r"^Preview manifest variant_traces contain malformed entries$",
+    ) as exc_info:
+        preview_trace.get_preview_variant_trace(store, result.run_id, image_index=0, variant_index=0)
+
+    assert str(exc_info.value) == "Preview manifest variant_traces contain malformed entries"
+    assert private_path not in str(exc_info.value)
+    assert str(store.root) not in str(exc_info.value)
+
+
+def test_get_preview_variant_trace_rejects_unknown_pair(tmp_path: Path) -> None:
+    store, result = _render_real_preview_fixture(tmp_path)
+
+    with pytest.raises(
+        ValueError,
+        match=r"^Preview variant trace is unavailable for image 2, variant 3$",
+    ):
+        preview_trace.get_preview_variant_trace(store, result.run_id, image_index=2, variant_index=3)
+
+
+@pytest.mark.parametrize(("image_index", "variant_index"), [(-1, 0), (0, -1)])
+def test_get_preview_variant_trace_rejects_negative_indexes_before_manifest_read(
+    tmp_path: Path,
+    image_index: int,
+    variant_index: int,
+) -> None:
+    store = ArtifactStore(tmp_path / "private-artifacts")
+
+    with pytest.raises(
+        ValueError,
+        match=r"^image_index and variant_index must be non-negative$",
+    ):
+        preview_trace.get_preview_variant_trace(
+            store,
+            "0" * 32,
+            image_index=image_index,
+            variant_index=variant_index,
+        )
+
+
 def _render_preview_fixture(tmp_path: Path) -> tuple[ArtifactStore, PreviewResult]:
     image_path = tmp_path / "input.png"
     Image.fromarray(np.full((16, 16, 3), 128, dtype=np.uint8)).save(image_path)
@@ -322,6 +474,28 @@ def _render_preview_fixture(tmp_path: Path) -> tuple[ArtifactStore, PreviewResul
         PreviewRequest(
             input_paths=[image_path],
             pipeline=ComposeSpec(transforms=[TransformSpec(name="HorizontalFlip", p=1.0)]),
+        ),
+    )
+    return store, result
+
+
+def _render_real_preview_fixture(tmp_path: Path) -> tuple[ArtifactStore, PreviewResult]:
+    image_path = tmp_path / "input.png"
+    image = np.arange(16 * 16 * 3, dtype=np.uint8).reshape((16, 16, 3))
+    Image.fromarray(image).save(image_path)
+    store = ArtifactStore(tmp_path / "artifacts")
+    service = PreviewService(PipelineService(TransformCatalog()), PathPolicy([tmp_path]), store)
+    result = service.render_preview(
+        PreviewRequest(
+            input_paths=[image_path],
+            pipeline=ComposeSpec(
+                transforms=[
+                    TransformSpec(name="HorizontalFlip", p=1.0),
+                    TransformSpec(name="GaussNoise", params={"std_range": (0.01, 0.02)}, p=1.0),
+                ],
+                seed=17,
+            ),
+            variants_per_image=1,
         ),
     )
     return store, result

@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+import albumentations as A
+import numpy as np
 import pytest
 
 from albumentationsx_mcp.catalog import TransformCatalog
@@ -123,6 +125,29 @@ def test_build_pipeline_adapts_public_bbox_format_for_runtime() -> None:
     pipeline = service.build_pipeline(spec)
 
     assert pipeline is not None
+
+
+def test_build_pipeline_records_applied_params_without_changing_seeded_output() -> None:
+    image = np.arange(16 * 16 * 3, dtype=np.uint8).reshape((16, 16, 3))
+    spec = ComposeSpec(
+        transforms=[
+            TransformSpec(name="HorizontalFlip", p=1.0),
+            TransformSpec(name="GaussNoise", params={"std_range": (0.01, 0.02)}, p=1.0),
+        ],
+        seed=17,
+    )
+    ordinary_result = A.Compose(
+        [A.HorizontalFlip(p=1.0), A.GaussNoise(std_range=(0.01, 0.02), p=1.0)],
+        seed=17,
+    )(image=image)
+
+    instrumented_result = PipelineService(TransformCatalog()).build_pipeline(spec)(image=image)
+
+    assert instrumented_result["image"].tobytes() == ordinary_result["image"].tobytes()
+    assert [name for name, _ in instrumented_result["applied_transforms"]] == [
+        "HorizontalFlip",
+        "GaussNoise",
+    ]
 
 
 def test_export_python_adapts_public_bbox_format_for_runtime() -> None:
