@@ -42,6 +42,9 @@ _APPLIED_TRANSFORMS_COLLECTION_ERROR = "applied_transforms must be an ordered co
 _APPLIED_TRANSFORMS_ENTRY_ERROR = (
     "applied_transforms entries must be (name, params) tuples with string names and mapping params"
 )
+_SOURCE_PATH_ERROR = "source_path must be a string or pathlib.Path"
+_ARTIFACT_URI_ERROR = "artifact_uri must be a string"
+_MALFORMED_PREVIEW_TRACE_MANIFEST_ERROR = "Preview trace manifest is malformed"
 _MALFORMED_MANIFEST_TRACES_ERROR = "Preview manifest variant_traces contain malformed entries"
 _DUPLICATE_MANIFEST_TRACE_ERROR = "Preview manifest contains multiple traces for the requested image and variant"
 
@@ -175,8 +178,8 @@ class PreviewVariantTrace(StrictModel):
     source_path: str
     artifact_uri: str
     effective_seed: int | None = None
-    applied_transforms: list[AppliedTransformTrace] = Field(default_factory=list)
-    truncated_transform_count: int = Field(default=0, ge=0)
+    applied_transforms: list[AppliedTransformTrace] = Field(default_factory=list, max_length=MAX_APPLIED_TRANSFORMS)
+    truncated_transform_count: int = Field(default=0, ge=0, le=MAX_TRACE_INDEX)
     parameters_truncated: bool = False
 
 
@@ -432,6 +435,7 @@ def build_variant_trace(  # noqa: PLR0913
         variant_index=variant_index,
         effective_seed=effective_seed,
     )
+    _validate_trace_string_metadata(source_path=source_path, artifact_uri=artifact_uri)
     validated = _validate_applied_transforms(applied_transforms)
     retained = validated[:MAX_APPLIED_TRANSFORMS]
     truncated_transform_count = len(validated) - len(retained)
@@ -515,7 +519,10 @@ def get_preview_variant_trace(
     _validate_trace_index("image_index", image_index)
     _validate_trace_index("variant_index", variant_index)
 
-    manifest = artifact_store.read_manifest(run_id)
+    try:
+        manifest = artifact_store.read_manifest(run_id)
+    except TypeError:
+        raise ValueError(_MALFORMED_PREVIEW_TRACE_MANIFEST_ERROR) from None
     if "variant_traces" not in manifest:
         return PreviewVariantTraceResult(
             run_id=run_id,
@@ -641,6 +648,13 @@ def _validate_trace_scalar_metadata(
     ):
         msg = f"effective_seed must be None or an integer between {MIN_TRACE_SEED} and {MAX_TRACE_SEED}"
         raise ValueError(msg)
+
+
+def _validate_trace_string_metadata(*, source_path: Any, artifact_uri: Any) -> None:
+    if not isinstance(source_path, (str, Path)):
+        raise ValueError(_SOURCE_PATH_ERROR)  # noqa: TRY004 - public API uses stable ValueError validation.
+    if not isinstance(artifact_uri, str):
+        raise ValueError(_ARTIFACT_URI_ERROR)  # noqa: TRY004 - public API uses stable ValueError validation.
 
 
 def _validate_trace_index(field: str, value: int) -> None:

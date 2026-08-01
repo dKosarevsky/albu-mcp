@@ -5,6 +5,7 @@ import re
 import sys
 from collections.abc import ItemsView, Iterator, Mapping
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pytest
@@ -536,6 +537,35 @@ def test_build_variant_trace_accepts_missing_applied_transforms() -> None:
     assert trace.parameters_truncated is False
 
 
+@pytest.mark.parametrize(
+    ("field", "value", "expected_message"),
+    [
+        ("source_path", 7, "source_path must be a string or pathlib.Path"),
+        ("source_path", None, "source_path must be a string or pathlib.Path"),
+        ("artifact_uri", 7, "artifact_uri must be a string"),
+        ("artifact_uri", None, "artifact_uri must be a string"),
+    ],
+    ids=["numeric-source-path", "null-source-path", "numeric-artifact-uri", "null-artifact-uri"],
+)
+def test_build_variant_trace_rejects_invalid_string_metadata(
+    field: str,
+    value: Any,
+    expected_message: str,
+) -> None:
+    with pytest.raises(ValueError, match=re.escape(expected_message)) as exc_info:
+        preview_trace.build_variant_trace(
+            image_index=0,
+            variant_index=0,
+            source_path=value if field == "source_path" else Path("source.png"),
+            artifact_uri=value if field == "artifact_uri" else "artifact://run/000-000.png",
+            effective_seed=7,
+            applied_transforms=[],
+        )
+
+    assert str(exc_info.value) == expected_message
+    assert len(str(exc_info.value)) < 128
+
+
 def test_build_variant_trace_caps_applied_transforms() -> None:
     applied_transforms = [(f"Transform{index:02d}", {"index": index}) for index in range(MAX_APPLIED_TRANSFORMS + 5)]
 
@@ -782,6 +812,52 @@ def test_preview_variant_trace_rejects_negative_indexes(field: str, value: int) 
 
     with pytest.raises(ValidationError):
         PreviewVariantTrace.model_validate(data)
+
+
+def test_preview_variant_trace_accepts_collection_and_count_boundaries() -> None:
+    transforms = [{"name": f"Transform{index:02d}", "params": {}} for index in range(MAX_APPLIED_TRANSFORMS)]
+
+    trace = PreviewVariantTrace.model_validate(
+        {
+            "image_index": 0,
+            "variant_index": 0,
+            "source_path": "source.png",
+            "artifact_uri": "albumentationsx://runs/run-1/images/0/0",
+            "applied_transforms": transforms,
+            "truncated_transform_count": preview_trace.MAX_TRACE_INDEX,
+        }
+    )
+
+    assert len(trace.applied_transforms) == MAX_APPLIED_TRANSFORMS
+    assert trace.truncated_transform_count == preview_trace.MAX_TRACE_INDEX
+
+
+def test_preview_variant_trace_rejects_too_many_applied_transforms() -> None:
+    transforms = [{"name": f"Transform{index:02d}", "params": {}} for index in range(MAX_APPLIED_TRANSFORMS + 1)]
+
+    with pytest.raises(ValidationError):
+        PreviewVariantTrace.model_validate(
+            {
+                "image_index": 0,
+                "variant_index": 0,
+                "source_path": "source.png",
+                "artifact_uri": "albumentationsx://runs/run-1/images/0/0",
+                "applied_transforms": transforms,
+            }
+        )
+
+
+def test_preview_variant_trace_rejects_oversized_truncated_transform_count() -> None:
+    with pytest.raises(ValidationError):
+        PreviewVariantTrace.model_validate(
+            {
+                "image_index": 0,
+                "variant_index": 0,
+                "source_path": "source.png",
+                "artifact_uri": "albumentationsx://runs/run-1/images/0/0",
+                "truncated_transform_count": preview_trace.MAX_TRACE_INDEX + 1,
+            }
+        )
 
 
 @pytest.mark.parametrize(("field", "value"), [("image_index", -1), ("variant_index", -1)])

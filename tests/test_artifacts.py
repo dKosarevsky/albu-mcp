@@ -411,6 +411,19 @@ def test_get_preview_variant_trace_rejects_non_list_metadata_without_path_leak(t
     assert str(store.root) not in str(exc_info.value)
 
 
+def test_get_preview_variant_trace_rejects_non_object_manifest_root_without_path_leak(tmp_path: Path) -> None:
+    store, result = _render_real_preview_fixture(tmp_path)
+    manifest_path = store.root / result.run_id / "manifest.json"
+    private_path = str(tmp_path / "private" / "customer.png")
+    manifest_path.write_text(json.dumps([private_path]), encoding="utf-8")
+
+    with pytest.raises(ValueError, match=r"^Preview trace manifest is malformed$") as exc_info:
+        preview_trace.get_preview_variant_trace(store, result.run_id, image_index=0, variant_index=0)
+
+    assert private_path not in str(exc_info.value)
+    assert str(store.root) not in str(exc_info.value)
+
+
 def test_get_preview_variant_trace_rejects_malformed_entry_without_path_leak(tmp_path: Path) -> None:
     store, result = _render_real_preview_fixture(tmp_path)
     manifest_path = store.root / result.run_id / "manifest.json"
@@ -526,6 +539,33 @@ def test_get_preview_variant_trace_rejects_coercive_manifest_fields(
         match=r"^Preview manifest variant_traces contain malformed entries$",
     ):
         preview_trace.get_preview_variant_trace(store, result.run_id, image_index=0, variant_index=0)
+
+
+@pytest.mark.parametrize(
+    "target",
+    ["applied_transforms", "truncated_transform_count"],
+    ids=["too-many-applied-transforms", "oversized-truncated-count"],
+)
+def test_get_preview_variant_trace_rejects_out_of_bounds_trace_fields(tmp_path: Path, target: str) -> None:
+    store, result = _render_real_preview_fixture(tmp_path)
+    manifest_path = store.root / result.run_id / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    trace = manifest["variant_traces"][0]
+    if target == "applied_transforms":
+        trace[target] = [
+            {"name": f"Transform{index:02d}", "params": {}} for index in range(preview_trace.MAX_APPLIED_TRANSFORMS + 1)
+        ]
+    else:
+        trace[target] = preview_trace.MAX_TRACE_INDEX + 1
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(
+        ValueError,
+        match=r"^Preview manifest variant_traces contain malformed entries$",
+    ) as exc_info:
+        preview_trace.get_preview_variant_trace(store, result.run_id, image_index=0, variant_index=0)
+
+    assert str(store.root) not in str(exc_info.value)
 
 
 def test_get_preview_variant_trace_rejects_duplicate_matching_entries(tmp_path: Path) -> None:
