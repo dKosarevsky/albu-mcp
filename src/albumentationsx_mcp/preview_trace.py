@@ -247,11 +247,8 @@ class _TraceOrderTokenBuilder:
             "kind": "numpy_scalar",
             "type": type(value).__qualname__,
             "dtype": str(scalar.dtype),
+            "value": self._normalize(value.item(), depth=depth),
         }
-        if scalar.dtype.hasobject:
-            order_structure["value"] = self._normalize(value.item(), depth=depth + 1)
-        else:
-            order_structure["sha256"] = hashlib.sha256(np.ascontiguousarray(scalar).tobytes()).hexdigest()
         return order_structure
 
     def _normalize_array(self, value: np.ndarray[Any, Any], *, depth: int) -> dict[str, Any]:
@@ -262,11 +259,8 @@ class _TraceOrderTokenBuilder:
             "dtype": str(value.dtype),
             "element_count": int(value.size),
         }
-        if value.dtype.hasobject and value.size <= MAX_INLINE_ARRAY_ELEMENTS:
-            order_structure["items"] = [
-                self._normalize(value.flat[index], depth=depth + 1)
-                for index in range(int(value.size))
-            ]
+        if value.size <= MAX_INLINE_ARRAY_ELEMENTS:
+            order_structure["value"] = self._normalize(value.tolist(), depth=depth + 1)
         elif value.dtype.hasobject:
             order_structure["content_omitted"] = True
         else:

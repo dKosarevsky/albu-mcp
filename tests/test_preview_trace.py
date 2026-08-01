@@ -184,6 +184,25 @@ def test_normalize_trace_value_caps_object_numpy_scalar_values_deterministically
     json.dumps(forward, allow_nan=False, sort_keys=True)
 
 
+def test_normalize_trace_value_orders_object_numpy_scalars_at_depth_boundary() -> None:
+    dtype = np.dtype([("payload", object)])
+
+    def nested_scalar(index: int) -> list[object]:
+        value = np.array((list(range(index)),), dtype=dtype)[()]
+        return [[[value]]]
+
+    entries = [
+        (bytes([index]), nested_scalar(index))
+        for index in range(MAX_COLLECTION_ITEMS + 1)
+    ]
+
+    forward = normalize_trace_value(dict(entries))
+    reverse = normalize_trace_value(dict(reversed(entries)))
+
+    assert forward == reverse
+    json.dumps(forward, allow_nan=False, sort_keys=True)
+
+
 def test_normalize_trace_value_orders_inline_object_arrays_beyond_collection_prefix() -> None:
     prefix = list(range(MAX_COLLECTION_ITEMS))
     entries = [
