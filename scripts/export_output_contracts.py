@@ -12,6 +12,8 @@ from typing import Any
 
 from PIL import Image
 
+from albumentationsx_mcp.adapters.mcp.registration import public_surface_for_profile
+from albumentationsx_mcp.capabilities import CapabilityProfile
 from albumentationsx_mcp.catalog import TransformCatalog
 from albumentationsx_mcp.dataset import score_dataset_preview_candidates
 from albumentationsx_mcp.dataset_quality import inspect_dataset_quality
@@ -575,73 +577,7 @@ def _preview_request(image_path: Path) -> dict[str, Any]:
 
 
 def _diagnostics_public_surface() -> PublicSurface:
-    return PublicSurface(
-        tools=[
-            "search_transforms",
-            "get_transform_schema",
-            "validate_pipeline",
-            "recommend_pipeline",
-            "adjust_pipeline",
-            "explain_pipeline",
-            "list_feedback_tags",
-            "render_preview",
-            "render_preview_batch",
-            "compare_preview_runs",
-            "interpret_preview_feedback",
-            "plan_preview_review",
-            "summarize_tuning_session",
-            "start_tuning_session",
-            "record_tuning_session_step",
-            "list_tuning_sessions",
-            "export_tuning_session",
-            "close_tuning_session",
-            "archive_tuning_session",
-            "cleanup_tuning_sessions",
-            "rank_preview_candidates",
-            "score_dataset_preview_candidates",
-            "list_quality_profiles",
-            "recommend_recipe",
-            "record_preview_feedback",
-            "list_preview_feedback",
-            "record_tuning_decision",
-            "list_tuning_decisions",
-            "export_tuning_report",
-            "export_preview_report",
-            "list_preview_runs",
-            "get_preview_manifest",
-            "delete_preview_run",
-            "cleanup_preview_runs",
-            "export_pipeline",
-            "diagnose_environment",
-            "run_host_smoke_check",
-            "validate_preview_request",
-            "plan_dataset_onboarding",
-            "build_review_packet",
-            "inspect_dataset_quality",
-        ],
-        prompts=[
-            "build_robustness_augmentation_session",
-            "run_first_preview_review",
-            "compare_preview_runs_for_feedback",
-            "tune_pipeline_from_preview_feedback",
-            "export_reproducible_pipeline",
-        ],
-        workflow_resources=[
-            "albumentationsx://workflows/catalog",
-            "albumentationsx://workflows/preview-tuning",
-            "albumentationsx://workflows/annotation-preview",
-            "albumentationsx://workflows/task-profiles",
-            "albumentationsx://recipes/catalog",
-            "albumentationsx://diagnostics/guide",
-            "albumentationsx://examples/client-smoke",
-            "albumentationsx://examples/first-preview",
-            "albumentationsx://examples/distortion-review",
-            "albumentationsx://examples/dataset-onboarding",
-            "albumentationsx://examples/diagnostics",
-            "albumentationsx://examples/review-loop",
-            "albumentationsx://examples/report-handoff",
-        ],
-    )
+    return public_surface_for_profile(CapabilityProfile.FULL)
 
 
 def _normalize_feedback_record(record: PreviewFeedbackRecord) -> dict[str, Any]:

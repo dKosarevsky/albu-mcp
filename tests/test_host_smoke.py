@@ -66,6 +66,30 @@ def test_host_smoke_report_is_preview_ready_when_diagnostics_and_validation_pass
     )
 
 
+def test_host_smoke_report_defaults_to_guided_full_profile_for_existing_callers(tmp_path: Path) -> None:
+    catalog = TransformCatalog()
+    pipeline_service = PipelineService(catalog)
+    recipe = recommend_recipe("classification", intensity="low", targets=["image"])
+    validation = pipeline_service.validate_pipeline(recipe.pipeline)
+    diagnostics = DiagnosticsService(
+        allowed_roots=[tmp_path],
+        artifact_root=tmp_path / "artifacts",
+        max_preview_runs=100,
+        public_surface=public_surface_for_profile(CapabilityProfile.FULL),
+    ).diagnose(include_write_probe=True)
+
+    report = build_host_smoke_report(
+        diagnostics=diagnostics,
+        recipe=recipe,
+        validation=validation,
+    )
+
+    guidance = " ".join(report.workflow_guidance.instructions)
+    assert report.capability_profile == CapabilityProfile.FULL
+    assert "run_first_preview" in guidance
+    assert "trace_preview_variant" in guidance
+
+
 def test_host_smoke_report_blocks_preview_when_diagnostics_warn(tmp_path: Path) -> None:
     catalog = TransformCatalog()
     pipeline_service = PipelineService(catalog)

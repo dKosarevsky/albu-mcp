@@ -34,6 +34,8 @@ When I accept the result, call export_pipeline and provide:
 Explicit fallback:
 In the review capability profile, or when I ask to inspect the request, continue after run_host_smoke_check returns
 preview_ready=true. Copy preview_request_template.request and replace its placeholder path.
+In full or dataset, you may call plan_dataset_onboarding before validation and use its returned request instead. The
+review profile must not call that unavailable tool and continues with preview_request_template from the smoke report.
 Call validate_preview_request with that request.
 Do not render anything until validate_preview_request returns valid=true.
 Then call render_preview_batch and inspect its contact sheet. When I identify a result, call trace_preview_variant with

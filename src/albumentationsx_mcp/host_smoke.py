@@ -72,7 +72,7 @@ def build_host_smoke_report(  # noqa: PLR0913
     diagnostics: DiagnosticsReport,
     recipe: RecipeRecommendation,
     validation: PipelineValidationReport,
-    guided_preview_available: bool,
+    guided_preview_available: bool = True,
     preview_tools_available: bool = True,
     trace_preview_available: bool = True,
 ) -> HostSmokeReport:

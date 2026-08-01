@@ -34,6 +34,7 @@ _PROMPT_REQUIRED_PHRASES = (
     "run_host_smoke_check",
     "run_first_preview",
     "trace_preview_variant",
+    "plan_dataset_onboarding",
     "Do not render anything until validate_preview_request returns valid=true.",
     "render_preview_batch",
     "compare_preview_runs",
@@ -52,6 +53,7 @@ _PRIMARY_WORKFLOW_ANCHORS = (
 _FALLBACK_WORKFLOW_ANCHORS = (
     "run_host_smoke_check",
     "preview_request_template",
+    "plan_dataset_onboarding",
     "validate_preview_request",
     "render_preview_batch",
     "contact sheet",

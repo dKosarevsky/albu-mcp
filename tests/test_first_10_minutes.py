@@ -217,6 +217,18 @@ def test_first_10_minutes_requires_explicit_ordered_fallback(
     assert expected in check.message
 
 
+def test_host_prompt_requires_dataset_onboarding_inside_explicit_fallback(tmp_path: Path) -> None:
+    primary, fallback = _valid_prompt_text().split(_FALLBACK_MARKER, 1)
+    fallback = fallback.replace("plan_dataset_onboarding\n", "", 1)
+    malformed = f"{primary}plan_dataset_onboarding\n{_FALLBACK_MARKER}{fallback}"
+
+    check = _workflow_check(tmp_path, document_name="prompt", text=malformed)
+
+    assert check.ok is False
+    assert "fallback workflow" in check.message
+    assert "plan_dataset_onboarding" in check.message
+
+
 def _valid_guide_text() -> str:
     return """# First 10 Minutes
 uvx --from albumentationsx-mcp albumentationsx-mcp
@@ -259,6 +271,7 @@ export_pipeline
 Explicit fallback:
 run_host_smoke_check
 preview_request_template
+plan_dataset_onboarding
 Do not render anything until validate_preview_request returns valid=true.
 render_preview_batch
 contact sheet
