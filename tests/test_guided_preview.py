@@ -272,9 +272,11 @@ def test_guided_preview_renders_bounded_safe_template_with_traceable_contact_she
     assert result.contact_sheet is contact_sheet
     assert result.contact_sheet == contact_sheet
     assert result.trace_available is True
-    assert "contact sheet" in result.next_actions[0].lower()
-    assert "first variant trace" in result.next_actions[1].lower()
-    assert "adjusting or rerendering" in result.next_actions[1].lower()
+    assert result.next_actions == [
+        "Inspect the rendered contact sheet.",
+        "Call `trace_preview_variant` for image_index=0 and variant_index=0.",
+        "Use `adjust_pipeline` only after reviewing the contact sheet and first-variant trace evidence.",
+    ]
 
     manifest = artifact_store.read_manifest(result.preview.run_id)
     assert manifest["summary"]["variant_trace_count"] == result.onboarding.sampled_image_count
@@ -458,11 +460,12 @@ def test_guided_preview_requires_exactly_one_rendered_contact_sheet(
     )
 
     with pytest.raises(
-        ValueError,
+        RuntimeError,
         match=r"^Rendered preview must contain exactly one contact_sheet artifact$",
     ) as exc_info:
         service.run(GuidedPreviewRequest(dataset_path=dataset_path))
 
+    assert type(exc_info.value) is RuntimeError
     assert str(exc_info.value) == "Rendered preview must contain exactly one contact_sheet artifact"
     assert len(renderer.calls) == 1
     assert trace_lookup.calls == []
@@ -514,11 +517,12 @@ def test_guided_preview_rejects_unavailable_or_inconsistent_first_variant_trace(
     )
 
     with pytest.raises(
-        ValueError,
+        RuntimeError,
         match=r"^Rendered preview first variant trace is unavailable or inconsistent$",
     ) as exc_info:
         service.run(GuidedPreviewRequest(dataset_path=dataset_path))
 
+    assert type(exc_info.value) is RuntimeError
     assert str(exc_info.value) == "Rendered preview first variant trace is unavailable or inconsistent"
     assert trace_lookup.calls == [("fake-run", 0, 0)]
 

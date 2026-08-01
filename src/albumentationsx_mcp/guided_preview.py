@@ -19,8 +19,9 @@ _MALFORMED_NORMALIZED_REQUEST = "Validated preview request is malformed"
 _INVALID_CONTACT_SHEET_COUNT = "Rendered preview must contain exactly one contact_sheet artifact"
 _UNAVAILABLE_FIRST_TRACE = "Rendered preview first variant trace is unavailable or inconsistent"
 _SUCCESS_NEXT_ACTIONS = (
-    "Inspect the rendered contact sheet before changing the pipeline.",
-    "Query the first variant trace at image_index=0 and variant_index=0 before adjusting or rerendering.",
+    "Inspect the rendered contact sheet.",
+    "Call `trace_preview_variant` for image_index=0 and variant_index=0.",
+    "Use `adjust_pipeline` only after reviewing the contact sheet and first-variant trace evidence.",
 )
 
 
@@ -152,12 +153,12 @@ class GuidedPreviewService:
         preview = self.preview_service.render_preview(preview_request)
         contact_sheets = [artifact for artifact in preview.artifacts if artifact.kind == "contact_sheet"]
         if len(contact_sheets) != 1:
-            raise ValueError(_INVALID_CONTACT_SHEET_COUNT)
+            raise RuntimeError(_INVALID_CONTACT_SHEET_COUNT)
 
         trace_result = self.trace_lookup(preview.run_id, image_index=0, variant_index=0)
         trace_available = _is_first_variant_trace_available(trace_result, run_id=preview.run_id)
         if not trace_available:
-            raise ValueError(_UNAVAILABLE_FIRST_TRACE)
+            raise RuntimeError(_UNAVAILABLE_FIRST_TRACE)
 
         return GuidedPreviewResult(
             status="rendered",
