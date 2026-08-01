@@ -153,6 +153,14 @@ class _TraceNormalizer:
     def _normalize_array(self, value: np.ndarray[Any, Any], *, depth: int) -> Any:
         if value.size <= MAX_INLINE_ARRAY_ELEMENTS:
             return self.normalize(value.tolist(), depth=depth + 1)
+        if value.dtype.hasobject:
+            return {
+                "kind": "ndarray_summary",
+                "shape": [int(dimension) for dimension in value.shape],
+                "dtype": str(value.dtype),
+                "element_count": int(value.size),
+                "content_omitted": True,
+            }
         contiguous = np.ascontiguousarray(value)
         return {
             "kind": "ndarray_summary",
@@ -292,11 +300,13 @@ class _TraceOrderTokenBuilder:
             "dtype": str(value.dtype),
             "element_count": int(value.size),
         }
-        if value.dtype.hasobject:
+        if value.dtype.hasobject and value.size <= MAX_INLINE_ARRAY_ELEMENTS:
             order_structure["items"] = [
                 self._normalize(value.flat[index], depth=depth + 1)
-                for index in range(min(int(value.size), MAX_COLLECTION_ITEMS))
+                for index in range(int(value.size))
             ]
+        elif value.dtype.hasobject:
+            order_structure["content_omitted"] = True
         else:
             contiguous = np.ascontiguousarray(value)
             order_structure["sha256"] = hashlib.sha256(contiguous.tobytes()).hexdigest()

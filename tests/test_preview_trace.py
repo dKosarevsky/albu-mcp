@@ -71,6 +71,22 @@ def test_normalize_trace_value_summarizes_large_array_from_contiguous_bytes() ->
     }
 
 
+def test_normalize_trace_value_omits_large_object_array_contents() -> None:
+    first = np.array([{"value": index} for index in range(MAX_INLINE_ARRAY_ELEMENTS + 1)], dtype=object)
+    second = np.array([{"value": index} for index in range(MAX_INLINE_ARRAY_ELEMENTS + 1)], dtype=object)
+    expected = {
+        "kind": "ndarray_summary",
+        "shape": [MAX_INLINE_ARRAY_ELEMENTS + 1],
+        "dtype": "object",
+        "element_count": MAX_INLINE_ARRAY_ELEMENTS + 1,
+        "content_omitted": True,
+    }
+
+    assert normalize_trace_value(first) == expected
+    assert normalize_trace_value(second) == expected
+    json.dumps(expected, allow_nan=False, sort_keys=True)
+
+
 def test_normalize_trace_value_summarizes_long_string() -> None:
     value = "x" * (MAX_INLINE_STRING_CHARS + 1)
 
@@ -158,6 +174,23 @@ def test_normalize_trace_value_caps_object_numpy_scalar_values_deterministically
     dtype = np.dtype([("label", object), ("index", np.int64)])
     entries = [
         (bytes([index]), np.array((f"value-{index:02d}", index), dtype=dtype)[()])
+        for index in range(MAX_COLLECTION_ITEMS + 1)
+    ]
+
+    forward = normalize_trace_value(dict(entries))
+    reverse = normalize_trace_value(dict(reversed(entries)))
+
+    assert forward == reverse
+    json.dumps(forward, allow_nan=False, sort_keys=True)
+
+
+def test_normalize_trace_value_orders_inline_object_arrays_beyond_collection_prefix() -> None:
+    prefix = list(range(MAX_COLLECTION_ITEMS))
+    entries = [
+        (
+            bytes([index]),
+            np.array([*prefix, f"tail-{index:02d}", "shared-tail"], dtype=object).reshape((2, 17)),
+        )
         for index in range(MAX_COLLECTION_ITEMS + 1)
     ]
 
