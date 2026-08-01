@@ -43,8 +43,8 @@
         "resource_template_count": 2,
         "resource_templates_sha256": "f9cd0b837af9a8badb057866fe882b79f08562715852d6aaf23094ed961170ed",
         "resources_sha256": "8fe8e73ff49a1fd2765e46d660ea18d7a14aa4674fd1dcffeddd379587eb0a67",
-        "tool_count": 42,
-        "tools_sha256": "863785837b894c9caafdae65828a27d578700525c68b8c2e11463ebb171bbf1b"
+        "tool_count": 43,
+        "tools_sha256": "79ad392e257fb89e518c2820ed1aff0559dea089d1fd3631038a1e4c0c4b653a"
       },
       "surface_matches": true,
       "surface_mismatches": {}
@@ -67,8 +67,8 @@
         "resource_template_count": 2,
         "resource_templates_sha256": "f9cd0b837af9a8badb057866fe882b79f08562715852d6aaf23094ed961170ed",
         "resources_sha256": "2cd58c387312959b1ffd03749b31a728c70488348cc81f6aaea14f8346727881",
-        "tool_count": 25,
-        "tools_sha256": "fd908587c36776c1da1b0002403e02914eee49a3ca265d75f1da74c50431986a"
+        "tool_count": 27,
+        "tools_sha256": "812a36302b6d0be66f220cec7b0c4b2f67a6a715c464a2652e2a862926e690ae"
       },
       "surface_matches": true,
       "surface_mismatches": {}
@@ -91,8 +91,8 @@
         "resource_template_count": 2,
         "resource_templates_sha256": "f9cd0b837af9a8badb057866fe882b79f08562715852d6aaf23094ed961170ed",
         "resources_sha256": "1b6c749b83f98d3ac02b82a3afe646863e564157b6fd6de1388041426eca0a80",
-        "tool_count": 45,
-        "tools_sha256": "d76f732f3617d9ced3a24437b9040b0d06327922c0f32dc4abde4a11664b089d"
+        "tool_count": 47,
+        "tools_sha256": "b755fa7978b35e47490a1322e636ac2959f458689eb5c810f10d61fae4515bc6"
       },
       "surface_matches": true,
       "surface_mismatches": {}
