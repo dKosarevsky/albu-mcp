@@ -12,18 +12,14 @@ First, read albumentationsx://examples/client-smoke. If resource reads are unava
 example_id="client-smoke". Then run run_host_smoke_check.
 Continue only if preview_ready is true. If it is not ready, explain the remediation actions and stop before rendering.
 
-Then call plan_dataset_onboarding for the local image or directory. Use preview_request_template as the starting point.
-Do not render anything until validate_preview_request returns valid=true.
+Then call run_first_preview for the local image or directory with intensity="low" and max_images=8. Show me the
+returned contact sheet.
 
-Render a small preview with render_preview_batch:
-- use one variant per image;
-- keep the first pipeline conservative;
-- write artifacts under the configured artifact root;
-- create a contact sheet;
-- summarize what changed in visual terms.
+When I identify a specific result, call trace_preview_variant with the returned run id and that result's zero-based
+image_index and variant_index. Summarize the applied transforms before adjusting anything.
 
-After I inspect the contact sheet, ask for concrete feedback. If I say that some examples are too noisy, too blurry,
-too distorted, or too dark, call adjust_pipeline and render a candidate preview.
+After the trace, ask for concrete feedback. If I say that some examples are too noisy, too blurry, too distorted, or
+too dark, call adjust_pipeline and render a candidate preview.
 
 Compare the baseline and candidate with compare_preview_runs before exporting anything.
 
@@ -33,6 +29,13 @@ When I accept the result, call export_pipeline and provide:
 - the seed and target assumptions;
 - a short note about the feedback that led to the final version.
 
-If my local image source is not ready, show me the reference demo report path instead:
+Explicit advanced/fallback path:
+If run_first_preview is unavailable or I ask to inspect the request, continue after run_host_smoke_check returns
+preview_ready=true: call plan_dataset_onboarding and use preview_request_template as the starting point.
+Do not render anything until validate_preview_request returns valid=true.
+Then call render_preview_batch, inspect its contact sheet, use compare_preview_runs after adjustments, and call
+export_pipeline only after I accept the result.
+
+If my local image source is not ready, show me the reference demo report path:
 docs/assets/demo/demo_report.md
 ```

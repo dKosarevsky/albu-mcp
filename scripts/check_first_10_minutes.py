@@ -19,6 +19,8 @@ _GUIDE_REQUIRED_PHRASES = (
     "examples/first_10_minutes_prompt.md",
     "docs/assets/demo/demo_report.md",
     "run_host_smoke_check",
+    "run_first_preview",
+    "trace_preview_variant",
     "plan_dataset_onboarding",
     "validate_preview_request",
     "render_preview_batch",
@@ -29,6 +31,8 @@ _GUIDE_REQUIRED_PHRASES = (
 )
 _PROMPT_REQUIRED_PHRASES = (
     "run_host_smoke_check",
+    "run_first_preview",
+    "trace_preview_variant",
     "plan_dataset_onboarding",
     "Do not render anything until validate_preview_request returns valid=true.",
     "render_preview_batch",
