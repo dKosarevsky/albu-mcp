@@ -1,12 +1,14 @@
 import hashlib
 import json
 import math
+from collections.abc import ItemsView, Iterator, Mapping
 from pathlib import Path
 
 import numpy as np
 import pytest
 from pydantic import ValidationError
 
+from albumentationsx_mcp import preview_trace
 from albumentationsx_mcp.preview_trace import (
     MAX_APPLIED_TRANSFORMS,
     MAX_COLLECTION_ITEMS,
@@ -28,6 +30,25 @@ class UnsupportedValue:
         raise AssertionError(message)
 
 
+class CountingMapping(Mapping[str, object]):
+    def __init__(self, values: dict[str, object]) -> None:
+        self._values = values
+        self.items_call_count = 0
+
+    def __getitem__(self, key: str) -> object:
+        return self._values[key]
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._values)
+
+    def __len__(self) -> int:
+        return len(self._values)
+
+    def items(self) -> ItemsView[str, object]:
+        self.items_call_count += 1
+        return self._values.items()
+
+
 def test_trace_limits_are_stable() -> None:
     assert MAX_INLINE_ARRAY_ELEMENTS == 64
     assert MAX_COLLECTION_ITEMS == 32
@@ -36,6 +57,8 @@ def test_trace_limits_are_stable() -> None:
     assert MAX_INLINE_STRING_CHARS == 256
     assert MAX_APPLIED_TRANSFORMS == 32
     assert MAX_VARIANT_TRACE_JSON_BYTES == 8 * 1024
+    assert preview_trace.MAX_ARRAY_HASH_BYTES == 1024 * 1024
+    assert preview_trace.MAX_INLINE_INTEGER_BITS == 4096
 
 
 @pytest.mark.parametrize(
@@ -87,6 +110,37 @@ def test_normalize_trace_value_omits_large_object_array_contents() -> None:
     json.dumps(expected, allow_nan=False, sort_keys=True)
 
 
+def test_normalize_trace_value_omits_large_padded_structured_array_contents() -> None:
+    dtype = np.dtype({"names": ["value"], "formats": ["u1"], "offsets": [0], "itemsize": 8})
+    values = [(index,) for index in range(MAX_INLINE_ARRAY_ELEMENTS + 1)]
+    first = np.array(values, dtype=dtype)
+    second = np.array(values, dtype=dtype)
+    expected = {
+        "kind": "ndarray_summary",
+        "shape": [MAX_INLINE_ARRAY_ELEMENTS + 1],
+        "dtype": str(dtype),
+        "element_count": MAX_INLINE_ARRAY_ELEMENTS + 1,
+        "content_omitted": True,
+    }
+
+    assert normalize_trace_value(first) == expected
+    assert normalize_trace_value(second) == expected
+    json.dumps(expected, allow_nan=False, sort_keys=True)
+
+
+def test_normalize_trace_value_omits_oversized_numeric_array_contents() -> None:
+    element_count = preview_trace.MAX_ARRAY_HASH_BYTES // np.dtype(np.float64).itemsize + 1
+    value = np.zeros(element_count, dtype=np.float64)
+
+    assert normalize_trace_value(value) == {
+        "kind": "ndarray_summary",
+        "shape": [element_count],
+        "dtype": "float64",
+        "element_count": element_count,
+        "content_omitted": True,
+    }
+
+
 def test_normalize_trace_value_summarizes_long_string() -> None:
     value = "x" * (MAX_INLINE_STRING_CHARS + 1)
 
@@ -106,6 +160,19 @@ def test_normalize_trace_value_applies_string_bound_to_paths() -> None:
     assert result["length"] == MAX_INLINE_STRING_CHARS + 1
 
 
+def test_normalize_trace_value_hashes_surrogate_strings_and_paths_safely() -> None:
+    text = "x" * MAX_INLINE_STRING_CHARS + "\udcff"
+    expected = {
+        "kind": "string_summary",
+        "length": len(text),
+        "sha256": hashlib.sha256(text.encode("utf-8", errors="surrogatepass")).hexdigest(),
+    }
+
+    assert normalize_trace_value(text) == expected
+    assert normalize_trace_value(Path(text)) == expected
+    json.dumps(expected, allow_nan=False, sort_keys=True)
+
+
 @pytest.mark.parametrize(("value", "type_name"), [(list(range(33)), "list"), (tuple(range(33)), "tuple")])
 def test_normalize_trace_value_caps_long_sequences(value: object, type_name: str) -> None:
     result = normalize_trace_value(value)
@@ -119,14 +186,39 @@ def test_normalize_trace_value_caps_long_sequences(value: object, type_name: str
     }
 
 
-def test_normalize_trace_value_sorts_and_caps_mapping_entries() -> None:
+def test_normalize_trace_value_summarizes_oversized_mapping() -> None:
     items = [(f"key-{index:02d}", index) for index in range(MAX_COLLECTION_ITEMS + 5)]
     forward = normalize_trace_value(dict(items))
     reverse = normalize_trace_value(dict(reversed(items)))
 
-    assert forward == reverse
-    assert list(forward) == sorted(key for key, _ in items)[:MAX_COLLECTION_ITEMS]
-    assert len(forward) == MAX_COLLECTION_ITEMS
+    expected = {
+        "kind": "mapping_summary",
+        "type": "dict",
+        "item_count": len(items),
+        "truncated": True,
+    }
+    assert forward == expected
+    assert reverse == expected
+    json.dumps(expected, allow_nan=False, sort_keys=True)
+
+
+def test_normalize_trace_value_does_not_iterate_oversized_mapping_values() -> None:
+    value = CountingMapping(
+        {
+            f"key-{index:02d}": {"nested": [index] * MAX_COLLECTION_ITEMS}
+            for index in range(MAX_COLLECTION_ITEMS + 1)
+        }
+    )
+
+    assert normalize_trace_value({"oversized": value}) == {
+        "oversized": {
+            "kind": "mapping_summary",
+            "type": "CountingMapping",
+            "item_count": MAX_COLLECTION_ITEMS + 1,
+            "truncated": True,
+        }
+    }
+    assert value.items_call_count == 0
 
 
 def test_normalize_trace_value_bounds_mapping_keys() -> None:
@@ -156,8 +248,8 @@ def test_normalize_trace_value_preserves_colliding_mapping_values_deterministica
     assert reverse == expected
 
 
-def test_normalize_trace_value_caps_equal_key_tokens_deterministically() -> None:
-    entries = [(bytes([index]), index) for index in range(MAX_COLLECTION_ITEMS + 1)]
+def test_normalize_trace_value_orders_equal_key_tokens_deterministically() -> None:
+    entries = [(bytes([index]), index) for index in range(MAX_COLLECTION_ITEMS)]
 
     forward = normalize_trace_value(dict(entries))
     reverse = normalize_trace_value(dict(reversed(entries)))
@@ -174,7 +266,7 @@ def test_normalize_trace_value_caps_object_numpy_scalar_values_deterministically
     dtype = np.dtype([("label", object), ("index", np.int64)])
     entries = [
         (bytes([index]), np.array((f"value-{index:02d}", index), dtype=dtype)[()])
-        for index in range(MAX_COLLECTION_ITEMS + 1)
+        for index in range(MAX_COLLECTION_ITEMS)
     ]
 
     forward = normalize_trace_value(dict(entries))
@@ -193,7 +285,7 @@ def test_normalize_trace_value_orders_object_numpy_scalars_at_depth_boundary() -
 
     entries = [
         (bytes([index]), nested_scalar(index))
-        for index in range(MAX_COLLECTION_ITEMS + 1)
+        for index in range(MAX_COLLECTION_ITEMS)
     ]
 
     forward = normalize_trace_value(dict(entries))
@@ -210,7 +302,7 @@ def test_normalize_trace_value_orders_inline_object_arrays_beyond_collection_pre
             bytes([index]),
             np.array([*prefix, f"tail-{index:02d}", "shared-tail"], dtype=object).reshape((2, 17)),
         )
-        for index in range(MAX_COLLECTION_ITEMS + 1)
+        for index in range(MAX_COLLECTION_ITEMS)
     ]
 
     forward = normalize_trace_value(dict(entries))
@@ -224,13 +316,13 @@ def test_normalize_trace_value_orders_nested_mapping_values_canonically() -> Non
     def nested_value(unique_value: int) -> dict[bytes, dict[str, object]]:
         common: list[tuple[bytes, dict[str, object]]] = [
             (bytes([index]), {"payload": f"common-{index:02d}"})
-            for index in range(MAX_COLLECTION_ITEMS)
+            for index in range(2)
         ]
-        return dict([*common, (bytes([MAX_COLLECTION_ITEMS]), {"payload": unique_value})])
+        return dict([*common, (bytes([2]), {"payload": unique_value})])
 
     entries = [
         (bytes([index]), nested_value(index))
-        for index in range(MAX_COLLECTION_ITEMS + 1)
+        for index in range(MAX_COLLECTION_ITEMS)
     ]
 
     forward = normalize_trace_value(dict(entries))
@@ -250,13 +342,36 @@ def test_normalize_trace_value_bounds_recursive_mapping_order_tokens() -> None:
     assert "structural_summary" in encoded
 
 
-def test_normalize_trace_value_bounds_numpy_scalar_mapping_key_with_shared_budget() -> None:
-    result = normalize_trace_value({np.longdouble("1.25"): "value"})
+def test_normalize_trace_value_bounds_numpy_scalar_without_starving_sibling() -> None:
+    scalar = np.longdouble("1.25")
 
-    normalized_key = next(iter(result))
-    assert json.loads(normalized_key)["kind"] == "structural_summary"
-    assert result[normalized_key] == {"kind": "structural_summary", "type": "str", "length": 5}
+    result = normalize_trace_value({"numpy": scalar, "sibling": "preserved"})
+
+    assert result == {
+        "numpy": {
+            "kind": "numpy_scalar_summary",
+            "type": type(scalar).__qualname__,
+            "dtype": str(scalar.dtype),
+            "content_omitted": True,
+        },
+        "sibling": "preserved",
+    }
     json.dumps(result, allow_nan=False)
+
+
+def test_normalize_trace_value_summarizes_huge_integer_for_strict_json() -> None:
+    value = 10**5000
+
+    result = normalize_trace_value({"value": value})
+
+    assert result == {
+        "value": {
+            "kind": "integer_summary",
+            "sign": 1,
+            "bit_length": value.bit_length(),
+        }
+    }
+    json.dumps(result, allow_nan=False, sort_keys=True)
 
 
 def test_normalize_trace_value_summarizes_excessive_nesting() -> None:
