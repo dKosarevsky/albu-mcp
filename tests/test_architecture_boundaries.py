@@ -67,6 +67,14 @@ def test_domain_modules_do_not_depend_on_transport_adapters() -> None:
     assert violations == [], "domain-to-transport dependency violations:\n" + "\n".join(violations)
 
 
+def test_mcp_registration_does_not_depend_on_sdk_private_managers() -> None:
+    source = (_PACKAGE_ROOT / "adapters" / "mcp" / "registration.py").read_text(encoding="utf-8")
+
+    assert "_tool_manager" not in source
+    assert "_resource_manager" not in source
+    assert "_prompt_manager" not in source
+
+
 @pytest.mark.parametrize(
     ("path", "line_limit"),
     [

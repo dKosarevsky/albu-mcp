@@ -25,8 +25,7 @@ from albumentationsx_mcp.workflows import (
 )
 
 if TYPE_CHECKING:
-    from mcp.server import MCPServer
-
+    from albumentationsx_mcp.adapters.mcp.registrar import McpRegistrar
     from albumentationsx_mcp.diagnostics import DiagnosticsService
     from albumentationsx_mcp.pipeline import PipelineService
 
@@ -78,7 +77,7 @@ SURFACE = AdapterSurface(
 
 
 def register_diagnostics_adapter(
-    mcp: MCPServer,
+    mcp: McpRegistrar,
     *,
     diagnostics_service: DiagnosticsService,
     pipeline_service: PipelineService,

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from importlib.resources import files
 from typing import TYPE_CHECKING, Any, Protocol
 
@@ -13,22 +12,11 @@ PREVIEW_REVIEW_APP_URI = "ui://albumentationsx/preview-review.html"
 PREVIEW_REVIEW_APP_MIME_TYPE = "text/html;profile=mcp-app"
 PREVIEW_ARTIFACT_URI_TEMPLATE = "artifact://{run_id}/{filename}"
 
-ResourceHandler = Callable[..., Any]
-
 
 class ResourceRegistrar(Protocol):
-    """Transport port required to register MCP App resources."""
+    """Resource decorator port used by the packaged preview application."""
 
-    def resource(
-        self,
-        uri: str,
-        *,
-        name: str | None = None,
-        description: str | None = None,
-        mime_type: str | None = None,
-        meta: dict[str, Any] | None = None,
-    ) -> Callable[[ResourceHandler], ResourceHandler]: ...
-
+    resource: Any
 
 def preview_review_tool_meta() -> dict[str, Any]:
     """Return modern MCP Apps metadata for preview rendering tools."""

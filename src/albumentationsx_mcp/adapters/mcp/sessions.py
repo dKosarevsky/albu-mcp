@@ -10,8 +10,7 @@ from albumentationsx_mcp.models import QualityProfileName
 from albumentationsx_mcp.tuning import build_tuning_session_summary
 
 if TYPE_CHECKING:
-    from mcp.server import MCPServer
-
+    from albumentationsx_mcp.adapters.mcp.registrar import McpRegistrar
     from albumentationsx_mcp.preview import PreviewService
     from albumentationsx_mcp.review import PreviewFeedbackStore
     from albumentationsx_mcp.sessions import InteractiveTuningSessionStore
@@ -49,7 +48,7 @@ SURFACE = AdapterSurface(
 
 
 def register_session_adapter(
-    mcp: MCPServer,
+    mcp: McpRegistrar,
     *,
     preview_service: PreviewService,
     tuning_store: TuningDecisionStore,

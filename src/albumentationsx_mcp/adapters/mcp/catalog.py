@@ -15,8 +15,7 @@ from albumentationsx_mcp.quality import list_quality_profiles
 from albumentationsx_mcp.recipes import list_recipe_catalog, recommend_recipe
 
 if TYPE_CHECKING:
-    from mcp.server import MCPServer
-
+    from albumentationsx_mcp.adapters.mcp.registrar import McpRegistrar
     from albumentationsx_mcp.catalog import TransformCatalog
 
 _TOOLS = (
@@ -51,7 +50,7 @@ SURFACE = AdapterSurface(
 
 
 def register_catalog_adapter(
-    mcp: MCPServer,
+    mcp: McpRegistrar,
     *,
     catalog: TransformCatalog,
     available_tools: Collection[str] | None = None,

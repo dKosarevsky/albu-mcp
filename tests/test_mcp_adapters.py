@@ -491,7 +491,7 @@ def test_register_mcp_adapters_rolls_back_unexpected_registration_failure(
         return "existing"
 
     def failing_session_adapter(target: MCPServer, **_: Any) -> None:
-        @target.tool(name="partially_registered_tool")
+        @target.tool(name="start_tuning_session")
         def partially_registered_tool() -> str:
             return "partial"
 

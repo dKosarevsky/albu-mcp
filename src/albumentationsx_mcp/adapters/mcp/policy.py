@@ -17,8 +17,7 @@ from albumentationsx_mcp.policy_assistant import (
 from albumentationsx_mcp.presets import Intensity, adjust_pipeline, recommend_pipeline
 
 if TYPE_CHECKING:
-    from mcp.server import MCPServer
-
+    from albumentationsx_mcp.adapters.mcp.registrar import McpRegistrar
     from albumentationsx_mcp.catalog import TransformCatalog
     from albumentationsx_mcp.pipeline import PipelineService
 
@@ -47,7 +46,7 @@ SURFACE = AdapterSurface(
 
 
 def register_policy_adapter(
-    mcp: MCPServer,
+    mcp: McpRegistrar,
     *,
     catalog: TransformCatalog,
     pipeline_service: PipelineService,

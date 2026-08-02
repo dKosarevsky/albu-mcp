@@ -19,8 +19,7 @@ from albumentationsx_mcp.recipes import recommend_recipe
 from albumentationsx_mcp.review_packet import build_review_packet
 
 if TYPE_CHECKING:
-    from mcp.server import MCPServer
-
+    from albumentationsx_mcp.adapters.mcp.registrar import McpRegistrar
     from albumentationsx_mcp.guided_preview import GuidedPreviewService
     from albumentationsx_mcp.pipeline import PipelineService
     from albumentationsx_mcp.preview import PathPolicy, PreviewService
@@ -45,7 +44,7 @@ SURFACE = AdapterSurface(
 
 
 def register_dataset_adapter(  # noqa: PLR0913
-    mcp: MCPServer,
+    mcp: McpRegistrar,
     *,
     path_policy: PathPolicy,
     pipeline_service: PipelineService,
