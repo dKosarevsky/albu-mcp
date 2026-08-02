@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from pathlib import Path
 from typing import Any, cast
 
 import pytest
+from mcp import Client
+from mcp.types import TextResourceContents
+from mcp.types.version import LATEST_MODERN_VERSION
 
 from albumentationsx_mcp.adapters.mcp.contracts import (
     AdapterSurface,
@@ -132,7 +136,19 @@ def test_profile_surface_has_expected_counts(
 
 
 def test_full_profile_preserves_canonical_registration_order() -> None:
-    assert combine_adapter_surfaces_for_profile(ADAPTER_SURFACES, CapabilityProfile.FULL) == COMBINED_SURFACE
+    adapter_order = combine_adapter_surfaces_for_profile(ADAPTER_SURFACES, CapabilityProfile.FULL)
+
+    assert set(adapter_order.tools) == set(COMBINED_SURFACE.tools)
+    assert adapter_order.resources == COMBINED_SURFACE.resources
+    assert adapter_order.resource_templates == COMBINED_SURFACE.resource_templates
+    assert adapter_order.prompts == COMBINED_SURFACE.prompts
+    preview_start = COMBINED_SURFACE.tools.index("validate_preview_request")
+    assert COMBINED_SURFACE.tools[preview_start : preview_start + 4] == (
+        "validate_preview_request",
+        "render_preview",
+        "render_preview_batch",
+        "trace_preview_variant",
+    )
 
 
 @pytest.mark.parametrize(
@@ -285,14 +301,25 @@ def test_registered_json_resources_reference_only_active_profile_surface(
             capability_profile=profile,
         )
     )
-    tools = set(server._tool_manager._tools)
-    resources = {str(uri) for uri in server._resource_manager._resources}
+    async def read_public_surface() -> tuple[set[str], set[str], dict[str, str]]:
+        async with Client(server, mode=LATEST_MODERN_VERSION) as client:
+            tools_result = await client.list_tools()
+            resources_result = await client.list_resources()
+            text_resources: dict[str, str] = {}
+            for resource in resources_result.resources:
+                result = await client.read_resource(str(resource.uri))
+                if len(result.contents) == 1 and isinstance(result.contents[0], TextResourceContents):
+                    text_resources[str(resource.uri)] = result.contents[0].text
+            return (
+                {tool.name for tool in tools_result.tools},
+                {str(resource.uri) for resource in resources_result.resources},
+                text_resources,
+            )
+
+    tools, resources, text_resources = asyncio.run(read_public_surface())
     unresolved: list[str] = []
 
-    for uri, resource in server._resource_manager._resources.items():
-        payload = cast("Any", resource).fn()
-        if not isinstance(payload, str):
-            continue
+    for uri, payload in text_resources.items():
         try:
             data = json.loads(payload)
         except json.JSONDecodeError:
