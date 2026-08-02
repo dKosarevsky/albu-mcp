@@ -4,7 +4,7 @@ import asyncio
 import sys
 from pathlib import Path
 
-from mcp import ClientSession, StdioServerParameters
+from mcp import Client, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 from albumentationsx_mcp.policy_assistant import plan_augmentation_policy
@@ -67,9 +67,8 @@ def test_mcp_server_lists_policy_assistant_tool(tmp_path: Path) -> None:
             ],
             cwd=str(Path.cwd()),
         )
-        async with stdio_client(params) as (read, write), ClientSession(read, write) as session:
-            await session.initialize()
-            tools = await session.list_tools()
+        async with Client(stdio_client(params), mode="auto") as client:
+            tools = await client.list_tools()
             return [tool.name for tool in tools.tools]
 
     tool_names = asyncio.run(run_client())

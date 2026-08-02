@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-from mcp import Client, ClientSession, StdioServerParameters
+from mcp import Client, StdioServerParameters
 from mcp.client import advertise
 from mcp.client.stdio import stdio_client
 from mcp.server.apps import APP_MIME_TYPE, EXTENSION_ID
@@ -117,13 +117,12 @@ def test_mcp_stdio_reads_preview_review_app_and_verified_image(tmp_path: Path) -
             ],
             cwd=str(Path.cwd()),
         )
-        async with stdio_client(params) as (read, write), ClientSession(read, write) as session:
-            await session.initialize()
-            tools = await session.list_tools()
-            resources = await session.list_resources()
-            templates = await session.list_resource_templates()
-            app_result = await session.read_resource(PREVIEW_REVIEW_APP_URI)
-            preview_result = await session.call_tool(
+        async with Client(stdio_client(params), mode="legacy") as client:
+            tools = await client.list_tools()
+            resources = await client.list_resources()
+            templates = await client.list_resource_templates()
+            app_result = await client.read_resource(PREVIEW_REVIEW_APP_URI)
+            preview_result = await client.call_tool(
                 "render_preview_batch",
                 {
                     "request": {
@@ -141,7 +140,7 @@ def test_mcp_stdio_reads_preview_review_app_and_verified_image(tmp_path: Path) -
             artifact_uri = next(
                 item["uri"] for item in preview_result.structured_content["artifacts"] if item["kind"] == "image"
             )
-            image_result = await session.read_resource(artifact_uri)
+            image_result = await client.read_resource(artifact_uri)
             app_content = app_result.contents[0]
             image_content = image_result.contents[0]
             assert isinstance(app_content, TextResourceContents)

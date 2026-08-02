@@ -44,7 +44,9 @@ def test_ci_workflow_runs_core_quality_gates() -> None:
     assert "uv run python scripts/check_contract_snapshots.py" in commands
     assert "uv run python scripts/check_demo_assets.py --output-dir docs/assets/demo --check" in commands
     assert "uv run python scripts/check_release_readiness.py" in commands
-    assert "ClientSession" in commands
+    assert "Client(stdio_client(params), mode=mode)" in commands
+    assert '("2026-07-28", "legacy")' in commands
+    assert "ClientSession" not in commands
 
 
 def test_ci_workflow_builds_and_verifies_the_mcp_app() -> None:
