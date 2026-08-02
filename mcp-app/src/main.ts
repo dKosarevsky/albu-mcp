@@ -84,7 +84,7 @@ interface ReviewDraft {
 type FeedbackStatus = "accepted" | "recorded";
 
 const app = new App(
-  { name: "albumentationsx-preview-review", version: "1.20.0" },
+  { name: "albumentationsx-preview-review", version: "1.21.0" },
   {},
   { autoResize: true, strict: true },
 );
