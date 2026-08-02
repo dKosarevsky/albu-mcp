@@ -1,7 +1,7 @@
 # Network Growth Tracker
 
 Package: `albumentationsx-mcp==1.21.0`
-Release health: `published`
+Release health: `unknown`
 Host evidence: `partial`
 Adoption experiment: `measuring`
 Details: `docs/STATUS.md`
