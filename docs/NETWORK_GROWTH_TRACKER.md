@@ -1,6 +1,6 @@
 # Network Growth Tracker
 
-Package: `albumentationsx-mcp==1.20.0`
+Package: `albumentationsx-mcp==1.21.0`
 Release health: `published`
 Host evidence: `partial`
 Adoption experiment: `measuring`

@@ -4,6 +4,8 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 ## Unreleased
 
+## 1.21.0 - 2026-08-03
+
 - Migrated to MCP Python SDK 2.x with modern `2026-07-28` discovery and retained legacy initialize-handshake support
   from the same stdio or Streamable HTTP server.
 - Replaced SDK-private profile registration and contract inspection with a local declarative registrar, atomic

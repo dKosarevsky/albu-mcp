@@ -1,6 +1,6 @@
 # V1 Release Train
 
-Package: `albumentationsx-mcp==1.20.0`
+Package: `albumentationsx-mcp==1.21.0`
 Release allowed: `false`
 Manual gate count: `5`
 

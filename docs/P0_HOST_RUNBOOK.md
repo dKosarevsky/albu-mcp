@@ -1,6 +1,6 @@
 # P0 Host Runbook
 
-Package: `albumentationsx-mcp==1.20.0`
+Package: `albumentationsx-mcp==1.21.0`
 Target hosts: `Codex, Claude Code`
 Ready for v1: `false`
 

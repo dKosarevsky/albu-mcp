@@ -84,8 +84,8 @@ def test_lifecycle_status_rejects_invalid_experiment(field: str, value: str, mes
 def test_committed_lifecycle_status_describes_current_project_state() -> None:
     report = build_committed_lifecycle_status()
 
-    assert report["release_health"]["status"] == "published"
-    assert report["release_health"]["version"] == "1.20.0"
+    assert report["release_health"]["status"] == "unknown"
+    assert report["release_health"]["version"] == "1.21.0"
     assert [channel["id"] for channel in report["release_health"]["channels"]] == [
         "pypi",
         "github_release",
