@@ -301,6 +301,7 @@ def test_registered_json_resources_reference_only_active_profile_surface(
             capability_profile=profile,
         )
     )
+
     async def read_public_surface() -> tuple[set[str], set[str], dict[str, str]]:
         async with Client(server, mode=LATEST_MODERN_VERSION) as client:
             tools_result = await client.list_tools()

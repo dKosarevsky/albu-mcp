@@ -186,8 +186,7 @@ def register_mcp_adapters(
     staged_surface = _registered_surface(staged)
     if not _same_surface_identifiers(staged_surface, registered_surface):
         msg = (
-            f"collected MCP surface does not match declaration: "
-            f"expected {registered_surface!r}, got {staged_surface!r}"
+            f"collected MCP surface does not match declaration: expected {registered_surface!r}, got {staged_surface!r}"
         )
         raise RuntimeError(msg)
 
@@ -332,8 +331,7 @@ def _verify_external_surface(actual: CombinedSurface, expected: CombinedSurface)
 
 def _same_surface_identifiers(left: CombinedSurface, right: CombinedSurface) -> bool:
     return all(
-        len(getattr(left, kind)) == len(getattr(right, kind))
-        and set(getattr(left, kind)) == set(getattr(right, kind))
+        len(getattr(left, kind)) == len(getattr(right, kind)) and set(getattr(left, kind)) == set(getattr(right, kind))
         for kind in ("tools", "resources", "resource_templates", "prompts")
     )
 
