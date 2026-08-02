@@ -1453,6 +1453,7 @@
           }
         ]
       },
+      "tensor_compatibility": null,
       "valid": true,
       "warnings": []
     }

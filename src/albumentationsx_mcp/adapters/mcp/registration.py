@@ -117,6 +117,7 @@ PUBLIC_WORKFLOW_RESOURCES = (
     "albumentationsx://examples/diagnostics",
     "albumentationsx://examples/review-loop",
     "albumentationsx://examples/report-handoff",
+    "albumentationsx://examples/torch-cpu-compose",
 )
 
 

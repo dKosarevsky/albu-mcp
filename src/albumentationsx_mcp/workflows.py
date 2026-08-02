@@ -14,6 +14,7 @@ HostExampleId = Literal[
     "diagnostics",
     "review-loop",
     "report-handoff",
+    "torch-cpu-compose",
 ]
 HOST_EXAMPLE_IDS: tuple[HostExampleId, ...] = (
     "client-smoke",
@@ -23,6 +24,7 @@ HOST_EXAMPLE_IDS: tuple[HostExampleId, ...] = (
     "diagnostics",
     "review-loop",
     "report-handoff",
+    "torch-cpu-compose",
 )
 
 
@@ -549,6 +551,47 @@ _HOST_EXAMPLES = {
             "The report includes baseline and candidate contact sheets.",
             "The report includes ranking, metric ranges, finding counts, and matching decisions.",
             "The host exports the pipeline only after the user accepts the candidate.",
+        ],
+    ),
+    "torch-cpu-compose": HostExample(
+        name="torch-cpu-compose",
+        goal=(
+            "Check whether an AlbumentationsX pipeline accepts channel-first CPU torch.Tensor targets and export "
+            "a guarded Python handoff only when every transform is compatible."
+        ),
+        trigger_phrase="use this AlbumentationsX pipeline with CPU torch tensors",
+        steps=[
+            HostExampleStep(
+                order=1,
+                tool="validate_pipeline",
+                instruction=(
+                    "Call validate_pipeline with the pipeline, canonical target list, and input_contract containing "
+                    "representation=torch, device=cpu, requires_grad=false, plus shape and dtype for every spatial "
+                    "Tensor target. Stop on runtime_unavailable or incompatible."
+                ),
+                expected_result=(
+                    "A tensor_compatibility report with runtime version, per-transform decisions, constraints, "
+                    "machine-readable issues, and remediation actions."
+                ),
+            ),
+            HostExampleStep(
+                order=2,
+                tool="export_pipeline",
+                instruction=(
+                    "Only when tensor_compatibility.status=compatible, call export_pipeline with output_format=python "
+                    "and the same target and same input_contract used for validation."
+                ),
+                expected_result=(
+                    "Python code with torch imports, CPU/autograd/dtype/rank/shape guards, and no terminal "
+                    "ToTensorV2 or ToTensor3D transform."
+                ),
+            ),
+        ],
+        success_criteria=[
+            "The installed AlbumentationsX runtime exposes the CPU Tensor capability API.",
+            "Every transform accepts the requested Tensor targets and image channel counts.",
+            "All spatial targets have CPU Tensor contracts and requires_grad is false.",
+            "The exported handoff reuses the exact contract that passed validation.",
         ],
     ),
 }

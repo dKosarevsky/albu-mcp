@@ -53,6 +53,9 @@ def test_golden_eval_assets_are_present() -> None:  # noqa: PLR0915
     dataset_quality_scenario = next(
         scenario for scenario in scenarios["scenarios"] if scenario["name"] == "dataset_quality_inspection_flow"
     )
+    torch_cpu_scenario = next(
+        scenario for scenario in scenarios["scenarios"] if scenario["name"] == "torch_cpu_compose_contract_flow"
+    )
 
     assert {scenario["name"] for scenario in scenarios["scenarios"]} == {
         "client_smoke_resource_flow",
@@ -70,6 +73,7 @@ def test_golden_eval_assets_are_present() -> None:  # noqa: PLR0915
         "interactive_tuning_session_flow",
         "review_packet_flow",
         "dataset_quality_inspection_flow",
+        "torch_cpu_compose_contract_flow",
     }
     assert smoke_scenario["client_smoke"] is True
     assert smoke_scenario["smoke_resources"] == [
@@ -106,6 +110,7 @@ def test_golden_eval_assets_are_present() -> None:  # noqa: PLR0915
     assert review_packet_scenario["input_count"] == 2
     assert dataset_quality_scenario["dataset_quality_inspection"] is True
     assert dataset_quality_scenario["input_count"] == 2
+    assert torch_cpu_scenario["torch_cpu_compose_smoke"] is True
     assert quality_scenario["record_preview_feedback"] is True
     assert quality_scenario["feedback_image_index"] == 7
     assert quality_scenario["assert_preview_report_feedback"] is True
@@ -119,6 +124,7 @@ def test_golden_eval_assets_are_present() -> None:  # noqa: PLR0915
     assert "_run_interactive_tuning_session" in runner_source
     assert "_run_review_packet_flow" in runner_source
     assert "_run_dataset_quality_inspection" in runner_source
+    assert "_run_torch_cpu_compose_smoke" in runner_source
     assert "run_host_smoke_check" in runner_source
     assert "validate_preview_request" in runner_source
     assert "plan_dataset_onboarding" in runner_source

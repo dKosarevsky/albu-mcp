@@ -60,6 +60,7 @@ def test_host_examples_cover_review_loop_and_report_handoff() -> None:
     distortion_review = get_host_example("distortion-review")
     review_loop = get_host_example("review-loop")
     report_handoff = get_host_example("report-handoff")
+    torch_cpu_compose = get_host_example("torch-cpu-compose")
 
     assert {example.name for example in examples} >= {
         "client-smoke",
@@ -67,6 +68,7 @@ def test_host_examples_cover_review_loop_and_report_handoff() -> None:
         "distortion-review",
         "review-loop",
         "report-handoff",
+        "torch-cpu-compose",
     }
     assert client_smoke.trigger_phrase == "is AlbumentationsX MCP connected?"
     assert [step.tool for step in client_smoke.steps] == [
@@ -103,6 +105,10 @@ def test_host_examples_cover_review_loop_and_report_handoff() -> None:
         "adjust_pipeline",
     ]
     assert "export_preview_report" in [step.tool for step in report_handoff.steps]
+    assert torch_cpu_compose.trigger_phrase == "use this AlbumentationsX pipeline with CPU torch tensors"
+    assert [step.tool for step in torch_cpu_compose.steps] == ["validate_pipeline", "export_pipeline"]
+    assert "tensor_compatibility.status=compatible" in torch_cpu_compose.steps[1].instruction
+    assert "same input_contract" in torch_cpu_compose.steps[1].instruction
 
 
 def test_first_preview_host_example_uses_only_review_fallback_tools_without_guided_preview() -> None:
