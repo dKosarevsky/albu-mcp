@@ -85,7 +85,7 @@ GH_TOKEN="$(gh auth token)" uv run python scripts/export_growth_report.py --outp
 
 ## Lifecycle Status
 
-- Release health: `unknown`
+- Release health: `published`
 - Host evidence: `partial`
 - Adoption experiment: `measuring`
 - Details: `docs/STATUS.md`
