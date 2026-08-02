@@ -9,11 +9,12 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-from mcp import ClientSession, StdioServerParameters
+from mcp import Client, StdioServerParameters
+from mcp.client import advertise
 from mcp.client.stdio import stdio_client
+from mcp.server.apps import APP_MIME_TYPE, EXTENSION_ID
 from mcp.types import BlobResourceContents, TextResourceContents
 from PIL import Image
-from pydantic import AnyUrl
 
 from albumentationsx_mcp.mcp_app import (
     PREVIEW_ARTIFACT_URI_TEMPLATE,
@@ -49,6 +50,17 @@ def test_render_tools_publish_modern_preview_review_metadata() -> None:
         assert tool.meta == _EXPECTED_TOOL_META
         assert tool.meta is not None
         assert "ui/resourceUri" not in tool.meta
+
+
+def test_server_advertises_official_apps_extension() -> None:
+    async def inspect_capabilities() -> dict[str, Any]:
+        extension = advertise(EXTENSION_ID, {"mimeTypes": [APP_MIME_TYPE]})
+        async with Client(create_mcp_server(), mode="auto", extensions=[extension]) as client:
+            return client.server_capabilities.model_dump(by_alias=True, exclude_none=True)
+
+    capabilities = asyncio.run(inspect_capabilities())
+
+    assert capabilities["extensions"][EXTENSION_ID] == {}
 
 
 def test_preview_review_resources_are_local_and_deny_network_access() -> None:
@@ -105,13 +117,12 @@ def test_mcp_stdio_reads_preview_review_app_and_verified_image(tmp_path: Path) -
             ],
             cwd=str(Path.cwd()),
         )
-        async with stdio_client(params) as (read, write), ClientSession(read, write) as session:
-            await session.initialize()
-            tools = await session.list_tools()
-            resources = await session.list_resources()
-            templates = await session.list_resource_templates()
-            app_result = await session.read_resource(AnyUrl(PREVIEW_REVIEW_APP_URI))
-            preview_result = await session.call_tool(
+        async with Client(stdio_client(params), mode="legacy") as client:
+            tools = await client.list_tools()
+            resources = await client.list_resources()
+            templates = await client.list_resource_templates()
+            app_result = await client.read_resource(PREVIEW_REVIEW_APP_URI)
+            preview_result = await client.call_tool(
                 "render_preview_batch",
                 {
                     "request": {
@@ -124,12 +135,12 @@ def test_mcp_stdio_reads_preview_review_app_and_verified_image(tmp_path: Path) -
                     }
                 },
             )
-            assert preview_result.isError is False
-            assert preview_result.structuredContent is not None
+            assert preview_result.is_error is False
+            assert preview_result.structured_content is not None
             artifact_uri = next(
-                item["uri"] for item in preview_result.structuredContent["artifacts"] if item["kind"] == "image"
+                item["uri"] for item in preview_result.structured_content["artifacts"] if item["kind"] == "image"
             )
-            image_result = await session.read_resource(AnyUrl(artifact_uri))
+            image_result = await client.read_resource(artifact_uri)
             app_content = app_result.contents[0]
             image_content = image_result.contents[0]
             assert isinstance(app_content, TextResourceContents)
@@ -137,10 +148,10 @@ def test_mcp_stdio_reads_preview_review_app_and_verified_image(tmp_path: Path) -
             return {
                 "render_meta": next(tool.meta for tool in tools.tools if tool.name == "render_preview_batch"),
                 "resource_uris": {str(resource.uri) for resource in resources.resources},
-                "template_uris": {str(template.uriTemplate) for template in templates.resourceTemplates},
-                "app_mime_type": app_content.mimeType,
+                "template_uris": {str(template.uri_template) for template in templates.resource_templates},
+                "app_mime_type": app_content.mime_type,
                 "app_html": app_content.text,
-                "image_mime_type": image_content.mimeType,
+                "image_mime_type": image_content.mime_type,
                 "image_bytes": base64.b64decode(image_content.blob),
             }
 

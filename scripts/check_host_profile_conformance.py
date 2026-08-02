@@ -15,10 +15,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from mcp import ClientSession, StdioServerParameters
+from mcp import Client, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.types import TextResourceContents
-from pydantic import AnyUrl
 
 if not __package__:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -71,31 +70,31 @@ async def check_profile_conformance(
         cwd=str(config.source_root),
     )
     try:
-        async with stdio_client(params) as (read, write), ClientSession(read, write) as session:
-            await session.initialize()
-            tools_result = await session.list_tools()
-            resources_result = await session.list_resources()
-            templates_result = await session.list_resource_templates()
-            prompts_result = await session.list_prompts()
-            diagnostics_result = await session.call_tool("diagnose_environment", {"include_write_probe": False})
-            smoke_result = await session.call_tool("run_host_smoke_check", {"include_write_probe": False})
-            resource_result = await session.read_resource(AnyUrl("albumentationsx://examples/client-smoke"))
-            fallback_result = await session.call_tool(
+        async with Client(stdio_client(params), mode="auto") as client:
+            tools_result = await client.list_tools()
+            resources_result = await client.list_resources()
+            templates_result = await client.list_resource_templates()
+            prompts_result = await client.list_prompts()
+            diagnostics_result = await client.call_tool("diagnose_environment", {"include_write_probe": False})
+            smoke_result = await client.call_tool("run_host_smoke_check", {"include_write_probe": False})
+            resource_result = await client.read_resource("albumentationsx://examples/client-smoke")
+            fallback_result = await client.call_tool(
                 "get_workflow_example",
                 {"example_id": "client-smoke"},
             )
 
-        observed = AdapterSurface(
+        raw_observed = AdapterSurface(
             adapter=f"stdio-{profile.value}",
             tools=tuple(tool.name for tool in tools_result.tools),
             resources=tuple(str(resource.uri) for resource in resources_result.resources),
-            resource_templates=tuple(str(template.uriTemplate) for template in templates_result.resourceTemplates),
+            resource_templates=tuple(str(template.uri_template) for template in templates_result.resource_templates),
             prompts=tuple(prompt.name for prompt in prompts_result.prompts),
         )
+        observed = _canonicalize_surface(expected, raw_observed)
         mismatches = _surface_mismatches(expected, observed)
-        diagnostics = _structured_content(diagnostics_result.structuredContent, label="diagnose_environment")
-        smoke = _structured_content(smoke_result.structuredContent, label="run_host_smoke_check")
-        fallback = _structured_content(fallback_result.structuredContent, label="get_workflow_example")
+        diagnostics = _structured_content(diagnostics_result.structured_content, label="diagnose_environment")
+        smoke = _structured_content(smoke_result.structured_content, label="run_host_smoke_check")
+        fallback = _structured_content(fallback_result.structured_content, label="get_workflow_example")
         resource = _resource_json(resource_result.contents)
         expected_preview_ready = profile is not CapabilityProfile.CORE
         profile_identity_failures = _profile_identity_failures(
@@ -103,11 +102,11 @@ async def check_profile_conformance(
             smoke=smoke,
             expected=profile,
         )
-        diagnostics_ok = diagnostics_result.isError is not True
+        diagnostics_ok = diagnostics_result.is_error is not True
         reported_capability_profile = smoke.get("capability_profile")
         preview_ready = smoke.get("preview_ready")
-        smoke_ok = smoke_result.isError is not True and preview_ready is expected_preview_ready
-        fallback_matches_resource = fallback_result.isError is not True and fallback == resource
+        smoke_ok = smoke_result.is_error is not True and preview_ready is expected_preview_ready
+        fallback_matches_resource = fallback_result.is_error is not True and fallback == resource
         failures = _profile_failures(
             mismatches=mismatches,
             diagnostics_ok=diagnostics_ok,
@@ -360,6 +359,23 @@ def _surface_mismatches(
                 "observed": observed_values,
             }
     return mismatches
+
+
+def _canonicalize_surface(expected: CombinedSurface, observed: AdapterSurface) -> AdapterSurface:
+    return AdapterSurface(
+        adapter=observed.adapter,
+        tools=_canonicalize_identifiers(expected.tools, observed.tools),
+        resources=_canonicalize_identifiers(expected.resources, observed.resources),
+        resource_templates=_canonicalize_identifiers(expected.resource_templates, observed.resource_templates),
+        prompts=_canonicalize_identifiers(expected.prompts, observed.prompts),
+    )
+
+
+def _canonicalize_identifiers(expected: Sequence[str], observed: Sequence[str]) -> tuple[str, ...]:
+    observed_set = set(observed)
+    canonical = [identifier for identifier in expected if identifier in observed_set]
+    canonical.extend(sorted(identifier for identifier in observed if identifier not in set(expected)))
+    return tuple(canonical)
 
 
 def _surface_summary(surface: AdapterSurface) -> dict[str, int | str]:

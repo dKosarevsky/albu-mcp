@@ -1,4 +1,4 @@
-"""FastMCP diagnostics and workflow resource registration."""
+"""MCP diagnostics and workflow resource registration."""
 
 from __future__ import annotations
 
@@ -25,8 +25,7 @@ from albumentationsx_mcp.workflows import (
 )
 
 if TYPE_CHECKING:
-    from mcp.server.fastmcp import FastMCP
-
+    from albumentationsx_mcp.adapters.mcp.registrar import McpRegistrar
     from albumentationsx_mcp.diagnostics import DiagnosticsService
     from albumentationsx_mcp.pipeline import PipelineService
 
@@ -78,7 +77,7 @@ SURFACE = AdapterSurface(
 
 
 def register_diagnostics_adapter(
-    mcp: FastMCP,
+    mcp: McpRegistrar,
     *,
     diagnostics_service: DiagnosticsService,
     pipeline_service: PipelineService,

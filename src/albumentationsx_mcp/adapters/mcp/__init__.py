@@ -1,4 +1,4 @@
-"""FastMCP registration adapters."""
+"""MCP registration adapters."""
 
 from albumentationsx_mcp.adapters.mcp.contracts import AdapterSurface, CombinedSurface
 from albumentationsx_mcp.adapters.mcp.dependencies import McpDependencies

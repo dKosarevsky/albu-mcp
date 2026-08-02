@@ -145,25 +145,16 @@ def combine_adapter_surfaces_for_profile(
         msg = f"unknown capability profile: {profile}"
         raise TypeError(msg)
     validate_profiled_adapter_surfaces(surfaces)
-    selected_surfaces = tuple(_adapter_surface_for_profile(surface, profile) for surface in surfaces)
+    selected_surfaces = tuple(adapter_surface_for_profile(surface, profile) for surface in surfaces)
     return combine_adapter_surfaces(selected_surfaces)
 
 
-_SURFACE_KINDS = ("tools", "resources", "resource_templates", "prompts")
-
-
-def _surface_entries(
-    surface: AdapterSurface | ProfileSurface,
-) -> tuple[tuple[str, tuple[str, ...]], ...]:
-    return (
-        ("tools", surface.tools),
-        ("resources", surface.resources),
-        ("resource_templates", surface.resource_templates),
-        ("prompts", surface.prompts),
-    )
-
-
-def _adapter_surface_for_profile(surface: AdapterSurface, profile: CapabilityProfile) -> AdapterSurface:
+def adapter_surface_for_profile(surface: AdapterSurface, profile: CapabilityProfile) -> AdapterSurface:
+    """Filter one validated adapter declaration for a capability profile."""
+    if not isinstance(profile, CapabilityProfile):
+        msg = f"unknown capability profile: {profile}"
+        raise TypeError(msg)
+    validate_profiled_adapter_surfaces((surface,))
     selected: dict[str, set[str]] = {kind: set() for kind in _SURFACE_KINDS}
     for profile_surface in surface.profile_surfaces:
         if profile not in profile_surface.profiles:
@@ -178,4 +169,18 @@ def _adapter_surface_for_profile(surface: AdapterSurface, profile: CapabilityPro
             identifier for identifier in surface.resource_templates if identifier in selected["resource_templates"]
         ),
         prompts=tuple(identifier for identifier in surface.prompts if identifier in selected["prompts"]),
+    )
+
+
+_SURFACE_KINDS = ("tools", "resources", "resource_templates", "prompts")
+
+
+def _surface_entries(
+    surface: AdapterSurface | ProfileSurface,
+) -> tuple[tuple[str, tuple[str, ...]], ...]:
+    return (
+        ("tools", surface.tools),
+        ("resources", surface.resources),
+        ("resource_templates", surface.resource_templates),
+        ("prompts", surface.prompts),
     )

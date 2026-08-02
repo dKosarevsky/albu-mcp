@@ -15,7 +15,7 @@ _TRANSPORT_BOUNDARIES = {
 _FORBIDDEN_DOMAIN_IMPORTS = (
     "albumentationsx_mcp.adapters",
     "argparse",
-    "mcp.server.fastmcp",
+    "mcp.server",
 )
 _CLI_COMPOSITION_MODULES = {
     "__init__.py",
@@ -65,6 +65,23 @@ def test_domain_modules_do_not_depend_on_transport_adapters() -> None:
                 violations.append(f"{path}:{line} imports {module}")
 
     assert violations == [], "domain-to-transport dependency violations:\n" + "\n".join(violations)
+
+
+def test_mcp_registration_does_not_depend_on_sdk_private_managers() -> None:
+    source = (_PACKAGE_ROOT / "adapters" / "mcp" / "registration.py").read_text(encoding="utf-8")
+
+    assert "_tool_manager" not in source
+    assert "_resource_manager" not in source
+    assert "_prompt_manager" not in source
+
+
+def test_mcp_contract_exporter_uses_public_sdk_listing_api() -> None:
+    source = Path("scripts/export_mcp_contract.py").read_text(encoding="utf-8")
+
+    assert "_tool_manager" not in source
+    assert "_resource_manager" not in source
+    assert "_prompt_manager" not in source
+    assert "mcp.server.fastmcp" not in source
 
 
 @pytest.mark.parametrize(

@@ -1,14 +1,17 @@
-"""FastMCP composition root for AlbumentationsX."""
+"""MCP composition root for AlbumentationsX."""
 
 from __future__ import annotations
 
 import os
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 from pydantic import BaseModel, Field
 
+from albumentationsx_mcp.adapters.mcp.apps import SURFACE as PREVIEW_APP_SURFACE
+from albumentationsx_mcp.adapters.mcp.apps import build_preview_review_apps
 from albumentationsx_mcp.adapters.mcp.dependencies import McpDependencies
 from albumentationsx_mcp.adapters.mcp.preview import (
     export_matching_tuning_session_artifacts as _export_session_artifacts,
@@ -60,7 +63,14 @@ def settings_from_environment() -> ServerSettings:
 OutputFormat = Literal["python", "json", "yaml"]
 
 
-def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:
+def _package_version() -> str:
+    try:
+        return version("albumentationsx-mcp")
+    except PackageNotFoundError:  # pragma: no cover - editable installs include package metadata
+        return "0+unknown"
+
+
+def create_mcp_server(settings: ServerSettings | None = None) -> MCPServer:
     """Construct application services and register the public MCP surface."""
     settings = settings or settings_from_environment()
     public_surface = public_surface_for_profile(settings.capability_profile)
@@ -107,8 +117,21 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:
         report_service=report_service,
         diagnostics_service=diagnostics_service,
     )
-    mcp = FastMCP("AlbumentationsX MCP")
-    register_mcp_adapters(mcp, dependencies, profile=settings.capability_profile)
+    preview_apps = build_preview_review_apps(preview_service, available_tools=public_surface.tools)
+    mcp = MCPServer(
+        "AlbumentationsX MCP",
+        title="AlbumentationsX MCP",
+        description="Augmentation previews, validation, and review workflows for AlbumentationsX.",
+        website_url="https://github.com/dKosarevsky/albu-mcp",
+        version=_package_version(),
+        extensions=[preview_apps] if preview_apps is not None else None,
+    )
+    register_mcp_adapters(
+        mcp,
+        dependencies,
+        profile=settings.capability_profile,
+        external_surfaces=(PREVIEW_APP_SURFACE,) if preview_apps is not None else (),
+    )
     return mcp
 
 

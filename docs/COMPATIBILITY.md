@@ -22,6 +22,29 @@ Three reviewed snapshot layers guard this contract:
 - `scripts/export_output_contracts.py` writes representative output payload snapshots used by
   `tests/test_output_contract_snapshots.py`.
 
+## Protocol Versions
+
+One server supports both MCP protocol eras through MCP Python SDK 2.x:
+
+- modern clients negotiate `2026-07-28`, use `server/discover`, and can send any request to any Streamable HTTP
+  instance without a protocol session;
+- legacy clients keep the initialize handshake and existing stdio or Streamable HTTP launch configuration;
+- both eras discover the same profile-specific tool, resource, template, and prompt identifiers and receive the same
+  AlbumentationsX structured payloads.
+
+The SDK owns protocol envelopes such as `resultType`, cache hints, trace context, and legacy initialization. The
+application does not synthesize those fields. Product state remains explicit: `run_id`, `feedback_id`, tuning session
+IDs, and artifact URIs identify stored application records and do not depend on `Mcp-Session-Id`.
+
+The preview UI is registered through the official MCP Apps extension. Clients without MCP Apps support continue to
+receive the ordinary render result and can use contact sheets plus `record_preview_feedback` directly.
+
+`create_mcp_server` keeps its import path, arguments, and behavior but now returns SDK 2.x `MCPServer` instead of SDK
+1.x `FastMCP`. Embedders must use documented server methods rather than either SDK version's private manager fields.
+
+MCP Tasks are not exposed yet because MCP Python SDK 2.0 does not implement the final Tasks extension. Existing
+operations remain bounded and synchronous; Tasks will be added only through the official SDK contract.
+
 ## Compatible Changes
 
 Compatible changes may ship in minor releases:
@@ -32,7 +55,7 @@ Compatible changes may ship in minor releases:
 - adding new enum values only when older hosts can ignore or pass them through safely;
 - tightening internal validation when invalid input was already outside the documented contract.
 
-Capability profiles are additive configuration views. `full` defines the complete v1.x public contract and remains the
+Capability profiles are additive configuration views. `full` defines the complete public contract and remains the
 default. A focused profile intentionally omits items outside its declared view; that is not a removal from `full`.
 Every profile must be generated from the same canonical registration manifest and pass dependency-closure tests. A
 change to the default profile, or removal from `full`, requires the major-release migration process below.

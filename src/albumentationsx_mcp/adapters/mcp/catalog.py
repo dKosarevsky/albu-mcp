@@ -1,4 +1,4 @@
-"""FastMCP catalog and discovery registration."""
+"""MCP catalog and discovery registration."""
 
 from __future__ import annotations
 
@@ -15,8 +15,7 @@ from albumentationsx_mcp.quality import list_quality_profiles
 from albumentationsx_mcp.recipes import list_recipe_catalog, recommend_recipe
 
 if TYPE_CHECKING:
-    from mcp.server.fastmcp import FastMCP
-
+    from albumentationsx_mcp.adapters.mcp.registrar import McpRegistrar
     from albumentationsx_mcp.catalog import TransformCatalog
 
 _TOOLS = (
@@ -51,7 +50,7 @@ SURFACE = AdapterSurface(
 
 
 def register_catalog_adapter(
-    mcp: FastMCP,
+    mcp: McpRegistrar,
     *,
     catalog: TransformCatalog,
     available_tools: Collection[str] | None = None,

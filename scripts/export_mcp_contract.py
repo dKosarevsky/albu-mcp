@@ -1,42 +1,50 @@
-"""Export a deterministic snapshot of the public FastMCP contract."""
+"""Export a deterministic snapshot of the public MCP contract."""
 
 from __future__ import annotations
 
 import argparse
+import asyncio
 import json
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from mcp.shared.uri_template import UriTemplate
+
 from albumentationsx_mcp.server import create_mcp_server
 
 if TYPE_CHECKING:
-    from mcp.server.fastmcp import FastMCP
+    from mcp.server import MCPServer
+
+_RESOURCE_TEMPLATE_TITLE_OVERRIDES = {
+    "artifact://{run_id}/{filename}": "preview_image_artifactArguments",
+}
 
 
-def build_contract_snapshot(server: FastMCP | None = None) -> dict[str, Any]:
+def build_contract_snapshot(server: MCPServer | None = None) -> dict[str, Any]:
     """Return the public MCP surface as canonical JSON-compatible data."""
-    server = server or create_mcp_server()
+    return asyncio.run(build_contract_snapshot_async(server))
+
+
+async def build_contract_snapshot_async(server: MCPServer | None = None) -> dict[str, Any]:
+    """Return the public MCP surface through SDK-supported listing APIs."""
+    active_server = server or create_mcp_server()
+    tools, resources, templates, prompts = await asyncio.gather(
+        active_server.list_tools(),
+        active_server.list_resources(),
+        active_server.list_resource_templates(),
+        active_server.list_prompts(),
+    )
     return {
         "server": {
-            "name": server.name,
+            "name": active_server.name,
         },
-        "tools": [
-            _tool_entry(tool)
-            for _, tool in sorted(server._tool_manager._tools.items())  # noqa: SLF001
-        ],
-        "resources": [
-            _resource_entry(resource)
-            for _, resource in sorted(server._resource_manager._resources.items())  # noqa: SLF001
-        ],
+        "tools": [_tool_entry(tool) for tool in sorted(tools, key=lambda item: item.name)],
+        "resources": [_resource_entry(resource) for resource in sorted(resources, key=lambda item: str(item.uri))],
         "resource_templates": [
-            _resource_template_entry(template)
-            for _, template in sorted(server._resource_manager._templates.items())  # noqa: SLF001
+            _resource_template_entry(template) for template in sorted(templates, key=lambda item: item.uri_template)
         ],
-        "prompts": [
-            _prompt_entry(prompt)
-            for _, prompt in sorted(server._prompt_manager._prompts.items())  # noqa: SLF001
-        ],
+        "prompts": [_prompt_entry(prompt) for prompt in sorted(prompts, key=lambda item: item.name)],
     }
 
 
@@ -65,7 +73,7 @@ def _tool_entry(tool: Any) -> dict[str, Any]:
         {
             "name": tool.name,
             "description": tool.description,
-            "parameters": _json_safe(tool.parameters),
+            "parameters": _json_safe(tool.input_schema),
         },
         tool.meta,
     )
@@ -90,7 +98,7 @@ def _resource_template_entry(template: Any) -> dict[str, Any]:
             "name": template.name,
             "description": template.description,
             "mime_type": template.mime_type,
-            "parameters": _json_safe(template.parameters),
+            "parameters": _resource_template_parameters(template.uri_template, template.name),
         },
         template.meta,
     )
@@ -106,8 +114,25 @@ def _prompt_entry(prompt: Any) -> dict[str, Any]:
                 "description": argument.description,
                 "required": argument.required,
             }
-            for argument in prompt.arguments
+            for argument in prompt.arguments or []
         ],
+    }
+
+
+def _resource_template_parameters(uri_template: str, template_name: str) -> dict[str, Any]:
+    variable_names = UriTemplate.parse(uri_template).variable_names
+    title = _RESOURCE_TEMPLATE_TITLE_OVERRIDES.get(uri_template, f"{template_name}Arguments")
+    return {
+        "properties": {
+            name: {
+                "title": name.replace("_", " ").title(),
+                "type": "string",
+            }
+            for name in variable_names
+        },
+        "required": variable_names,
+        "title": title,
+        "type": "object",
     }
 
 

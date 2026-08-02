@@ -26,6 +26,15 @@ def test_readme_is_a_concise_product_install_funnel() -> None:
     assert "## Operator CLI" not in readme
 
 
+def test_compatibility_policy_documents_both_mcp_protocol_eras() -> None:
+    compatibility = Path("docs/COMPATIBILITY.md").read_text(encoding="utf-8")
+
+    assert "2026-07-28" in compatibility
+    assert "legacy" in compatibility
+    assert "MCPServer" in compatibility
+    assert "MCP Tasks" in compatibility
+
+
 def test_ci_workflow_runs_core_quality_gates() -> None:
     workflow_path = Path(".github/workflows/ci.yml")
     workflow = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
@@ -44,7 +53,9 @@ def test_ci_workflow_runs_core_quality_gates() -> None:
     assert "uv run python scripts/check_contract_snapshots.py" in commands
     assert "uv run python scripts/check_demo_assets.py --output-dir docs/assets/demo --check" in commands
     assert "uv run python scripts/check_release_readiness.py" in commands
-    assert "ClientSession" in commands
+    assert "Client(stdio_client(params), mode=mode)" in commands
+    assert '("2026-07-28", "legacy")' in commands
+    assert "ClientSession" not in commands
 
 
 def test_ci_workflow_builds_and_verifies_the_mcp_app() -> None:
@@ -120,11 +131,11 @@ def test_ci_workflow_uses_node24_ready_actions() -> None:
     assert setup_uv["with"]["enable-cache"] is False
 
 
-def test_runtime_dependency_keeps_mcp_sdk_on_v1() -> None:
+def test_runtime_dependency_tracks_mcp_sdk_v2_compatibility_line() -> None:
     project = tomli.loads(Path("pyproject.toml").read_text(encoding="utf-8"))["project"]
     mcp_requirements = [requirement for requirement in project["dependencies"] if requirement.startswith("mcp[")]
 
-    assert mcp_requirements == ["mcp[cli]>=1.24.0,<2"]
+    assert mcp_requirements == ["mcp[cli]>=2.0.0,<3"]
 
 
 def test_usage_docs_and_examples_are_present() -> None:

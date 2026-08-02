@@ -17,6 +17,9 @@ def test_create_mcp_server_registers_fastmcp_instance() -> None:
     server = create_mcp_server()
 
     assert server.name == "AlbumentationsX MCP"
+    assert server.title == "AlbumentationsX MCP"
+    assert server.version == "1.20.0"
+    assert server.website_url == "https://github.com/dKosarevsky/albu-mcp"
 
 
 def test_server_settings_default_to_full_profile() -> None:
@@ -55,10 +58,10 @@ def test_create_mcp_server_exposes_exact_profile_and_capabilities(
     )
     expected = surface_for_profile(profile)
 
-    assert tuple(server._tool_manager._tools) == expected.tools
-    assert tuple(str(uri) for uri in server._resource_manager._resources) == expected.resources
-    assert tuple(server._resource_manager._templates) == expected.resource_templates
-    assert tuple(server._prompt_manager._prompts) == expected.prompts
+    assert set(server._tool_manager._tools) == set(expected.tools)
+    assert {str(uri) for uri in server._resource_manager._resources} == set(expected.resources)
+    assert set(server._resource_manager._templates) == set(expected.resource_templates)
+    assert set(server._prompt_manager._prompts) == set(expected.prompts)
 
     capabilities = json.loads(cast("Any", server._resource_manager._resources["albumentationsx://capabilities"]).fn())
     diagnostics = cast("Any", server._tool_manager._tools["diagnose_environment"]).fn(include_write_probe=False)

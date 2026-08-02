@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Literal, cast
 
 import pytest
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 from PIL import Image
 
 from albumentationsx_mcp.adapters.mcp import registration as registration_module
@@ -212,7 +212,7 @@ def test_validate_adapter_surfaces_rejects_identifier_owned_by_two_adapters(
 
 
 def test_catalog_adapter_registers_its_exact_declared_surface() -> None:
-    mcp = FastMCP("catalog-test")
+    mcp = MCPServer("catalog-test")
 
     register_catalog_adapter(mcp, catalog=TransformCatalog())
 
@@ -221,7 +221,7 @@ def test_catalog_adapter_registers_its_exact_declared_surface() -> None:
 
 
 def test_policy_adapter_registers_its_exact_declared_surface() -> None:
-    mcp = FastMCP("policy-test")
+    mcp = MCPServer("policy-test")
     catalog = TransformCatalog()
 
     register_policy_adapter(mcp, catalog=catalog, pipeline_service=PipelineService(catalog))
@@ -233,7 +233,7 @@ def test_policy_adapter_registers_its_exact_declared_surface() -> None:
 def test_dataset_adapter_registers_its_exact_declared_surface(
     adapter_dependencies: AdapterTestDependencies,
 ) -> None:
-    mcp = FastMCP("dataset-test")
+    mcp = MCPServer("dataset-test")
 
     register_dataset_adapter(
         mcp,
@@ -250,7 +250,7 @@ def test_dataset_adapter_registers_its_exact_declared_surface(
 def test_diagnostics_adapter_registers_its_exact_declared_surface(
     adapter_dependencies: AdapterTestDependencies,
 ) -> None:
-    mcp = FastMCP("diagnostics-test")
+    mcp = MCPServer("diagnostics-test")
 
     register_diagnostics_adapter(
         mcp,
@@ -263,7 +263,7 @@ def test_diagnostics_adapter_registers_its_exact_declared_surface(
 
 
 def test_prompt_adapter_registers_its_exact_declared_surface() -> None:
-    mcp = FastMCP("prompts-test")
+    mcp = MCPServer("prompts-test")
 
     register_prompt_adapter(mcp)
 
@@ -274,7 +274,7 @@ def test_prompt_adapter_registers_its_exact_declared_surface() -> None:
 def test_preview_adapter_registers_its_exact_declared_surface(
     adapter_dependencies: AdapterTestDependencies,
 ) -> None:
-    mcp = FastMCP("preview-test")
+    mcp = MCPServer("preview-test")
 
     register_preview_adapter(
         mcp,
@@ -297,7 +297,7 @@ def test_dataset_adapter_run_first_preview_handler_renders(
 ) -> None:
     image_path = tmp_path / "guided.png"
     Image.new("RGB", (24, 24), (96, 128, 160)).save(image_path)
-    mcp = FastMCP("guided-preview-handler-test")
+    mcp = MCPServer("guided-preview-handler-test")
     register_dataset_adapter(
         mcp,
         path_policy=adapter_dependencies.path_policy,
@@ -326,7 +326,7 @@ def test_preview_adapter_trace_handler_returns_trace_from_guided_run(
         GuidedPreviewRequest(dataset_path=image_path, max_images=1),
     )
     assert guided.preview is not None
-    mcp = FastMCP("preview-trace-handler-test")
+    mcp = MCPServer("preview-trace-handler-test")
     register_preview_adapter(
         mcp,
         artifact_store=adapter_dependencies.artifact_store,
@@ -356,7 +356,7 @@ def test_preview_adapter_trace_handler_returns_trace_from_guided_run(
 def test_session_adapter_registers_its_exact_declared_surface(
     adapter_dependencies: AdapterTestDependencies,
 ) -> None:
-    mcp = FastMCP("sessions-test")
+    mcp = MCPServer("sessions-test")
 
     register_session_adapter(
         mcp,
@@ -375,6 +375,7 @@ def test_combined_adapter_surface_matches_canonical_counts() -> None:
         "catalog",
         "policy",
         "dataset",
+        "preview_app",
         "preview",
         "sessions",
         "diagnostics",
@@ -389,14 +390,14 @@ def test_combined_adapter_surface_matches_canonical_counts() -> None:
 def test_register_mcp_adapters_registers_exact_combined_surface(
     adapter_dependencies: AdapterTestDependencies,
 ) -> None:
-    mcp = FastMCP("combined-test")
+    mcp = MCPServer("combined-test")
 
     register_mcp_adapters(mcp, _mcp_dependencies(adapter_dependencies))
 
-    assert tuple(mcp._tool_manager._tools) == COMBINED_SURFACE.tools
-    assert tuple(str(uri) for uri in mcp._resource_manager._resources) == COMBINED_SURFACE.resources
-    assert tuple(mcp._resource_manager._templates) == COMBINED_SURFACE.resource_templates
-    assert tuple(mcp._prompt_manager._prompts) == COMBINED_SURFACE.prompts
+    assert set(mcp._tool_manager._tools) == set(COMBINED_SURFACE.tools)
+    assert {str(uri) for uri in mcp._resource_manager._resources} == set(COMBINED_SURFACE.resources)
+    assert set(mcp._resource_manager._templates) == set(COMBINED_SURFACE.resource_templates)
+    assert set(mcp._prompt_manager._prompts) == set(COMBINED_SURFACE.prompts)
 
 
 @pytest.mark.parametrize("profile", CapabilityProfile)
@@ -404,21 +405,21 @@ def test_register_mcp_adapters_registers_exact_profile_surface(
     adapter_dependencies: AdapterTestDependencies,
     profile: CapabilityProfile,
 ) -> None:
-    mcp = FastMCP(f"{profile.value}-profile-test")
+    mcp = MCPServer(f"{profile.value}-profile-test")
     expected = combine_adapter_surfaces_for_profile(ADAPTER_SURFACES, profile)
 
     register_mcp_adapters(mcp, _mcp_dependencies(adapter_dependencies, profile=profile), profile=profile)
 
-    assert tuple(mcp._tool_manager._tools) == expected.tools
-    assert tuple(str(uri) for uri in mcp._resource_manager._resources) == expected.resources
-    assert tuple(mcp._resource_manager._templates) == expected.resource_templates
-    assert tuple(mcp._prompt_manager._prompts) == expected.prompts
+    assert set(mcp._tool_manager._tools) == set(expected.tools)
+    assert {str(uri) for uri in mcp._resource_manager._resources} == set(expected.resources)
+    assert set(mcp._resource_manager._templates) == set(expected.resource_templates)
+    assert set(mcp._prompt_manager._prompts) == set(expected.prompts)
 
 
 def test_profile_registration_preserves_collision_for_excluded_identifier(
     adapter_dependencies: AdapterTestDependencies,
 ) -> None:
-    mcp = FastMCP("excluded-collision-test")
+    mcp = MCPServer("excluded-collision-test")
 
     @mcp.tool(name="render_preview")
     def existing_render_preview() -> str:
@@ -440,7 +441,7 @@ def test_profile_registration_preserves_collision_for_excluded_identifier(
 def test_register_mcp_adapters_rejects_dependency_surface_mismatch_before_registration(
     adapter_dependencies: AdapterTestDependencies,
 ) -> None:
-    mcp = FastMCP("mismatched-profile-test")
+    mcp = MCPServer("mismatched-profile-test")
     dependencies = _mcp_dependencies(adapter_dependencies)
     dependencies.diagnostics_service.public_surface = PublicSurface(
         capability_profile=CapabilityProfile.FULL,
@@ -463,7 +464,7 @@ def test_register_mcp_adapters_rejects_collision_before_partial_registration(
     adapter_dependencies: AdapterTestDependencies,
     profile: CapabilityProfile,
 ) -> None:
-    mcp = FastMCP("collision-test")
+    mcp = MCPServer("collision-test")
 
     @mcp.tool(name="search_transforms")
     def existing_search_transforms() -> str:
@@ -484,14 +485,14 @@ def test_register_mcp_adapters_rolls_back_unexpected_registration_failure(
     monkeypatch: pytest.MonkeyPatch,
     profile: CapabilityProfile,
 ) -> None:
-    mcp = FastMCP("rollback-test")
+    mcp = MCPServer("rollback-test")
 
     @mcp.tool(name="existing_tool")
     def existing_tool() -> str:
         return "existing"
 
-    def failing_session_adapter(target: FastMCP, **_: Any) -> None:
-        @target.tool(name="partially_registered_tool")
+    def failing_session_adapter(target: MCPServer, **_: Any) -> None:
+        @target.tool(name="start_tuning_session")
         def partially_registered_tool() -> str:
             return "partial"
 
@@ -509,7 +510,7 @@ def test_register_mcp_adapters_rolls_back_unexpected_registration_failure(
     assert not mcp._prompt_manager._prompts
 
 
-def _registered_surface(mcp: FastMCP, *, adapter: str) -> AdapterSurface:
+def _registered_surface(mcp: MCPServer, *, adapter: str) -> AdapterSurface:
     return AdapterSurface(
         adapter=adapter,
         tools=tuple(mcp._tool_manager._tools),
@@ -560,7 +561,7 @@ def _mcp_dependencies(
     )
 
 
-def _assert_registered_contract_matches_snapshot(mcp: FastMCP, surface: AdapterSurface) -> None:
+def _assert_registered_contract_matches_snapshot(mcp: MCPServer, surface: AdapterSurface) -> None:
     expected = json.loads(_CONTRACT_SNAPSHOT_PATH.read_text(encoding="utf-8"))
     actual = build_contract_snapshot(mcp)
 

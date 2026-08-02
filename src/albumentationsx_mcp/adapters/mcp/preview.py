@@ -1,4 +1,4 @@
-"""FastMCP preview, review, ranking, and report registration."""
+"""MCP preview, review, ranking, and report registration."""
 
 from __future__ import annotations
 
@@ -11,15 +11,12 @@ from albumentationsx_mcp.capabilities import REVIEW_DATASET_PROFILE_MEMBERSHIP, 
 from albumentationsx_mcp.dataset import score_dataset_preview_candidates as score_dataset_candidates
 from albumentationsx_mcp.mcp_app import (
     PREVIEW_ARTIFACT_URI_TEMPLATE,
-    PREVIEW_REVIEW_APP_URI,
-    preview_review_tool_meta,
-    register_preview_review_resources,
+    register_preview_artifact_resource,
 )
 from albumentationsx_mcp.models import (
     ArtifactRef,
     InteractiveTuningSession,
     PreviewFeedbackRecord,
-    PreviewRequest,
     QualityProfileName,
     TargetSpec,
 )
@@ -29,8 +26,7 @@ from albumentationsx_mcp.review_agent import build_review_agent_plan
 from albumentationsx_mcp.review_agent import interpret_preview_feedback as interpret_feedback_note
 
 if TYPE_CHECKING:
-    from mcp.server.fastmcp import FastMCP
-
+    from albumentationsx_mcp.adapters.mcp.registrar import McpRegistrar
     from albumentationsx_mcp.preview import ArtifactStore, PreviewService
     from albumentationsx_mcp.preview_validation import PreviewRequestValidator
     from albumentationsx_mcp.reports import PreviewReportService
@@ -40,8 +36,6 @@ if TYPE_CHECKING:
 
 _TOOLS = (
     "validate_preview_request",
-    "render_preview",
-    "render_preview_batch",
     "trace_preview_variant",
     "compare_preview_runs",
     "interpret_preview_feedback",
@@ -51,25 +45,21 @@ _TOOLS = (
 )
 _DATASET_TOOLS = (
     "validate_preview_request",
-    "render_preview_batch",
     "trace_preview_variant",
     "compare_preview_runs",
     "export_preview_report",
 )
 _REVIEW_ONLY_TOOLS = tuple(tool for tool in _TOOLS if tool not in _DATASET_TOOLS)
-_RESOURCES = (PREVIEW_REVIEW_APP_URI,)
 _RESOURCE_TEMPLATES = (PREVIEW_ARTIFACT_URI_TEMPLATE,)
 SURFACE = AdapterSurface(
     adapter="preview",
     tools=_TOOLS,
-    resources=_RESOURCES,
     resource_templates=_RESOURCE_TEMPLATES,
     profile_surfaces=(
         ProfileSurface(profiles=REVIEW_PROFILE_MEMBERSHIP, tools=_REVIEW_ONLY_TOOLS),
         ProfileSurface(
             profiles=REVIEW_DATASET_PROFILE_MEMBERSHIP,
             tools=_DATASET_TOOLS,
-            resources=_RESOURCES,
             resource_templates=_RESOURCE_TEMPLATES,
         ),
     ),
@@ -77,7 +67,7 @@ SURFACE = AdapterSurface(
 
 
 def register_preview_adapter(  # noqa: PLR0913
-    mcp: FastMCP,
+    mcp: McpRegistrar,
     *,
     artifact_store: ArtifactStore,
     preview_service: PreviewService,
@@ -87,26 +77,14 @@ def register_preview_adapter(  # noqa: PLR0913
     feedback_store: PreviewFeedbackStore,
     report_service: PreviewReportService,
 ) -> None:
-    """Register preview rendering, review, ranking, reports, and MCP App resources."""
-    register_preview_review_resources(mcp, artifact_store)
+    """Register preview validation, review, ranking, reports, and artifact resources."""
+    register_preview_artifact_resource(mcp, artifact_store)
 
     @mcp.tool(name="validate_preview_request")
     def validate_preview_request_tool(request: dict[str, Any], target: dict[str, Any] | None = None) -> dict[str, Any]:
         """Validate a preview request before rendering local preview artifacts."""
         target_spec = TargetSpec.model_validate(target or {})
         return preview_validator.validate(request, target=target_spec).model_dump(mode="json")
-
-    @mcp.tool(meta=preview_review_tool_meta())
-    def render_preview(request: dict[str, Any]) -> dict[str, Any]:
-        """Render deterministic preview artifacts for local input images."""
-        preview_request = PreviewRequest.model_validate(request)
-        return preview_service.render_preview(preview_request).model_dump(mode="json")
-
-    @mcp.tool(meta=preview_review_tool_meta())
-    def render_preview_batch(request: dict[str, Any]) -> dict[str, Any]:
-        """Render deterministic batch preview artifacts and contact sheets for local input images."""
-        preview_request = PreviewRequest.model_validate(request)
-        return preview_service.render_preview(preview_request).model_dump(mode="json")
 
     @mcp.tool()
     def trace_preview_variant(

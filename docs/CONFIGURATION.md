@@ -33,7 +33,7 @@ Use `--capability-profile` or `ALBU_MCP_CAPABILITY_PROFILE`:
 | `core` | Discovery and pipeline design without local preview tools | Catalog, validation, recommendation, adjustment, explanation, export, diagnostics, smoke, and workflow fallback |
 | `review` | Preview, reject, adjust, compare, accept, and export | `core` plus rendering, comparison, feedback, ranking, reports, sessions, and review prompts |
 | `dataset` | Bounded local dataset planning, preview, and quality inspection | `core` plus onboarding, review packets, quality inspection, validation, batch rendering, feedback recording, comparison, reports, and dataset candidate scoring |
-| `full` | Every supported workflow | Complete canonical surface; default for all v1.x installations |
+| `full` | Every supported workflow | Complete canonical surface; default for all package 1.x installations |
 
 For a preview-focused host:
 

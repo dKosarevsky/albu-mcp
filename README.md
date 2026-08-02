@@ -63,7 +63,7 @@ If setup fails, read `albumentationsx://diagnostics/guide` and call `diagnose_en
 - Interactive MCP Apps review with a text-only fallback for other hosts.
 - Structured feedback, tuning sessions, and Python, JSON, or YAML export.
 - Runtime-aware CPU `torch.Tensor` pipeline validation and guarded Python handoff.
-- Stable agent workflow resources, prompts, diagnostics, and reviewed contract snapshots.
+- MCP `2026-07-28` plus legacy negotiation; stable agent workflow resources, diagnostics, and contract snapshots.
 
 The server does not execute arbitrary Python, fetch remote images, overwrite datasets, or train models. Reads are restricted by `--allowed-root`; generated files stay under `--artifact-root`.
 

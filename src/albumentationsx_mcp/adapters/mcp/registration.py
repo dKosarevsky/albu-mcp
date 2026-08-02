@@ -1,16 +1,21 @@
-"""Ordered, atomic composition of the public FastMCP adapter surface."""
+"""Ordered, atomic composition of the public MCP adapter surface."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+from typing import TYPE_CHECKING, cast
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 
+from albumentationsx_mcp.adapters.mcp.apps import SURFACE as PREVIEW_APP_SURFACE
+from albumentationsx_mcp.adapters.mcp.apps import register_preview_app_fallback
 from albumentationsx_mcp.adapters.mcp.catalog import SURFACE as CATALOG_SURFACE
 from albumentationsx_mcp.adapters.mcp.catalog import register_catalog_adapter
 from albumentationsx_mcp.adapters.mcp.contracts import (
+    AdapterSurface,
     CombinedSurface,
+    adapter_surface_for_profile,
     combine_adapter_surfaces_for_profile,
     validate_profiled_adapter_surfaces,
 )
@@ -24,6 +29,7 @@ from albumentationsx_mcp.adapters.mcp.preview import SURFACE as PREVIEW_SURFACE
 from albumentationsx_mcp.adapters.mcp.preview import register_preview_adapter
 from albumentationsx_mcp.adapters.mcp.prompts import SURFACE as PROMPT_SURFACE
 from albumentationsx_mcp.adapters.mcp.prompts import register_prompt_adapter
+from albumentationsx_mcp.adapters.mcp.registrar import CollectedMcpRegistrar, McpRegistrar, ProfiledMcpRegistrar
 from albumentationsx_mcp.adapters.mcp.sessions import SURFACE as SESSION_SURFACE
 from albumentationsx_mcp.adapters.mcp.sessions import register_session_adapter
 from albumentationsx_mcp.capabilities import CapabilityProfile
@@ -36,14 +42,36 @@ ADAPTER_SURFACES = (
     CATALOG_SURFACE,
     POLICY_SURFACE,
     DATASET_SURFACE,
+    PREVIEW_APP_SURFACE,
     PREVIEW_SURFACE,
     SESSION_SURFACE,
     DIAGNOSTICS_SURFACE,
     PROMPT_SURFACE,
 )
-PROFILE_SURFACES = {
-    profile: combine_adapter_surfaces_for_profile(ADAPTER_SURFACES, profile) for profile in CapabilityProfile
-}
+_CANONICAL_TOOL_ORDER = (
+    *CATALOG_SURFACE.tools,
+    *POLICY_SURFACE.tools,
+    *DATASET_SURFACE.tools,
+    "validate_preview_request",
+    *PREVIEW_APP_SURFACE.tools,
+    *(tool for tool in PREVIEW_SURFACE.tools if tool != "validate_preview_request"),
+    *SESSION_SURFACE.tools,
+    *DIAGNOSTICS_SURFACE.tools,
+)
+
+
+def _canonical_surface_for_profile(profile: CapabilityProfile) -> CombinedSurface:
+    surface = combine_adapter_surfaces_for_profile(ADAPTER_SURFACES, profile)
+    selected_tools = set(surface.tools)
+    return CombinedSurface(
+        tools=tuple(tool for tool in _CANONICAL_TOOL_ORDER if tool in selected_tools),
+        resources=surface.resources,
+        resource_templates=surface.resource_templates,
+        prompts=surface.prompts,
+    )
+
+
+PROFILE_SURFACES = {profile: _canonical_surface_for_profile(profile) for profile in CapabilityProfile}
 COMBINED_SURFACE = PROFILE_SURFACES[CapabilityProfile.FULL]
 
 PUBLIC_TOOLS = (
@@ -121,21 +149,14 @@ PUBLIC_WORKFLOW_RESOURCES = (
 )
 
 
-@dataclass(frozen=True, slots=True)
-class _ManagerState:
-    tools: dict[Any, Any]
-    resources: dict[Any, Any]
-    resource_templates: dict[Any, Any]
-    prompts: dict[Any, Any]
-
-
 def register_mcp_adapters(
-    mcp: FastMCP,
+    mcp: MCPServer,
     dependencies: McpDependencies,
     *,
     profile: CapabilityProfile = CapabilityProfile.FULL,
+    external_surfaces: tuple[AdapterSurface, ...] = (),
 ) -> None:
-    """Register one canonical profile without leaving a partial target surface."""
+    """Register one canonical profile on a fresh or collision-free MCP server."""
     validate_profiled_adapter_surfaces(ADAPTER_SURFACES)
     declared_surface = surface_for_profile(profile)
     expected_public_surface = public_surface_for_profile(profile)
@@ -146,20 +167,34 @@ def register_mcp_adapters(
             f"expected {expected_public_surface!r}, got {actual_public_surface!r}"
         )
         raise ValueError(msg)
-    before = _capture_manager_state(mcp)
-    initial_surface = _surface_from_state(before)
-    _raise_on_collisions(initial_surface, declared_surface)
+    external_adapter_names = _validate_external_surfaces(external_surfaces)
+    external_surface = (
+        combine_adapter_surfaces_for_profile(external_surfaces, profile) if external_surfaces else _empty_surface()
+    )
+    registered_surface = _subtract_surface(declared_surface, external_surface)
 
-    try:
-        staged = FastMCP("AlbumentationsX MCP registration staging")
-        _register_adapters(staged, dependencies)
-        _verify_staged_surface(staged)
-        selected = _select_manager_state(_capture_manager_state(staged), declared_surface)
-        _append_manager_state(mcp, selected)
-        _verify_registered_surface(mcp, initial_surface, declared_surface)
-    except Exception:
-        _restore_manager_state(mcp, before)
-        raise
+    collected = CollectedMcpRegistrar()
+    _register_adapters(
+        collected,
+        dependencies,
+        profile=profile,
+        external_adapter_names=external_adapter_names,
+    )
+
+    staged = MCPServer("AlbumentationsX MCP registration validation")
+    collected.apply_to(staged)
+    staged_surface = _registered_surface(staged)
+    if not _same_surface_identifiers(staged_surface, registered_surface):
+        msg = (
+            f"collected MCP surface does not match declaration: expected {registered_surface!r}, got {staged_surface!r}"
+        )
+        raise RuntimeError(msg)
+
+    initial_surface = _registered_surface(mcp)
+    _verify_external_surface(initial_surface, external_surface)
+    _raise_on_collisions(initial_surface, registered_surface)
+    collected.apply_to(mcp)
+    _verify_registered_surface(mcp, initial_surface, registered_surface)
 
 
 def surface_for_profile(profile: CapabilityProfile) -> CombinedSurface:
@@ -184,24 +219,45 @@ def public_surface_for_profile(profile: CapabilityProfile) -> PublicSurface:
     )
 
 
-def _register_adapters(mcp: FastMCP, dependencies: McpDependencies) -> None:
+def _register_adapters(
+    mcp: McpRegistrar,
+    dependencies: McpDependencies,
+    *,
+    profile: CapabilityProfile,
+    external_adapter_names: set[str],
+) -> None:
     available_tools = set(dependencies.diagnostics_service.public_surface.tools)
-    register_catalog_adapter(mcp, catalog=dependencies.catalog, available_tools=available_tools)
+    catalog_registrar = _profiled_registrar(mcp, CATALOG_SURFACE, profile)
+    register_catalog_adapter(catalog_registrar, catalog=dependencies.catalog, available_tools=available_tools)
+    catalog_registrar.verify_complete()
+
+    policy_registrar = _profiled_registrar(mcp, POLICY_SURFACE, profile)
     register_policy_adapter(
-        mcp,
+        policy_registrar,
         catalog=dependencies.catalog,
         pipeline_service=dependencies.pipeline_service,
     )
+    policy_registrar.verify_complete()
+
+    dataset_registrar = _profiled_registrar(mcp, DATASET_SURFACE, profile)
     register_dataset_adapter(
-        mcp,
+        dataset_registrar,
         path_policy=dependencies.path_policy,
         pipeline_service=dependencies.pipeline_service,
         preview_service=dependencies.preview_service,
         guided_preview_service=dependencies.guided_preview_service,
         available_tools=available_tools,
     )
+    dataset_registrar.verify_complete()
+
+    if PREVIEW_APP_SURFACE.adapter not in external_adapter_names:
+        app_registrar = _profiled_registrar(mcp, PREVIEW_APP_SURFACE, profile)
+        register_preview_app_fallback(app_registrar, preview_service=dependencies.preview_service)
+        app_registrar.verify_complete()
+
+    preview_registrar = _profiled_registrar(mcp, PREVIEW_SURFACE, profile)
     register_preview_adapter(
-        mcp,
+        preview_registrar,
         artifact_store=dependencies.artifact_store,
         preview_service=dependencies.preview_service,
         preview_validator=dependencies.preview_validator,
@@ -210,46 +266,109 @@ def _register_adapters(mcp: FastMCP, dependencies: McpDependencies) -> None:
         feedback_store=dependencies.feedback_store,
         report_service=dependencies.report_service,
     )
+    preview_registrar.verify_complete()
+
+    session_registrar = _profiled_registrar(mcp, SESSION_SURFACE, profile)
     register_session_adapter(
-        mcp,
+        session_registrar,
         preview_service=dependencies.preview_service,
         tuning_store=dependencies.tuning_store,
         session_store=dependencies.session_store,
         feedback_store=dependencies.feedback_store,
     )
+    session_registrar.verify_complete()
+
+    diagnostics_registrar = _profiled_registrar(mcp, DIAGNOSTICS_SURFACE, profile)
     register_diagnostics_adapter(
-        mcp,
+        diagnostics_registrar,
         diagnostics_service=dependencies.diagnostics_service,
         pipeline_service=dependencies.pipeline_service,
     )
-    register_prompt_adapter(mcp, available_tools=available_tools)
+    diagnostics_registrar.verify_complete()
+
+    prompt_registrar = _profiled_registrar(mcp, PROMPT_SURFACE, profile)
+    register_prompt_adapter(prompt_registrar, available_tools=available_tools)
+    prompt_registrar.verify_complete()
 
 
-def _capture_manager_state(mcp: FastMCP) -> _ManagerState:
-    return _ManagerState(
-        tools=dict(mcp._tool_manager._tools),  # noqa: SLF001
-        resources=dict(mcp._resource_manager._resources),  # noqa: SLF001
-        resource_templates=dict(mcp._resource_manager._templates),  # noqa: SLF001
-        prompts=dict(mcp._prompt_manager._prompts),  # noqa: SLF001
-    )
+def _validate_external_surfaces(external_surfaces: tuple[AdapterSurface, ...]) -> set[str]:
+    canonical = {surface.adapter: surface for surface in ADAPTER_SURFACES}
+    names: set[str] = set()
+    for surface in external_surfaces:
+        if surface.adapter in names:
+            msg = f"duplicate external MCP adapter surface: {surface.adapter!r}"
+            raise ValueError(msg)
+        if canonical.get(surface.adapter) != surface:
+            msg = f"unknown or mismatched external MCP adapter surface: {surface.adapter!r}"
+            raise ValueError(msg)
+        names.add(surface.adapter)
+    return names
 
 
-def _surface_from_state(state: _ManagerState) -> CombinedSurface:
+def _empty_surface() -> CombinedSurface:
+    return CombinedSurface(tools=(), resources=(), resource_templates=(), prompts=())
+
+
+def _subtract_surface(surface: CombinedSurface, excluded: CombinedSurface) -> CombinedSurface:
     return CombinedSurface(
-        tools=tuple(state.tools),
-        resources=tuple(str(uri) for uri in state.resources),
-        resource_templates=tuple(state.resource_templates),
-        prompts=tuple(state.prompts),
+        tools=tuple(item for item in surface.tools if item not in set(excluded.tools)),
+        resources=tuple(item for item in surface.resources if item not in set(excluded.resources)),
+        resource_templates=tuple(
+            item for item in surface.resource_templates if item not in set(excluded.resource_templates)
+        ),
+        prompts=tuple(item for item in surface.prompts if item not in set(excluded.prompts)),
     )
 
 
-def _registered_surface(mcp: FastMCP) -> CombinedSurface:
-    return CombinedSurface(
-        tools=tuple(mcp._tool_manager._tools),  # noqa: SLF001
-        resources=tuple(str(uri) for uri in mcp._resource_manager._resources),  # noqa: SLF001
-        resource_templates=tuple(mcp._resource_manager._templates),  # noqa: SLF001
-        prompts=tuple(mcp._prompt_manager._prompts),  # noqa: SLF001
+def _verify_external_surface(actual: CombinedSurface, expected: CombinedSurface) -> None:
+    for kind in ("tools", "resources", "resource_templates", "prompts"):
+        missing = set(getattr(expected, kind)) - set(getattr(actual, kind))
+        if missing:
+            identifier = next(item for item in getattr(expected, kind) if item in missing)
+            msg = f"external MCP {kind} identifier {identifier!r} is not registered"
+            raise RuntimeError(msg)
+
+
+def _same_surface_identifiers(left: CombinedSurface, right: CombinedSurface) -> bool:
+    return all(
+        len(getattr(left, kind)) == len(getattr(right, kind)) and set(getattr(left, kind)) == set(getattr(right, kind))
+        for kind in ("tools", "resources", "resource_templates", "prompts")
     )
+
+
+def _profiled_registrar(
+    mcp: McpRegistrar,
+    declared: AdapterSurface,
+    profile: CapabilityProfile,
+) -> ProfiledMcpRegistrar:
+    return ProfiledMcpRegistrar(
+        mcp,
+        declared=declared,
+        selected=adapter_surface_for_profile(declared, profile),
+    )
+
+
+def _registered_surface(mcp: MCPServer) -> CombinedSurface:
+    async def list_surface() -> CombinedSurface:
+        tools, resources, resource_templates, prompts = await asyncio.gather(
+            mcp.list_tools(),
+            mcp.list_resources(),
+            mcp.list_resource_templates(),
+            mcp.list_prompts(),
+        )
+        return CombinedSurface(
+            tools=tuple(tool.name for tool in tools),
+            resources=tuple(str(resource.uri) for resource in resources),
+            resource_templates=tuple(template.uri_template for template in resource_templates),
+            prompts=tuple(prompt.name for prompt in prompts),
+        )
+
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(list_surface())
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        return cast("CombinedSurface", executor.submit(asyncio.run, list_surface()).result())
 
 
 def _raise_on_collisions(existing: CombinedSurface, declared: CombinedSurface) -> None:
@@ -264,15 +383,8 @@ def _raise_on_collisions(existing: CombinedSurface, declared: CombinedSurface) -
             raise ValueError(msg)
 
 
-def _verify_staged_surface(mcp: FastMCP) -> None:
-    actual = _registered_surface(mcp)
-    if actual != COMBINED_SURFACE:
-        msg = f"staged MCP surface does not match full declaration: expected {COMBINED_SURFACE!r}, got {actual!r}"
-        raise RuntimeError(msg)
-
-
 def _verify_registered_surface(
-    mcp: FastMCP,
+    mcp: MCPServer,
     initial: CombinedSurface,
     declared: CombinedSurface,
 ) -> None:
@@ -283,44 +395,6 @@ def _verify_registered_surface(
         prompts=initial.prompts + declared.prompts,
     )
     actual = _registered_surface(mcp)
-    if actual != expected:
+    if not _same_surface_identifiers(actual, expected):
         msg = f"registered MCP surface does not match declarations: expected {expected!r}, got {actual!r}"
         raise RuntimeError(msg)
-
-
-def _select_manager_state(state: _ManagerState, surface: CombinedSurface) -> _ManagerState:
-    tools = set(surface.tools)
-    resources = set(surface.resources)
-    resource_templates = set(surface.resource_templates)
-    prompts = set(surface.prompts)
-    return _ManagerState(
-        tools={name: item for name, item in state.tools.items() if name in tools},
-        resources={uri: item for uri, item in state.resources.items() if str(uri) in resources},
-        resource_templates={
-            uri: item for uri, item in state.resource_templates.items() if str(uri) in resource_templates
-        },
-        prompts={name: item for name, item in state.prompts.items() if name in prompts},
-    )
-
-
-def _append_manager_state(mcp: FastMCP, state: _ManagerState) -> None:
-    managers = (
-        (mcp._tool_manager._tools, state.tools),  # noqa: SLF001
-        (mcp._resource_manager._resources, state.resources),  # noqa: SLF001
-        (mcp._resource_manager._templates, state.resource_templates),  # noqa: SLF001
-        (mcp._prompt_manager._prompts, state.prompts),  # noqa: SLF001
-    )
-    for registered, selected in managers:
-        registered.update(selected)
-
-
-def _restore_manager_state(mcp: FastMCP, state: _ManagerState) -> None:
-    managers = (
-        (mcp._tool_manager._tools, state.tools),  # noqa: SLF001
-        (mcp._resource_manager._resources, state.resources),  # noqa: SLF001
-        (mcp._resource_manager._templates, state.resource_templates),  # noqa: SLF001
-        (mcp._prompt_manager._prompts, state.prompts),  # noqa: SLF001
-    )
-    for registered, original in managers:
-        registered.clear()
-        registered.update(original)

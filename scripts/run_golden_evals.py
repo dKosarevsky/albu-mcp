@@ -12,10 +12,9 @@ from typing import Any
 
 import numpy as np
 import yaml
-from mcp import ClientSession, StdioServerParameters
+from mcp import Client, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from PIL import Image, ImageDraw
-from pydantic import AnyUrl
 
 _RANKING_CANDIDATE_COUNT = 2
 
@@ -53,8 +52,7 @@ async def run_scenarios(scenario_file: Path, work_dir: Path) -> list[str]:
     )
 
     completed: list[str] = []
-    async with stdio_client(params) as (read, write), ClientSession(read, write) as session:
-        await session.initialize()
+    async with Client(stdio_client(params), mode="auto") as session:
         for scenario in scenarios:
             await _run_scenario(session, scenario, images_dir)
             completed.append(str(scenario["name"]))
@@ -76,7 +74,7 @@ def _prepare_work_dirs(work_dir: Path) -> tuple[Path, Path]:
 
 
 async def _run_scenario(  # noqa: PLR0911, PLR0912
-    session: ClientSession,
+    session: Client,
     scenario: dict[str, Any],
     images_dir: Path,
 ) -> None:
@@ -147,7 +145,7 @@ async def _run_scenario(  # noqa: PLR0911, PLR0912
         await _run_preview_lifecycle(session, scenario, images_dir, pipeline)
 
 
-async def _run_torch_cpu_compose_smoke(session: ClientSession, scenario: dict[str, Any]) -> None:
+async def _run_torch_cpu_compose_smoke(session: Client, scenario: dict[str, Any]) -> None:
     playbook = await _read_resource_json(session, "albumentationsx://examples/torch-cpu-compose")
     if [step["tool"] for step in playbook["steps"]] != ["validate_pipeline", "export_pipeline"]:
         raise AssertionError(f"{scenario['name']} returned the wrong Tensor Compose workflow: {playbook}")
@@ -191,7 +189,7 @@ async def _run_torch_cpu_compose_smoke(session: ClientSession, scenario: dict[st
 
 
 async def _run_preview_lifecycle(
-    session: ClientSession,
+    session: Client,
     scenario: dict[str, Any],
     images_dir: Path,
     pipeline: dict[str, Any],
@@ -239,7 +237,7 @@ def _write_preview_inputs(images_dir: Path, scenario: dict[str, Any]) -> list[Pa
     return paths
 
 
-async def _run_real_sample_smoke(session: ClientSession, scenario: dict[str, Any], images_dir: Path) -> None:
+async def _run_real_sample_smoke(session: Client, scenario: dict[str, Any], images_dir: Path) -> None:
     image_paths = _write_real_sample_inputs(images_dir, scenario)
     smoke_report = await _call_tool_json(
         session,
@@ -317,7 +315,7 @@ async def _run_real_sample_smoke(session: ClientSession, scenario: dict[str, Any
 
 
 async def _run_interactive_tuning_session(
-    session: ClientSession,
+    session: Client,
     scenario: dict[str, Any],
     images_dir: Path,
 ) -> None:
@@ -463,7 +461,7 @@ def _assert_preview_report_session_artifact(
 
 
 async def _run_preview_request_troubleshooting(
-    session: ClientSession,
+    session: Client,
     scenario: dict[str, Any],
     images_dir: Path,
 ) -> None:
@@ -512,7 +510,7 @@ async def _run_preview_request_troubleshooting(
     await _delete_preview_run(session, scenario, preview["run_id"])
 
 
-async def _run_first_preview_smoke(session: ClientSession, scenario: dict[str, Any], images_dir: Path) -> None:
+async def _run_first_preview_smoke(session: Client, scenario: dict[str, Any], images_dir: Path) -> None:
     image_paths = _write_preview_inputs(images_dir, scenario)
     playbook = await _read_resource_json(session, "albumentationsx://examples/first-preview")
     if playbook["trigger_phrase"] != "run the first AlbumentationsX preview":
@@ -681,7 +679,7 @@ def _real_sample_preview_request(
 
 
 async def _assert_real_sample_preview_manifest(
-    session: ClientSession,
+    session: Client,
     scenario: dict[str, Any],
     run_id: str,
     *,
@@ -717,14 +715,14 @@ async def _assert_real_sample_preview_manifest(
     return manifest
 
 
-async def _delete_preview_run(session: ClientSession, scenario: dict[str, Any], run_id: str) -> None:
+async def _delete_preview_run(session: Client, scenario: dict[str, Any], run_id: str) -> None:
     deleted = await _call_tool_json(session, "delete_preview_run", {"run_id": run_id})
     if deleted["deleted"]["run_id"] != run_id:
         raise AssertionError(f"{scenario['name']} did not delete preview run {run_id}: {deleted}")
 
 
 async def _validate_preview_request_or_fail(
-    session: ClientSession,
+    session: Client,
     scenario: dict[str, Any],
     request: dict[str, Any],
 ) -> dict[str, Any]:
@@ -742,7 +740,7 @@ async def _validate_preview_request_or_fail(
 
 
 async def _run_preview_comparison(
-    session: ClientSession,
+    session: Client,
     scenario: dict[str, Any],
     image_paths: list[Path],
     pipeline: dict[str, Any],
@@ -839,7 +837,7 @@ async def _run_preview_comparison(
 
 
 async def _run_candidate_ranking(  # noqa: PLR0913
-    session: ClientSession,
+    session: Client,
     scenario: dict[str, Any],
     image_paths: list[Path],
     pipeline: dict[str, Any],
@@ -893,7 +891,7 @@ async def _run_candidate_ranking(  # noqa: PLR0913
 
 
 async def _run_preview_feedback_loop(
-    session: ClientSession,
+    session: Client,
     scenario: dict[str, Any],
     candidate_run_id: str,
     candidate_pipeline: dict[str, Any],
@@ -937,7 +935,7 @@ async def _run_preview_feedback_loop(
         raise AssertionError(f"{scenario['name']} feedback adjustment returned no transforms: {adjusted}")
 
 
-async def _run_recipe_recommendation(session: ClientSession, scenario: dict[str, Any]) -> None:
+async def _run_recipe_recommendation(session: Client, scenario: dict[str, Any]) -> None:
     recipe = await _call_tool_json(
         session,
         "recommend_recipe",
@@ -962,7 +960,7 @@ async def _run_recipe_recommendation(session: ClientSession, scenario: dict[str,
             raise AssertionError(f"{scenario['name']} recipe did not include {tool_name}: {recipe}")
 
 
-async def _run_client_smoke(session: ClientSession, scenario: dict[str, Any]) -> None:
+async def _run_client_smoke(session: Client, scenario: dict[str, Any]) -> None:
     smoke_resources = scenario.get("smoke_resources", [])
     expected_resources = {
         "albumentationsx://examples/client-smoke",
@@ -1020,7 +1018,7 @@ async def _run_client_smoke(session: ClientSession, scenario: dict[str, Any]) ->
         await _run_host_smoke(session, scenario)
 
 
-async def _run_distortion_review_smoke(session: ClientSession, scenario: dict[str, Any]) -> None:
+async def _run_distortion_review_smoke(session: Client, scenario: dict[str, Any]) -> None:
     playbook = await _read_resource_json(session, "albumentationsx://examples/distortion-review")
     if playbook["trigger_phrase"] != "make distorted versions, but example 8 is too noisy":
         raise AssertionError(f"{scenario['name']} returned wrong distortion-review trigger phrase: {playbook}")
@@ -1044,7 +1042,7 @@ async def _run_distortion_review_smoke(session: ClientSession, scenario: dict[st
             raise AssertionError(f"{scenario['name']} capabilities did not include {tool_name}: {capabilities}")
 
 
-async def _run_dataset_onboarding(session: ClientSession, scenario: dict[str, Any], images_dir: Path) -> None:
+async def _run_dataset_onboarding(session: Client, scenario: dict[str, Any], images_dir: Path) -> None:
     image_paths = _write_real_sample_inputs(images_dir, scenario)
     dataset_path = image_paths[0].parent
     if scenario.get("segmentation_onboarding"):
@@ -1115,7 +1113,7 @@ async def _run_dataset_onboarding(session: ClientSession, scenario: dict[str, An
     await _delete_preview_run(session, scenario, preview["run_id"])
 
 
-async def _run_review_packet_flow(session: ClientSession, scenario: dict[str, Any], images_dir: Path) -> None:
+async def _run_review_packet_flow(session: Client, scenario: dict[str, Any], images_dir: Path) -> None:
     image_paths = _write_real_sample_inputs(images_dir, scenario)
     dataset_path = image_paths[0].parent
     capabilities = await _read_resource_json(session, "albumentationsx://capabilities")
@@ -1223,7 +1221,7 @@ async def _run_review_packet_flow(session: ClientSession, scenario: dict[str, An
     await _delete_preview_run(session, scenario, baseline["run_id"])
 
 
-async def _run_dataset_quality_inspection(session: ClientSession, scenario: dict[str, Any], images_dir: Path) -> None:
+async def _run_dataset_quality_inspection(session: Client, scenario: dict[str, Any], images_dir: Path) -> None:
     image_paths = _write_real_sample_inputs(images_dir, scenario)
     dataset_path = image_paths[0].parent
     clipped_path = dataset_path / "clipped.png"
@@ -1289,7 +1287,7 @@ def _assert_annotation_onboarding_report(
         raise AssertionError(f"{scenario['name']} onboarding did not detect COCO annotations: {report}")
 
 
-async def _run_host_smoke(session: ClientSession, scenario: dict[str, Any]) -> None:
+async def _run_host_smoke(session: Client, scenario: dict[str, Any]) -> None:
     smoke_report = await _call_tool_json(
         session,
         "run_host_smoke_check",
@@ -1310,7 +1308,7 @@ async def _run_host_smoke(session: ClientSession, scenario: dict[str, Any]) -> N
         raise AssertionError(f"{scenario['name']} host smoke returned unsafe preview request: {smoke_report}")
 
 
-async def _run_diagnostics_smoke(session: ClientSession, scenario: dict[str, Any]) -> None:
+async def _run_diagnostics_smoke(session: Client, scenario: dict[str, Any]) -> None:
     diagnostics_resources = scenario.get("diagnostics_resources", [])
     expected_resources = {
         "albumentationsx://diagnostics/guide",
@@ -1360,7 +1358,7 @@ async def _run_diagnostics_smoke(session: ClientSession, scenario: dict[str, Any
 
 
 async def _run_dataset_scoring_and_preview_report(
-    session: ClientSession,
+    session: Client,
     scenario: dict[str, Any],
     baseline_run_id: str,
     candidate_run_ids: list[str],
@@ -1437,7 +1435,7 @@ def _assert_preview_report_feedback(scenario: dict[str, Any], content: str) -> N
 
 
 async def _record_tuning_decision_and_report(
-    session: ClientSession,
+    session: Client,
     scenario: dict[str, Any],
     baseline_run_id: str,
     candidate_run_id: str,
@@ -1476,12 +1474,12 @@ async def _record_tuning_decision_and_report(
             raise AssertionError(f"{scenario['name']} report did not include decision: {report}")
 
 
-async def _call_tool_json(session: ClientSession, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+async def _call_tool_json(session: Client, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
     result = await session.call_tool(name, arguments)
-    if result.isError:
+    if result.is_error:
         raise AssertionError(f"{name} returned MCP error: {result.content}")
-    if result.structuredContent is not None:
-        return result.structuredContent
+    if result.structured_content is not None:
+        return result.structured_content
     for content in result.content:
         if getattr(content, "type", None) == "text":
             text = getattr(content, "text", None)
@@ -1490,8 +1488,8 @@ async def _call_tool_json(session: ClientSession, name: str, arguments: dict[str
     raise AssertionError(f"{name} returned no JSON content: {result.content}")
 
 
-async def _read_resource_json(session: ClientSession, uri: str) -> Any:
-    result = await session.read_resource(AnyUrl(uri))
+async def _read_resource_json(session: Client, uri: str) -> Any:
+    result = await session.read_resource(uri)
     for content in result.contents:
         text = getattr(content, "text", None)
         if isinstance(text, str):

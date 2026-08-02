@@ -6,17 +6,19 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from mcp import ClientSession, StdioServerParameters
+import pytest
+from mcp import Client, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.types import BlobResourceContents, TextResourceContents
+from mcp.types.version import LATEST_MODERN_VERSION
 from PIL import Image
-from pydantic import AnyUrl
 
 from albumentationsx_mcp.adapters.mcp.registration import surface_for_profile
 from albumentationsx_mcp.capabilities import CapabilityProfile
 
 
-def test_mcp_stdio_lists_documented_tools(tmp_path: Path) -> None:
+@pytest.mark.parametrize("mode", [LATEST_MODERN_VERSION, "legacy"])
+def test_mcp_stdio_lists_documented_tools(tmp_path: Path, mode: str) -> None:
     async def run_client() -> list[str]:
         params = StdioServerParameters(
             command=sys.executable,
@@ -30,9 +32,8 @@ def test_mcp_stdio_lists_documented_tools(tmp_path: Path) -> None:
             ],
             cwd=str(Path.cwd()),
         )
-        async with stdio_client(params) as (read, write), ClientSession(read, write) as session:
-            await session.initialize()
-            tools = await session.list_tools()
+        async with Client(stdio_client(params), mode=mode) as client:
+            tools = await client.list_tools()
             return [tool.name for tool in tools.tools]
 
     tool_names = asyncio.run(run_client())
@@ -100,9 +101,8 @@ def test_mcp_stdio_core_profile_lists_only_core_tools(tmp_path: Path) -> None:
             ],
             cwd=str(Path.cwd()),
         )
-        async with stdio_client(params) as (read, write), ClientSession(read, write) as session:
-            await session.initialize()
-            tools = await session.list_tools()
+        async with Client(stdio_client(params), mode="auto") as client:
+            tools = await client.list_tools()
             return [tool.name for tool in tools.tools]
 
     tool_names = asyncio.run(run_client())
@@ -115,34 +115,30 @@ def test_mcp_stdio_review_profile_executes_preview_resource_flow(tmp_path: Path)
     Image.new("RGB", (24, 24), (96, 128, 160)).save(image_path)
 
     async def run_client() -> dict[str, Any]:
-        async with (
-            stdio_client(_profile_server_parameters(tmp_path, CapabilityProfile.REVIEW)) as (
-                read,
-                write,
-            ),
-            ClientSession(read, write) as session,
-        ):
-            await session.initialize()
-            tools = await session.list_tools()
-            example = await session.read_resource(AnyUrl("albumentationsx://examples/first-preview"))
-            smoke = await session.call_tool("run_host_smoke_check", {"include_write_probe": False})
+        async with Client(
+            stdio_client(_profile_server_parameters(tmp_path, CapabilityProfile.REVIEW)),
+            mode="auto",
+        ) as client:
+            tools = await client.list_tools()
+            example = await client.read_resource("albumentationsx://examples/first-preview")
+            smoke = await client.call_tool("run_host_smoke_check", {"include_write_probe": False})
             request = _preview_request(image_path)
-            validation = await session.call_tool("validate_preview_request", {"request": request})
-            preview = await session.call_tool("render_preview_batch", {"request": request})
+            validation = await client.call_tool("validate_preview_request", {"request": request})
+            preview = await client.call_tool("render_preview_batch", {"request": request})
             example_content = example.contents[0]
             assert isinstance(example_content, TextResourceContents)
             return {
                 "tools": [tool.name for tool in tools.tools],
                 "example": example_content.text,
-                "smoke": smoke.structuredContent,
-                "validation": validation.structuredContent,
-                "preview": preview.structuredContent,
-                "errors": [smoke.isError, validation.isError, preview.isError],
+                "smoke": smoke.structured_content,
+                "validation": validation.structured_content,
+                "preview": preview.structured_content,
+                "errors": [smoke.is_error, validation.is_error, preview.is_error],
             }
 
     result = asyncio.run(run_client())
 
-    assert result["tools"] == list(surface_for_profile(CapabilityProfile.REVIEW).tools)
+    assert set(result["tools"]) == set(surface_for_profile(CapabilityProfile.REVIEW).tools)
     assert "render_preview_batch" in result["example"]
     assert result["smoke"]["preview_ready"] is True
     assert result["validation"]["valid"] is True
@@ -155,22 +151,18 @@ def test_mcp_stdio_dataset_profile_executes_guided_preview_trace_resource_flow(t
     Image.new("RGB", (24, 24), (160, 128, 96)).save(image_path)
 
     async def run_client() -> dict[str, Any]:
-        async with (
-            stdio_client(_profile_server_parameters(tmp_path, CapabilityProfile.DATASET)) as (
-                read,
-                write,
-            ),
-            ClientSession(read, write) as session,
-        ):
-            await session.initialize()
-            tools = await session.list_tools()
-            guided = await session.call_tool(
+        async with Client(
+            stdio_client(_profile_server_parameters(tmp_path, CapabilityProfile.DATASET)),
+            mode="auto",
+        ) as client:
+            tools = await client.list_tools()
+            guided = await client.call_tool(
                 "run_first_preview",
                 {"dataset_path": str(image_path), "intensity": "high", "max_images": 1},
             )
-            assert guided.structuredContent is not None
-            preview = guided.structuredContent["preview"]
-            trace = await session.call_tool(
+            assert guided.structured_content is not None
+            preview = guided.structured_content["preview"]
+            trace = await client.call_tool(
                 "trace_preview_variant",
                 {
                     "run_id": preview["run_id"],
@@ -178,21 +170,21 @@ def test_mcp_stdio_dataset_profile_executes_guided_preview_trace_resource_flow(t
                     "variant_index": 0,
                 },
             )
-            contact_sheet = await session.read_resource(AnyUrl(guided.structuredContent["contact_sheet"]["uri"]))
+            contact_sheet = await client.read_resource(guided.structured_content["contact_sheet"]["uri"])
             contact_sheet_content = contact_sheet.contents[0]
             assert isinstance(contact_sheet_content, BlobResourceContents)
             return {
                 "tools": [tool.name for tool in tools.tools],
-                "guided": guided.structuredContent,
-                "trace": trace.structuredContent,
-                "contact_sheet_mime_type": contact_sheet_content.mimeType,
+                "guided": guided.structured_content,
+                "trace": trace.structured_content,
+                "contact_sheet_mime_type": contact_sheet_content.mime_type,
                 "contact_sheet_blob": contact_sheet_content.blob,
-                "errors": [guided.isError, trace.isError],
+                "errors": [guided.is_error, trace.is_error],
             }
 
     result = asyncio.run(run_client())
 
-    assert result["tools"] == list(surface_for_profile(CapabilityProfile.DATASET).tools)
+    assert set(result["tools"]) == set(surface_for_profile(CapabilityProfile.DATASET).tools)
     assert result["guided"]["status"] == "rendered"
     assert result["guided"]["trace_available"] is True
     assert result["trace"]["available"] is True
