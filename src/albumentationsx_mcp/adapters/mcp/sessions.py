@@ -1,4 +1,4 @@
-"""FastMCP tuning session, feedback, decision, and retention registration."""
+"""MCP tuning session, feedback, decision, and retention registration."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from albumentationsx_mcp.models import QualityProfileName
 from albumentationsx_mcp.tuning import build_tuning_session_summary
 
 if TYPE_CHECKING:
-    from mcp.server.fastmcp import FastMCP
+    from mcp.server import MCPServer
 
     from albumentationsx_mcp.preview import PreviewService
     from albumentationsx_mcp.review import PreviewFeedbackStore
@@ -49,7 +49,7 @@ SURFACE = AdapterSurface(
 
 
 def register_session_adapter(
-    mcp: FastMCP,
+    mcp: MCPServer,
     *,
     preview_service: PreviewService,
     tuning_store: TuningDecisionStore,

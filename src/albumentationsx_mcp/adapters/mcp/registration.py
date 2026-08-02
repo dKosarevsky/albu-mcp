@@ -1,11 +1,11 @@
-"""Ordered, atomic composition of the public FastMCP adapter surface."""
+"""Ordered, atomic composition of the public MCP adapter surface."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 
 from albumentationsx_mcp.adapters.mcp.catalog import SURFACE as CATALOG_SURFACE
 from albumentationsx_mcp.adapters.mcp.catalog import register_catalog_adapter
@@ -130,7 +130,7 @@ class _ManagerState:
 
 
 def register_mcp_adapters(
-    mcp: FastMCP,
+    mcp: MCPServer,
     dependencies: McpDependencies,
     *,
     profile: CapabilityProfile = CapabilityProfile.FULL,
@@ -151,7 +151,7 @@ def register_mcp_adapters(
     _raise_on_collisions(initial_surface, declared_surface)
 
     try:
-        staged = FastMCP("AlbumentationsX MCP registration staging")
+        staged = MCPServer("AlbumentationsX MCP registration staging")
         _register_adapters(staged, dependencies)
         _verify_staged_surface(staged)
         selected = _select_manager_state(_capture_manager_state(staged), declared_surface)
@@ -184,7 +184,7 @@ def public_surface_for_profile(profile: CapabilityProfile) -> PublicSurface:
     )
 
 
-def _register_adapters(mcp: FastMCP, dependencies: McpDependencies) -> None:
+def _register_adapters(mcp: MCPServer, dependencies: McpDependencies) -> None:
     available_tools = set(dependencies.diagnostics_service.public_surface.tools)
     register_catalog_adapter(mcp, catalog=dependencies.catalog, available_tools=available_tools)
     register_policy_adapter(
@@ -225,7 +225,7 @@ def _register_adapters(mcp: FastMCP, dependencies: McpDependencies) -> None:
     register_prompt_adapter(mcp, available_tools=available_tools)
 
 
-def _capture_manager_state(mcp: FastMCP) -> _ManagerState:
+def _capture_manager_state(mcp: MCPServer) -> _ManagerState:
     return _ManagerState(
         tools=dict(mcp._tool_manager._tools),  # noqa: SLF001
         resources=dict(mcp._resource_manager._resources),  # noqa: SLF001
@@ -243,7 +243,7 @@ def _surface_from_state(state: _ManagerState) -> CombinedSurface:
     )
 
 
-def _registered_surface(mcp: FastMCP) -> CombinedSurface:
+def _registered_surface(mcp: MCPServer) -> CombinedSurface:
     return CombinedSurface(
         tools=tuple(mcp._tool_manager._tools),  # noqa: SLF001
         resources=tuple(str(uri) for uri in mcp._resource_manager._resources),  # noqa: SLF001
@@ -264,7 +264,7 @@ def _raise_on_collisions(existing: CombinedSurface, declared: CombinedSurface) -
             raise ValueError(msg)
 
 
-def _verify_staged_surface(mcp: FastMCP) -> None:
+def _verify_staged_surface(mcp: MCPServer) -> None:
     actual = _registered_surface(mcp)
     if actual != COMBINED_SURFACE:
         msg = f"staged MCP surface does not match full declaration: expected {COMBINED_SURFACE!r}, got {actual!r}"
@@ -272,7 +272,7 @@ def _verify_staged_surface(mcp: FastMCP) -> None:
 
 
 def _verify_registered_surface(
-    mcp: FastMCP,
+    mcp: MCPServer,
     initial: CombinedSurface,
     declared: CombinedSurface,
 ) -> None:
@@ -303,7 +303,7 @@ def _select_manager_state(state: _ManagerState, surface: CombinedSurface) -> _Ma
     )
 
 
-def _append_manager_state(mcp: FastMCP, state: _ManagerState) -> None:
+def _append_manager_state(mcp: MCPServer, state: _ManagerState) -> None:
     managers = (
         (mcp._tool_manager._tools, state.tools),  # noqa: SLF001
         (mcp._resource_manager._resources, state.resources),  # noqa: SLF001
@@ -314,7 +314,7 @@ def _append_manager_state(mcp: FastMCP, state: _ManagerState) -> None:
         registered.update(selected)
 
 
-def _restore_manager_state(mcp: FastMCP, state: _ManagerState) -> None:
+def _restore_manager_state(mcp: MCPServer, state: _ManagerState) -> None:
     managers = (
         (mcp._tool_manager._tools, state.tools),  # noqa: SLF001
         (mcp._resource_manager._resources, state.resources),  # noqa: SLF001

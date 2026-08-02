@@ -1,4 +1,4 @@
-"""FastMCP prompt registration."""
+"""MCP prompt registration."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ from albumentationsx_mcp.prompts import (
 )
 
 if TYPE_CHECKING:
-    from mcp.server.fastmcp import FastMCP
+    from mcp.server import MCPServer
 
 _PROMPTS = (
     "build_robustness_augmentation_session",
@@ -39,7 +39,7 @@ SURFACE = AdapterSurface(
 )
 
 
-def register_prompt_adapter(mcp: FastMCP, *, available_tools: set[str] | None = None) -> None:
+def register_prompt_adapter(mcp: MCPServer, *, available_tools: set[str] | None = None) -> None:
     """Register the public agent workflow prompts."""
 
     @mcp.prompt()

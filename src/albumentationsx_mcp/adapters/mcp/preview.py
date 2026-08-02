@@ -1,4 +1,4 @@
-"""FastMCP preview, review, ranking, and report registration."""
+"""MCP preview, review, ranking, and report registration."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ from albumentationsx_mcp.review_agent import build_review_agent_plan
 from albumentationsx_mcp.review_agent import interpret_preview_feedback as interpret_feedback_note
 
 if TYPE_CHECKING:
-    from mcp.server.fastmcp import FastMCP
+    from mcp.server import MCPServer
 
     from albumentationsx_mcp.preview import ArtifactStore, PreviewService
     from albumentationsx_mcp.preview_validation import PreviewRequestValidator
@@ -77,7 +77,7 @@ SURFACE = AdapterSurface(
 
 
 def register_preview_adapter(  # noqa: PLR0913
-    mcp: FastMCP,
+    mcp: MCPServer,
     *,
     artifact_store: ArtifactStore,
     preview_service: PreviewService,

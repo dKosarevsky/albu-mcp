@@ -1,4 +1,4 @@
-"""FastMCP composition root for AlbumentationsX."""
+"""MCP composition root for AlbumentationsX."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 from pydantic import BaseModel, Field
 
 from albumentationsx_mcp.adapters.mcp.dependencies import McpDependencies
@@ -60,7 +60,7 @@ def settings_from_environment() -> ServerSettings:
 OutputFormat = Literal["python", "json", "yaml"]
 
 
-def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:
+def create_mcp_server(settings: ServerSettings | None = None) -> MCPServer:
     """Construct application services and register the public MCP surface."""
     settings = settings or settings_from_environment()
     public_surface = public_surface_for_profile(settings.capability_profile)
@@ -107,7 +107,7 @@ def create_mcp_server(settings: ServerSettings | None = None) -> FastMCP:
         report_service=report_service,
         diagnostics_service=diagnostics_service,
     )
-    mcp = FastMCP("AlbumentationsX MCP")
+    mcp = MCPServer("AlbumentationsX MCP")
     register_mcp_adapters(mcp, dependencies, profile=settings.capability_profile)
     return mcp
 

@@ -15,7 +15,7 @@ _TRANSPORT_BOUNDARIES = {
 _FORBIDDEN_DOMAIN_IMPORTS = (
     "albumentationsx_mcp.adapters",
     "argparse",
-    "mcp.server.fastmcp",
+    "mcp.server",
 )
 _CLI_COMPOSITION_MODULES = {
     "__init__.py",
