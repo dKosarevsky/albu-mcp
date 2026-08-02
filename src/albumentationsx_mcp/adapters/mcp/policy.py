@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Literal
 from albumentationsx_mcp.adapters.mcp.contracts import AdapterSurface, ProfileSurface
 from albumentationsx_mcp.advisor import explain_pipeline
 from albumentationsx_mcp.capabilities import CORE_PROFILE_MEMBERSHIP, REVIEW_PROFILE_MEMBERSHIP
-from albumentationsx_mcp.models import ComposeSpec, TargetSpec
+from albumentationsx_mcp.models import ComposeSpec, TargetSpec, TensorInputContract
 from albumentationsx_mcp.policy_assistant import (
     plan_augmentation_policy,
     plan_augmentation_policy_candidates,
@@ -78,11 +78,20 @@ def register_policy_adapter(
         )
 
     @mcp.tool()
-    def validate_pipeline(pipeline: dict[str, Any], target: dict[str, Any] | None = None) -> dict[str, Any]:
-        """Validate a pipeline spec before previewing or exporting it."""
+    def validate_pipeline(
+        pipeline: dict[str, Any],
+        target: dict[str, Any] | None = None,
+        input_contract: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Validate a pipeline spec and optional CPU Tensor boundary before export."""
         spec = ComposeSpec.model_validate(pipeline)
         target_spec = TargetSpec.model_validate(target or {})
-        return pipeline_service.validate_pipeline(spec, target_spec).model_dump(mode="json", exclude_none=True)
+        tensor_contract = TensorInputContract.model_validate(input_contract) if input_contract is not None else None
+        return pipeline_service.validate_pipeline(
+            spec,
+            target_spec,
+            input_contract=tensor_contract,
+        ).model_dump(mode="json", exclude_none=True)
 
     @mcp.tool(name="recommend_pipeline")
     def recommend_pipeline_tool(
@@ -170,7 +179,19 @@ def register_policy_adapter(
         ).model_dump(mode="json", exclude_none=True)
 
     @mcp.tool()
-    def export_pipeline(pipeline: dict[str, Any], output_format: OutputFormat = "python") -> dict[str, Any]:
-        """Export a validated pipeline as Python, JSON, or YAML."""
+    def export_pipeline(
+        pipeline: dict[str, Any],
+        output_format: OutputFormat = "python",
+        target: dict[str, Any] | None = None,
+        input_contract: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Export a validated pipeline, optionally as a guarded CPU Tensor Python handoff."""
         spec = ComposeSpec.model_validate(pipeline)
-        return pipeline_service.export_pipeline(spec, output_format=output_format).model_dump(mode="json")
+        target_spec = TargetSpec.model_validate(target) if target is not None else None
+        tensor_contract = TensorInputContract.model_validate(input_contract) if input_contract is not None else None
+        return pipeline_service.export_pipeline(
+            spec,
+            output_format=output_format,
+            target=target_spec,
+            input_contract=tensor_contract,
+        ).model_dump(mode="json")

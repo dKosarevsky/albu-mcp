@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 import pytest
 
@@ -196,3 +196,53 @@ def test_validate_pipeline_rejects_terminal_tensor_transform(name: str) -> None:
     assert report.tensor_compatibility is not None
     assert report.errors[0].code == "terminal_tensor_transform_redundant"
     assert "remove" in report.tensor_compatibility.transforms[0].reason.lower()
+
+
+def test_export_pipeline_generates_guarded_cpu_tensor_handoff() -> None:
+    service = PipelineService(_CapabilityCatalog({"NoOp": _TensorTransform}))
+    pipeline = ComposeSpec(transforms=[TransformSpec(name="NoOp")], seed=17)
+    input_contract = _contract(
+        _image(),
+        TensorTargetContract(name="mask", shape=[None, None], dtype="int64"),
+    )
+
+    exported = service.export_pipeline(
+        pipeline,
+        output_format="python",
+        target=TargetSpec(targets=["image", "mask"]),
+        input_contract=input_contract,
+    )
+
+    assert "import torch" in exported.content
+    assert "def augment(image: torch.Tensor, mask: torch.Tensor) -> dict[str, torch.Tensor]:" in exported.content
+    assert "image.device.type != 'cpu'" in exported.content
+    assert "image.requires_grad" in exported.content
+    assert "image.dtype is not torch.uint8" in exported.content
+    assert "image.ndim != 3" in exported.content
+    assert "expected_shape = (3, None, None)" in exported.content
+    assert "return transform(image=image, mask=mask)" in exported.content
+    assert "ToTensorV2" not in exported.content
+    compile(exported.content, "<tensor-export>", "exec")
+
+
+def test_export_pipeline_rejects_incompatible_cpu_tensor_handoff() -> None:
+    service = PipelineService(_CapabilityCatalog({"HorizontalFlip": _UnsupportedTensorTransform}))
+
+    with pytest.raises(ValueError, match="cpu_tensor_transform_unsupported"):
+        service.export_pipeline(
+            ComposeSpec(transforms=[TransformSpec(name="HorizontalFlip")]),
+            output_format="python",
+            input_contract=_contract(_image()),
+        )
+
+
+@pytest.mark.parametrize("output_format", ["json", "yaml"])
+def test_export_pipeline_limits_cpu_tensor_handoff_to_python(output_format: Literal["json", "yaml"]) -> None:
+    service = PipelineService(_CapabilityCatalog({"NoOp": _TensorTransform}))
+
+    with pytest.raises(ValueError, match="only as Python"):
+        service.export_pipeline(
+            ComposeSpec(transforms=[TransformSpec(name="NoOp")]),
+            output_format=output_format,
+            input_contract=_contract(_image()),
+        )
