@@ -192,6 +192,12 @@
       "uri": "albumentationsx://examples/review-loop"
     },
     {
+      "description": "Return the CPU Tensor Compose validation and export example.",
+      "mime_type": "text/plain",
+      "name": "torch_cpu_compose_example",
+      "uri": "albumentationsx://examples/torch-cpu-compose"
+    },
+    {
       "description": "Return structured feedback tags accepted by adjustment tools.",
       "mime_type": "text/plain",
       "name": "feedback_tags_resource",
@@ -570,10 +576,23 @@
       }
     },
     {
-      "description": "Export a validated pipeline as Python, JSON, or YAML.",
+      "description": "Export a validated pipeline, optionally as a guarded CPU Tensor Python handoff.",
       "name": "export_pipeline",
       "parameters": {
         "properties": {
+          "input_contract": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Input Contract"
+          },
           "output_format": {
             "default": "python",
             "enum": [
@@ -588,6 +607,19 @@
             "additionalProperties": true,
             "title": "Pipeline",
             "type": "object"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Target"
           }
         },
         "required": [
@@ -788,7 +820,8 @@
               "dataset-onboarding",
               "diagnostics",
               "review-loop",
-              "report-handoff"
+              "report-handoff",
+              "torch-cpu-compose"
             ],
             "title": "Example Id",
             "type": "string"
@@ -2060,10 +2093,23 @@
       }
     },
     {
-      "description": "Validate a pipeline spec before previewing or exporting it.",
+      "description": "Validate a pipeline spec and optional CPU Tensor boundary before export.",
       "name": "validate_pipeline",
       "parameters": {
         "properties": {
+          "input_contract": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Input Contract"
+          },
           "pipeline": {
             "additionalProperties": true,
             "title": "Pipeline",

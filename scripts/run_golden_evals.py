@@ -86,6 +86,9 @@ async def _run_scenario(  # noqa: PLR0911, PLR0912
         await _run_client_smoke(session, scenario)
     if scenario.get("diagnostics_smoke"):
         await _run_diagnostics_smoke(session, scenario)
+    if scenario.get("torch_cpu_compose_smoke"):
+        await _run_torch_cpu_compose_smoke(session, scenario)
+        return
     if scenario.get("first_preview_smoke"):
         await _run_first_preview_smoke(session, scenario, images_dir)
         return
@@ -142,6 +145,49 @@ async def _run_scenario(  # noqa: PLR0911, PLR0912
 
     if scenario.get("preview"):
         await _run_preview_lifecycle(session, scenario, images_dir, pipeline)
+
+
+async def _run_torch_cpu_compose_smoke(session: ClientSession, scenario: dict[str, Any]) -> None:
+    playbook = await _read_resource_json(session, "albumentationsx://examples/torch-cpu-compose")
+    if [step["tool"] for step in playbook["steps"]] != ["validate_pipeline", "export_pipeline"]:
+        raise AssertionError(f"{scenario['name']} returned the wrong Tensor Compose workflow: {playbook}")
+
+    pipeline = {"transforms": [{"name": "NoOp", "p": 1.0}]}
+    target = {"targets": scenario["targets"]}
+    input_contract = {
+        "representation": "torch",
+        "device": "cpu",
+        "requires_grad": False,
+        "targets": [{"name": "image", "shape": [3, None, None], "dtype": "uint8"}],
+    }
+    validation = await _call_tool_json(
+        session,
+        "validate_pipeline",
+        {"pipeline": pipeline, "target": target, "input_contract": input_contract},
+    )
+    tensor_compatibility = validation.get("tensor_compatibility", {})
+    status = tensor_compatibility.get("status")
+    if status == "runtime_unavailable":
+        issue_codes = {issue["code"] for issue in validation.get("errors", [])}
+        if "cpu_tensor_runtime_unavailable" not in issue_codes:
+            raise AssertionError(f"{scenario['name']} returned no runtime remediation: {validation}")
+        return
+    if status != "compatible" or validation.get("valid") is not True:
+        raise AssertionError(f"{scenario['name']} returned an unexpected compatibility result: {validation}")
+
+    exported = await _call_tool_json(
+        session,
+        "export_pipeline",
+        {
+            "pipeline": pipeline,
+            "output_format": "python",
+            "target": target,
+            "input_contract": input_contract,
+        },
+    )
+    if "import torch" not in exported["content"] or "def augment(" not in exported["content"]:
+        raise AssertionError(f"{scenario['name']} returned an incomplete Tensor handoff: {exported}")
+    compile(exported["content"], "<golden-tensor-export>", "exec")
 
 
 async def _run_preview_lifecycle(

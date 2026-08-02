@@ -381,7 +381,7 @@ def test_combined_adapter_surface_matches_canonical_counts() -> None:
         "prompts",
     )
     assert len(COMBINED_SURFACE.tools) == 47
-    assert len(COMBINED_SURFACE.resources) == 20
+    assert len(COMBINED_SURFACE.resources) == 21
     assert len(COMBINED_SURFACE.resource_templates) == 2
     assert len(COMBINED_SURFACE.prompts) == 5
 

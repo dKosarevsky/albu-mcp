@@ -4,6 +4,11 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 ## Unreleased
 
+- Added runtime-aware CPU `torch.Tensor` compatibility to `validate_pipeline`, including shape, dtype, device,
+  autograd, spatial-target, per-transform target, and channel checks with structured remediation.
+- Added fail-closed guarded Python export and the `torch-cpu-compose` workflow resource/fallback example without
+  introducing a separate Tensor execution tool.
+
 ## 1.20.0 - 2026-08-01
 
 - Added the guided `run_first_preview` use case for a bounded, validated path from host smoke to contact-sheet review.

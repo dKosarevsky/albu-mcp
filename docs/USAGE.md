@@ -19,6 +19,10 @@ For a single read-only preflight, call `run_host_smoke_check` and continue only 
 `run_first_preview` for one real local image or image directory in the default `full` or `dataset` profile. The `review`
 profile uses the explicit manual fallback below, or the host can restart with `dataset` or `full`.
 
+For PyTorch training code, the runtime-aware `validate_pipeline -> export_pipeline` path is documented in
+[TORCH_CPU_COMPOSE.md](TORCH_CPU_COMPOSE.md). It validates AlbumentationsX CPU Tensor capabilities without passing
+live Tensor objects through MCP.
+
 Use `examples/claude_desktop_config.json` as a starting point and replace `/path/to/albu-mcp` with the repository path:
 
 ```json

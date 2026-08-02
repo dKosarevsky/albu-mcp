@@ -23,6 +23,14 @@ scenarios:
       - albumentationsx://diagnostics/guide
       - albumentationsx://capabilities
 
+  - name: torch_cpu_compose_contract_flow
+    task: classification
+    intensity: low
+    targets: ["image"]
+    export_format: python
+    preview: false
+    torch_cpu_compose_smoke: true
+
   - name: first_preview_resource_prompt_flow
     task: classification
     intensity: low

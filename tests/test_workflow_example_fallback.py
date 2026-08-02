@@ -19,6 +19,7 @@ _EXPECTED_EXAMPLE_IDS = (
     "diagnostics",
     "review-loop",
     "report-handoff",
+    "torch-cpu-compose",
 )
 
 

@@ -45,12 +45,14 @@ _RESOURCES = (
     "albumentationsx://examples/diagnostics",
     "albumentationsx://examples/review-loop",
     "albumentationsx://examples/report-handoff",
+    "albumentationsx://examples/torch-cpu-compose",
 )
 _CORE_RESOURCES = (
     "albumentationsx://capabilities",
     "albumentationsx://diagnostics/guide",
     "albumentationsx://examples/client-smoke",
     "albumentationsx://examples/diagnostics",
+    "albumentationsx://examples/torch-cpu-compose",
 )
 _REVIEW_RESOURCES = (
     "albumentationsx://workflows/catalog",
@@ -172,6 +174,11 @@ def register_diagnostics_adapter(
     def report_handoff_example() -> str:
         """Return the visual report handoff host example."""
         return get_host_example("report-handoff").model_dump_json()
+
+    @mcp.resource("albumentationsx://examples/torch-cpu-compose")
+    def torch_cpu_compose_example() -> str:
+        """Return the CPU Tensor Compose validation and export example."""
+        return get_host_example("torch-cpu-compose").model_dump_json()
 
     @mcp.tool(name="diagnose_environment")
     def diagnose_environment_tool(include_write_probe: bool = True) -> dict[str, Any]:  # noqa: FBT001, FBT002

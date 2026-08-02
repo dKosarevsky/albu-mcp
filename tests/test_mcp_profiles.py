@@ -17,10 +17,10 @@ from albumentationsx_mcp.capabilities import CapabilityProfile
 from albumentationsx_mcp.server import ServerSettings, create_mcp_server
 
 _EXPECTED_COUNTS = {
-    CapabilityProfile.CORE: (16, 9, 1, 0),
-    CapabilityProfile.REVIEW: (43, 19, 2, 5),
-    CapabilityProfile.DATASET: (27, 11, 2, 0),
-    CapabilityProfile.FULL: (47, 20, 2, 5),
+    CapabilityProfile.CORE: (16, 10, 1, 0),
+    CapabilityProfile.REVIEW: (43, 20, 2, 5),
+    CapabilityProfile.DATASET: (27, 12, 2, 0),
+    CapabilityProfile.FULL: (47, 21, 2, 5),
 }
 
 _SINGLE_TOOL_REFERENCE_KEYS = {"primary_tool", "recommended_next_tool", "tool", "v2_tool"}
@@ -107,6 +107,10 @@ _WORKFLOW_RESOURCE_TOOL_DEPENDENCIES = {
     },
     "albumentationsx://examples/report-handoff": {
         "export_preview_report",
+        "export_pipeline",
+    },
+    "albumentationsx://examples/torch-cpu-compose": {
+        "validate_pipeline",
         "export_pipeline",
     },
 }

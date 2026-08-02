@@ -62,6 +62,7 @@ If setup fails, read `albumentationsx://diagnostics/guide` and call `diagnose_en
 - Deterministic previews, contact sheets, annotation overlays, comparison, ranking, and reports.
 - Interactive MCP Apps review with a text-only fallback for other hosts.
 - Structured feedback, tuning sessions, and Python, JSON, or YAML export.
+- Runtime-aware CPU `torch.Tensor` pipeline validation and guarded Python handoff.
 - Stable agent workflow resources, prompts, diagnostics, and reviewed contract snapshots.
 
 The server does not execute arbitrary Python, fetch remote images, overwrite datasets, or train models. Reads are restricted by `--allowed-root`; generated files stay under `--artifact-root`.
@@ -79,6 +80,7 @@ The server does not execute arbitrary Python, fetch remote images, overwrite dat
 - [Runtime settings and capability profiles](docs/CONFIGURATION.md)
 - [First 10 minutes](docs/FIRST_10_MINUTES.md)
 - [Usage](docs/USAGE.md) and [recipes](docs/RECIPES.md)
+- [CPU Tensor Compose validation and export](docs/TORCH_CPU_COMPOSE.md)
 - [MCP Apps review](docs/MCP_APPS_REVIEW.md) and [compatibility policy](docs/COMPATIBILITY.md)
 - [Documentation index](docs/INDEX.md)
 - [CHANGELOG.md](CHANGELOG.md)
