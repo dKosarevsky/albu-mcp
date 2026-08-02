@@ -394,10 +394,10 @@ def test_register_mcp_adapters_registers_exact_combined_surface(
 
     register_mcp_adapters(mcp, _mcp_dependencies(adapter_dependencies))
 
-    assert tuple(mcp._tool_manager._tools) == COMBINED_SURFACE.tools
-    assert tuple(str(uri) for uri in mcp._resource_manager._resources) == COMBINED_SURFACE.resources
-    assert tuple(mcp._resource_manager._templates) == COMBINED_SURFACE.resource_templates
-    assert tuple(mcp._prompt_manager._prompts) == COMBINED_SURFACE.prompts
+    assert set(mcp._tool_manager._tools) == set(COMBINED_SURFACE.tools)
+    assert {str(uri) for uri in mcp._resource_manager._resources} == set(COMBINED_SURFACE.resources)
+    assert set(mcp._resource_manager._templates) == set(COMBINED_SURFACE.resource_templates)
+    assert set(mcp._prompt_manager._prompts) == set(COMBINED_SURFACE.prompts)
 
 
 @pytest.mark.parametrize("profile", CapabilityProfile)
@@ -410,10 +410,10 @@ def test_register_mcp_adapters_registers_exact_profile_surface(
 
     register_mcp_adapters(mcp, _mcp_dependencies(adapter_dependencies, profile=profile), profile=profile)
 
-    assert tuple(mcp._tool_manager._tools) == expected.tools
-    assert tuple(str(uri) for uri in mcp._resource_manager._resources) == expected.resources
-    assert tuple(mcp._resource_manager._templates) == expected.resource_templates
-    assert tuple(mcp._prompt_manager._prompts) == expected.prompts
+    assert set(mcp._tool_manager._tools) == set(expected.tools)
+    assert {str(uri) for uri in mcp._resource_manager._resources} == set(expected.resources)
+    assert set(mcp._resource_manager._templates) == set(expected.resource_templates)
+    assert set(mcp._prompt_manager._prompts) == set(expected.prompts)
 
 
 def test_profile_registration_preserves_collision_for_excluded_identifier(

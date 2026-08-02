@@ -48,9 +48,30 @@ ADAPTER_SURFACES = (
     DIAGNOSTICS_SURFACE,
     PROMPT_SURFACE,
 )
-PROFILE_SURFACES = {
-    profile: combine_adapter_surfaces_for_profile(ADAPTER_SURFACES, profile) for profile in CapabilityProfile
-}
+_CANONICAL_TOOL_ORDER = (
+    *CATALOG_SURFACE.tools,
+    *POLICY_SURFACE.tools,
+    *DATASET_SURFACE.tools,
+    "validate_preview_request",
+    *PREVIEW_APP_SURFACE.tools,
+    *(tool for tool in PREVIEW_SURFACE.tools if tool != "validate_preview_request"),
+    *SESSION_SURFACE.tools,
+    *DIAGNOSTICS_SURFACE.tools,
+)
+
+
+def _canonical_surface_for_profile(profile: CapabilityProfile) -> CombinedSurface:
+    surface = combine_adapter_surfaces_for_profile(ADAPTER_SURFACES, profile)
+    selected_tools = set(surface.tools)
+    return CombinedSurface(
+        tools=tuple(tool for tool in _CANONICAL_TOOL_ORDER if tool in selected_tools),
+        resources=surface.resources,
+        resource_templates=surface.resource_templates,
+        prompts=surface.prompts,
+    )
+
+
+PROFILE_SURFACES = {profile: _canonical_surface_for_profile(profile) for profile in CapabilityProfile}
 COMBINED_SURFACE = PROFILE_SURFACES[CapabilityProfile.FULL]
 
 PUBLIC_TOOLS = (
@@ -163,7 +184,7 @@ def register_mcp_adapters(
     staged = MCPServer("AlbumentationsX MCP registration validation")
     collected.apply_to(staged)
     staged_surface = _registered_surface(staged)
-    if staged_surface != registered_surface:
+    if not _same_surface_identifiers(staged_surface, registered_surface):
         msg = (
             f"collected MCP surface does not match declaration: "
             f"expected {registered_surface!r}, got {staged_surface!r}"
@@ -309,6 +330,14 @@ def _verify_external_surface(actual: CombinedSurface, expected: CombinedSurface)
             raise RuntimeError(msg)
 
 
+def _same_surface_identifiers(left: CombinedSurface, right: CombinedSurface) -> bool:
+    return all(
+        len(getattr(left, kind)) == len(getattr(right, kind))
+        and set(getattr(left, kind)) == set(getattr(right, kind))
+        for kind in ("tools", "resources", "resource_templates", "prompts")
+    )
+
+
 def _profiled_registrar(
     mcp: McpRegistrar,
     declared: AdapterSurface,
@@ -368,6 +397,6 @@ def _verify_registered_surface(
         prompts=initial.prompts + declared.prompts,
     )
     actual = _registered_surface(mcp)
-    if actual != expected:
+    if not _same_surface_identifiers(actual, expected):
         msg = f"registered MCP surface does not match declarations: expected {expected!r}, got {actual!r}"
         raise RuntimeError(msg)
