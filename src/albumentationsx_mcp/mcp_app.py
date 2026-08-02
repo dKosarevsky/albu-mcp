@@ -18,6 +18,7 @@ class ResourceRegistrar(Protocol):
 
     resource: Any
 
+
 def preview_review_tool_meta() -> dict[str, Any]:
     """Return modern MCP Apps metadata for preview rendering tools."""
     return {
@@ -28,29 +29,23 @@ def preview_review_tool_meta() -> dict[str, Any]:
     }
 
 
-def register_preview_review_resources(mcp: ResourceRegistrar, artifact_store: ArtifactStore) -> None:
-    """Register the packaged review app and its verified image resource template."""
+def preview_review_resource_meta() -> dict[str, Any]:
+    """Return network-denying metadata for the packaged preview application."""
+    return {
+        "ui": {
+            "csp": {
+                "connectDomains": [],
+                "resourceDomains": [],
+                "frameDomains": [],
+                "baseUriDomains": [],
+            },
+            "prefersBorder": True,
+        }
+    }
 
-    @mcp.resource(
-        PREVIEW_REVIEW_APP_URI,
-        name="AlbumentationsX Preview Review",
-        description="Interactive review surface for rendered AlbumentationsX preview batches.",
-        mime_type=PREVIEW_REVIEW_APP_MIME_TYPE,
-        meta={
-            "ui": {
-                "csp": {
-                    "connectDomains": [],
-                    "resourceDomains": [],
-                    "frameDomains": [],
-                    "baseUriDomains": [],
-                },
-                "prefersBorder": True,
-            }
-        },
-    )
-    def preview_review_app() -> str:
-        """Return the self-contained preview review MCP App."""
-        return load_preview_review_html()
+
+def register_preview_artifact_resource(mcp: ResourceRegistrar, artifact_store: ArtifactStore) -> None:
+    """Register the verified image resource template used by the preview application."""
 
     @mcp.resource(
         PREVIEW_ARTIFACT_URI_TEMPLATE,

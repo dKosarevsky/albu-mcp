@@ -39,7 +39,7 @@ def test_full_profile_supports_modern_and_legacy_protocols(
             resource = await client.read_resource("albumentationsx://examples/client-smoke")
 
             assert client.protocol_version == expected_version
-            assert [tool.name for tool in tools.tools] == list(surface_for_profile(CapabilityProfile.FULL).tools)
+            assert {tool.name for tool in tools.tools} == set(surface_for_profile(CapabilityProfile.FULL).tools)
             assert tools.result_type == "complete"
             assert result.is_error is False
             assert result.result_type == "complete"

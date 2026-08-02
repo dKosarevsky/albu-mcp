@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, cast
 
 from mcp.server import MCPServer
 
+from albumentationsx_mcp.adapters.mcp.apps import SURFACE as PREVIEW_APP_SURFACE
+from albumentationsx_mcp.adapters.mcp.apps import register_preview_app_fallback
 from albumentationsx_mcp.adapters.mcp.catalog import SURFACE as CATALOG_SURFACE
 from albumentationsx_mcp.adapters.mcp.catalog import register_catalog_adapter
 from albumentationsx_mcp.adapters.mcp.contracts import (
@@ -40,6 +42,7 @@ ADAPTER_SURFACES = (
     CATALOG_SURFACE,
     POLICY_SURFACE,
     DATASET_SURFACE,
+    PREVIEW_APP_SURFACE,
     PREVIEW_SURFACE,
     SESSION_SURFACE,
     DIAGNOSTICS_SURFACE,
@@ -130,6 +133,7 @@ def register_mcp_adapters(
     dependencies: McpDependencies,
     *,
     profile: CapabilityProfile = CapabilityProfile.FULL,
+    external_surfaces: tuple[AdapterSurface, ...] = (),
 ) -> None:
     """Register one canonical profile on a fresh or collision-free MCP server."""
     validate_profiled_adapter_surfaces(ADAPTER_SURFACES)
@@ -142,20 +146,35 @@ def register_mcp_adapters(
             f"expected {expected_public_surface!r}, got {actual_public_surface!r}"
         )
         raise ValueError(msg)
+    external_adapter_names = _validate_external_surfaces(external_surfaces)
+    external_surface = (
+        combine_adapter_surfaces_for_profile(external_surfaces, profile) if external_surfaces else _empty_surface()
+    )
+    registered_surface = _subtract_surface(declared_surface, external_surface)
+
     collected = CollectedMcpRegistrar()
-    _register_adapters(collected, dependencies, profile=profile)
+    _register_adapters(
+        collected,
+        dependencies,
+        profile=profile,
+        external_adapter_names=external_adapter_names,
+    )
 
     staged = MCPServer("AlbumentationsX MCP registration validation")
     collected.apply_to(staged)
     staged_surface = _registered_surface(staged)
-    if staged_surface != declared_surface:
-        msg = f"collected MCP surface does not match declaration: expected {declared_surface!r}, got {staged_surface!r}"
+    if staged_surface != registered_surface:
+        msg = (
+            f"collected MCP surface does not match declaration: "
+            f"expected {registered_surface!r}, got {staged_surface!r}"
+        )
         raise RuntimeError(msg)
 
     initial_surface = _registered_surface(mcp)
-    _raise_on_collisions(initial_surface, declared_surface)
+    _verify_external_surface(initial_surface, external_surface)
+    _raise_on_collisions(initial_surface, registered_surface)
     collected.apply_to(mcp)
-    _verify_registered_surface(mcp, initial_surface, declared_surface)
+    _verify_registered_surface(mcp, initial_surface, registered_surface)
 
 
 def surface_for_profile(profile: CapabilityProfile) -> CombinedSurface:
@@ -185,6 +204,7 @@ def _register_adapters(
     dependencies: McpDependencies,
     *,
     profile: CapabilityProfile,
+    external_adapter_names: set[str],
 ) -> None:
     available_tools = set(dependencies.diagnostics_service.public_surface.tools)
     catalog_registrar = _profiled_registrar(mcp, CATALOG_SURFACE, profile)
@@ -209,6 +229,11 @@ def _register_adapters(
         available_tools=available_tools,
     )
     dataset_registrar.verify_complete()
+
+    if PREVIEW_APP_SURFACE.adapter not in external_adapter_names:
+        app_registrar = _profiled_registrar(mcp, PREVIEW_APP_SURFACE, profile)
+        register_preview_app_fallback(app_registrar, preview_service=dependencies.preview_service)
+        app_registrar.verify_complete()
 
     preview_registrar = _profiled_registrar(mcp, PREVIEW_SURFACE, profile)
     register_preview_adapter(
@@ -244,6 +269,44 @@ def _register_adapters(
     prompt_registrar = _profiled_registrar(mcp, PROMPT_SURFACE, profile)
     register_prompt_adapter(prompt_registrar, available_tools=available_tools)
     prompt_registrar.verify_complete()
+
+
+def _validate_external_surfaces(external_surfaces: tuple[AdapterSurface, ...]) -> set[str]:
+    canonical = {surface.adapter: surface for surface in ADAPTER_SURFACES}
+    names: set[str] = set()
+    for surface in external_surfaces:
+        if surface.adapter in names:
+            msg = f"duplicate external MCP adapter surface: {surface.adapter!r}"
+            raise ValueError(msg)
+        if canonical.get(surface.adapter) != surface:
+            msg = f"unknown or mismatched external MCP adapter surface: {surface.adapter!r}"
+            raise ValueError(msg)
+        names.add(surface.adapter)
+    return names
+
+
+def _empty_surface() -> CombinedSurface:
+    return CombinedSurface(tools=(), resources=(), resource_templates=(), prompts=())
+
+
+def _subtract_surface(surface: CombinedSurface, excluded: CombinedSurface) -> CombinedSurface:
+    return CombinedSurface(
+        tools=tuple(item for item in surface.tools if item not in set(excluded.tools)),
+        resources=tuple(item for item in surface.resources if item not in set(excluded.resources)),
+        resource_templates=tuple(
+            item for item in surface.resource_templates if item not in set(excluded.resource_templates)
+        ),
+        prompts=tuple(item for item in surface.prompts if item not in set(excluded.prompts)),
+    )
+
+
+def _verify_external_surface(actual: CombinedSurface, expected: CombinedSurface) -> None:
+    for kind in ("tools", "resources", "resource_templates", "prompts"):
+        missing = set(getattr(expected, kind)) - set(getattr(actual, kind))
+        if missing:
+            identifier = next(item for item in getattr(expected, kind) if item in missing)
+            msg = f"external MCP {kind} identifier {identifier!r} is not registered"
+            raise RuntimeError(msg)
 
 
 def _profiled_registrar(

@@ -375,6 +375,7 @@ def test_combined_adapter_surface_matches_canonical_counts() -> None:
         "catalog",
         "policy",
         "dataset",
+        "preview_app",
         "preview",
         "sessions",
         "diagnostics",
