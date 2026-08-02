@@ -87,12 +87,53 @@ class TargetSpec(StrictModel):
     bbox_type: Literal["hbb", "obb"] | None = None
 
 
+class TensorTargetContract(StrictModel):
+    """Serializable shape and dtype contract for one CPU Tensor target."""
+
+    name: Literal["image", "images", "volume", "mask", "masks", "mask3d", "bboxes", "keypoints"]
+    shape: list[int | None] = Field(min_length=1, max_length=4)
+    dtype: str
+
+
+class TensorInputContract(StrictModel):
+    """Public CPU Tensor boundary requested for an AlbumentationsX Compose pipeline."""
+
+    representation: Literal["torch"] = "torch"
+    device: str = "cpu"
+    requires_grad: bool = False
+    targets: list[TensorTargetContract] = Field(min_length=1)
+
+
 class ValidationIssue(StrictModel):
     """Machine-readable validation problem."""
 
     code: str
     path: str
     message: str
+
+
+class TensorTransformCompatibility(StrictModel):
+    """Tensor capability decision for one transform in a pipeline."""
+
+    index: int
+    name: str
+    compatible: bool
+    accepted_targets: list[str] | None = None
+    accepted_channels: list[int] | None = None
+    reason: str
+
+
+class TensorPipelineCompatibility(StrictModel):
+    """Structured CPU Tensor compatibility result attached to pipeline validation."""
+
+    status: Literal["compatible", "incompatible", "runtime_unavailable"]
+    compatible: bool
+    runtime_version: str | None = None
+    input_contract: TensorInputContract
+    transforms: list[TensorTransformCompatibility] = Field(default_factory=list)
+    issues: list[ValidationIssue] = Field(default_factory=list)
+    constraints: list[str] = Field(default_factory=list)
+    remediation_actions: list[str] = Field(default_factory=list)
 
 
 class PipelineValidationReport(StrictModel):
@@ -102,6 +143,7 @@ class PipelineValidationReport(StrictModel):
     errors: list[ValidationIssue] = Field(default_factory=list)
     warnings: list[ValidationIssue] = Field(default_factory=list)
     normalized_pipeline: dict[str, Any] | None = None
+    tensor_compatibility: TensorPipelineCompatibility | None = None
 
 
 class ExportResult(StrictModel):

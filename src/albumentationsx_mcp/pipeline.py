@@ -14,10 +14,12 @@ from albumentationsx_mcp.models import (
     ExportResult,
     PipelineValidationReport,
     TargetSpec,
+    TensorInputContract,
     TransformMetadata,
     TransformSpec,
     ValidationIssue,
 )
+from albumentationsx_mcp.tensor_compatibility import TensorCompatibilityService
 
 
 class CatalogLike(Protocol):
@@ -33,8 +35,15 @@ class PipelineService:
 
     def __init__(self, catalog: CatalogLike) -> None:
         self.catalog = catalog
+        self.tensor_compatibility = TensorCompatibilityService(catalog)
 
-    def validate_pipeline(self, pipeline: ComposeSpec, target: TargetSpec | None = None) -> PipelineValidationReport:
+    def validate_pipeline(
+        self,
+        pipeline: ComposeSpec,
+        target: TargetSpec | None = None,
+        *,
+        input_contract: TensorInputContract | None = None,
+    ) -> PipelineValidationReport:
         """Validate transform names, parameters, constraints, and target hints."""
         errors: list[ValidationIssue] = []
         warnings: list[ValidationIssue] = []
@@ -47,11 +56,17 @@ class PipelineService:
             self._validate_params(transform, metadata, index, errors)
             self._validate_target_warnings(transform, metadata, target, index, warnings)
 
+        tensor_compatibility = None
+        if input_contract is not None:
+            tensor_compatibility = self.tensor_compatibility.inspect(pipeline, target, input_contract)
+            errors.extend(tensor_compatibility.issues)
+
         return PipelineValidationReport(
             valid=not errors,
             errors=errors,
             warnings=warnings,
             normalized_pipeline=pipeline.model_dump(mode="json", exclude_none=True),
+            tensor_compatibility=tensor_compatibility,
         )
 
     def build_pipeline(self, pipeline: ComposeSpec) -> Any:
