@@ -9,6 +9,8 @@ Python code.
 For copyable host snippets, PyPI install, bounded local access, and troubleshooting, start with
 [INSTALL.md](INSTALL.md). Runtime profiles and environment precedence are in [CONFIGURATION.md](CONFIGURATION.md). This
 page focuses on the augmentation workflow after the server is connected.
+The same command supports modern MCP `2026-07-28` discovery and legacy initialize clients. Product run, feedback, and
+tuning IDs remain explicit across both modes; see [COMPATIBILITY.md](COMPATIBILITY.md) for the tested contract.
 For a copyable host prompt that works across Claude Desktop, Claude Code, Cursor, and Codex, see
 [examples/first_preview_workflow.md](../examples/first_preview_workflow.md).
 After connecting a new host, read `albumentationsx://examples/client-smoke`; when resource reads are unavailable, call

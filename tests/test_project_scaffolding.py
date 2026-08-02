@@ -26,6 +26,15 @@ def test_readme_is_a_concise_product_install_funnel() -> None:
     assert "## Operator CLI" not in readme
 
 
+def test_compatibility_policy_documents_both_mcp_protocol_eras() -> None:
+    compatibility = Path("docs/COMPATIBILITY.md").read_text(encoding="utf-8")
+
+    assert "2026-07-28" in compatibility
+    assert "legacy" in compatibility
+    assert "MCPServer" in compatibility
+    assert "MCP Tasks" in compatibility
+
+
 def test_ci_workflow_runs_core_quality_gates() -> None:
     workflow_path = Path(".github/workflows/ci.yml")
     workflow = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))

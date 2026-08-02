@@ -4,6 +4,14 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 ## Unreleased
 
+- Migrated to MCP Python SDK 2.x with modern `2026-07-28` discovery and retained legacy initialize-handshake support
+  from the same stdio or Streamable HTTP server.
+- Replaced SDK-private profile registration and contract inspection with a local declarative registrar, atomic
+  validation batches, and public server listing APIs while preserving the canonical MCP snapshot.
+- Registered the preview review UI through the official MCP Apps extension with unchanged render metadata, CSP,
+  resources, and non-App fallback behavior.
+- Added modern/legacy stdio CI coverage and migrated conformance, golden evals, and client tests to the SDK 2.x
+  high-level client.
 - Added runtime-aware CPU `torch.Tensor` compatibility to `validate_pipeline`, including shape, dtype, device,
   autograd, spatial-target, per-transform target, and channel checks with structured remediation.
 - Added fail-closed guarded Python export and the `torch-cpu-compose` workflow resource/fallback example without

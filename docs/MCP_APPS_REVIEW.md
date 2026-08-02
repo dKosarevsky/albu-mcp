@@ -3,6 +3,8 @@
 AlbumentationsX MCP adds an MCP Apps review surface to `render_preview` and `render_preview_batch`.
 The UI uses progressive enhancement: the render tool contract, preview artifacts, and feedback tools remain usable
 without the UI.
+The Python server registers the capability and UI resource through the official MCP SDK 2.x `Apps` extension; the
+frontend continues to use the official `@modelcontextprotocol/ext-apps` package.
 
 The app is available in the `review`, `dataset`, and `full` capability profiles. Each of those profiles includes
 `record_preview_feedback`; `core` publishes neither the preview app nor local render tools.
