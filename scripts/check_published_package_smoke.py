@@ -9,7 +9,6 @@ import shlex
 import subprocess
 import sys
 import time
-import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
@@ -98,7 +97,7 @@ def run_smoke(config: SmokeConfig) -> None:
     attempts = max(1, config.retries)
     for attempt in range(1, attempts + 1):
         if config.check_pypi_version:
-            pypi_error = _check_pypi_version(
+            pypi_error = check_pypi_version(
                 package=config.package,
                 version=config.version,
                 timeout_seconds=config.timeout_seconds,
@@ -121,16 +120,20 @@ def run_smoke(config: SmokeConfig) -> None:
         time.sleep(max(0.0, config.delay_seconds))
 
 
-def _check_pypi_version(*, package: str, version: str, timeout_seconds: float) -> str | None:
+def check_pypi_version(*, package: str, version: str, timeout_seconds: float) -> str | None:
+    """Return a stable safe error when an exact PyPI version is unavailable."""
     url = build_pypi_version_url(package=package, version=version)
     try:
         with urllib.request.urlopen(url, timeout=timeout_seconds) as response:  # noqa: S310 - fixed HTTPS PyPI URL.
             payload = json.loads(response.read().decode("utf-8"))
-    except (OSError, TimeoutError, urllib.error.URLError, json.JSONDecodeError) as exc:
-        return f"PyPI version endpoint is not visible yet: {url} ({exc})"
-    published_version = payload.get("info", {}).get("version")
+    except Exception:  # noqa: BLE001 - return a fixed message from the external response boundary.
+        return "PyPI version endpoint is not visible yet."
+    if not isinstance(payload, dict):
+        return "PyPI version endpoint did not confirm the requested exact version."
+    info = payload.get("info")
+    published_version = info.get("version") if isinstance(info, dict) else None
     if published_version != version:
-        return f"PyPI version endpoint returned {published_version!r}, expected {version!r}: {url}"
+        return "PyPI version endpoint did not confirm the requested exact version."
     return None
 
 
