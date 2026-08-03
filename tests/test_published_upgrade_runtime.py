@@ -42,8 +42,10 @@ from scripts.published_upgrade_runtime import (
 )
 
 if sys.version_info >= (3, 11):
+    from builtins import BaseExceptionGroup as RuntimeBaseExceptionGroup
     from builtins import ExceptionGroup as RuntimeExceptionGroup
 else:
+    from exceptiongroup import BaseExceptionGroup as RuntimeBaseExceptionGroup  # ty: ignore[unresolved-import]
     from exceptiongroup import ExceptionGroup as RuntimeExceptionGroup  # ty: ignore[unresolved-import]
 
 
@@ -473,6 +475,49 @@ def test_bounded_stderr_sink_classifies_without_retaining_raw_output() -> None:
     assert all(value not in {"private server failure", b"private server failure"} for value in vars(sink).values())
 
 
+def test_bounded_stderr_sink_recognizes_split_attestation_marker() -> None:
+    sink = runtime_module._BoundedStderrSink()
+    marker = runtime_module._ATTESTATION_STDERR_MARKER
+    split_at = len(marker) // 2
+
+    sink._inspect_chunk(marker[:split_at])
+    assert sink.category is StderrCategory.OTHER
+    sink._inspect_chunk(marker[split_at:])
+
+    assert sink.category is StderrCategory.ATTESTATION
+
+
+def test_bounded_stderr_sink_forces_reader_cleanup_with_held_writer(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    sink = runtime_module._BoundedStderrSink()
+    with sink:
+        duplicate_writer = os.dup(sink.stream.fileno())
+        try:
+            read_fd = sink._read_fd
+            wake_read_fd = sink._wake_read_fd
+            assert read_fd is not None
+            assert wake_read_fd is not None
+            monkeypatch.setattr(runtime_module, "_STDERR_DRAIN_TIMEOUT_SECONDS", 0.0)
+
+            sink.finish()
+            sink.finish()
+
+            assert sink.category is StderrCategory.TRUNCATED
+            assert sink._thread is None
+            assert sink._read_fd is None
+            assert sink._wake_read_fd is None
+            assert sink._wake_write_fd is None
+            assert sink.stream.closed
+            with pytest.raises(OSError, match="Bad file descriptor"):
+                os.fstat(read_fd)
+            with pytest.raises(OSError, match="Bad file descriptor"):
+                os.fstat(wake_read_fd)
+            os.fstat(duplicate_writer)
+        finally:
+            os.close(duplicate_writer)
+
+
 @pytest.mark.parametrize(
     ("failure", "expected_code"),
     [
@@ -541,6 +586,44 @@ def test_existing_runtime_error_survives_exit_and_cleanup_failures_in_order(
     assert events == ["enter", "request", "exit", "cleanup", "caught"]
 
 
+def test_default_nested_lifecycle_preserves_normalized_inner_teardown(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    richer = PublishedUpgradeRuntimeError(
+        phase=RuntimePhase.CONTEXT_EXIT,
+        code=RuntimeCode.CONTEXT_EXIT_FAILED,
+        diagnostic=StderrCategory.TRUNCATED,
+    )
+
+    @asynccontextmanager
+    async def connected_stdio_client(*_args: object, **_kwargs: object) -> AsyncIterator[object]:
+        yield object()
+
+    class TeardownFailingClient:
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            pass
+
+        async def __aenter__(self) -> Self:
+            return self
+
+        async def __aexit__(self, *_args: object) -> None:
+            raise richer
+
+        async def list_tools(self, **_kwargs: object) -> object:
+            message = "private-request-value"
+            raise ValueError(message)
+
+    monkeypatch.setattr(runtime_module, "stdio_client", connected_stdio_client)
+    monkeypatch.setattr(runtime_module, "Client", TeardownFailingClient)
+
+    with pytest.raises(PublishedUpgradeRuntimeError) as caught:
+        asyncio.run(run_published_upgrade(_config(tmp_path)))
+
+    assert caught.value is richer
+    assert caught.value.diagnostic is StderrCategory.TRUNCATED
+
+
 def test_context_exit_failure_after_success_is_normalized(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -577,6 +660,50 @@ def test_cancellation_is_not_normalized(tmp_path: Path) -> None:
         asyncio.run(run_published_upgrade(_config(tmp_path), client_factory=client_factory))
 
 
+@pytest.mark.parametrize(
+    "control_flow",
+    [asyncio.CancelledError(), KeyboardInterrupt(), SystemExit(19)],
+)
+def test_grouped_control_flow_is_preserved(control_flow: BaseException) -> None:
+    failure = RuntimeBaseExceptionGroup(
+        "private-outer-group",
+        [
+            ValueError("private-ordinary-value"),
+            RuntimeBaseExceptionGroup("private-inner-group", [control_flow]),
+        ],
+    )
+
+    normalized = runtime_module._normalize_runtime_error(
+        failure,
+        phase=RuntimePhase.REQUEST,
+        code=RuntimeCode.REQUEST_FAILED,
+    )
+
+    assert normalized is control_flow
+
+
+def test_mixed_grouped_control_flow_has_deterministic_precedence() -> None:
+    cancelled = asyncio.CancelledError()
+    interrupted = KeyboardInterrupt()
+    exited = SystemExit(23)
+    failure = RuntimeBaseExceptionGroup(
+        "private-outer-group",
+        [
+            RuntimeBaseExceptionGroup("private-system-exit", [exited]),
+            RuntimeBaseExceptionGroup("private-keyboard", [interrupted]),
+            RuntimeBaseExceptionGroup("private-cancel", [cancelled]),
+        ],
+    )
+
+    normalized = runtime_module._normalize_runtime_error(
+        failure,
+        phase=RuntimePhase.REQUEST,
+        code=RuntimeCode.REQUEST_FAILED,
+    )
+
+    assert normalized is cancelled
+
+
 def _assert_png_failure(result: ReadResourceResult, code: RuntimeCode) -> None:
     client = _ResourceClient(result)
     with pytest.raises(PublishedUpgradeRuntimeError) as caught:
@@ -603,6 +730,13 @@ def test_png_resource_rejects_wrong_content_type_and_mime() -> None:
     _assert_png_failure(
         _blob_result(_png_bytes(), mime_type="image/jpeg"),
         RuntimeCode.RESOURCE_MIME_INVALID,
+    )
+
+
+def test_png_resource_requires_returned_uri_to_match_request() -> None:
+    _assert_png_failure(
+        _blob_result(_png_bytes(), uri=_OTHER_CONTACT_SHEET_URI),
+        RuntimeCode.RESOURCE_URI_MISMATCH,
     )
 
 
@@ -702,6 +836,11 @@ def test_seed_manifest_requires_exactly_one_contact_sheet(artifacts: list[object
     ("overrides", "expected_code"),
     [
         ({"uri": "artifact://bad/../private.png"}, RuntimeCode.CONTACT_SHEET_ARTIFACT_INVALID),
+        ({"uri": _OTHER_CONTACT_SHEET_URI}, RuntimeCode.CONTACT_SHEET_ARTIFACT_INVALID),
+        (
+            {"uri": f"artifact://{_RUN_ID}/alternate.png"},
+            RuntimeCode.CONTACT_SHEET_ARTIFACT_INVALID,
+        ),
         ({"mime_type": "image/jpeg"}, RuntimeCode.CONTACT_SHEET_ARTIFACT_INVALID),
         ({"size_bytes": -1}, RuntimeCode.CONTACT_SHEET_ARTIFACT_INVALID),
         ({"size_bytes": True}, RuntimeCode.CONTACT_SHEET_ARTIFACT_INVALID),

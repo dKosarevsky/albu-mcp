@@ -7,6 +7,7 @@ import base64
 import hashlib
 import os
 import re
+import select
 import shutil
 import stat
 import tempfile
@@ -17,7 +18,7 @@ from dataclasses import dataclass
 from enum import Enum
 from io import BytesIO
 from pathlib import Path
-from typing import Any, Literal, Protocol, TextIO, TypeAlias
+from typing import Any, Literal, Protocol, TextIO, TypeAlias, TypeVar
 
 from mcp import Client, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -38,6 +39,7 @@ PACKAGE = "albumentationsx-mcp"
 ConnectionMode: TypeAlias = Literal["legacy", "auto"]
 _RUNTIME_ERROR_MESSAGE = "Published upgrade probe failed."
 _MAX_STDERR_INSPECT_BYTES = 16 * 1024
+_STDERR_DRAIN_TIMEOUT_SECONDS = 1.0
 _ATTESTATION_STDERR_MARKER = b"ALBU_MCP_ATTESTATION_FAILED"
 _MAX_PNG_DECODED_BYTES = 8 * 1024 * 1024
 _MAX_PNG_ENCODED_BYTES = ((_MAX_PNG_DECODED_BYTES + 2) // 3) * 4
@@ -45,8 +47,22 @@ _MAX_PNG_WIDTH = 4096
 _MAX_PNG_HEIGHT = 4096
 _MAX_PNG_PIXELS = 16 * 1024 * 1024
 _RUN_ID_PATTERN = re.compile(r"[0-9a-f]{32}\Z")
-_ARTIFACT_URI_PATTERN = re.compile(r"artifact://[0-9a-f]{32}/[A-Za-z0-9][A-Za-z0-9._-]{0,127}\Z")
 _LOWER_SHA256_PATTERN = re.compile(r"[0-9a-f]{64}\Z")
+
+
+def _marker_prefix_table(marker: bytes) -> tuple[int, ...]:
+    table = [0] * len(marker)
+    prefix_length = 0
+    for index in range(1, len(marker)):
+        while prefix_length and marker[index] != marker[prefix_length]:
+            prefix_length = table[prefix_length - 1]
+        if marker[index] == marker[prefix_length]:
+            prefix_length += 1
+            table[index] = prefix_length
+    return tuple(table)
+
+
+_ATTESTATION_MARKER_PREFIXES = _marker_prefix_table(_ATTESTATION_STDERR_MARKER)
 
 PUBLISHED_SERVER_BOOTSTRAP = """\
 from importlib.metadata import version
@@ -142,6 +158,7 @@ class RuntimeCode(str, Enum):
     CONTEXT_EXIT_FAILED = "context_exit_failed"
     RESOURCE_CONTENT_COUNT_INVALID = "resource_content_count_invalid"
     RESOURCE_CONTENT_TYPE_INVALID = "resource_content_type_invalid"
+    RESOURCE_URI_MISMATCH = "resource_uri_mismatch"
     RESOURCE_MIME_INVALID = "resource_mime_invalid"
     RESOURCE_BASE64_INVALID = "resource_base64_invalid"
     RESOURCE_ENCODED_TOO_LARGE = "resource_encoded_too_large"
@@ -209,6 +226,12 @@ class _BoundedStderrSink:
         self.inspected_bytes = 0
         self._stream: TextIO | None = None
         self._thread: threading.Thread | None = None
+        self._read_fd: int | None = None
+        self._wake_read_fd: int | None = None
+        self._wake_write_fd: int | None = None
+        self._marker_prefix_length = 0
+        self._finish_lock = threading.Lock()
+        self._finished = False
 
     @property
     def stream(self) -> TextIO:
@@ -220,8 +243,16 @@ class _BoundedStderrSink:
 
     def __enter__(self) -> Self:
         read_fd, write_fd = os.pipe()
+        wake_read_fd, wake_write_fd = os.pipe()
+        self._read_fd = read_fd
+        self._wake_read_fd = wake_read_fd
+        self._wake_write_fd = wake_write_fd
         self._stream = os.fdopen(write_fd, "w", encoding="utf-8")
-        self._thread = threading.Thread(target=self._drain, args=(read_fd,), daemon=True)
+        self._thread = threading.Thread(
+            target=self._drain,
+            args=(read_fd, wake_read_fd),
+            daemon=False,
+        )
         self._thread.start()
         return self
 
@@ -230,32 +261,69 @@ class _BoundedStderrSink:
 
     def finish(self) -> None:
         """Close the parent writer and wait for the bounded drain to finish."""
-        if self._stream is not None and not self._stream.closed:
-            self._stream.close()
-        if self._thread is not None:
-            self._thread.join(timeout=1.0)
-            if self._thread.is_alive() and self.category is not StderrCategory.ATTESTATION:
-                self.category = StderrCategory.TRUNCATED
+        with self._finish_lock:
+            if self._finished:
+                return
+            if self._stream is not None and not self._stream.closed:
+                self._stream.close()
+            if self._thread is not None:
+                self._thread.join(timeout=_STDERR_DRAIN_TIMEOUT_SECONDS)
+                if self._thread.is_alive():
+                    if self.category is not StderrCategory.ATTESTATION:
+                        self.category = StderrCategory.TRUNCATED
+                    self._wake_reader()
+                    self._thread.join()
+            if self._wake_write_fd is not None:
+                with suppress(OSError):
+                    os.close(self._wake_write_fd)
+            self._thread = None
+            self._read_fd = None
+            self._wake_read_fd = None
+            self._wake_write_fd = None
+            self._finished = True
 
     def finish_and_classify(self) -> StderrCategory:
         """Finish draining stderr and return only its bounded category."""
         self.finish()
         return self.category
 
-    def _drain(self, read_fd: int) -> None:
+    def _wake_reader(self) -> None:
+        if self._wake_write_fd is not None:
+            with suppress(OSError):
+                os.write(self._wake_write_fd, b"\0")
+
+    def _drain(self, read_fd: int, wake_read_fd: int) -> None:
         try:
-            while chunk := os.read(read_fd, 4096):
-                remaining = max(0, _MAX_STDERR_INSPECT_BYTES - self.inspected_bytes)
-                sample = chunk[:remaining]
-                self.inspected_bytes += len(sample)
-                if _ATTESTATION_STDERR_MARKER in sample:
-                    self.category = StderrCategory.ATTESTATION
-                elif sample.strip() and self.category is StderrCategory.NONE:
-                    self.category = StderrCategory.OTHER
-                if len(chunk) > remaining and self.category is not StderrCategory.ATTESTATION:
-                    self.category = StderrCategory.TRUNCATED
+            while True:
+                ready, _, _ = select.select((read_fd, wake_read_fd), (), ())
+                if wake_read_fd in ready:
+                    return
+                chunk = os.read(read_fd, 4096)
+                if not chunk:
+                    return
+                self._inspect_chunk(chunk)
         finally:
-            os.close(read_fd)
+            with suppress(OSError):
+                os.close(read_fd)
+            with suppress(OSError):
+                os.close(wake_read_fd)
+
+    def _inspect_chunk(self, chunk: bytes) -> None:
+        remaining = max(0, _MAX_STDERR_INSPECT_BYTES - self.inspected_bytes)
+        sample = chunk[:remaining]
+        self.inspected_bytes += len(sample)
+        for byte in sample:
+            while self._marker_prefix_length and byte != _ATTESTATION_STDERR_MARKER[self._marker_prefix_length]:
+                self._marker_prefix_length = _ATTESTATION_MARKER_PREFIXES[self._marker_prefix_length - 1]
+            if byte == _ATTESTATION_STDERR_MARKER[self._marker_prefix_length]:
+                self._marker_prefix_length += 1
+                if self._marker_prefix_length == len(_ATTESTATION_STDERR_MARKER):
+                    self.category = StderrCategory.ATTESTATION
+                    self._marker_prefix_length = _ATTESTATION_MARKER_PREFIXES[self._marker_prefix_length - 1]
+        if sample.strip() and self.category is StderrCategory.NONE:
+            self.category = StderrCategory.OTHER
+        if len(chunk) > remaining and self.category is not StderrCategory.ATTESTATION:
+            self.category = StderrCategory.TRUNCATED
 
 
 @dataclass(frozen=True)
@@ -346,14 +414,17 @@ def _nested_exceptions(error: BaseException) -> tuple[BaseException, ...]:
     return tuple(item for item in nested if isinstance(item, BaseException))
 
 
-def _contains_exception_type(error: BaseException, exception_type: type[BaseException]) -> bool:
+_ExceptionT = TypeVar("_ExceptionT", bound=BaseException)
+
+
+def _find_nested_exception(error: BaseException, exception_type: type[_ExceptionT]) -> _ExceptionT | None:
     if isinstance(error, exception_type):
-        return True
-    return any(_contains_exception_type(item, exception_type) for item in _nested_exceptions(error))
-
-
-def _contains_cancellation(error: BaseException) -> bool:
-    return _contains_exception_type(error, asyncio.CancelledError)
+        return error
+    for item in _nested_exceptions(error):
+        found = _find_nested_exception(item, exception_type)
+        if found is not None:
+            return found
+    return None
 
 
 def _normalize_runtime_error(
@@ -365,11 +436,13 @@ def _normalize_runtime_error(
 ) -> BaseException:
     if isinstance(error, PublishedUpgradeRuntimeError):
         return error
-    if _contains_cancellation(error):
-        return error if isinstance(error, asyncio.CancelledError) else asyncio.CancelledError()
-    if isinstance(error, (GeneratorExit, KeyboardInterrupt, SystemExit)):
+    for control_flow_type in (asyncio.CancelledError, KeyboardInterrupt, SystemExit):
+        control_flow = _find_nested_exception(error, control_flow_type)
+        if control_flow is not None:
+            return control_flow
+    if isinstance(error, GeneratorExit):
         return error
-    normalized_code = RuntimeCode.TIMEOUT if _contains_exception_type(error, TimeoutError) else code
+    normalized_code = RuntimeCode.TIMEOUT if _find_nested_exception(error, TimeoutError) is not None else code
     return PublishedUpgradeRuntimeError(
         phase=phase,
         code=normalized_code,
@@ -410,7 +483,13 @@ async def _connected_client(
         return
 
     stderr_category = diagnostic() if diagnostic is not None else StderrCategory.NONE
-    if body_error is not None:
+    if isinstance(body_error, PublishedUpgradeRuntimeError):
+        error = body_error
+        phase, code = RuntimePhase.REQUEST, RuntimeCode.REQUEST_FAILED
+    elif isinstance(caught_error, PublishedUpgradeRuntimeError):
+        error = caught_error
+        phase, code = RuntimePhase.CONTEXT_EXIT, RuntimeCode.CONTEXT_EXIT_FAILED
+    elif body_error is not None:
         error = body_error
         phase, code = RuntimePhase.REQUEST, RuntimeCode.REQUEST_FAILED
     elif connected:
@@ -800,7 +879,7 @@ async def _render_seed(client: Client, fixture_path: Path) -> _ArtifactSeed:
     run_id = content.get("run_id")
     if not isinstance(run_id, str) or _RUN_ID_PATTERN.fullmatch(run_id) is None:
         raise _request_failure(RuntimeCode.TOOL_RESULT_INVALID)
-    artifact = _contact_sheet_artifact(content)
+    artifact = _contact_sheet_artifact(content, run_id)
     payload = await _read_png_resource(client, artifact.uri)
     digest = _validate_artifact_payload(artifact, payload)
     return _ArtifactSeed(
@@ -820,9 +899,11 @@ async def _read_old_artifact(client: Client, seed: _ArtifactSeed) -> ArtifactCon
         raise _request_failure(RuntimeCode.MANIFEST_INVALID)
     if run_id != seed.run_id:
         raise _request_failure(RuntimeCode.MANIFEST_RUN_ID_MISMATCH)
-    artifact = _contact_sheet_artifact(manifest_content)
-    if artifact.uri != seed.contact_sheet_uri:
-        raise _request_failure(RuntimeCode.CONTACT_SHEET_URI_MISMATCH)
+    artifact = _contact_sheet_artifact(
+        manifest_content,
+        run_id,
+        uri_failure=RuntimeCode.CONTACT_SHEET_URI_MISMATCH,
+    )
 
     payload = await _read_png_resource(client, artifact.uri)
     digest = _validate_artifact_payload(
@@ -840,7 +921,12 @@ async def _read_old_artifact(client: Client, seed: _ArtifactSeed) -> ArtifactCon
     )
 
 
-def _contact_sheet_artifact(content: Mapping[str, Any]) -> _ContactSheetArtifact:
+def _contact_sheet_artifact(
+    content: Mapping[str, Any],
+    run_id: str,
+    *,
+    uri_failure: RuntimeCode = RuntimeCode.CONTACT_SHEET_ARTIFACT_INVALID,
+) -> _ContactSheetArtifact:
     artifacts = content.get("artifacts")
     if not isinstance(artifacts, list):
         raise _request_failure(RuntimeCode.MANIFEST_INVALID)
@@ -855,10 +941,10 @@ def _contact_sheet_artifact(content: Mapping[str, Any]) -> _ContactSheetArtifact
     mime_type = contact_sheet.get("mime_type")
     size_bytes = contact_sheet.get("size_bytes")
     digest = contact_sheet.get("sha256")
+    if not isinstance(uri, str) or uri != f"artifact://{run_id}/contact_sheet.png":
+        raise _request_failure(uri_failure)
     if (
-        not isinstance(uri, str)
-        or _ARTIFACT_URI_PATTERN.fullmatch(uri) is None
-        or mime_type != "image/png"
+        mime_type != "image/png"
         or type(size_bytes) is not int
         or size_bytes < 0
         or size_bytes > _MAX_PNG_DECODED_BYTES
@@ -904,6 +990,8 @@ async def _read_png_resource(client: Client, uri: str) -> bytes:
     content = result.contents[0]
     if not isinstance(content, BlobResourceContents):
         raise _request_failure(RuntimeCode.RESOURCE_CONTENT_TYPE_INVALID)
+    if str(content.uri) != uri:
+        raise _request_failure(RuntimeCode.RESOURCE_URI_MISMATCH)
     if content.mime_type != "image/png":
         raise _request_failure(RuntimeCode.RESOURCE_MIME_INVALID)
     if len(content.blob) > _MAX_PNG_ENCODED_BYTES:
