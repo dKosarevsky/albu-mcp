@@ -19,6 +19,22 @@ from albumentationsx_mcp.upgrade_proof import (
 
 _CATEGORIES = ("tools", "resources", "resource_templates", "prompts")
 _ROLES = ("from_legacy", "to_legacy", "to_modern")
+_ROW_SCALAR_FIELDS = (
+    "server_version",
+    "observed_server_version",
+    "client_mode",
+    "expected_protocol",
+    "negotiated_protocol",
+)
+_EXTERNAL_SCALAR_TARGETS = (
+    "package",
+    "from_version",
+    "to_version",
+    "observed_on",
+    *(f"{role}.{field}" for role in _ROLES for field in _ROW_SCALAR_FIELDS),
+    "artifact.contact_sheet_sha256",
+)
+_OVERSIZED_RELEASE = f"{'1' * 129}.0.0"
 
 
 def _surface(
@@ -118,6 +134,65 @@ def _expected_digest(*values: str) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
+def _report_with_versions(from_version: str, to_version: str) -> UpgradeProofReport:
+    evidence = _evidence()
+    from_legacy = cast("ProtocolObservation", evidence["from_legacy"])
+    to_legacy = cast("ProtocolObservation", evidence["to_legacy"])
+    to_modern = cast("ProtocolObservation", evidence["to_modern"])
+    return _report(
+        from_version=from_version,
+        to_version=to_version,
+        from_legacy=replace(
+            from_legacy,
+            server_version=from_version,
+            observed_server_version=from_version,
+        ),
+        to_legacy=replace(
+            to_legacy,
+            server_version=to_version,
+            observed_server_version=to_version,
+        ),
+        to_modern=replace(
+            to_modern,
+            server_version=to_version,
+            observed_server_version=to_version,
+        ),
+    )
+
+
+def _report_with_scalar(target: str, value: str) -> UpgradeProofReport:
+    if target in {"package", "from_version", "to_version", "observed_on"}:
+        return _report(**{target: value})
+    if target == "artifact.contact_sheet_sha256":
+        return _report(artifact=replace(_artifact(), contact_sheet_sha256=value))
+
+    role, field = target.split(".", maxsplit=1)
+    row = replace(cast("ProtocolObservation", _evidence()[role]), **{field: value})
+    return _report(**{role: row})
+
+
+def _scalar_output(report: UpgradeProofReport, target: str) -> Any:
+    if target in {"package", "from_version", "to_version", "observed_on"}:
+        return cast("dict[str, Any]", report)[target]
+    if target == "artifact.contact_sheet_sha256":
+        return report["artifact_continuity"]["contact_sheet_sha256"]
+
+    role, field = target.split(".", maxsplit=1)
+    return cast("dict[str, Any]", _matrix_row(report, role))[field]
+
+
+def _scalar_failure(target: str) -> tuple[str, str]:
+    if target == "package":
+        return "package_invalid", target
+    if target in {"from_version", "to_version"}:
+        return "version_invalid", target
+    if target == "observed_on":
+        return "observed_on_invalid", target
+    if target == "artifact.contact_sheet_sha256":
+        return "artifact_sha256_invalid", "contact_sheet_sha256"
+    return "observation_invalid", target
+
+
 def test_additive_upgrade_passes_without_emitting_public_identifier_lists() -> None:
     report = _report()
     encoded = json.dumps(report, sort_keys=True)
@@ -213,7 +288,8 @@ def test_every_matrix_row_reports_version_and_protocol_mismatches(
     if mismatch == "observed_version":
         row = replace(row, observed_server_version="9.9.9")
     else:
-        row = replace(row, negotiated_protocol="2099-01-01")
+        other_protocol = "2025-11-25" if role == "to_modern" else "2026-07-28"
+        row = replace(row, negotiated_protocol=other_protocol)
 
     report = _report(**{role: row})
     summary = _matrix_row(report, role)
@@ -222,6 +298,76 @@ def test_every_matrix_row_reports_version_and_protocol_mismatches(
     assert (summary["server_version_ok"], summary["protocol_ok"]) == expected_checks
     assert summary["ok"] is False
     assert (failure_code, role) in {(failure["code"], failure["scope"]) for failure in report["failures"]}
+    if mismatch == "protocol":
+        assert ("row_protocol_mismatch", role) in {
+            (failure["code"], failure["scope"]) for failure in report["failures"]
+        }
+
+
+@pytest.mark.parametrize(
+    ("role", "wrong_mode"),
+    [
+        ("from_legacy", "2026-07-28"),
+        ("to_legacy", "2026-07-28"),
+        ("to_modern", "legacy"),
+    ],
+)
+def test_matrix_roles_reject_swapped_recognized_modes(role: str, wrong_mode: str) -> None:
+    row = replace(cast("ProtocolObservation", _evidence()[role]), client_mode=wrong_mode)
+
+    report = _report(**{role: row})
+    summary = _matrix_row(report, role)
+
+    assert summary["client_mode"] == wrong_mode
+    assert summary["ok"] is False
+    assert ("row_mode_mismatch", role) in {(failure["code"], failure["scope"]) for failure in report["failures"]}
+
+
+@pytest.mark.parametrize(
+    ("role", "wrong_protocol"),
+    [
+        ("from_legacy", "2026-07-28"),
+        ("to_legacy", "2026-07-28"),
+        ("to_modern", "2025-11-25"),
+    ],
+)
+def test_matrix_roles_reject_recognized_protocol_from_other_era(role: str, wrong_protocol: str) -> None:
+    row = replace(
+        cast("ProtocolObservation", _evidence()[role]),
+        expected_protocol=wrong_protocol,
+        negotiated_protocol=wrong_protocol,
+    )
+
+    report = _report(**{role: row})
+    summary = _matrix_row(report, role)
+
+    assert summary["expected_protocol"] == wrong_protocol
+    assert summary["negotiated_protocol"] == wrong_protocol
+    assert summary["protocol_ok"] is False
+    assert summary["ok"] is False
+    assert ("row_protocol_mismatch", role) in {(failure["code"], failure["scope"]) for failure in report["failures"]}
+
+
+@pytest.mark.parametrize("role", _ROLES)
+@pytest.mark.parametrize("protocol", ["banana", "2025-03-26"])
+def test_arbitrary_equal_protocols_are_rejected_and_redacted(role: str, protocol: str) -> None:
+    row = replace(
+        cast("ProtocolObservation", _evidence()[role]),
+        expected_protocol=protocol,
+        negotiated_protocol=protocol,
+    )
+
+    report = _report(**{role: row})
+    summary = _matrix_row(report, role)
+    failures = {(failure["code"], failure["scope"]) for failure in report["failures"]}
+
+    assert report["status"] == "fail"
+    assert summary["expected_protocol"] is None
+    assert summary["negotiated_protocol"] is None
+    assert summary["protocol_ok"] is False
+    assert ("observation_invalid", f"{role}.expected_protocol") in failures
+    assert ("observation_invalid", f"{role}.negotiated_protocol") in failures
+    assert protocol not in json.dumps(report, sort_keys=True)
 
 
 @pytest.mark.parametrize("role", _ROLES)
@@ -270,6 +416,22 @@ def test_malformed_observations_are_aggregated_and_sanitized(field: str, value: 
         assert value not in encoded
 
 
+@pytest.mark.parametrize("role", _ROLES)
+@pytest.mark.parametrize("field", ["server_version", "observed_server_version"])
+@pytest.mark.parametrize("version", ["1.21", "1.21.0rc1", ">=1.21.0", _OVERSIZED_RELEASE])
+def test_matrix_versions_require_exact_public_release_grammar(role: str, field: str, version: str) -> None:
+    row = replace(cast("ProtocolObservation", _evidence()[role]), **{field: version})
+
+    report = _report(**{role: row})
+    summary = cast("dict[str, Any]", _matrix_row(report, role))
+
+    assert report["status"] == "fail"
+    assert summary[field] is None
+    assert ("observation_invalid", f"{role}.{field}") in {
+        (failure["code"], failure["scope"]) for failure in report["failures"]
+    }
+
+
 def test_observation_bound_is_measured_in_utf8_bytes() -> None:
     value = "\u00e9" * 65
     row = replace(cast("ProtocolObservation", _evidence()["from_legacy"]), client_mode=value)
@@ -308,6 +470,65 @@ def test_invalid_report_metadata_is_aggregated_and_sanitized(
         assert value not in encoded
 
 
+@pytest.mark.parametrize(
+    "package",
+    ["AlbumentationsX-MCP", "albumentationsx_mcp", "albumentationsx.mcp", "other-package", "user42"],
+)
+def test_package_must_be_the_normalized_evidence_package(package: str) -> None:
+    report = _report(package=package)
+
+    assert report["status"] == "fail"
+    assert report["package"] is None
+    assert ("package_invalid", "package") in {(failure["code"], failure["scope"]) for failure in report["failures"]}
+    assert package not in json.dumps(report, sort_keys=True)
+
+
+@pytest.mark.parametrize("field", ["from_version", "to_version"])
+@pytest.mark.parametrize(
+    "version",
+    [
+        "1.21",
+        "01.21.0",
+        "1.021.0",
+        "v1.21.0",
+        "1.21.0rc1",
+        "1.21.0+local",
+        ">=1.21.0",
+        "1.21.0/next",
+        _OVERSIZED_RELEASE,
+    ],
+)
+def test_versions_require_exact_public_release_grammar(field: str, version: str) -> None:
+    report = _report(**{field: version})
+
+    assert report["status"] == "fail"
+    assert cast("dict[str, Any]", report)[field] is None
+    assert ("version_invalid", field) in {(failure["code"], failure["scope"]) for failure in report["failures"]}
+
+
+@pytest.mark.parametrize(
+    ("from_version", "to_version"),
+    [("1.20.0", "1.20.0"), ("1.21.0", "1.20.0"), ("2.0.0", "1.99.99")],
+)
+def test_upgrade_versions_must_be_strictly_ascending(from_version: str, to_version: str) -> None:
+    report = _report_with_versions(from_version, to_version)
+
+    assert report["status"] == "fail"
+    assert report["from_version"] == from_version
+    assert report["to_version"] == to_version
+    assert ("upgrade_version_order_invalid", "from_version,to_version") in {
+        (failure["code"], failure["scope"]) for failure in report["failures"]
+    }
+
+
+def test_release_order_uses_numeric_version_precedence() -> None:
+    report = _report_with_versions("1.9.9", "1.10.0")
+
+    assert report["status"] == "pass"
+    assert report["from_version"] == "1.9.9"
+    assert report["to_version"] == "1.10.0"
+
+
 @pytest.mark.parametrize("observed_on", ["", "20260803", "2026-02-30", "2026-8-3", "x" * 129])
 def test_observed_on_must_be_an_iso_calendar_date(observed_on: str) -> None:
     report = _report(observed_on=observed_on)
@@ -324,6 +545,18 @@ def test_valid_iso_leap_day_is_preserved() -> None:
 
     assert report["status"] == "pass"
     assert report["observed_on"] == "2028-02-29"
+
+
+@pytest.mark.parametrize("target", _EXTERNAL_SCALAR_TARGETS)
+@pytest.mark.parametrize("sensitive", ["/Users/u", "user42", "left\u202eright"])
+def test_every_external_scalar_rejects_and_redacts_private_values(target: str, sensitive: str) -> None:
+    report = _report_with_scalar(target, sensitive)
+    encoded = json.dumps(report, sort_keys=True, ensure_ascii=False)
+
+    assert report["status"] == "fail"
+    assert _scalar_output(report, target) is None
+    assert _scalar_failure(target) in {(failure["code"], failure["scope"]) for failure in report["failures"]}
+    assert sensitive not in encoded
 
 
 @pytest.mark.parametrize("category", _CATEGORIES)
@@ -534,7 +767,7 @@ def test_failure_order_is_stable_and_deterministic() -> None:
     bad_from = replace(
         _observation("1.20.0", "legacy", "2025-11-25", old),
         observed_server_version="9.9.9",
-        negotiated_protocol="2099-01-01",
+        negotiated_protocol="2026-07-28",
     )
     artifact = replace(
         _artifact(),
@@ -554,6 +787,7 @@ def test_failure_order_is_stable_and_deterministic() -> None:
     assert [(failure["code"], failure["scope"]) for failure in report["failures"]] == [
         ("observed_on_invalid", "observed_on"),
         ("server_version_mismatch", "from_legacy"),
+        ("row_protocol_mismatch", "from_legacy"),
         ("protocol_negotiation_failed", "from_legacy"),
         ("surface_removed", "tools"),
         ("surface_removed", "resources"),

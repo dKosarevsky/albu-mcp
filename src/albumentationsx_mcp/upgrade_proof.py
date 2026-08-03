@@ -11,8 +11,19 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Final, Literal, TypeAlias, TypedDict, TypeGuard
 
+from packaging.version import InvalidVersion, Version
+
 _SCHEMA_VERSION: Final = "albumentationsx-mcp/published-upgrade-proof/v1"
-_MAX_OBSERVATION_BYTES: Final = 128
+_PACKAGE_NAME: Final = "albumentationsx-mcp"
+_MAX_RELEASE_LENGTH: Final = 128
+_LEGACY_MODE: Final = "legacy"
+_MODERN_MODE: Final = "2026-07-28"
+_LEGACY_PROTOCOL: Final = "2025-11-25"
+_MODERN_PROTOCOL: Final = "2026-07-28"
+_SUPPORTED_MODES: Final = frozenset({_LEGACY_MODE, _MODERN_MODE})
+_SUPPORTED_PROTOCOLS: Final = frozenset({_LEGACY_PROTOCOL, _MODERN_PROTOCOL})
+_NORMALIZED_PACKAGE_NAME: Final = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*\Z")
+_PUBLIC_RELEASE_VERSION: Final = re.compile(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\Z")
 _ISO_DATE: Final = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}\Z")
 _LOWER_SHA256: Final = re.compile(r"[0-9a-f]{64}\Z")
 
@@ -27,9 +38,12 @@ FailureCode: TypeAlias = Literal[
     "observed_on_invalid",
     "package_invalid",
     "protocol_negotiation_failed",
+    "row_mode_mismatch",
+    "row_protocol_mismatch",
     "row_version_mismatch",
     "server_version_mismatch",
     "surface_removed",
+    "upgrade_version_order_invalid",
     "version_invalid",
 ]
 
@@ -211,33 +225,43 @@ def build_upgrade_proof_report(  # noqa: PLR0913
     """Build deterministic, privacy-safe evidence without I/O or ambient state."""
     failures: list[FailureReport] = []
 
-    safe_package = package if _is_bounded_text(package) else None
+    safe_package = package if _is_evidence_package(package) else None
     if safe_package is None:
         failures.append(
             _failure(
                 code="package_invalid",
                 scope="package",
-                remediation="Provide a nonempty package name no longer than 128 UTF-8 bytes.",
+                remediation="Use the normalized albumentationsx-mcp package name.",
             )
         )
 
-    safe_from_version = from_version if _is_bounded_text(from_version) else None
+    parsed_from_version = _parse_public_release(from_version)
+    safe_from_version = from_version if parsed_from_version is not None else None
     if safe_from_version is None:
         failures.append(
             _failure(
                 code="version_invalid",
                 scope="from_version",
-                remediation="Provide a nonempty report version no longer than 128 UTF-8 bytes.",
+                remediation="Use an exact three-part public release version such as 1.21.0.",
             )
         )
 
-    safe_to_version = to_version if _is_bounded_text(to_version) else None
+    parsed_to_version = _parse_public_release(to_version)
+    safe_to_version = to_version if parsed_to_version is not None else None
     if safe_to_version is None:
         failures.append(
             _failure(
                 code="version_invalid",
                 scope="to_version",
-                remediation="Provide a nonempty report version no longer than 128 UTF-8 bytes.",
+                remediation="Use an exact three-part public release version such as 1.21.0.",
+            )
+        )
+    if parsed_from_version is not None and parsed_to_version is not None and parsed_to_version <= parsed_from_version:
+        failures.append(
+            _failure(
+                code="upgrade_version_order_invalid",
+                scope="from_version,to_version",
+                remediation="Use a to_version that is strictly newer than from_version.",
             )
         )
 
@@ -298,28 +322,58 @@ def _protocol_summary(
     expected_report_version: str | None,
 ) -> tuple[ProtocolSummary, list[FailureReport]]:
     failures: list[FailureReport] = []
-    server_version_valid = _is_bounded_text(row.server_version)
-    observed_server_version_valid = _is_bounded_text(row.observed_server_version)
-    client_mode_valid = _is_bounded_text(row.client_mode)
-    expected_protocol_valid = _is_bounded_text(row.expected_protocol)
-    negotiated_protocol_valid = _is_bounded_text(row.negotiated_protocol)
+    server_version_valid = _parse_public_release(row.server_version) is not None
+    observed_server_version_valid = _parse_public_release(row.observed_server_version) is not None
+    client_mode_valid = _is_supported_mode(row.client_mode)
+    expected_protocol_valid = _is_supported_protocol(row.expected_protocol)
+    negotiated_protocol_valid = _is_supported_protocol(row.negotiated_protocol)
 
     observations = (
-        ("server_version", server_version_valid),
-        ("observed_server_version", observed_server_version_valid),
-        ("client_mode", client_mode_valid),
-        ("expected_protocol", expected_protocol_valid),
-        ("negotiated_protocol", negotiated_protocol_valid),
+        (
+            "server_version",
+            server_version_valid,
+            "Use an exact three-part public release version such as 1.21.0.",
+        ),
+        (
+            "observed_server_version",
+            observed_server_version_valid,
+            "Use an exact three-part public release version such as 1.21.0.",
+        ),
+        (
+            "client_mode",
+            client_mode_valid,
+            "Use the recognized legacy or modern HTTP conformance client mode.",
+        ),
+        (
+            "expected_protocol",
+            expected_protocol_valid,
+            "Use a supported ISO-date MCP protocol version.",
+        ),
+        (
+            "negotiated_protocol",
+            negotiated_protocol_valid,
+            "Use a supported ISO-date MCP protocol version.",
+        ),
     )
-    for field, valid in observations:
+    for field, valid, remediation in observations:
         if not valid:
             failures.append(
                 _failure(
                     code="observation_invalid",
                     scope=f"{role}.{field}",
-                    remediation="Provide a nonempty observation no longer than 128 UTF-8 bytes.",
+                    remediation=remediation,
                 )
             )
+
+    mode_role_ok = client_mode_valid and row.client_mode == _expected_mode(role)
+    if client_mode_valid and not mode_role_ok:
+        failures.append(
+            _failure(
+                code="row_mode_mismatch",
+                scope=role,
+                remediation="Use legacy mode for legacy rows and the current modern mode for the modern row.",
+            )
+        )
 
     role_version_ok = (
         server_version_valid and expected_report_version is not None and row.server_version == expected_report_version
@@ -346,10 +400,25 @@ def _protocol_summary(
         )
     server_version_ok = role_version_ok and observed_server_version_ok
 
-    protocol_ok = (
+    protocol_role_ok = (
+        expected_protocol_valid
+        and negotiated_protocol_valid
+        and row.expected_protocol == _expected_protocol(role)
+        and row.negotiated_protocol == _expected_protocol(role)
+    )
+    if expected_protocol_valid and negotiated_protocol_valid and not protocol_role_ok:
+        failures.append(
+            _failure(
+                code="row_protocol_mismatch",
+                scope=role,
+                remediation="Use the legacy protocol for legacy rows and the current protocol for the modern row.",
+            )
+        )
+
+    protocol_agreement_ok = (
         expected_protocol_valid and negotiated_protocol_valid and row.expected_protocol == row.negotiated_protocol
     )
-    if expected_protocol_valid and negotiated_protocol_valid and not protocol_ok:
+    if expected_protocol_valid and negotiated_protocol_valid and not protocol_agreement_ok:
         failures.append(
             _failure(
                 code="protocol_negotiation_failed",
@@ -357,6 +426,7 @@ def _protocol_summary(
                 remediation="Verify the selected client mode and published server SDK compatibility.",
             )
         )
+    protocol_ok = protocol_role_ok and protocol_agreement_ok
 
     summary: ProtocolSummary = {
         "role": role,
@@ -367,7 +437,7 @@ def _protocol_summary(
         "negotiated_protocol": row.negotiated_protocol if negotiated_protocol_valid else None,
         "server_version_ok": server_version_ok,
         "protocol_ok": protocol_ok,
-        "ok": client_mode_valid and server_version_ok and protocol_ok,
+        "ok": mode_role_ok and server_version_ok and protocol_ok,
         "surface": _surface_summaries(row.surface),
     }
     return summary, failures
@@ -528,14 +598,37 @@ def _digest(values: Iterable[str]) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
-def _is_bounded_text(value: object) -> TypeGuard[str]:
-    if not isinstance(value, str) or not value.strip() or _has_control_character(value):
-        return False
+def _is_evidence_package(value: object) -> TypeGuard[str]:
+    return isinstance(value, str) and _NORMALIZED_PACKAGE_NAME.fullmatch(value) is not None and value == _PACKAGE_NAME
+
+
+def _parse_public_release(value: object) -> Version | None:
+    if (
+        not isinstance(value, str)
+        or len(value) > _MAX_RELEASE_LENGTH
+        or _PUBLIC_RELEASE_VERSION.fullmatch(value) is None
+    ):
+        return None
     try:
-        encoded = value.encode("utf-8")
-    except UnicodeEncodeError:
-        return False
-    return len(encoded) <= _MAX_OBSERVATION_BYTES
+        return Version(value)
+    except InvalidVersion:
+        return None
+
+
+def _is_supported_mode(value: object) -> TypeGuard[str]:
+    return isinstance(value, str) and value in _SUPPORTED_MODES
+
+
+def _is_supported_protocol(value: object) -> TypeGuard[str]:
+    return isinstance(value, str) and _ISO_DATE.fullmatch(value) is not None and value in _SUPPORTED_PROTOCOLS
+
+
+def _expected_mode(role: MatrixRole) -> str:
+    return _MODERN_MODE if role == "to_modern" else _LEGACY_MODE
+
+
+def _expected_protocol(role: MatrixRole) -> str:
+    return _MODERN_PROTOCOL if role == "to_modern" else _LEGACY_PROTOCOL
 
 
 def _is_iso_calendar_date(value: object) -> TypeGuard[str]:
