@@ -11,9 +11,47 @@ import sys
 import time
 import urllib.request
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
+from typing import Final
 
 _PROJECT_FIELD_PATTERN = re.compile(r'(?m)^(name|version)\s*=\s*"([^"]+)"')
+MAX_PYPI_RESPONSE_BYTES: Final = 128 * 1024
+
+
+class PyPIVersionState(str, Enum):
+    """Finite outcomes from one exact PyPI version lookup."""
+
+    AVAILABLE = "available"
+    RETRYABLE_UNAVAILABLE = "retryable_unavailable"
+    TERMINAL_MALFORMED = "terminal_malformed"
+    TERMINAL_VERSION_MISMATCH = "terminal_version_mismatch"
+
+
+@dataclass(frozen=True)
+class PyPIVersionResult:
+    """Typed privacy-safe result from an exact PyPI version lookup."""
+
+    state: PyPIVersionState
+
+    @property
+    def available(self) -> bool:
+        return self.state is PyPIVersionState.AVAILABLE
+
+    @property
+    def retryable(self) -> bool:
+        return self.state is PyPIVersionState.RETRYABLE_UNAVAILABLE
+
+    @property
+    def message(self) -> str:
+        return {
+            PyPIVersionState.AVAILABLE: "",
+            PyPIVersionState.RETRYABLE_UNAVAILABLE: "PyPI version endpoint is not visible yet.",
+            PyPIVersionState.TERMINAL_MALFORMED: "PyPI version endpoint returned a malformed response.",
+            PyPIVersionState.TERMINAL_VERSION_MISMATCH: (
+                "PyPI version endpoint did not confirm the requested exact version."
+            ),
+        }[self.state]
 
 
 def main() -> None:
@@ -97,16 +135,16 @@ def run_smoke(config: SmokeConfig) -> None:
     attempts = max(1, config.retries)
     for attempt in range(1, attempts + 1):
         if config.check_pypi_version:
-            pypi_error = check_pypi_version(
+            pypi_result = check_pypi_version(
                 package=config.package,
                 version=config.version,
                 timeout_seconds=config.timeout_seconds,
             )
-            if pypi_error is not None:
-                if attempt == attempts:
-                    sys.stderr.write(pypi_error)
+            if not pypi_result.available:
+                if not pypi_result.retryable or attempt == attempts:
+                    sys.stderr.write(pypi_result.message + "\n")
                     raise SystemExit(1)
-                sys.stderr.write(f"{pypi_error.rstrip()}, retrying smoke attempt {attempt}/{attempts}\n")
+                sys.stderr.write(f"{pypi_result.message} retrying smoke attempt {attempt}/{attempts}\n")
                 time.sleep(max(0.0, config.delay_seconds))
                 continue
         completed = subprocess.run(config.command, check=False, text=True, capture_output=True)  # noqa: S603
@@ -120,21 +158,36 @@ def run_smoke(config: SmokeConfig) -> None:
         time.sleep(max(0.0, config.delay_seconds))
 
 
-def check_pypi_version(*, package: str, version: str, timeout_seconds: float) -> str | None:
-    """Return a stable safe error when an exact PyPI version is unavailable."""
+def check_pypi_version(*, package: str, version: str, timeout_seconds: float) -> PyPIVersionResult:
+    """Return a typed safe result for one bounded exact-version lookup."""
     url = build_pypi_version_url(package=package, version=version)
     try:
         with urllib.request.urlopen(url, timeout=timeout_seconds) as response:  # noqa: S310 - fixed HTTPS PyPI URL.
-            payload = json.loads(response.read().decode("utf-8"))
+            body = response.read(MAX_PYPI_RESPONSE_BYTES + 1)
     except Exception:  # noqa: BLE001 - return a fixed message from the external response boundary.
-        return "PyPI version endpoint is not visible yet."
-    if not isinstance(payload, dict):
-        return "PyPI version endpoint did not confirm the requested exact version."
-    info = payload.get("info")
-    published_version = info.get("version") if isinstance(info, dict) else None
-    if published_version != version:
-        return "PyPI version endpoint did not confirm the requested exact version."
-    return None
+        state = PyPIVersionState.RETRYABLE_UNAVAILABLE
+    else:
+        state = _classify_pypi_response(body, expected_version=version)
+    return PyPIVersionResult(state)
+
+
+def _classify_pypi_response(body: object, *, expected_version: str) -> PyPIVersionState:
+    state = PyPIVersionState.TERMINAL_MALFORMED
+    if type(body) is bytes and len(body) <= MAX_PYPI_RESPONSE_BYTES:
+        try:
+            payload = json.loads(body.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            pass
+        else:
+            info = payload.get("info") if type(payload) is dict else None
+            published_version = info.get("version") if type(info) is dict else None
+            if type(published_version) is str:
+                state = (
+                    PyPIVersionState.AVAILABLE
+                    if published_version == expected_version
+                    else PyPIVersionState.TERMINAL_VERSION_MISMATCH
+                )
+    return state
 
 
 def _read_release_metadata(root: Path) -> ReleaseMetadata:

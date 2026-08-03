@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import copy
 import hashlib
 import inspect
 import json
@@ -18,6 +19,7 @@ from albumentationsx_mcp.upgrade_proof import (
     PublicSurface,
     UpgradeProofReport,
     build_upgrade_proof_report,
+    validate_upgrade_proof_report,
 )
 
 _CATEGORIES = ("tools", "resources", "resource_templates", "prompts")
@@ -198,6 +200,181 @@ def _scalar_failure(target: str) -> tuple[str, str]:
     if target.endswith(".advertised_server_version"):
         return "advertised_server_version_invalid", target.rsplit(".", maxsplit=1)[0]
     return "observation_invalid", target
+
+
+def _validate_publication(report: object) -> UpgradeProofReport:
+    return validate_upgrade_proof_report(
+        report,
+        expected_package="albumentationsx-mcp",
+        expected_from_version="1.20.0",
+        expected_to_version="1.21.0",
+        expected_observed_on="2026-08-03",
+    )
+
+
+def test_publication_validator_returns_detached_canonical_pass_report() -> None:
+    report = _report()
+
+    validated = _validate_publication(report)
+
+    assert validated == report
+    assert validated is not report
+    assert validated["matrix"] is not report["matrix"]
+    assert validated["compatibility"] is not report["compatibility"]
+    assert validated["artifact_continuity"] is not report["artifact_continuity"]
+    assert validated["failures"] is not report["failures"]
+
+
+def test_publication_validator_accepts_consistent_fail_report() -> None:
+    report = _report_for_surfaces(
+        _surface(tools=["removed", "retained"]),
+        _surface(tools=["retained"]),
+    )
+
+    validated = _validate_publication(report)
+
+    assert validated == report
+    assert validated["status"] == "fail"
+    assert [(item["code"], item["scope"]) for item in validated["failures"]] == [("surface_removed", "tools")]
+
+
+@pytest.mark.parametrize(
+    "report",
+    [
+        {"status": "pass"},
+        [],
+        None,
+    ],
+)
+def test_publication_validator_rejects_partial_or_non_object_reports(report: object) -> None:
+    with pytest.raises(ValueError, match="published upgrade proof report is invalid"):
+        _validate_publication(report)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("package", "other-package"),
+        ("from_version", "1.19.0"),
+        ("to_version", "1.22.0"),
+        ("observed_on", "2026-08-04"),
+    ],
+)
+def test_publication_validator_rejects_context_mismatch(field: str, value: str) -> None:
+    report = copy.deepcopy(_report())
+    cast("dict[str, object]", report)[field] = value
+
+    with pytest.raises(ValueError, match="published upgrade proof report is invalid"):
+        _validate_publication(report)
+
+
+def test_publication_validator_requires_exact_string_types() -> None:
+    class StringSubclass(str):
+        __slots__ = ()
+
+    report = copy.deepcopy(_report())
+    report["package"] = StringSubclass("albumentationsx-mcp")
+
+    with pytest.raises(ValueError, match="published upgrade proof report is invalid"):
+        _validate_publication(report)
+
+
+@pytest.mark.parametrize("target", ["top", "row", "surface", "compatibility", "artifact", "failure"])
+def test_publication_validator_rejects_unknown_sensitive_fields_without_echoing_them(target: str) -> None:
+    report = copy.deepcopy(_report_for_surfaces(_surface(tools=["removed"]), _surface(tools=[])))
+    sensitive_key = "https://token@proxy.invalid/private/path"
+    if target == "top":
+        cast("dict[str, object]", report)[sensitive_key] = "private"
+    elif target == "row":
+        cast("dict[str, object]", report["matrix"][0])[sensitive_key] = "private"
+    elif target == "surface":
+        cast("dict[str, object]", report["matrix"][0]["surface"])[sensitive_key] = "private"
+    elif target == "compatibility":
+        cast("dict[str, object]", report["compatibility"])[sensitive_key] = "private"
+    elif target == "artifact":
+        cast("dict[str, object]", report["artifact_continuity"])[sensitive_key] = "private"
+    else:
+        cast("dict[str, object]", report["failures"][0])[sensitive_key] = "private"
+
+    with pytest.raises(ValueError, match="published upgrade proof report is invalid") as caught:
+        _validate_publication(report)
+
+    assert str(caught.value) == "published upgrade proof report is invalid"
+    assert sensitive_key not in str(caught.value)
+
+
+@pytest.mark.parametrize("bad_count", [True, -1, 4097, float("nan")])
+def test_publication_validator_rejects_invalid_surface_count_types_and_bounds(bad_count: object) -> None:
+    report = copy.deepcopy(_report())
+    cast("dict[str, object]", report["matrix"][0]["surface"]["tools"])["count"] = bad_count
+
+    with pytest.raises(ValueError, match="published upgrade proof report is invalid"):
+        _validate_publication(report)
+
+
+def test_publication_validator_rejects_oversized_failure_list() -> None:
+    report = copy.deepcopy(_report_for_surfaces(_surface(tools=["removed"]), _surface(tools=[])))
+    report["failures"] = report["failures"] * 65
+
+    with pytest.raises(ValueError, match="published upgrade proof report is invalid"):
+        _validate_publication(report)
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "row_ok_false",
+        "row_server_ok_false",
+        "artifact_flag_false",
+        "artifact_ok_false",
+        "pass_with_failure",
+        "compatibility_old_mismatch",
+        "new_modes_equal_false",
+    ],
+)
+def test_publication_validator_rejects_inconsistent_derived_state(mutation: str) -> None:
+    report = copy.deepcopy(_report())
+    if mutation == "row_ok_false":
+        report["matrix"][0]["ok"] = False
+    elif mutation == "row_server_ok_false":
+        report["matrix"][0]["server_version_ok"] = False
+    elif mutation == "artifact_flag_false":
+        report["artifact_continuity"]["manifest_readable"] = False
+    elif mutation == "artifact_ok_false":
+        report["artifact_continuity"]["ok"] = False
+    elif mutation == "pass_with_failure":
+        failed = _report_for_surfaces(_surface(tools=["removed"]), _surface(tools=[]))
+        report["failures"] = copy.deepcopy(failed["failures"])
+    elif mutation == "compatibility_old_mismatch":
+        report["compatibility"]["categories"]["tools"]["old"]["sha256"] = "b" * 64
+    else:
+        report["compatibility"]["new_modes_equal"] = False
+
+    with pytest.raises(ValueError, match="published upgrade proof report is invalid"):
+        _validate_publication(report)
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    ["status", "missing_count", "missing_sha256", "remediation", "duplicate", "unknown_code"],
+)
+def test_publication_validator_rejects_malformed_fail_reports(mutation: str) -> None:
+    report = copy.deepcopy(_report_for_surfaces(_surface(tools=["removed"]), _surface(tools=[])))
+    if mutation == "status":
+        report["status"] = "pass"
+    elif mutation == "missing_count":
+        report["failures"][0]["missing_count"] = True
+    elif mutation == "missing_sha256":
+        report["failures"][0]["missing_sha256"] = "A" * 64
+    elif mutation == "remediation":
+        report["failures"][0]["remediation"] = "ignore the mismatch"
+    elif mutation == "duplicate":
+        report["failures"].append(copy.deepcopy(report["failures"][0]))
+    else:
+        cast("dict[str, object]", report["failures"][0])["code"] = "private_unknown_code"
+
+    with pytest.raises(ValueError, match="published upgrade proof report is invalid"):
+        _validate_publication(report)
 
 
 def test_additive_upgrade_passes_without_emitting_public_identifier_lists() -> None:

@@ -4,37 +4,47 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import base64
+import contextlib
 import json
 import math
 import os
 import re
+import secrets
+import signal
 import stat
+import subprocess
 import sys
 import tempfile
+import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from pathlib import Path
-from typing import Final, Protocol, TypeVar
+from typing import BinaryIO, Final, Protocol, TypeVar
 
 if not __package__:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from mcp.types.version import LATEST_MODERN_VERSION
 
-from albumentationsx_mcp.upgrade_proof import UpgradeProofReport
-from scripts.check_published_package_smoke import check_pypi_version
+from albumentationsx_mcp.upgrade_proof import UpgradeProofReport, validate_upgrade_proof_report
+from scripts.check_published_package_smoke import PyPIVersionResult, PyPIVersionState, check_pypi_version
 from scripts.published_upgrade_runtime import (
     PACKAGE,
     PublishedUpgradeConfig,
     PublishedUpgradeRuntimeError,
+    RuntimeCode,
+    RuntimePhase,
+    StderrCategory,
     build_attested_uvx_server_command,
     run_published_upgrade,
 )
 
 _SCHEMA_VERSION: Final = "albumentationsx-mcp/published-upgrade-proof/v1"
 _EXACT_VERSION: Final = re.compile(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\Z")
+_ISO_DATE: Final = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}\Z")
 _MAX_VERSION_LENGTH: Final = 128
 _MAX_RETRIES: Final = 10
 _MAX_RETRY_DELAY_SECONDS: Final = 300.0
@@ -42,10 +52,24 @@ _MAX_PYPI_TIMEOUT_SECONDS: Final = 120.0
 _MAX_READ_TIMEOUT_SECONDS: Final = 600.0
 _MAX_PROBE_TIMEOUT_SECONDS: Final = 3600.0
 _MAX_SERIALIZED_REPORT_BYTES: Final = 1024 * 1024
+_MAX_CHILD_PAYLOAD_BYTES: Final = _MAX_SERIALIZED_REPORT_BYTES + 4096
+_MAX_ENCODED_REQUEST_LENGTH: Final = 4096
+_PROCESS_TERMINATE_GRACE_SECONDS: Final = 0.25
+_PROCESS_KILL_GRACE_SECONDS: Final = 0.5
+_CHILD_MODE: Final = "--published-upgrade-child"
+_CHILD_ARG_COUNT: Final = 3
+_MAX_OUTPUT_PATH_LENGTH: Final = 4096
+_MAX_OUTPUT_COMPONENTS: Final = 64
+_MAX_OUTPUT_COMPONENT_LENGTH: Final = 255
+_TEMP_FILE_ATTEMPTS: Final = 16
+_CHILD_ERROR_REASONS: Final = frozenset({"child_payload_invalid", "child_process_failed", "operational_error"})
+_RUNTIME_PHASE_VALUES: Final = frozenset(item.value for item in RuntimePhase)
+_RUNTIME_CODE_VALUES: Final = frozenset(item.value for item in RuntimeCode)
+_STDERR_CATEGORY_VALUES: Final = frozenset(item.value for item in StderrCategory)
 
 
 class _PyPIVersionCheck(Protocol):
-    def __call__(self, *, package: str, version: str, timeout_seconds: float) -> str | None: ...
+    def __call__(self, *, package: str, version: str, timeout_seconds: float) -> PyPIVersionResult: ...
 
 
 @dataclass(frozen=True)
@@ -63,6 +87,33 @@ class _FailureContext:
     observed_on: date
 
 
+@dataclass(frozen=True)
+class _ProbeRequest:
+    from_version: str
+    to_version: str
+    observed_on: str
+    read_timeout_seconds: float
+
+
+@dataclass(frozen=True)
+class _PyPIVersionFailure:
+    version: str
+    state: PyPIVersionState
+
+
+@dataclass
+class _BoundedChildOutput:
+    data: bytes = b""
+    failed: bool = False
+
+
+class _ProbeExecutorError(RuntimeError):
+    def __init__(self, failure: dict[str, str]) -> None:
+        self.failure = dict(failure)
+        super().__init__("Published upgrade child execution failed.")
+
+
+_ProbeLauncher = Callable[[_ProbeRequest], subprocess.Popen[bytes]]
 _ExceptionT = TypeVar("_ExceptionT", bound=BaseException)
 
 
@@ -154,14 +205,7 @@ def _verify_pypi_versions(args: argparse.Namespace, context: _FailureContext) ->
         return False
 
     if unavailable_versions:
-        failures = [
-            {
-                "code": "pypi_version_unavailable",
-                "scope": "from_version" if version == args.from_version else "to_version",
-                "remediation": "Retry after the exact release is visible on the public PyPI version endpoint.",
-            }
-            for version in unavailable_versions
-        ]
+        failures = [_pypi_failure(item, from_version=args.from_version) for item in unavailable_versions]
         _emit_failure(context, failures=failures)
         return False
     return True
@@ -172,19 +216,15 @@ def _collect_upgrade_report(
     context: _FailureContext,
 ) -> UpgradeProofReport | None:
     try:
-        with tempfile.TemporaryDirectory(prefix="albumentationsx-mcp-upgrade-") as temporary:
-            root = Path(temporary)
-            report = _run_probe(
-                PublishedUpgradeConfig(
-                    from_version=args.from_version,
-                    to_version=args.to_version,
-                    observed_on=context.observed_on.isoformat(),
-                    allowed_root=root,
-                    artifact_root=root / "artifacts",
-                    read_timeout_seconds=args.read_timeout,
-                ),
-                args.probe_timeout,
-            )
+        report = _run_probe(
+            _ProbeRequest(
+                from_version=args.from_version,
+                to_version=args.to_version,
+                observed_on=context.observed_on.isoformat(),
+                read_timeout_seconds=args.read_timeout,
+            ),
+            args.probe_timeout,
+        )
     except BaseException as error:  # noqa: BLE001 - AnyIO may wrap runtime failures in base exception groups.
         failure = _probe_failure(error)
         _emit_failure(context, failures=[failure])
@@ -193,13 +233,19 @@ def _collect_upgrade_report(
 
 
 def _validated_serialized_report(
-    report: UpgradeProofReport,
+    report: object,
     context: _FailureContext,
 ) -> tuple[str, str] | None:
     try:
-        content = _serialize_report(report)
-        status = _validated_report_status(report)
-    except (KeyError, TypeError, ValueError):
+        validated = validate_upgrade_proof_report(
+            report,
+            expected_package=PACKAGE,
+            expected_from_version=context.from_version,
+            expected_to_version=context.to_version,
+            expected_observed_on=context.observed_on.isoformat(),
+        )
+        content = _serialize_report(validated)
+    except (TypeError, ValueError):
         _emit_failure(
             context,
             failures=[
@@ -211,7 +257,7 @@ def _validated_serialized_report(
             ],
         )
         return None
-    return content, status
+    return content, validated["status"]
 
 
 def _publish_report(
@@ -256,6 +302,9 @@ def _parse_exact_version(value: str) -> str:
 
 
 def _parse_observed_on(value: str) -> date:
+    if _ISO_DATE.fullmatch(value) is None:
+        message = "observed-on must be a valid ISO calendar date in YYYY-MM-DD form"
+        raise argparse.ArgumentTypeError(message)
     try:
         return date.fromisoformat(value)
     except ValueError:
@@ -364,26 +413,350 @@ def _wait_for_pypi_versions(
     *,
     check_version: _PyPIVersionCheck,
     sleep: Callable[[float], None],
-) -> tuple[str, ...]:
-    unavailable: list[str] = []
+) -> tuple[_PyPIVersionFailure, ...]:
+    unavailable: list[_PyPIVersionFailure] = []
     for version in dict.fromkeys(config.versions):
         for attempt in range(config.retries):
-            error = check_version(package=PACKAGE, version=version, timeout_seconds=config.timeout_seconds)
-            if error is None:
+            result = check_version(package=PACKAGE, version=version, timeout_seconds=config.timeout_seconds)
+            if result.available:
                 break
+            if not result.retryable:
+                unavailable.append(_PyPIVersionFailure(version=version, state=result.state))
+                return tuple(unavailable)
             if attempt + 1 < config.retries:
                 sleep(config.delay_seconds)
         else:
-            unavailable.append(version)
+            unavailable.append(_PyPIVersionFailure(version=version, state=PyPIVersionState.RETRYABLE_UNAVAILABLE))
     return tuple(unavailable)
 
 
-async def _bounded_probe(config: PublishedUpgradeConfig, timeout_seconds: float) -> UpgradeProofReport:
-    return await asyncio.wait_for(run_published_upgrade(config), timeout=timeout_seconds)
+def _pypi_failure(failure: _PyPIVersionFailure, *, from_version: str) -> dict[str, str]:
+    scope = "from_version" if failure.version == from_version else "to_version"
+    if failure.state is PyPIVersionState.TERMINAL_VERSION_MISMATCH:
+        return {
+            "code": "pypi_version_mismatch",
+            "scope": scope,
+            "remediation": "Verify the exact public PyPI release version before running the upgrade proof.",
+        }
+    if failure.state is PyPIVersionState.TERMINAL_MALFORMED:
+        return {
+            "code": "pypi_response_invalid",
+            "scope": scope,
+            "remediation": "Retry after the public PyPI version endpoint returns a bounded valid response.",
+        }
+    return {
+        "code": "pypi_version_unavailable",
+        "scope": scope,
+        "remediation": "Retry after the exact release is visible on the public PyPI version endpoint.",
+    }
 
 
-def _run_probe(config: PublishedUpgradeConfig, timeout_seconds: float) -> UpgradeProofReport:
-    return asyncio.run(_bounded_probe(config, timeout_seconds))
+# Isolated probe watchdog
+
+
+def _run_probe(
+    request: _ProbeRequest,
+    timeout_seconds: float,
+    *,
+    launcher: _ProbeLauncher | None = None,
+) -> object:
+    deadline = time.monotonic() + timeout_seconds
+    try:
+        process = (launcher or _launch_probe_process)(request)
+    except BaseException as error:  # noqa: BLE001 - nested control-flow exceptions must survive test seams.
+        _raise_control_flow(error)
+        raise _ProbeExecutorError(_child_failure("child_start_failed")) from None
+    process_group = _isolated_process_group(process)
+    if process.stdout is None:
+        _stop_probe_process(process, process_group=process_group)
+        raise _ProbeExecutorError(_child_failure("child_start_failed"))
+
+    output = _BoundedChildOutput()
+    reader = threading.Thread(
+        target=_read_bounded_child_output,
+        args=(process.stdout, output),
+        daemon=True,
+    )
+    reader.start()
+    try:
+        remaining = max(0.0, deadline - time.monotonic())
+        process.wait(timeout=remaining)
+    except subprocess.TimeoutExpired:
+        _stop_probe_process(process, process_group=process_group)
+        _finish_child_reader(process, reader)
+        raise _ProbeExecutorError(_child_failure("timeout")) from None
+    except BaseException as error:  # noqa: BLE001 - nested control-flow exceptions must survive test seams.
+        _stop_probe_process(process, process_group=process_group)
+        _finish_child_reader(process, reader)
+        _raise_control_flow(error)
+        raise _ProbeExecutorError(_child_failure("child_process_failed")) from None
+    _kill_process_group(process_group)
+    _finish_child_reader(process, reader)
+
+    if output.failed or len(output.data) > _MAX_CHILD_PAYLOAD_BYTES:
+        raise _ProbeExecutorError(_child_failure("child_payload_invalid"))
+    if process.returncode != 0:
+        raise _ProbeExecutorError(_child_failure("child_process_failed"))
+    return _parse_child_payload(output.data)
+
+
+def _launch_probe_process(request: _ProbeRequest) -> subprocess.Popen[bytes]:
+    encoded_request = _encode_probe_request(request)
+    return subprocess.Popen(  # noqa: S603 - fixed interpreter and local script path.
+        [sys.executable, str(Path(__file__).resolve()), _CHILD_MODE, encoded_request],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        start_new_session=os.name == "posix",
+        creationflags=(getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) if os.name == "nt" else 0),
+    )
+
+
+def _read_bounded_child_output(stream: BinaryIO, output: _BoundedChildOutput) -> None:
+    try:
+        data = stream.read(_MAX_CHILD_PAYLOAD_BYTES + 1)
+        if type(data) is not bytes:
+            output.failed = True
+            return
+        output.data = data
+    except Exception:  # noqa: BLE001 - reader exposes only a finite failure bit.
+        output.failed = True
+    finally:
+        try:
+            stream.close()
+        except Exception:  # noqa: BLE001 - process outcome remains finite.
+            output.failed = True
+
+
+def _finish_child_reader(process: subprocess.Popen[bytes], reader: threading.Thread) -> None:
+    reader.join(timeout=_PROCESS_KILL_GRACE_SECONDS)
+    if reader.is_alive() and process.stdout is not None:
+        with contextlib.suppress(OSError):
+            process.stdout.close()
+        reader.join(timeout=_PROCESS_KILL_GRACE_SECONDS)
+
+
+def _isolated_process_group(process: subprocess.Popen[bytes]) -> int | None:
+    if os.name != "posix":
+        return None
+    try:
+        process_group = os.getpgid(process.pid)
+    except OSError:
+        return None
+    return process_group if process_group == process.pid else None
+
+
+def _stop_probe_process(process: subprocess.Popen[bytes], *, process_group: int | None) -> None:
+    if process.poll() is None:
+        _signal_probe_process(process, process_group=process_group, terminate=True)
+        with contextlib.suppress(subprocess.TimeoutExpired):
+            process.wait(timeout=_PROCESS_TERMINATE_GRACE_SECONDS)
+    _signal_probe_process(process, process_group=process_group, terminate=False)
+    if process.poll() is None:
+        try:
+            process.wait(timeout=_PROCESS_KILL_GRACE_SECONDS)
+        except subprocess.TimeoutExpired:
+            _signal_probe_process(process, process_group=process_group, terminate=False)
+
+
+def _signal_probe_process(
+    process: subprocess.Popen[bytes],
+    *,
+    process_group: int | None,
+    terminate: bool,
+) -> None:
+    if process_group is not None:
+        signal_number = signal.SIGTERM if terminate else signal.SIGKILL
+        try:
+            os.killpg(process_group, signal_number)
+        except OSError:
+            return
+        return
+    try:
+        if terminate:
+            process.terminate()
+        else:
+            process.kill()
+    except OSError:
+        return
+
+
+def _kill_process_group(process_group: int | None) -> None:
+    if process_group is None:
+        return
+    with contextlib.suppress(OSError):
+        os.killpg(process_group, signal.SIGKILL)
+
+
+def _encode_probe_request(request: _ProbeRequest) -> str:
+    payload = json.dumps(
+        {
+            "from_version": request.from_version,
+            "to_version": request.to_version,
+            "observed_on": request.observed_on,
+            "read_timeout_seconds": request.read_timeout_seconds,
+        },
+        allow_nan=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    return base64.urlsafe_b64encode(payload).decode("ascii")
+
+
+def _decode_probe_request(encoded: str) -> _ProbeRequest:
+    if type(encoded) is not str or len(encoded) > _MAX_ENCODED_REQUEST_LENGTH:
+        raise _ProbeExecutorError(_child_failure("child_payload_invalid"))
+    try:
+        raw = base64.b64decode(encoded.encode("ascii"), altchars=b"-_", validate=True)
+        data = json.loads(raw.decode("utf-8"))
+    except Exception as error:
+        raise _ProbeExecutorError(_child_failure("child_payload_invalid")) from error
+    expected_keys = {"from_version", "to_version", "observed_on", "read_timeout_seconds"}
+    if type(data) is not dict or len(data) != len(expected_keys) or set(data) != expected_keys:
+        raise _ProbeExecutorError(_child_failure("child_payload_invalid"))
+    from_version = data["from_version"]
+    to_version = data["to_version"]
+    observed_on = data["observed_on"]
+    read_timeout = data["read_timeout_seconds"]
+    if (
+        type(from_version) is not str
+        or type(to_version) is not str
+        or type(observed_on) is not str
+        or type(read_timeout) not in {int, float}
+        or not math.isfinite(read_timeout)
+        or not 0 < read_timeout <= _MAX_READ_TIMEOUT_SECONDS
+    ):
+        raise _ProbeExecutorError(_child_failure("child_payload_invalid"))
+    try:
+        validate_exact_version(from_version)
+        validate_exact_version(to_version)
+        _validate_upgrade_order(from_version, to_version)
+        _parse_observed_on(observed_on)
+    except (ValueError, argparse.ArgumentTypeError):
+        raise _ProbeExecutorError(_child_failure("child_payload_invalid")) from None
+    return _ProbeRequest(
+        from_version=from_version,
+        to_version=to_version,
+        observed_on=observed_on,
+        read_timeout_seconds=float(read_timeout),
+    )
+
+
+def _parse_child_payload(payload: bytes) -> object:
+    try:
+        data = json.loads(payload.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        raise _ProbeExecutorError(_child_failure("child_payload_invalid")) from None
+    if type(data) is not dict or type(data.get("kind")) is not str:
+        raise _ProbeExecutorError(_child_failure("child_payload_invalid"))
+    kind = data["kind"]
+    if kind == "report" and set(data) == {"kind", "report"}:
+        return data["report"]
+    if kind == "runtime_error" and set(data) == {"kind", "phase", "code", "diagnostic"}:
+        phase = data["phase"]
+        code = data["code"]
+        diagnostic = data["diagnostic"]
+        if (
+            type(phase) is str
+            and phase in _RUNTIME_PHASE_VALUES
+            and type(code) is str
+            and code in _RUNTIME_CODE_VALUES
+            and type(diagnostic) is str
+            and diagnostic in _STDERR_CATEGORY_VALUES
+        ):
+            raise _ProbeExecutorError(_runtime_failure(phase=phase, code=code, diagnostic=diagnostic))
+    if kind == "error" and set(data) == {"kind", "reason"}:
+        reason = data["reason"]
+        if type(reason) is str and reason in _CHILD_ERROR_REASONS:
+            raise _ProbeExecutorError(_child_failure(reason))
+    raise _ProbeExecutorError(_child_failure("child_payload_invalid"))
+
+
+def _child_failure(reason: str) -> dict[str, str]:
+    if reason == "timeout":
+        return {
+            "code": "probe_execution_failed",
+            "reason": "timeout",
+            "remediation": "Retry with a bounded probe timeout after checking published server startup locally.",
+        }
+    if reason == "child_payload_invalid":
+        return {
+            "code": "probe_execution_failed",
+            "reason": "child_payload_invalid",
+            "remediation": "Retry with a runtime that emits one bounded canonical child result.",
+        }
+    return {
+        "code": "probe_execution_failed",
+        "reason": reason,
+        "remediation": "Retry after checking published child startup and diagnostics locally.",
+    }
+
+
+def _runtime_failure(*, phase: str, code: str, diagnostic: str) -> dict[str, str]:
+    return {
+        "code": "probe_execution_failed",
+        "phase": phase,
+        "runtime_code": code,
+        "diagnostic": diagnostic,
+        "remediation": "Retry after checking PyPI visibility and published server diagnostics locally.",
+    }
+
+
+def _probe_child_main(encoded_request: str) -> int:
+    try:
+        request = _decode_probe_request(encoded_request)
+        with tempfile.TemporaryDirectory(prefix="albumentationsx-mcp-upgrade-") as temporary:
+            root = Path(temporary)
+            report = asyncio.run(
+                run_published_upgrade(
+                    PublishedUpgradeConfig(
+                        from_version=request.from_version,
+                        to_version=request.to_version,
+                        observed_on=request.observed_on,
+                        allowed_root=root,
+                        artifact_root=root / "artifacts",
+                        read_timeout_seconds=request.read_timeout_seconds,
+                    )
+                )
+            )
+        envelope: dict[str, object] = {"kind": "report", "report": report}
+    except BaseException as error:  # noqa: BLE001 - child emits only finite envelopes.
+        runtime_error = _find_nested_exception(error, PublishedUpgradeRuntimeError)
+        if runtime_error is not None:
+            envelope = {
+                "kind": "runtime_error",
+                "phase": runtime_error.phase.value,
+                "code": runtime_error.code.value,
+                "diagnostic": runtime_error.diagnostic.value,
+            }
+        elif isinstance(error, _ProbeExecutorError):
+            envelope = {"kind": "error", "reason": "child_payload_invalid"}
+        else:
+            envelope = {"kind": "error", "reason": "operational_error"}
+    return _write_child_envelope(envelope)
+
+
+def _write_child_envelope(envelope: dict[str, object]) -> int:
+    try:
+        payload = json.dumps(
+            envelope,
+            allow_nan=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("utf-8")
+    except (TypeError, ValueError, UnicodeEncodeError):
+        payload = b'{"kind":"error","reason":"child_payload_invalid"}'
+    if len(payload) > _MAX_CHILD_PAYLOAD_BYTES:
+        payload = b'{"kind":"error","reason":"child_payload_invalid"}'
+    try:
+        sys.stdout.buffer.write(payload)
+        sys.stdout.buffer.flush()
+    except (OSError, ValueError):
+        return 1
+    return 0
+
+
+# Failure normalization
 
 
 def _nested_exceptions(error: BaseException) -> tuple[BaseException, ...]:
@@ -407,7 +780,7 @@ def _raise_control_flow(error: BaseException) -> None:
     for exception_type in (asyncio.CancelledError, KeyboardInterrupt, SystemExit):
         control_flow = _find_nested_exception(error, exception_type)
         if control_flow is not None:
-            raise control_flow
+            raise control_flow from None
 
 
 def _contains_timeout_error(error: BaseException) -> bool:
@@ -417,15 +790,16 @@ def _contains_timeout_error(error: BaseException) -> bool:
 
 def _probe_failure(error: BaseException) -> dict[str, str]:
     _raise_control_flow(error)
+    executor_error = _find_nested_exception(error, _ProbeExecutorError)
+    if executor_error is not None:
+        return dict(executor_error.failure)
     runtime_error = _find_nested_exception(error, PublishedUpgradeRuntimeError)
     if runtime_error is not None:
-        return {
-            "code": "probe_execution_failed",
-            "phase": runtime_error.phase.value,
-            "runtime_code": runtime_error.code.value,
-            "diagnostic": runtime_error.diagnostic.value,
-            "remediation": "Retry after checking PyPI visibility and published server diagnostics locally.",
-        }
+        return _runtime_failure(
+            phase=runtime_error.phase.value,
+            code=runtime_error.code.value,
+            diagnostic=runtime_error.diagnostic.value,
+        )
     if _contains_timeout_error(error):
         return {
             "code": "probe_execution_failed",
@@ -470,36 +844,162 @@ def _serialize_report(report: UpgradeProofReport) -> str:
     return content
 
 
-def _validated_report_status(report: UpgradeProofReport) -> str:
-    status = report["status"]
-    if status not in {"pass", "fail"}:
-        message = "published upgrade report has an invalid status"
-        raise ValueError(message)
-    return status
-
-
-def _validate_output_path(path: Path) -> None:
-    if not path.name or path.name in {".", ".."}:
-        message = "output path must name a regular file"
-        raise OSError(message)
-    if path.is_symlink() or path.parent.is_symlink():
-        message = "output path must not be a symlink"
-        raise OSError(message)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if path.parent.is_symlink() or not path.parent.is_dir():
-        message = "output parent must be a regular directory"
-        raise OSError(message)
-    try:
-        mode = path.lstat().st_mode
-    except FileNotFoundError:
-        return
-    if not stat.S_ISREG(mode):
-        message = "output path must name a regular file"
-        raise OSError(message)
+# Durable atomic output
 
 
 def _write_atomic(path: Path, content: str) -> None:
-    _validate_output_path(path)
+    if _supports_posix_dirfd_output():
+        _write_atomic_posix(path, content)
+    else:
+        _write_atomic_fallback(path, content)
+
+
+def _supports_posix_dirfd_output() -> bool:
+    return (
+        os.name == "posix"
+        and bool(getattr(os, "O_DIRECTORY", 0))
+        and bool(getattr(os, "O_NOFOLLOW", 0))
+        and os.open in os.supports_dir_fd
+        and os.mkdir in os.supports_dir_fd
+        and os.stat in os.supports_dir_fd
+        and os.unlink in os.supports_dir_fd
+    )
+
+
+def _validated_output_parts(path: Path) -> tuple[str, tuple[str, ...]]:
+    encoded = os.fspath(path)
+    parts = path.parts
+    if not encoded or len(encoded) > _MAX_OUTPUT_PATH_LENGTH or len(parts) > _MAX_OUTPUT_COMPONENTS or not parts:
+        message = "output path shape is invalid"
+        raise OSError(message)
+    anchor = path.anchor
+    relative_parts = parts[1:] if anchor else parts
+    if not relative_parts or any(
+        component in {"", ".", ".."} or len(component) > _MAX_OUTPUT_COMPONENT_LENGTH for component in relative_parts
+    ):
+        message = "output path shape is invalid"
+        raise OSError(message)
+    return anchor, tuple(relative_parts)
+
+
+def _directory_open_flags() -> int:
+    return os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
+
+
+def _open_output_parent_posix(path: Path) -> tuple[int, str]:
+    anchor, parts = _validated_output_parts(path)
+    current_fd = os.open(anchor or ".", _directory_open_flags())
+    try:
+        for component in parts[:-1]:
+            try:
+                next_fd = os.open(component, _directory_open_flags(), dir_fd=current_fd)
+            except FileNotFoundError:
+                try:
+                    os.mkdir(component, mode=0o755, dir_fd=current_fd)
+                except FileExistsError:
+                    pass
+                else:
+                    os.fsync(current_fd)
+                next_fd = os.open(component, _directory_open_flags(), dir_fd=current_fd)
+            os.close(current_fd)
+            current_fd = next_fd
+    except BaseException:
+        os.close(current_fd)
+        raise
+    return current_fd, parts[-1]
+
+
+def _ensure_regular_destination_at(parent_fd: int, filename: str) -> None:
+    try:
+        mode = os.stat(filename, dir_fd=parent_fd, follow_symlinks=False).st_mode
+    except FileNotFoundError:
+        return
+    if not stat.S_ISREG(mode):
+        message = "output path must name a regular non-symlink file"
+        raise OSError(message)
+
+
+def _open_temporary_at(parent_fd: int) -> tuple[int, str]:
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+    for _attempt in range(_TEMP_FILE_ATTEMPTS):
+        filename = f".published-upgrade-{secrets.token_hex(12)}.tmp"
+        try:
+            return os.open(filename, flags, 0o600, dir_fd=parent_fd), filename
+        except FileExistsError:
+            continue
+    message = "unable to allocate a unique output temporary file"
+    raise OSError(message)
+
+
+def _write_atomic_posix(path: Path, content: str) -> None:
+    parent_fd, destination_name = _open_output_parent_posix(path)
+    temporary_name: str | None = None
+    temporary_fd: int | None = None
+    try:
+        _ensure_regular_destination_at(parent_fd, destination_name)
+        temporary_fd, temporary_name = _open_temporary_at(parent_fd)
+        with os.fdopen(temporary_fd, mode="w", encoding="utf-8", newline="\n") as handle:
+            temporary_fd = None
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        _ensure_regular_destination_at(parent_fd, destination_name)
+        os.replace(
+            temporary_name,
+            destination_name,
+            src_dir_fd=parent_fd,
+            dst_dir_fd=parent_fd,
+        )
+        temporary_name = None
+        os.fsync(parent_fd)
+    finally:
+        if temporary_fd is not None:
+            os.close(temporary_fd)
+        if temporary_name is not None:
+            with contextlib.suppress(FileNotFoundError):
+                os.unlink(temporary_name, dir_fd=parent_fd)
+        os.close(parent_fd)
+
+
+def _validate_fallback_output_path(path: Path) -> None:
+    """Validate without following links where dirfd/O_NOFOLLOW APIs are unavailable."""
+    anchor, parts = _validated_output_parts(path)
+    current = Path(anchor) if anchor else Path.cwd()
+    for component in parts[:-1]:
+        current /= component
+        try:
+            mode = current.lstat().st_mode
+        except FileNotFoundError:
+            current.mkdir()
+            mode = current.lstat().st_mode
+        if not stat.S_ISDIR(mode) or stat.S_ISLNK(mode):
+            message = "output parent must be a regular non-symlink directory"
+            raise OSError(message)
+    destination = current / parts[-1]
+    try:
+        mode = destination.lstat().st_mode
+    except FileNotFoundError:
+        return
+    if not stat.S_ISREG(mode):
+        message = "output path must name a regular non-symlink file"
+        raise OSError(message)
+
+
+def _fsync_directory_best_effort(path: Path) -> None:
+    descriptor: int | None = None
+    try:
+        descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+        os.fsync(descriptor)
+    except OSError:
+        pass
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+
+
+def _write_atomic_fallback(path: Path, content: str) -> None:
+    """Use a same-directory atomic replace on platforms without secure dirfd traversal."""
+    _validate_fallback_output_path(path)
     temporary_path: Path | None = None
     try:
         with tempfile.NamedTemporaryFile(
@@ -514,12 +1014,16 @@ def _write_atomic(path: Path, content: str) -> None:
             handle.write(content)
             handle.flush()
             os.fsync(handle.fileno())
+        _validate_fallback_output_path(path)
         os.replace(temporary_path, path)  # noqa: PTH105 - explicit atomic primitive is injected in tests.
         temporary_path = None
+        _fsync_directory_best_effort(path.parent)
     finally:
         if temporary_path is not None:
             temporary_path.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":
+    if len(sys.argv) == _CHILD_ARG_COUNT and sys.argv[1] == _CHILD_MODE:
+        raise SystemExit(_probe_child_main(sys.argv[2]))
     raise SystemExit(main())
