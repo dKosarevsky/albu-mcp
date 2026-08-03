@@ -462,6 +462,34 @@ def test_probe_timeout_fails_closed_without_replacing_output(
     assert failure["failures"][0]["reason"] == "timeout"
 
 
+def test_python_310_asyncio_timeout_is_classified_once_through_exception_group(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    class SimulatedAsyncioTimeoutError(Exception):
+        pass
+
+    def failed_probe(_config: PublishedUpgradeConfig, _timeout_seconds: float) -> UpgradeProofReport:
+        message = "private timeout group"
+        raise RuntimeExceptionGroup(message, [SimulatedAsyncioTimeoutError("private timeout detail")])
+
+    monkeypatch.setattr(check_published_upgrade.asyncio, "TimeoutError", SimulatedAsyncioTimeoutError)
+    monkeypatch.setattr(check_published_upgrade, "_run_probe", failed_probe)
+    monkeypatch.setattr(check_published_upgrade, "check_pypi_version", lambda **_kwargs: None)
+
+    result = check_published_upgrade.main(["--from-version", "1.20.0", "--to-version", "1.21.0"])
+    failure = json.loads(capsys.readouterr().err)
+
+    assert result == 1
+    assert failure["failures"] == [
+        {
+            "code": "probe_execution_failed",
+            "reason": "timeout",
+            "remediation": "Retry with a bounded probe timeout after checking published server startup locally.",
+        }
+    ]
+
+
 def test_runtime_failure_uses_only_finite_safe_diagnostics(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],

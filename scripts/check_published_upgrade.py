@@ -410,6 +410,11 @@ def _raise_control_flow(error: BaseException) -> None:
             raise control_flow
 
 
+def _contains_timeout_error(error: BaseException) -> bool:
+    timeout_types = (TimeoutError,) if asyncio.TimeoutError is TimeoutError else (TimeoutError, asyncio.TimeoutError)
+    return any(_find_nested_exception(error, exception_type) is not None for exception_type in timeout_types)
+
+
 def _probe_failure(error: BaseException) -> dict[str, str]:
     _raise_control_flow(error)
     runtime_error = _find_nested_exception(error, PublishedUpgradeRuntimeError)
@@ -421,7 +426,7 @@ def _probe_failure(error: BaseException) -> dict[str, str]:
             "diagnostic": runtime_error.diagnostic.value,
             "remediation": "Retry after checking PyPI visibility and published server diagnostics locally.",
         }
-    if _find_nested_exception(error, TimeoutError) is not None:
+    if _contains_timeout_error(error):
         return {
             "code": "probe_execution_failed",
             "reason": "timeout",
