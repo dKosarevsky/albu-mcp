@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import ast
 import hashlib
+import inspect
 import json
 from collections.abc import Iterable
 from dataclasses import replace
@@ -8,6 +10,7 @@ from typing import Any, cast
 
 import pytest
 
+from albumentationsx_mcp import upgrade_proof
 from albumentationsx_mcp.upgrade_proof import (
     ArtifactContinuity,
     ProtocolObservation,
@@ -204,6 +207,18 @@ def test_additive_upgrade_passes_without_emitting_public_identifier_lists() -> N
     assert "render_preview_batch" not in encoded
     assert "/Users/" not in encoded
     assert "/home/" not in encoded
+
+
+def test_upgrade_proof_does_not_import_undeclared_packaging_dependency() -> None:
+    tree = ast.parse(inspect.getsource(upgrade_proof))
+    packaging_imports = [
+        node
+        for node in ast.walk(tree)
+        if (isinstance(node, ast.ImportFrom) and node.module is not None and node.module.startswith("packaging"))
+        or (isinstance(node, ast.Import) and any(alias.name.startswith("packaging") for alias in node.names))
+    ]
+
+    assert packaging_imports == []
 
 
 def test_report_has_exact_schema_shape() -> None:
@@ -432,7 +447,7 @@ def test_matrix_versions_require_exact_public_release_grammar(role: str, field: 
     }
 
 
-def test_observation_bound_is_measured_in_utf8_bytes() -> None:
+def test_client_mode_allowlist_rejects_non_ascii_value() -> None:
     value = "\u00e9" * 65
     row = replace(cast("ProtocolObservation", _evidence()["from_legacy"]), client_mode=value)
 

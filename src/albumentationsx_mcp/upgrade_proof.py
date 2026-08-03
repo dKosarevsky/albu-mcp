@@ -11,8 +11,6 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Final, Literal, TypeAlias, TypedDict, TypeGuard
 
-from packaging.version import InvalidVersion, Version
-
 _SCHEMA_VERSION: Final = "albumentationsx-mcp/published-upgrade-proof/v1"
 _PACKAGE_NAME: Final = "albumentationsx-mcp"
 _MAX_RELEASE_LENGTH: Final = 128
@@ -23,7 +21,7 @@ _MODERN_PROTOCOL: Final = "2026-07-28"
 _SUPPORTED_MODES: Final = frozenset({_LEGACY_MODE, _MODERN_MODE})
 _SUPPORTED_PROTOCOLS: Final = frozenset({_LEGACY_PROTOCOL, _MODERN_PROTOCOL})
 _NORMALIZED_PACKAGE_NAME: Final = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*\Z")
-_PUBLIC_RELEASE_VERSION: Final = re.compile(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\Z")
+_PUBLIC_RELEASE_VERSION: Final = re.compile(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\Z")
 _ISO_DATE: Final = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}\Z")
 _LOWER_SHA256: Final = re.compile(r"[0-9a-f]{64}\Z")
 
@@ -602,17 +600,13 @@ def _is_evidence_package(value: object) -> TypeGuard[str]:
     return isinstance(value, str) and _NORMALIZED_PACKAGE_NAME.fullmatch(value) is not None and value == _PACKAGE_NAME
 
 
-def _parse_public_release(value: object) -> Version | None:
-    if (
-        not isinstance(value, str)
-        or len(value) > _MAX_RELEASE_LENGTH
-        or _PUBLIC_RELEASE_VERSION.fullmatch(value) is None
-    ):
+def _parse_public_release(value: object) -> tuple[int, int, int] | None:
+    if not isinstance(value, str) or len(value) > _MAX_RELEASE_LENGTH:
         return None
-    try:
-        return Version(value)
-    except InvalidVersion:
+    match = _PUBLIC_RELEASE_VERSION.fullmatch(value)
+    if match is None:
         return None
+    return int(match.group(1)), int(match.group(2)), int(match.group(3))
 
 
 def _is_supported_mode(value: object) -> TypeGuard[str]:
