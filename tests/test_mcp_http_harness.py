@@ -152,11 +152,7 @@ async def _request(
         receive,
         send,
     )
-    return b"".join(
-        message.get("body", b"")
-        for message in sent
-        if message["type"] == "http.response.body"
-    )
+    return b"".join(message.get("body", b"") for message in sent if message["type"] == "http.response.body")
 
 
 def test_dispatcher_routes_consecutive_requests_round_robin() -> None:
@@ -193,12 +189,8 @@ def test_trace_keeps_only_bounded_mcp_headers() -> None:
         ("mcp-name", "x" * 128),
         ("mcp-session-id", "<present>"),
     )
-    assert sanitize_mcp_headers([(b"mcp-name", b"preview_augmentation")]) == (
-        ("mcp-name", "preview_augmentation"),
-    )
-    assert sanitize_mcp_headers([(b"mcp-name", b"file:///Users/example/private.json")]) == (
-        ("mcp-name", "<redacted>"),
-    )
+    assert sanitize_mcp_headers([(b"mcp-name", b"preview_augmentation")]) == (("mcp-name", "preview_augmentation"),)
+    assert sanitize_mcp_headers([(b"mcp-name", b"file:///Users/example/private.json")]) == (("mcp-name", "<redacted>"),)
 
 
 def test_trace_is_bounded_and_reports_overflow_and_truncation() -> None:
@@ -240,9 +232,7 @@ def test_trace_capacity_cannot_exceed_hard_limit() -> None:
 
 def test_dispatcher_keeps_backend_lifespan_states_distinct() -> None:
     async def exercise() -> list[bytes]:
-        async with run_loopback_mcp_cluster(
-            [_state_backend("zero"), _state_backend("one")]
-        ) as cluster:
+        async with run_loopback_mcp_cluster([_state_backend("zero"), _state_backend("one")]) as cluster:
             return [await _request(cluster.dispatcher) for _ in range(3)]
 
     assert asyncio.run(exercise()) == [b"zero", b"one", b"zero"]

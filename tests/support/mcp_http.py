@@ -20,9 +20,7 @@ _MAX_HTTP_METHOD_VALUE = 16
 _MAX_HTTP_PATH_VALUE = 256
 _MAX_MCP_HEADER_COUNT = 4
 _MAX_MCP_HEADER_VALUE = 128
-_MCP_HEADER_ALLOWLIST = frozenset(
-    {"mcp-method", "mcp-name", "mcp-protocol-version", "mcp-session-id"}
-)
+_MCP_HEADER_ALLOWLIST = frozenset({"mcp-method", "mcp-name", "mcp-protocol-version", "mcp-session-id"})
 _SENSITIVE_MCP_HEADERS = frozenset({"mcp-session-id"})
 _SAFE_MCP_NAME = re.compile(r"[A-Za-z0-9_.-]+\Z")
 
@@ -246,9 +244,7 @@ async def run_loopback_mcp_cluster(
         listener.listen()
         listener.setblocking(False)  # noqa: FBT003
         port = int(listener.getsockname()[1])
-        server = uvicorn.Server(
-            uvicorn.Config(dispatcher, log_level="error", access_log=False, lifespan="on")
-        )
+        server = uvicorn.Server(uvicorn.Config(dispatcher, log_level="error", access_log=False, lifespan="on"))
         serve_task = asyncio.create_task(server.serve(sockets=[listener]))
         await asyncio.wait_for(
             _wait_until_started(server, serve_task, dispatcher),
