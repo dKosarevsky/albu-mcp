@@ -218,6 +218,46 @@ class PublishedUpgradeRuntimeError(RuntimeError):
         }
 
 
+class _StderrSink(Protocol):
+    category: StderrCategory
+
+    @property
+    def stream(self) -> TextIO: ...
+
+    def __enter__(self) -> Self: ...
+
+    def __exit__(self, *_args: object) -> None: ...
+
+    def finish_and_classify(self) -> StderrCategory: ...
+
+
+class _DevnullStderrSink:
+    """Discard child stderr on platforms where select cannot monitor pipes."""
+
+    def __init__(self) -> None:
+        self.category = StderrCategory.NONE
+        self._stream: TextIO | None = None
+
+    @property
+    def stream(self) -> TextIO:
+        if self._stream is None:
+            message = "stderr sink must be entered before use"
+            raise RuntimeError(message)
+        return self._stream
+
+    def __enter__(self) -> Self:
+        self._stream = Path(os.devnull).open("w", encoding="utf-8")
+        return self
+
+    def __exit__(self, *_args: object) -> None:
+        self.finish_and_classify()
+
+    def finish_and_classify(self) -> StderrCategory:
+        if self._stream is not None and not self._stream.closed:
+            self._stream.close()
+        return self.category
+
+
 class _BoundedStderrSink:
     """Drain child stderr without retaining raw bytes."""
 
@@ -326,6 +366,10 @@ class _BoundedStderrSink:
             self.category = StderrCategory.TRUNCATED
 
 
+def _stderr_sink() -> _StderrSink:
+    return _BoundedStderrSink() if os.name == "posix" else _DevnullStderrSink()
+
+
 @dataclass(frozen=True)
 class PublishedUpgradeConfig:
     """Inputs shared across the three published-server observations."""
@@ -427,6 +471,37 @@ def _find_nested_exception(error: BaseException, exception_type: type[_Exception
     return None
 
 
+_ErrorCandidate: TypeAlias = tuple[BaseException | None, RuntimePhase, RuntimeCode, StderrCategory]
+
+
+def _select_runtime_error(*candidates: _ErrorCandidate) -> BaseException | None:
+    """Select cancellation, interrupts, exits, normalized errors, then ordinary errors."""
+    for control_flow_type in (asyncio.CancelledError, KeyboardInterrupt, SystemExit, GeneratorExit):
+        for error, _phase, _code, _diagnostic in candidates:
+            if error is None:
+                continue
+            control_flow = _find_nested_exception(error, control_flow_type)
+            if control_flow is not None:
+                return control_flow
+
+    for error, _phase, _code, _diagnostic in candidates:
+        if error is None:
+            continue
+        normalized = _find_nested_exception(error, PublishedUpgradeRuntimeError)
+        if normalized is not None:
+            return normalized
+
+    for error, phase, code, diagnostic in candidates:
+        if error is not None:
+            normalized_code = RuntimeCode.TIMEOUT if _find_nested_exception(error, TimeoutError) is not None else code
+            return PublishedUpgradeRuntimeError(
+                phase=phase,
+                code=normalized_code,
+                diagnostic=diagnostic,
+            )
+    return None
+
+
 def _normalize_runtime_error(
     error: BaseException,
     *,
@@ -434,20 +509,11 @@ def _normalize_runtime_error(
     code: RuntimeCode,
     diagnostic: StderrCategory = StderrCategory.NONE,
 ) -> BaseException:
-    if isinstance(error, PublishedUpgradeRuntimeError):
-        return error
-    for control_flow_type in (asyncio.CancelledError, KeyboardInterrupt, SystemExit):
-        control_flow = _find_nested_exception(error, control_flow_type)
-        if control_flow is not None:
-            return control_flow
-    if isinstance(error, GeneratorExit):
-        return error
-    normalized_code = RuntimeCode.TIMEOUT if _find_nested_exception(error, TimeoutError) is not None else code
-    return PublishedUpgradeRuntimeError(
-        phase=phase,
-        code=normalized_code,
-        diagnostic=diagnostic,
-    )
+    selected = _select_runtime_error((error, phase, code, diagnostic))
+    if selected is None:
+        message = "runtime normalization requires an error"
+        raise RuntimeError(message)
+    return selected
 
 
 _ConnectFailure: TypeAlias = tuple[RuntimePhase, RuntimeCode]
@@ -464,7 +530,6 @@ async def _connected_client(
 ) -> AsyncIterator[Client]:
     """Classify one client lifecycle without exposing underlying exceptions."""
     connected = False
-    body_completed = False
     body_error: BaseException | None = None
     caught_error: BaseException | None = None
     try:
@@ -472,7 +537,6 @@ async def _connected_client(
             connected = True
             try:
                 yield client
-                body_completed = True
             except BaseException as exc:
                 body_error = exc
                 raise
@@ -483,33 +547,20 @@ async def _connected_client(
         return
 
     stderr_category = diagnostic() if diagnostic is not None else StderrCategory.NONE
-    if isinstance(body_error, PublishedUpgradeRuntimeError):
-        error = body_error
-        phase, code = RuntimePhase.REQUEST, RuntimeCode.REQUEST_FAILED
-    elif isinstance(caught_error, PublishedUpgradeRuntimeError):
-        error = caught_error
-        phase, code = RuntimePhase.CONTEXT_EXIT, RuntimeCode.CONTEXT_EXIT_FAILED
-    elif body_error is not None:
-        error = body_error
-        phase, code = RuntimePhase.REQUEST, RuntimeCode.REQUEST_FAILED
-    elif connected:
-        error = caught_error
-        phase, code = (
-            (RuntimePhase.CONTEXT_EXIT, RuntimeCode.CONTEXT_EXIT_FAILED)
-            if body_completed
-            else (RuntimePhase.REQUEST, RuntimeCode.REQUEST_FAILED)
+    if connected:
+        caught_phase, caught_code = (
+            (RuntimePhase.REQUEST, RuntimeCode.REQUEST_FAILED)
+            if caught_error is body_error
+            else (RuntimePhase.CONTEXT_EXIT, RuntimeCode.CONTEXT_EXIT_FAILED)
         )
     else:
-        error = caught_error
-        phase, code = _DEFAULT_CONNECT_FAILURE if connect_failure is None else connect_failure()
-    if error is None:
-        return
-    raise _normalize_runtime_error(
-        error,
-        phase=phase,
-        code=code,
-        diagnostic=stderr_category,
-    ) from None
+        caught_phase, caught_code = _DEFAULT_CONNECT_FAILURE if connect_failure is None else connect_failure()
+    selected = _select_runtime_error(
+        (body_error, RuntimePhase.REQUEST, RuntimeCode.REQUEST_FAILED, stderr_category),
+        (caught_error, caught_phase, caught_code, stderr_category),
+    )
+    if selected is not None:
+        raise selected from None
 
 
 @asynccontextmanager
@@ -530,7 +581,7 @@ async def open_published_client(request: ServerClientRequest) -> AsyncIterator[C
         cwd=str(request.allowed_root),
         env=clean_subprocess_environment(),
     )
-    with _BoundedStderrSink() as stderr_sink:
+    with _stderr_sink() as stderr_sink:
         transport_started = False
 
         @asynccontextmanager
@@ -637,28 +688,20 @@ async def run_published_upgrade(
             artifact=artifact,
         )
     except BaseException as exc:  # noqa: BLE001 - cleanup must run after cancellation and exception groups.
-        probe_error = _normalize_runtime_error(
-            exc,
-            phase=RuntimePhase.REQUEST,
-            code=RuntimeCode.REQUEST_FAILED,
-        )
+        probe_error = exc
 
     cleanup_error: BaseException | None = None
     try:
         _remove_fixture_workspace(fixture_root)
     except BaseException as exc:  # noqa: BLE001 - cleanup failures are normalized at the outer boundary.
-        cleanup_error = _normalize_runtime_error(
-            exc,
-            phase=RuntimePhase.FILESYSTEM,
-            code=RuntimeCode.FIXTURE_CLEANUP_FAILED,
-        )
+        cleanup_error = exc
 
-    if isinstance(probe_error, asyncio.CancelledError) or isinstance(cleanup_error, asyncio.CancelledError):
-        raise asyncio.CancelledError from None
-    if probe_error is not None:
-        raise probe_error from None
-    if cleanup_error is not None:
-        raise cleanup_error from None
+    selected = _select_runtime_error(
+        (probe_error, RuntimePhase.REQUEST, RuntimeCode.REQUEST_FAILED, StderrCategory.NONE),
+        (cleanup_error, RuntimePhase.FILESYSTEM, RuntimeCode.FIXTURE_CLEANUP_FAILED, StderrCategory.NONE),
+    )
+    if selected is not None:
+        raise selected from None
     if report is None:
         raise PublishedUpgradeRuntimeError(
             phase=RuntimePhase.REQUEST,

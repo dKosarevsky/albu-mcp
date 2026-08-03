@@ -11,7 +11,7 @@ import zlib
 from collections.abc import AsyncIterator, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import replace
-from io import BytesIO
+from io import BytesIO, StringIO
 from pathlib import Path
 from types import SimpleNamespace
 from typing import cast
@@ -518,6 +518,36 @@ def test_bounded_stderr_sink_forces_reader_cleanup_with_held_writer(
             os.close(duplicate_writer)
 
 
+def test_non_posix_stderr_sink_uses_closed_devnull_without_select(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    devnull_stream = StringIO()
+    opened_paths: list[str] = []
+
+    class PlatformPath:
+        def __init__(self, value: str) -> None:
+            opened_paths.append(value)
+
+        def open(self, *_args: object, **_kwargs: object) -> StringIO:
+            return devnull_stream
+
+    def forbidden_select(*_args: object, **_kwargs: object) -> object:
+        message = "select must not run for non-POSIX stderr"
+        raise AssertionError(message)
+
+    monkeypatch.setattr(runtime_module.os, "name", "nt")
+    monkeypatch.setattr(runtime_module.os, "devnull", "NUL")
+    monkeypatch.setattr(runtime_module, "Path", PlatformPath)
+    monkeypatch.setattr(runtime_module.select, "select", forbidden_select)
+
+    with runtime_module._stderr_sink() as sink:
+        assert sink.stream is devnull_stream
+        assert sink.finish_and_classify() is StderrCategory.NONE
+
+    assert opened_paths == ["NUL"]
+    assert devnull_stream.closed
+
+
 @pytest.mark.parametrize(
     ("failure", "expected_code"),
     [
@@ -622,6 +652,80 @@ def test_default_nested_lifecycle_preserves_normalized_inner_teardown(
 
     assert caught.value is richer
     assert caught.value.diagnostic is StderrCategory.TRUNCATED
+
+
+@pytest.mark.parametrize("control_flow_source", ["body", "teardown"])
+def test_connected_client_prioritizes_control_flow_across_body_and_teardown(
+    control_flow_source: str,
+) -> None:
+    normalized = PublishedUpgradeRuntimeError(
+        phase=RuntimePhase.REQUEST,
+        code=RuntimeCode.REQUEST_FAILED,
+        diagnostic=StderrCategory.OTHER,
+    )
+    control_flow: BaseException = asyncio.CancelledError() if control_flow_source == "body" else SystemExit(29)
+    body_error = control_flow if control_flow_source == "body" else normalized
+    teardown_error = normalized if control_flow_source == "body" else control_flow
+
+    @asynccontextmanager
+    async def client_manager() -> AsyncIterator[Client]:
+        try:
+            yield cast("Client", object())
+        finally:
+            raise teardown_error
+
+    async def exercise() -> None:
+        async with runtime_module._connected_client(client_manager):
+            raise body_error
+
+    with pytest.raises(type(control_flow)) as caught:
+        asyncio.run(exercise())
+
+    assert caught.value is control_flow
+
+
+def test_run_cleanup_control_flow_precedes_probe_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    probe_error = PublishedUpgradeRuntimeError(
+        phase=RuntimePhase.REQUEST,
+        code=RuntimeCode.REQUEST_FAILED,
+    )
+    cleanup_control = SystemExit(31)
+    remove_fixture_workspace = runtime_module._remove_fixture_workspace
+
+    def cleanup(fixture_root: Path) -> None:
+        remove_fixture_workspace(fixture_root)
+        message = "private-cleanup-group"
+        raise RuntimeBaseExceptionGroup(message, [cleanup_control])
+
+    @asynccontextmanager
+    async def client_factory(_request: ServerClientRequest) -> AsyncIterator[Client]:
+        raise probe_error
+        yield cast("Client", object())
+
+    monkeypatch.setattr(runtime_module, "_remove_fixture_workspace", cleanup)
+    with pytest.raises(SystemExit) as caught:
+        asyncio.run(run_published_upgrade(_config(tmp_path), client_factory=client_factory))
+
+    assert caught.value is cleanup_control
+
+
+def test_error_selector_preserves_ordinary_diagnostic() -> None:
+    selected = runtime_module._select_runtime_error(
+        (
+            ValueError("private-negotiation-value"),
+            RuntimePhase.NEGOTIATION,
+            RuntimeCode.NEGOTIATION_FAILED,
+            StderrCategory.OTHER,
+        )
+    )
+
+    assert isinstance(selected, PublishedUpgradeRuntimeError)
+    assert selected.phase is RuntimePhase.NEGOTIATION
+    assert selected.code is RuntimeCode.NEGOTIATION_FAILED
+    assert selected.diagnostic is StderrCategory.OTHER
 
 
 def test_context_exit_failure_after_success_is_normalized(
