@@ -25,6 +25,7 @@ _ROLES = ("from_legacy", "to_legacy", "to_modern")
 _ROW_SCALAR_FIELDS = (
     "server_version",
     "observed_server_version",
+    "advertised_server_version",
     "client_mode",
     "expected_protocol",
     "negotiated_protocol",
@@ -78,6 +79,7 @@ def _observation(version: str, mode: str, protocol: str, surface: PublicSurface)
     return ProtocolObservation(
         server_version=version,
         observed_server_version=version,
+        advertised_server_version=version,
         client_mode=mode,
         expected_protocol=protocol,
         negotiated_protocol=protocol,
@@ -193,6 +195,8 @@ def _scalar_failure(target: str) -> tuple[str, str]:
         return "observed_on_invalid", target
     if target == "artifact.contact_sheet_sha256":
         return "artifact_sha256_invalid", "contact_sheet_sha256"
+    if target.endswith(".advertised_server_version"):
+        return "advertised_server_version_invalid", target.rsplit(".", maxsplit=1)[0]
     return "observation_invalid", target
 
 
@@ -243,6 +247,7 @@ def test_report_has_exact_schema_shape() -> None:
             "role",
             "server_version",
             "observed_server_version",
+            "advertised_server_version",
             "client_mode",
             "expected_protocol",
             "negotiated_protocol",
@@ -317,6 +322,40 @@ def test_every_matrix_row_reports_version_and_protocol_mismatches(
         assert ("row_protocol_mismatch", role) in {
             (failure["code"], failure["scope"]) for failure in report["failures"]
         }
+
+
+def test_advertised_sdk_version_is_informational_not_distribution_attestation() -> None:
+    from_legacy = replace(
+        cast("ProtocolObservation", _evidence()["from_legacy"]),
+        advertised_server_version="2.0.0",
+    )
+
+    report = _report(from_legacy=from_legacy)
+    summary = _matrix_row(report, "from_legacy")
+
+    assert report["status"] == "pass"
+    assert summary["observed_server_version"] == "1.20.0"
+    assert summary["advertised_server_version"] == "2.0.0"
+    assert summary["server_version_ok"] is True
+
+
+@pytest.mark.parametrize("advertised", ["", "mcp-sdk-main", cast("Any", None)])
+def test_missing_or_malformed_advertised_server_metadata_fails_closed(advertised: Any) -> None:
+    from_legacy = replace(
+        cast("ProtocolObservation", _evidence()["from_legacy"]),
+        advertised_server_version=advertised,
+    )
+
+    report = _report(from_legacy=from_legacy)
+    summary = _matrix_row(report, "from_legacy")
+
+    assert report["status"] == "fail"
+    assert summary["advertised_server_version"] is None
+    assert summary["server_version_ok"] is True
+    assert summary["ok"] is False
+    assert ("advertised_server_version_invalid", "from_legacy") in {
+        (failure["code"], failure["scope"]) for failure in report["failures"]
+    }
 
 
 @pytest.mark.parametrize(
@@ -405,6 +444,8 @@ def test_matrix_role_version_must_match_report_version(role: str) -> None:
         ("server_version", "x" * 129),
         ("observed_server_version", ""),
         ("observed_server_version", "x" * 129),
+        ("advertised_server_version", ""),
+        ("advertised_server_version", "x" * 129),
         ("client_mode", ""),
         ("client_mode", "x" * 129),
         ("expected_protocol", ""),
@@ -424,15 +465,18 @@ def test_malformed_observations_are_aggregated_and_sanitized(field: str, value: 
     assert report["status"] == "fail"
     assert summary[field] is None
     assert summary["ok"] is False
-    assert ("observation_invalid", f"from_legacy.{field}") in {
-        (failure["code"], failure["scope"]) for failure in report["failures"]
-    }
+    failure = (
+        ("advertised_server_version_invalid", "from_legacy")
+        if field == "advertised_server_version"
+        else ("observation_invalid", f"from_legacy.{field}")
+    )
+    assert failure in {(failure["code"], failure["scope"]) for failure in report["failures"]}
     if isinstance(value, str) and value:
         assert value not in encoded
 
 
 @pytest.mark.parametrize("role", _ROLES)
-@pytest.mark.parametrize("field", ["server_version", "observed_server_version"])
+@pytest.mark.parametrize("field", ["server_version", "observed_server_version", "advertised_server_version"])
 @pytest.mark.parametrize("version", ["1.21", "1.21.0rc1", ">=1.21.0", _OVERSIZED_RELEASE])
 def test_matrix_versions_require_exact_public_release_grammar(role: str, field: str, version: str) -> None:
     row = replace(cast("ProtocolObservation", _evidence()[role]), **{field: version})
@@ -442,9 +486,12 @@ def test_matrix_versions_require_exact_public_release_grammar(role: str, field: 
 
     assert report["status"] == "fail"
     assert summary[field] is None
-    assert ("observation_invalid", f"{role}.{field}") in {
-        (failure["code"], failure["scope"]) for failure in report["failures"]
-    }
+    failure = (
+        ("advertised_server_version_invalid", role)
+        if field == "advertised_server_version"
+        else ("observation_invalid", f"{role}.{field}")
+    )
+    assert failure in {(failure["code"], failure["scope"]) for failure in report["failures"]}
 
 
 def test_client_mode_allowlist_rejects_non_ascii_value() -> None:
@@ -734,6 +781,7 @@ def test_all_validation_failures_are_aggregated_without_raising() -> None:
     malformed = ProtocolObservation(
         server_version="",
         observed_server_version="",
+        advertised_server_version="",
         client_mode="",
         expected_protocol="",
         negotiated_protocol="",
@@ -751,10 +799,11 @@ def test_all_validation_failures_are_aggregated_without_raising() -> None:
     summary = _matrix_row(report, "from_legacy")
 
     assert report["status"] == "fail"
-    assert len(report["failures"]) == 11
+    assert len(report["failures"]) == 12
     assert all(failure["remediation"] for failure in report["failures"])
     assert summary["server_version"] is None
     assert summary["observed_server_version"] is None
+    assert summary["advertised_server_version"] is None
     assert summary["client_mode"] is None
     assert summary["expected_protocol"] is None
     assert summary["negotiated_protocol"] is None

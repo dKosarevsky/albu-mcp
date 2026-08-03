@@ -29,6 +29,7 @@ ReportStatus: TypeAlias = Literal["pass", "fail"]
 MatrixRole: TypeAlias = Literal["from_legacy", "to_legacy", "to_modern"]
 SurfaceCategory: TypeAlias = Literal["tools", "resources", "resource_templates", "prompts"]
 FailureCode: TypeAlias = Literal[
+    "advertised_server_version_invalid",
     "artifact_continuity_failed",
     "artifact_sha256_invalid",
     "new_mode_surface_mismatch",
@@ -68,6 +69,7 @@ class ProtocolSummary(TypedDict):
     role: MatrixRole
     server_version: str | None
     observed_server_version: str | None
+    advertised_server_version: str | None
     client_mode: str | None
     expected_protocol: str | None
     negotiated_protocol: str | None
@@ -192,6 +194,7 @@ class ProtocolObservation:
 
     server_version: str
     observed_server_version: str
+    advertised_server_version: str
     client_mode: str
     expected_protocol: str
     negotiated_protocol: str
@@ -322,6 +325,7 @@ def _protocol_summary(
     failures: list[FailureReport] = []
     server_version_valid = _parse_public_release(row.server_version) is not None
     observed_server_version_valid = _parse_public_release(row.observed_server_version) is not None
+    advertised_server_version_valid = _parse_public_release(row.advertised_server_version) is not None
     client_mode_valid = _is_supported_mode(row.client_mode)
     expected_protocol_valid = _is_supported_protocol(row.expected_protocol)
     negotiated_protocol_valid = _is_supported_protocol(row.negotiated_protocol)
@@ -362,6 +366,15 @@ def _protocol_summary(
                     remediation=remediation,
                 )
             )
+
+    if not advertised_server_version_valid:
+        failures.append(
+            _failure(
+                code="advertised_server_version_invalid",
+                scope=role,
+                remediation="Require advertised MCP server metadata to use an exact three-part public release version.",
+            )
+        )
 
     mode_role_ok = client_mode_valid and row.client_mode == _expected_mode(role)
     if client_mode_valid and not mode_role_ok:
@@ -430,12 +443,13 @@ def _protocol_summary(
         "role": role,
         "server_version": row.server_version if server_version_valid else None,
         "observed_server_version": row.observed_server_version if observed_server_version_valid else None,
+        "advertised_server_version": (row.advertised_server_version if advertised_server_version_valid else None),
         "client_mode": row.client_mode if client_mode_valid else None,
         "expected_protocol": row.expected_protocol if expected_protocol_valid else None,
         "negotiated_protocol": row.negotiated_protocol if negotiated_protocol_valid else None,
         "server_version_ok": server_version_ok,
         "protocol_ok": protocol_ok,
-        "ok": mode_role_ok and server_version_ok and protocol_ok,
+        "ok": mode_role_ok and server_version_ok and advertised_server_version_valid and protocol_ok,
         "surface": _surface_summaries(row.surface),
     }
     return summary, failures
