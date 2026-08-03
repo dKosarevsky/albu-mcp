@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import hashlib
 from io import BytesIO
 from pathlib import Path
 from typing import Any
@@ -77,6 +78,10 @@ def _assert_modern_result(result: dict[str, Any]) -> None:
     assert isinstance(contact_sheet, BlobResourceContents)
     assert contact_sheet.mime_type == "image/png"
     png = base64.b64decode(contact_sheet.blob, validate=True)
+    manifest_contact_sheet = next(item for item in result["manifest"]["artifacts"] if item["kind"] == "contact_sheet")
+    assert contact_sheet.mime_type == manifest_contact_sheet["mime_type"]
+    assert len(png) == manifest_contact_sheet["size_bytes"]
+    assert hashlib.sha256(png).hexdigest() == manifest_contact_sheet["sha256"]
     assert png.startswith(b"\x89PNG\r\n\x1a\n")
     with Image.open(BytesIO(png)) as decoded:
         assert decoded.format == "PNG"
@@ -101,6 +106,11 @@ def _assert_modern_result(result: dict[str, Any]) -> None:
             mcp_method="tools/call",
             mcp_name="get_preview_manifest",
         ),
+        "read_contact_sheet_first": _operation_backend(
+            phases["read_contact_sheet_first"],
+            mcp_method="resources/read",
+            mcp_name="<redacted>",
+        ),
         "read_contact_sheet": _operation_backend(
             phases["read_contact_sheet"],
             mcp_method="resources/read",
@@ -116,11 +126,17 @@ def _assert_modern_result(result: dict[str, Any]) -> None:
             mcp_name="get_preview_manifest",
         ),
     }
-    render_backend = phase_backends["render_preview_batch"]
-    assert {
-        phase_backends["get_preview_manifest"],
-        phase_backends["read_contact_sheet"],
-    } - {render_backend}
+    assert phase_backends == {
+        "discover": 0,
+        "list_tools": 1,
+        "smoke": 0,
+        "render_preview_batch": 1,
+        "get_preview_manifest": 0,
+        "read_contact_sheet_first": 1,
+        "read_contact_sheet": 0,
+        "reconnect_discover": 1,
+        "reconnect_manifest": 0,
+    }
     assert sum(len(trace) for trace in phases.values()) == len(result["trace"])
     assert result["trace"]
     assert all(200 <= item.status < 300 for item in result["trace"])
@@ -164,6 +180,9 @@ def test_modern_streamable_http_is_stateless_across_backends_and_reconnect(tmp_p
                 phase_start = len(cluster.trace)
                 manifest = await client.call_tool("get_preview_manifest", {"run_id": run_id})
                 phases["get_preview_manifest"] = cluster.trace[phase_start:]
+                phase_start = len(cluster.trace)
+                await client.read_resource(contact_sheet_uri)
+                phases["read_contact_sheet_first"] = cluster.trace[phase_start:]
                 phase_start = len(cluster.trace)
                 contact_sheet = await client.read_resource(contact_sheet_uri)
                 phases["read_contact_sheet"] = cluster.trace[phase_start:]
@@ -272,6 +291,7 @@ def test_streamable_http_negotiates_apps_and_preserves_fallback(tmp_path: Path) 
                     "render_preview_batch",
                     {"request": _preview_request(image_path)},
                 )
+                app_protocol = app_client.protocol_version
 
             async with Client(
                 cluster.url,
@@ -287,10 +307,12 @@ def test_streamable_http_negotiates_apps_and_preserves_fallback(tmp_path: Path) 
                     "render_preview_batch",
                     {"request": _preview_request(image_path)},
                 )
+                ordinary_protocol = ordinary_client.protocol_version
 
             return {
                 "app_capabilities": app_capabilities,
                 "ordinary_capabilities": ordinary_capabilities,
+                "protocols": (app_protocol, ordinary_protocol),
                 "app_support": app_support,
                 "ordinary_support": ordinary_support,
                 "render_meta": next(tool.meta for tool in tools.tools if tool.name == "render_preview_batch"),
@@ -303,6 +325,7 @@ def test_streamable_http_negotiates_apps_and_preserves_fallback(tmp_path: Path) 
 
     assert result["app_capabilities"]["extensions"][EXTENSION_ID] == {}
     assert result["ordinary_capabilities"]["extensions"][EXTENSION_ID] == {}
+    assert result["protocols"] == (LATEST_MODERN_VERSION, LATEST_MODERN_VERSION)
     assert result["app_support"].is_error is False
     assert result["app_support"].structured_content == {"supports_apps": True}
     assert result["ordinary_support"].is_error is False
