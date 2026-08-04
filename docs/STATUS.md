@@ -19,9 +19,15 @@ Version: `1.21.0`
 
 Status: `passed`
 
+Status basis: Published upgrade probe result only; this does not assert provenance.
+
 Published upgrade: `1.20.0 -> 1.21.0`
 
 Evidence: [privacy-safe machine report](host-evidence/published-upgrade-1.20.0-to-1.21.0-2026-08-04.json)
+
+Evidence SHA-256: `2d6297cd017c118ecc690028fc0140052ea895d89140f32901531753ce3531da`
+
+Provenance: Local operator-run snapshot. No immutable public run or attestation is available; this evidence is not independently attested or provenance-verifiable.
 
 Scope: Streamable HTTP conformance and published-package artifact continuity. This is not real-host UI evidence.
 

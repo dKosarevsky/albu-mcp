@@ -1,12 +1,17 @@
+import hashlib
 import json
+import re
 import sys
-from pathlib import Path
+from collections.abc import Mapping
+from pathlib import Path, PureWindowsPath
 from typing import cast
+from urllib.parse import urlsplit
 
 import pytest
 import yaml
 
 from albumentationsx_mcp.upgrade_proof import validate_upgrade_proof_report
+from scripts.check_published_upgrade import _serialize_report
 
 _EVIDENCE = Path("docs/host-evidence/published-upgrade-1.20.0-to-1.21.0-2026-08-04.json")
 _STATUS = Path("docs/STATUS.md")
@@ -25,6 +30,70 @@ _STEP_NAMES = [
     "Prove published upgrade",
     "Upload privacy-safe evidence",
 ]
+_NORMALIZED_SENSITIVE_KEYS = frozenset(
+    {
+        "access_key",
+        "access_token",
+        "account_name",
+        "api_key",
+        "auth_token",
+        "authorization",
+        "client_secret",
+        "computer_name",
+        "credential",
+        "credentials",
+        "device_id",
+        "device_name",
+        "host_id",
+        "host_name",
+        "hostname",
+        "machine_guid",
+        "machine_id",
+        "machine_name",
+        "password",
+        "passwd",
+        "private_key",
+        "refresh_token",
+        "secret",
+        "session_id",
+        "token",
+        "user_name",
+        "username",
+    }
+)
+_NORMALIZED_CREDENTIAL_SUFFIXES = (
+    "_access_key",
+    "_api_key",
+    "_credential",
+    "_credentials",
+    "_password",
+    "_passwd",
+    "_private_key",
+    "_secret",
+    "_token",
+)
+_NORMALIZED_MACHINE_ENV_NAMES = frozenset(
+    {
+        "home",
+        "homedrive",
+        "homepath",
+        "hostname",
+        "logname",
+        "oldpwd",
+        "path",
+        "pwd",
+        "shell",
+        "temp",
+        "tmp",
+        "tmpdir",
+        "user",
+        "userdomain",
+        "username",
+        "userprofile",
+    }
+)
+_ENV_NAME = re.compile(r"[A-Z][A-Z0-9_]*\Z")
+_ENV_REFERENCE = re.compile(r"(?:\$[A-Z][A-Z0-9_]*|\$\{[A-Z][A-Z0-9_]*\}|%[A-Z][A-Z0-9_]*%)\Z")
 
 
 def _load_workflow() -> tuple[str, dict[object, object]]:
@@ -253,9 +322,56 @@ def test_published_upgrade_workflow_uploads_only_successful_evidence() -> None:
     assert steps.index(upload_steps[0]) > prove_index
 
 
-def test_committed_upgrade_evidence_is_passing_and_privacy_safe() -> None:
-    content = _EVIDENCE.read_text(encoding="utf-8")
-    report = json.loads(content)
+def _normalize_key(key: str) -> str:
+    separated = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_", key)
+    return re.sub(r"[^a-zA-Z0-9]+", "_", separated).strip("_").casefold()
+
+
+def _is_sensitive_key(key: str) -> bool:
+    normalized = _normalize_key(key)
+    if normalized in _NORMALIZED_SENSITIVE_KEYS or normalized.startswith("albu_mcp_"):
+        return True
+    if normalized.endswith(_NORMALIZED_CREDENTIAL_SUFFIXES):
+        return True
+    return _ENV_NAME.fullmatch(key) is not None and normalized in _NORMALIZED_MACHINE_ENV_NAMES
+
+
+def _is_private_string(value: str) -> bool:
+    candidate = value.strip()
+    if candidate.startswith("/") or PureWindowsPath(candidate).is_absolute():
+        return True
+    if candidate.casefold().startswith("file:") or _ENV_REFERENCE.fullmatch(candidate) is not None:
+        return True
+    parsed = urlsplit(candidate)
+    if parsed.username is not None or parsed.password is not None:
+        return True
+    return "-----BEGIN " in candidate.upper() and " PRIVATE KEY-----" in candidate.upper()
+
+
+def _assert_evidence_privacy_safe(value: object) -> None:
+    if isinstance(value, Mapping):
+        for key, nested_value in value.items():
+            assert isinstance(key, str)
+            assert not _is_sensitive_key(key)
+            _assert_evidence_privacy_safe(nested_value)
+    elif isinstance(value, list):
+        for item in value:
+            _assert_evidence_privacy_safe(item)
+    elif isinstance(value, str):
+        assert not _is_private_string(value)
+
+
+def _reject_duplicate_keys(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    parsed: dict[str, object] = {}
+    for key, value in pairs:
+        assert key not in parsed, f"duplicate JSON key: {key}"
+        parsed[key] = value
+    return parsed
+
+
+def _assert_committed_upgrade_evidence(path: Path) -> None:
+    content = path.read_text(encoding="utf-8")
+    report = json.loads(content, object_pairs_hook=_reject_duplicate_keys)
     validated = validate_upgrade_proof_report(
         report,
         expected_package="albumentationsx-mcp",
@@ -264,6 +380,7 @@ def test_committed_upgrade_evidence_is_passing_and_privacy_safe() -> None:
         expected_observed_on="2026-08-04",
     )
 
+    assert content == _serialize_report(validated)
     assert validated == report
     assert validated["status"] == "pass"
     assert validated["from_version"] == "1.20.0"
@@ -292,38 +409,104 @@ def test_committed_upgrade_evidence_is_passing_and_privacy_safe() -> None:
         )
     )
     assert validated["failures"] == []
+    _assert_evidence_privacy_safe(report)
 
-    lowered = content.casefold()
-    for private_marker in (
-        "/users/",
-        "/home/",
-        "\\users\\",
-        "albu_mcp_",
-        "token",
-        "authorization",
-        "bearer ",
-        "api_key",
-        "api-key",
-        "password",
-        "passwd",
-        "secret",
-        "private_key",
-        "private-key",
-        "access_key",
-        "access-key",
-        "begin rsa private key",
-        "begin openssh private key",
-    ):
-        assert private_marker not in lowered
+
+def test_committed_upgrade_evidence_is_passing_and_privacy_safe() -> None:
+    _assert_committed_upgrade_evidence(_EVIDENCE)
+
+
+@pytest.mark.parametrize("mutation", ["duplicate_status", "noncanonical_format"])
+def test_committed_upgrade_evidence_rejects_noncanonical_json(mutation: str, tmp_path: Path) -> None:
+    content = _EVIDENCE.read_text(encoding="utf-8")
+    if mutation == "duplicate_status":
+        mutated = content.replace('  "status": "pass",', '  "status": "pass",\n  "status": "pass",', 1)
+    else:
+        mutated = json.dumps(json.loads(content), sort_keys=True) + "\n"
+    assert mutated != content
+    evidence = tmp_path / "published-upgrade.json"
+    evidence.write_text(mutated, encoding="utf-8")
+
+    with pytest.raises(AssertionError):
+        _assert_committed_upgrade_evidence(evidence)
+
+
+@pytest.mark.parametrize(
+    "private_value",
+    [
+        pytest.param({"detail": "/private/var/folders/proof.json"}, id="private-posix-path"),
+        pytest.param({"detail": "/var/tmp/proof.json"}, id="var-posix-path"),  # noqa: S108
+        pytest.param({"detail": "/tmp/proof.json"}, id="tmp-posix-path"),  # noqa: S108
+        pytest.param({"detail": "/srv/runner/proof.json"}, id="generic-posix-path"),
+        pytest.param({"detail": r"C:\Users\operator\proof.json"}, id="windows-drive-path"),
+        pytest.param({"detail": r"\\server\share\proof.json"}, id="windows-unc-path"),
+        pytest.param({"host-name": "build-host"}, id="hostname-key"),
+        pytest.param({"User.Name": "operator"}, id="username-key"),
+        pytest.param({"machine-id": "host-123"}, id="machine-id-key"),
+        pytest.param({"API-KEY": "credential"}, id="credential-key"),
+        pytest.param({"SERVICE_TOKEN": "credential"}, id="credential-env-key"),
+        pytest.param({"ALBU_MCP_ALLOWED_ROOT": "relative"}, id="albu-env-key"),
+        pytest.param({"HOME": "relative"}, id="machine-env-key"),
+    ],
+)
+def test_evidence_privacy_rejects_structural_machine_data(private_value: object) -> None:
+    with pytest.raises(AssertionError):
+        _assert_evidence_privacy_safe(private_value)
+
+
+@pytest.mark.parametrize(
+    "safe_value",
+    [
+        {"token_count": 0},
+        {"secret_count": 0},
+        {"authorization_mode": "none"},
+        {"machine_id_matches": True},
+        {"hostname_count": 0},
+        {"api_key_count": 0},
+    ],
+)
+def test_evidence_privacy_accepts_harmless_schema_like_words(safe_value: object) -> None:
+    _assert_evidence_privacy_safe(safe_value)
+
+
+def _assert_status_links_published_upgrade_evidence(status: str) -> None:
+    digest = hashlib.sha256(_EVIDENCE.read_bytes()).hexdigest()
+    expected = (
+        "## Protocol Compatibility Evidence\n\n"
+        "Status: `passed`\n\n"
+        "Status basis: Published upgrade probe result only; this does not assert provenance.\n\n"
+        "Published upgrade: `1.20.0 -> 1.21.0`\n\n"
+        "Evidence: [privacy-safe machine report]"
+        "(host-evidence/published-upgrade-1.20.0-to-1.21.0-2026-08-04.json)\n\n"
+        f"Evidence SHA-256: `{digest}`\n\n"
+        "Provenance: Local operator-run snapshot. No immutable public run or attestation is available; "
+        "this evidence is not independently attested or provenance-verifiable.\n\n"
+        "Scope: Streamable HTTP conformance and published-package artifact continuity. "
+        "This is not real-host UI evidence.\n"
+    )
+    start = status.index("## Protocol Compatibility Evidence")
+    end = status.index("\n## Host Evidence", start)
+
+    assert status[start:end] == expected
 
 
 def test_status_links_the_published_upgrade_evidence_with_machine_only_scope() -> None:
     status = _STATUS.read_text(encoding="utf-8")
 
-    assert (
-        "Evidence: [privacy-safe machine report](host-evidence/published-upgrade-1.20.0-to-1.21.0-2026-08-04.json)"
-    ) in status
-    assert (
-        "Scope: Streamable HTTP conformance and published-package artifact continuity. "
-        "This is not real-host UI evidence."
-    ) in status
+    _assert_status_links_published_upgrade_evidence(status)
+
+
+@pytest.mark.parametrize(
+    ("current", "replacement"),
+    [
+        ("Status: `passed`", "Status: `failed`"),
+        ("Published upgrade: `1.20.0 -> 1.21.0`", "Published upgrade: `1.19.0 -> 1.21.0`"),
+    ],
+)
+def test_status_rejects_protocol_evidence_section_mutations(current: str, replacement: str) -> None:
+    status = _STATUS.read_text(encoding="utf-8")
+    mutated = status.replace(current, replacement, 1)
+    assert mutated != status
+
+    with pytest.raises(AssertionError):
+        _assert_status_links_published_upgrade_evidence(mutated)
