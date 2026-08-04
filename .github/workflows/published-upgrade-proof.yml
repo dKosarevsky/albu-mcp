@@ -1,0 +1,64 @@
+name: Published upgrade proof
+
+on:
+  workflow_dispatch:
+    inputs:
+      from_version:
+        description: Published version to upgrade from
+        required: true
+        default: "1.20.0"
+        type: string
+      to_version:
+        description: Published version to upgrade to
+        required: true
+        default: "1.21.0"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  prove-upgrade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install current client and probe dependencies
+        run: uv sync --frozen --dev
+
+      - name: Prepare artifact directory
+        run: install -d -m 700 artifacts
+
+      - name: Prove published upgrade
+        env:
+          FROM_VERSION: ${{ inputs.from_version }}
+          TO_VERSION: ${{ inputs.to_version }}
+        run: >
+          uv run python scripts/check_published_upgrade.py
+          --from-version "$FROM_VERSION"
+          --to-version "$TO_VERSION"
+          --observed-on "$(date -u +%F)"
+          --output artifacts/published-upgrade-proof.json
+
+      - name: Upload privacy-safe evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: published-upgrade-proof
+          path: artifacts/published-upgrade-proof.json
+          if-no-files-found: error
+          retention-days: 30
