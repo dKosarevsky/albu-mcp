@@ -555,14 +555,15 @@ def _validate_category_compatibility(
     expected_ok = missing_count == 0
     if old != expected_old or new != expected_new or ok is not expected_ok:
         raise _PublicationReportInvalid
-    if missing_count == 0:
-        if missing_sha256 != _EMPTY_SURFACE_SHA256:
-            raise _PublicationReportInvalid
-    elif (
-        missing_count > old["count"]
-        or old["count"] - missing_count > new["count"]
-        or missing_sha256 == _EMPTY_SURFACE_SHA256
-    ):
+    if missing_count > old["count"] or old["count"] - missing_count > new["count"]:
+        raise _PublicationReportInvalid
+    if missing_count == 0 and missing_sha256 != _EMPTY_SURFACE_SHA256:
+        raise _PublicationReportInvalid
+    if missing_count > 0 and missing_sha256 == _EMPTY_SURFACE_SHA256:
+        raise _PublicationReportInvalid
+    if missing_count == old["count"] and missing_sha256 != old["sha256"]:
+        raise _PublicationReportInvalid
+    if missing_count == 0 and old["count"] == new["count"] and old["sha256"] != new["sha256"]:
         raise _PublicationReportInvalid
 
     return {

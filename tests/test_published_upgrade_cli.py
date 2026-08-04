@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import base64
 import copy
+import hashlib
 import json
 import os
 import signal
@@ -23,6 +24,7 @@ from albumentationsx_mcp.upgrade_proof import (
     ArtifactContinuity,
     ProtocolObservation,
     PublicSurface,
+    SurfaceSummary,
     UpgradeProofReport,
     build_upgrade_proof_report,
 )
@@ -94,6 +96,42 @@ def _upgrade_report(*, compatible: bool = True) -> UpgradeProofReport:
             contact_sheet_sha256="a" * 64,
         ),
     )
+
+
+def _upgrade_report_with_invalid_set_summary(case: str) -> UpgradeProofReport:
+    report = copy.deepcopy(_upgrade_report())
+    empty_digest = hashlib.sha256(b"[]").hexdigest()
+    values = {
+        "old_gt_new_zero_missing": (2, "a" * 64, 1, "b" * 64, 0, empty_digest),
+        "equal_counts_different_hashes": (1, "a" * 64, 1, "b" * 64, 0, empty_digest),
+        "impossible_retained_count": (3, "a" * 64, 1, "b" * 64, 1, "c" * 64),
+        "full_missing_digest_mismatch": (2, "a" * 64, 0, empty_digest, 2, "c" * 64),
+    }
+    old_count, old_hash, new_count, new_hash, missing_count, missing_hash = values[case]
+    old_summary: SurfaceSummary = {"count": old_count, "sha256": old_hash}
+    new_summary: SurfaceSummary = {"count": new_count, "sha256": new_hash}
+    report["matrix"][0]["surface"]["tools"] = copy.deepcopy(old_summary)
+    report["matrix"][1]["surface"]["tools"] = copy.deepcopy(new_summary)
+    report["matrix"][2]["surface"]["tools"] = copy.deepcopy(new_summary)
+    category = report["compatibility"]["categories"]["tools"]
+    category["old"] = old_summary
+    category["new"] = new_summary
+    category["missing_count"] = missing_count
+    category["missing_sha256"] = missing_hash
+    category["ok"] = missing_count == 0
+    if missing_count:
+        report["compatibility"]["old_surface_is_subset"] = False
+        report["status"] = "fail"
+        report["failures"] = [
+            {
+                "code": "surface_removed",
+                "scope": "tools",
+                "missing_count": missing_count,
+                "missing_sha256": missing_hash,
+                "remediation": "Restore the published identifier or document and version a breaking change.",
+            }
+        ]
+    return report
 
 
 def _install_successful_probe(
@@ -770,6 +808,53 @@ def test_cli_rejects_unvalidated_probe_reports_without_echoing_them(
     assert sensitive_detail not in captured.err
 
 
+@pytest.mark.parametrize(
+    "case",
+    [
+        "old_gt_new_zero_missing",
+        "equal_counts_different_hashes",
+        "impossible_retained_count",
+        "full_missing_digest_mismatch",
+    ],
+)
+def test_cli_refuses_to_persist_impossible_set_summary_mathematics(
+    case: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    report = _upgrade_report_with_invalid_set_summary(case)
+
+    def fake_probe(_request: object, _timeout_seconds: float) -> object:
+        return report
+
+    monkeypatch.setattr(check_published_upgrade, "_run_probe", fake_probe)
+    monkeypatch.setattr(
+        check_published_upgrade,
+        "check_pypi_version",
+        lambda **_kwargs: _pypi_result("AVAILABLE"),
+    )
+    output = tmp_path / "upgrade.json"
+    output.write_text("previous evidence\n", encoding="utf-8")
+
+    result = check_published_upgrade.main(
+        [
+            "--from-version",
+            "1.20.0",
+            "--to-version",
+            "1.21.0",
+            "--observed-on",
+            "2026-08-03",
+            "--output",
+            str(output),
+        ]
+    )
+
+    assert result == 1
+    assert output.read_text(encoding="utf-8") == "previous evidence\n"
+    assert json.loads(capsys.readouterr().err)["failures"][0]["reason"] == "invalid_report"
+
+
 def test_probe_timeout_fails_closed_without_replacing_output(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -948,6 +1033,118 @@ def test_probe_watchdog_kills_and_reaps_sigterm_resistant_child_within_hard_boun
     assert len(processes) == 1
     assert processes[0].poll() is not None
     assert processes[0].returncode == -signal.SIGKILL
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX process-group descendant assertion")
+def test_probe_watchdog_kills_descendant_after_worker_exits(tmp_path: Path) -> None:
+    pid_file = tmp_path / "descendant.pid"
+    descendant_code = "import signal;signal.signal(signal.SIGTERM,signal.SIG_IGN);signal.pause()"
+    worker_code = (
+        "import pathlib,subprocess;"
+        f"child=subprocess.Popen([{sys.executable!r},'-c',{descendant_code!r}],"
+        "stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL);"
+        f"pathlib.Path({str(pid_file)!r}).write_text(str(child.pid),encoding='utf-8')"
+    )
+    processes: list[subprocess.Popen[bytes]] = []
+
+    def launch(_request: object) -> subprocess.Popen[bytes]:
+        process = subprocess.Popen(  # noqa: S603 - fixed local process-tree test child.
+            [sys.executable, "-c", worker_code],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+        process.wait(timeout=1.0)
+        processes.append(process)
+        return process
+
+    with pytest.raises(check_published_upgrade._ProbeExecutorError):
+        check_published_upgrade._run_probe(_probe_request(), 2.0, launcher=launch)
+
+    descendant_pid = int(pid_file.read_text(encoding="utf-8"))
+    deadline = time.monotonic() + 1.0
+    while _pid_is_live(descendant_pid) and time.monotonic() < deadline:
+        pass
+    descendant_live = _pid_is_live(descendant_pid)
+    if descendant_live:
+        os.kill(descendant_pid, signal.SIGKILL)
+    assert processes[0].returncode == 0
+    assert not descendant_live
+
+
+def _pid_is_live(pid: int) -> bool:
+    result = subprocess.run(  # noqa: S603 - fixed local process-status command.
+        ["ps", "-o", "state=", "-p", str(pid)],  # noqa: S607 - fixed POSIX test utility.
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        check=False,
+        text=True,
+    )
+    return result.returncode == 0 and not result.stdout.strip().startswith("Z")
+
+
+def test_windows_tree_kill_uses_fixed_bounded_taskkill(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[tuple[list[str], dict[str, object]]] = []
+
+    def fake_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[bytes]:
+        calls.append((command, kwargs))
+        return subprocess.CompletedProcess(command, 0)
+
+    monkeypatch.setattr(check_published_upgrade.subprocess, "run", fake_run)
+
+    assert check_published_upgrade._kill_windows_process_tree(321) is True
+    assert calls == [
+        (
+            ["taskkill", "/PID", "321", "/T", "/F"],
+            {
+                "stdin": subprocess.DEVNULL,
+                "stdout": subprocess.DEVNULL,
+                "stderr": subprocess.DEVNULL,
+                "check": False,
+                "timeout": check_published_upgrade._PROCESS_KILL_GRACE_SECONDS,
+            },
+        )
+    ]
+
+
+def test_windows_tree_kill_reports_unavailable_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
+    def unavailable(_command: list[str], **_kwargs: object) -> None:
+        raise FileNotFoundError
+
+    monkeypatch.setattr(check_published_upgrade.subprocess, "run", unavailable)
+
+    assert check_published_upgrade._kill_windows_process_tree(321) is False
+
+
+def test_windows_watchdog_attempts_tree_kill_before_worker_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
+    events: list[str] = []
+
+    class FakeProcess:
+        pid = 321
+
+        def poll(self) -> None:
+            return None
+
+        def kill(self) -> None:
+            events.append("worker_kill")
+
+        def wait(self, *, timeout: float) -> None:
+            del timeout
+            events.append("worker_reap")
+
+    def kill_tree(pid: int) -> bool:
+        assert pid == 321
+        events.append("tree_kill")
+        return False
+
+    monkeypatch.setattr(check_published_upgrade.os, "name", "nt")
+    monkeypatch.setattr(check_published_upgrade, "_kill_windows_process_tree", kill_tree)
+
+    process = cast("subprocess.Popen[bytes]", FakeProcess())
+    check_published_upgrade._stop_probe_process(process, process_group=None)
+
+    assert events == ["tree_kill", "worker_kill", "worker_reap"]
 
 
 def test_python_310_asyncio_timeout_is_classified_once_through_exception_group(
@@ -1139,6 +1336,59 @@ def test_atomic_write_failure_cleans_temp_and_preserves_existing_output(
     assert secret not in encoded
 
 
+@pytest.mark.parametrize("writer_name", ["_write_atomic", "_write_atomic_fallback"])
+@pytest.mark.parametrize("destination_state", ["absent", "existing"])
+def test_post_replace_fsync_failure_rolls_back_destination_and_cleans_sidecars(
+    writer_name: str,
+    destination_state: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    output = tmp_path / "upgrade.json"
+    if destination_state == "existing":
+        output.write_text("previous evidence\n", encoding="utf-8")
+    original_replace = os.replace
+    original_fsync = os.fsync
+    replacement_done = False
+    failure_injected = False
+
+    def recording_replace(
+        source: str | os.PathLike[str],
+        target: str | os.PathLike[str],
+        *,
+        src_dir_fd: int | None = None,
+        dst_dir_fd: int | None = None,
+    ) -> None:
+        nonlocal replacement_done
+        original_replace(source, target, src_dir_fd=src_dir_fd, dst_dir_fd=dst_dir_fd)
+        if not replacement_done and Path(target).name == output.name:
+            replacement_done = True
+
+    def fail_first_directory_fsync_after_replace(file_descriptor: int) -> None:
+        nonlocal failure_injected
+        if replacement_done and not failure_injected and stat.S_ISDIR(os.fstat(file_descriptor).st_mode):
+            failure_injected = True
+            message = "forced post-replace directory fsync failure"
+            raise OSError(message)
+        original_fsync(file_descriptor)
+
+    monkeypatch.setattr(check_published_upgrade.os, "replace", recording_replace)
+    monkeypatch.setattr(check_published_upgrade.os, "fsync", fail_first_directory_fsync_after_replace)
+    writer = getattr(check_published_upgrade, writer_name)
+
+    with pytest.raises(OSError, match="post-replace directory fsync"):
+        writer(output, "new evidence\n")
+
+    assert replacement_done is True
+    assert failure_injected is True
+    if destination_state == "existing":
+        assert output.read_text(encoding="utf-8") == "previous evidence\n"
+        assert list(tmp_path.iterdir()) == [output]
+    else:
+        assert not output.exists()
+        assert list(tmp_path.iterdir()) == []
+
+
 def test_existing_output_symlink_is_rejected_without_touching_target(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1232,6 +1482,43 @@ def test_posix_writer_is_anchored_when_parent_path_is_swapped(
 
     assert (displaced / "upgrade.json").read_text(encoding="utf-8") == "proof\n"
     assert not (attacker / "upgrade.json").exists()
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX mkdir identity assertion")
+def test_posix_writer_rejects_substituted_new_directory(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    parent = tmp_path / "parent"
+    parent.mkdir()
+    created = parent / "created"
+    displaced = parent / "displaced"
+    output = created / "upgrade.json"
+    original_open = os.open
+    created_open_attempts = 0
+
+    def replace_before_second_open(
+        path: str | bytes | os.PathLike[str] | os.PathLike[bytes],
+        flags: int,
+        mode: int = 0o777,
+        *,
+        dir_fd: int | None = None,
+    ) -> int:
+        nonlocal created_open_attempts
+        if path == "created" and dir_fd is not None:
+            created_open_attempts += 1
+            if created_open_attempts == 2:
+                created.rename(displaced)
+                created.mkdir()
+        return original_open(path, flags, mode, dir_fd=dir_fd)
+
+    monkeypatch.setattr(check_published_upgrade.os, "open", replace_before_second_open)
+
+    with pytest.raises(OSError, match="identity"):
+        check_published_upgrade._write_atomic_posix(output, "proof\n")
+
+    assert list(created.iterdir()) == []
+    assert list(displaced.iterdir()) == []
 
 
 def test_non_posix_fallback_writes_and_rejects_symlink_ancestors(tmp_path: Path) -> None:

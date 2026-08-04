@@ -17,6 +17,7 @@ from albumentationsx_mcp.upgrade_proof import (
     ProtocolObservation,
     ProtocolSummary,
     PublicSurface,
+    SurfaceSummary,
     UpgradeProofReport,
     build_upgrade_proof_report,
     validate_upgrade_proof_report,
@@ -212,6 +213,42 @@ def _validate_publication(report: object) -> UpgradeProofReport:
     )
 
 
+def _report_with_invalid_set_summary(case: str) -> UpgradeProofReport:
+    report = copy.deepcopy(_report())
+    empty_digest = _expected_digest()
+    values = {
+        "old_gt_new_zero_missing": (2, "a" * 64, 1, "b" * 64, 0, empty_digest),
+        "equal_counts_different_hashes": (1, "a" * 64, 1, "b" * 64, 0, empty_digest),
+        "impossible_retained_count": (3, "a" * 64, 1, "b" * 64, 1, "c" * 64),
+        "full_missing_digest_mismatch": (2, "a" * 64, 0, empty_digest, 2, "c" * 64),
+    }
+    old_count, old_hash, new_count, new_hash, missing_count, missing_hash = values[case]
+    old_summary: SurfaceSummary = {"count": old_count, "sha256": old_hash}
+    new_summary: SurfaceSummary = {"count": new_count, "sha256": new_hash}
+    report["matrix"][0]["surface"]["tools"] = copy.deepcopy(old_summary)
+    report["matrix"][1]["surface"]["tools"] = copy.deepcopy(new_summary)
+    report["matrix"][2]["surface"]["tools"] = copy.deepcopy(new_summary)
+    category = report["compatibility"]["categories"]["tools"]
+    category["old"] = old_summary
+    category["new"] = new_summary
+    category["missing_count"] = missing_count
+    category["missing_sha256"] = missing_hash
+    category["ok"] = missing_count == 0
+    if missing_count:
+        report["compatibility"]["old_surface_is_subset"] = False
+        report["status"] = "fail"
+        report["failures"] = [
+            {
+                "code": "surface_removed",
+                "scope": "tools",
+                "missing_count": missing_count,
+                "missing_sha256": missing_hash,
+                "remediation": "Restore the published identifier or document and version a breaking change.",
+            }
+        ]
+    return report
+
+
 def test_publication_validator_returns_detached_canonical_pass_report() -> None:
     report = _report()
 
@@ -318,6 +355,20 @@ def test_publication_validator_rejects_oversized_failure_list() -> None:
 
     with pytest.raises(ValueError, match="published upgrade proof report is invalid"):
         _validate_publication(report)
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        "old_gt_new_zero_missing",
+        "equal_counts_different_hashes",
+        "impossible_retained_count",
+        "full_missing_digest_mismatch",
+    ],
+)
+def test_publication_validator_rejects_impossible_set_summary_mathematics(case: str) -> None:
+    with pytest.raises(ValueError, match="published upgrade proof report is invalid"):
+        _validate_publication(_report_with_invalid_set_summary(case))
 
 
 @pytest.mark.parametrize(

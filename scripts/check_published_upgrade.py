@@ -214,7 +214,7 @@ def _verify_pypi_versions(args: argparse.Namespace, context: _FailureContext) ->
 def _collect_upgrade_report(
     args: argparse.Namespace,
     context: _FailureContext,
-) -> UpgradeProofReport | None:
+) -> object | None:
     try:
         report = _run_probe(
             _ProbeRequest(
@@ -466,7 +466,7 @@ def _run_probe(
     except BaseException as error:  # noqa: BLE001 - nested control-flow exceptions must survive test seams.
         _raise_control_flow(error)
         raise _ProbeExecutorError(_child_failure("child_start_failed")) from None
-    process_group = _isolated_process_group(process)
+    process_group = process.pid if os.name == "posix" else None
     if process.stdout is None:
         _stop_probe_process(process, process_group=process_group)
         raise _ProbeExecutorError(_child_failure("child_start_failed"))
@@ -490,7 +490,7 @@ def _run_probe(
         _finish_child_reader(process, reader)
         _raise_control_flow(error)
         raise _ProbeExecutorError(_child_failure("child_process_failed")) from None
-    _kill_process_group(process_group)
+    _force_kill_process_tree(process, process_group=process_group)
     _finish_child_reader(process, reader)
 
     if output.failed or len(output.data) > _MAX_CHILD_PAYLOAD_BYTES:
@@ -536,27 +536,23 @@ def _finish_child_reader(process: subprocess.Popen[bytes], reader: threading.Thr
         reader.join(timeout=_PROCESS_KILL_GRACE_SECONDS)
 
 
-def _isolated_process_group(process: subprocess.Popen[bytes]) -> int | None:
-    if os.name != "posix":
-        return None
-    try:
-        process_group = os.getpgid(process.pid)
-    except OSError:
-        return None
-    return process_group if process_group == process.pid else None
-
-
 def _stop_probe_process(process: subprocess.Popen[bytes], *, process_group: int | None) -> None:
+    if os.name == "nt" and process_group is None:
+        _kill_windows_process_tree(process.pid)
+    else:
+        if process.poll() is None:
+            _signal_probe_process(process, process_group=process_group, terminate=True)
+            with contextlib.suppress(subprocess.TimeoutExpired):
+                process.wait(timeout=_PROCESS_TERMINATE_GRACE_SECONDS)
+        _force_kill_process_tree(process, process_group=process_group)
     if process.poll() is None:
-        _signal_probe_process(process, process_group=process_group, terminate=True)
-        with contextlib.suppress(subprocess.TimeoutExpired):
-            process.wait(timeout=_PROCESS_TERMINATE_GRACE_SECONDS)
-    _signal_probe_process(process, process_group=process_group, terminate=False)
-    if process.poll() is None:
+        with contextlib.suppress(OSError):
+            process.kill()
         try:
             process.wait(timeout=_PROCESS_KILL_GRACE_SECONDS)
         except subprocess.TimeoutExpired:
-            _signal_probe_process(process, process_group=process_group, terminate=False)
+            with contextlib.suppress(OSError):
+                process.kill()
 
 
 def _signal_probe_process(
@@ -566,12 +562,12 @@ def _signal_probe_process(
     terminate: bool,
 ) -> None:
     if process_group is not None:
-        signal_number = signal.SIGTERM if terminate else signal.SIGKILL
         try:
-            os.killpg(process_group, signal_number)
+            os.killpg(process_group, signal.SIGTERM if terminate else signal.SIGKILL)
         except OSError:
+            pass
+        else:
             return
-        return
     try:
         if terminate:
             process.terminate()
@@ -581,11 +577,32 @@ def _signal_probe_process(
         return
 
 
-def _kill_process_group(process_group: int | None) -> None:
-    if process_group is None:
-        return
-    with contextlib.suppress(OSError):
-        os.killpg(process_group, signal.SIGKILL)
+def _force_kill_process_tree(process: subprocess.Popen[bytes], *, process_group: int | None) -> bool:
+    if process_group is not None:
+        try:
+            os.killpg(process_group, signal.SIGKILL)
+        except OSError:
+            return False
+        return True
+    if os.name == "nt":
+        return _kill_windows_process_tree(process.pid)
+    return False
+
+
+def _kill_windows_process_tree(pid: int) -> bool:
+    """Best-effort bounded tree kill; callers still kill/reap the worker when taskkill is unavailable."""
+    try:
+        completed = subprocess.run(  # noqa: S603 - fixed Windows system command and numeric PID.
+            ["taskkill", "/PID", str(pid), "/T", "/F"],  # noqa: S607 - documented system utility lookup.
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+            timeout=_PROCESS_KILL_GRACE_SECONDS,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return completed.returncode == 0
 
 
 def _encode_probe_request(request: _ProbeRequest) -> str:
@@ -861,6 +878,7 @@ def _supports_posix_dirfd_output() -> bool:
         and bool(getattr(os, "O_NOFOLLOW", 0))
         and os.open in os.supports_dir_fd
         and os.mkdir in os.supports_dir_fd
+        and os.link in os.supports_dir_fd
         and os.stat in os.supports_dir_fd
         and os.unlink in os.supports_dir_fd
     )
@@ -891,16 +909,7 @@ def _open_output_parent_posix(path: Path) -> tuple[int, str]:
     current_fd = os.open(anchor or ".", _directory_open_flags())
     try:
         for component in parts[:-1]:
-            try:
-                next_fd = os.open(component, _directory_open_flags(), dir_fd=current_fd)
-            except FileNotFoundError:
-                try:
-                    os.mkdir(component, mode=0o755, dir_fd=current_fd)
-                except FileExistsError:
-                    pass
-                else:
-                    os.fsync(current_fd)
-                next_fd = os.open(component, _directory_open_flags(), dir_fd=current_fd)
+            next_fd = _open_output_directory_at(current_fd, component)
             os.close(current_fd)
             current_fd = next_fd
     except BaseException:
@@ -909,20 +918,51 @@ def _open_output_parent_posix(path: Path) -> tuple[int, str]:
     return current_fd, parts[-1]
 
 
-def _ensure_regular_destination_at(parent_fd: int, filename: str) -> None:
+def _open_output_directory_at(parent_fd: int, component: str) -> int:
     try:
-        mode = os.stat(filename, dir_fd=parent_fd, follow_symlinks=False).st_mode
+        return os.open(component, _directory_open_flags(), dir_fd=parent_fd)
     except FileNotFoundError:
-        return
-    if not stat.S_ISREG(mode):
+        pass
+    try:
+        os.mkdir(component, mode=0o755, dir_fd=parent_fd)
+    except FileExistsError:
+        return os.open(component, _directory_open_flags(), dir_fd=parent_fd)
+
+    created = os.stat(component, dir_fd=parent_fd, follow_symlinks=False)
+    if not stat.S_ISDIR(created.st_mode):
+        message = "new output directory identity is invalid"
+        raise OSError(message)
+    os.fsync(parent_fd)
+    opened_fd = os.open(component, _directory_open_flags(), dir_fd=parent_fd)
+    try:
+        _require_same_directory_identity(created, os.fstat(opened_fd))
+    except BaseException:
+        os.close(opened_fd)
+        raise
+    return opened_fd
+
+
+def _require_same_directory_identity(expected: os.stat_result, observed: os.stat_result) -> None:
+    if not stat.S_ISDIR(observed.st_mode) or observed.st_dev != expected.st_dev or observed.st_ino != expected.st_ino:
+        message = "new output directory identity changed"
+        raise OSError(message)
+
+
+def _regular_destination_at(parent_fd: int, filename: str) -> os.stat_result | None:
+    try:
+        result = os.stat(filename, dir_fd=parent_fd, follow_symlinks=False)
+    except FileNotFoundError:
+        return None
+    if not stat.S_ISREG(result.st_mode):
         message = "output path must name a regular non-symlink file"
         raise OSError(message)
+    return result
 
 
 def _open_temporary_at(parent_fd: int) -> tuple[int, str]:
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
     for _attempt in range(_TEMP_FILE_ATTEMPTS):
-        filename = f".published-upgrade-{secrets.token_hex(12)}.tmp"
+        filename = f".published-upgrade-temp-{secrets.token_hex(12)}.tmp"
         try:
             return os.open(filename, flags, 0o600, dir_fd=parent_fd), filename
         except FileExistsError:
@@ -931,19 +971,82 @@ def _open_temporary_at(parent_fd: int) -> tuple[int, str]:
     raise OSError(message)
 
 
+def _same_file_identity(left: os.stat_result, right: os.stat_result) -> bool:
+    return (
+        stat.S_ISREG(left.st_mode)
+        and stat.S_ISREG(right.st_mode)
+        and left.st_dev == right.st_dev
+        and left.st_ino == right.st_ino
+    )
+
+
+def _require_same_file_identity(expected: os.stat_result, *observed: os.stat_result) -> None:
+    if not all(_same_file_identity(expected, item) for item in observed):
+        message = "output destination identity changed before replacement"
+        raise OSError(message)
+
+
+def _create_backup_at(parent_fd: int, destination_name: str, expected: os.stat_result) -> str:
+    for _attempt in range(_TEMP_FILE_ATTEMPTS):
+        backup_name = f".published-upgrade-backup-{secrets.token_hex(12)}.tmp"
+        try:
+            os.link(
+                destination_name,
+                backup_name,
+                src_dir_fd=parent_fd,
+                dst_dir_fd=parent_fd,
+                follow_symlinks=False,
+            )
+        except FileExistsError:
+            continue
+        try:
+            current = os.stat(destination_name, dir_fd=parent_fd, follow_symlinks=False)
+            backup = os.stat(backup_name, dir_fd=parent_fd, follow_symlinks=False)
+            _require_same_file_identity(expected, current, backup)
+        except BaseException:
+            with contextlib.suppress(FileNotFoundError):
+                os.unlink(backup_name, dir_fd=parent_fd)
+            raise
+        return backup_name
+    message = "unable to allocate a unique output backup file"
+    raise OSError(message)
+
+
+def _rollback_replacement_at(parent_fd: int, destination_name: str, backup_name: str | None) -> None:
+    if backup_name is None:
+        with contextlib.suppress(FileNotFoundError):
+            os.unlink(destination_name, dir_fd=parent_fd)
+    else:
+        os.replace(
+            backup_name,
+            destination_name,
+            src_dir_fd=parent_fd,
+            dst_dir_fd=parent_fd,
+        )
+    with contextlib.suppress(OSError):
+        os.fsync(parent_fd)
+
+
 def _write_atomic_posix(path: Path, content: str) -> None:
     parent_fd, destination_name = _open_output_parent_posix(path)
     temporary_name: str | None = None
     temporary_fd: int | None = None
+    backup_name: str | None = None
     try:
-        _ensure_regular_destination_at(parent_fd, destination_name)
+        previous = _regular_destination_at(parent_fd, destination_name)
         temporary_fd, temporary_name = _open_temporary_at(parent_fd)
         with os.fdopen(temporary_fd, mode="w", encoding="utf-8", newline="\n") as handle:
             temporary_fd = None
             handle.write(content)
             handle.flush()
             os.fsync(handle.fileno())
-        _ensure_regular_destination_at(parent_fd, destination_name)
+        if previous is None:
+            if _regular_destination_at(parent_fd, destination_name) is not None:
+                message = "output destination identity changed before replacement"
+                raise OSError(message)
+        else:
+            backup_name = _create_backup_at(parent_fd, destination_name, previous)
+            os.fsync(parent_fd)
         os.replace(
             temporary_name,
             destination_name,
@@ -951,17 +1054,29 @@ def _write_atomic_posix(path: Path, content: str) -> None:
             dst_dir_fd=parent_fd,
         )
         temporary_name = None
-        os.fsync(parent_fd)
+        try:
+            os.fsync(parent_fd)
+        except OSError:
+            _rollback_replacement_at(parent_fd, destination_name, backup_name)
+            backup_name = None
+            raise
+        if backup_name is not None:
+            os.unlink(backup_name, dir_fd=parent_fd)
+            backup_name = None
+            os.fsync(parent_fd)
     finally:
         if temporary_fd is not None:
             os.close(temporary_fd)
         if temporary_name is not None:
             with contextlib.suppress(FileNotFoundError):
                 os.unlink(temporary_name, dir_fd=parent_fd)
+        if backup_name is not None:
+            with contextlib.suppress(FileNotFoundError):
+                os.unlink(backup_name, dir_fd=parent_fd)
         os.close(parent_fd)
 
 
-def _validate_fallback_output_path(path: Path) -> None:
+def _validate_fallback_output_path(path: Path) -> os.stat_result | None:
     """Validate without following links where dirfd/O_NOFOLLOW APIs are unavailable."""
     anchor, parts = _validated_output_parts(path)
     current = Path(anchor) if anchor else Path.cwd()
@@ -977,30 +1092,63 @@ def _validate_fallback_output_path(path: Path) -> None:
             raise OSError(message)
     destination = current / parts[-1]
     try:
-        mode = destination.lstat().st_mode
+        result = destination.lstat()
     except FileNotFoundError:
-        return
-    if not stat.S_ISREG(mode):
+        return None
+    if not stat.S_ISREG(result.st_mode):
         message = "output path must name a regular non-symlink file"
         raise OSError(message)
+    return result
 
 
-def _fsync_directory_best_effort(path: Path) -> None:
-    descriptor: int | None = None
+def _fsync_directory(path: Path, *, best_effort: bool = False) -> None:
     try:
         descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    except OSError:
+        if best_effort or os.name == "nt":
+            return
+        raise
+    try:
         os.fsync(descriptor)
     except OSError:
-        pass
+        if not best_effort:
+            raise
     finally:
-        if descriptor is not None:
-            os.close(descriptor)
+        os.close(descriptor)
+
+
+def _create_fallback_backup(path: Path, expected: os.stat_result) -> Path:
+    for _attempt in range(_TEMP_FILE_ATTEMPTS):
+        backup = path.parent / f".published-upgrade-backup-{secrets.token_hex(12)}.tmp"
+        try:
+            os.link(path, backup, follow_symlinks=False)
+        except FileExistsError:
+            continue
+        try:
+            current = path.lstat()
+            backup_stat = backup.lstat()
+            _require_same_file_identity(expected, current, backup_stat)
+        except BaseException:
+            backup.unlink(missing_ok=True)
+            raise
+        return backup
+    message = "unable to allocate a unique output backup file"
+    raise OSError(message)
+
+
+def _rollback_fallback_replacement(path: Path, backup: Path | None) -> None:
+    if backup is None:
+        path.unlink(missing_ok=True)
+    else:
+        os.replace(backup, path)  # noqa: PTH105 - explicit rollback primitive.
+    _fsync_directory(path.parent, best_effort=True)
 
 
 def _write_atomic_fallback(path: Path, content: str) -> None:
     """Use a same-directory atomic replace on platforms without secure dirfd traversal."""
-    _validate_fallback_output_path(path)
+    previous = _validate_fallback_output_path(path)
     temporary_path: Path | None = None
+    backup_path: Path | None = None
     try:
         with tempfile.NamedTemporaryFile(
             mode="w",
@@ -1014,13 +1162,34 @@ def _write_atomic_fallback(path: Path, content: str) -> None:
             handle.write(content)
             handle.flush()
             os.fsync(handle.fileno())
-        _validate_fallback_output_path(path)
+        current = _validate_fallback_output_path(path)
+        if previous is None:
+            if current is not None:
+                message = "output destination identity changed before replacement"
+                raise OSError(message)
+        else:
+            if current is None or not _same_file_identity(previous, current):
+                message = "output destination identity changed before replacement"
+                raise OSError(message)
+            backup_path = _create_fallback_backup(path, previous)
+            _fsync_directory(path.parent)
         os.replace(temporary_path, path)  # noqa: PTH105 - explicit atomic primitive is injected in tests.
         temporary_path = None
-        _fsync_directory_best_effort(path.parent)
+        try:
+            _fsync_directory(path.parent)
+        except OSError:
+            _rollback_fallback_replacement(path, backup_path)
+            backup_path = None
+            raise
+        if backup_path is not None:
+            backup_path.unlink()
+            backup_path = None
+            _fsync_directory(path.parent)
     finally:
         if temporary_path is not None:
             temporary_path.unlink(missing_ok=True)
+        if backup_path is not None:
+            backup_path.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":
