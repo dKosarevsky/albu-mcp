@@ -4,12 +4,19 @@ from __future__ import annotations
 
 import contextlib
 import os
+import struct
 from dataclasses import dataclass
 from typing import Protocol
 
 _OWNERSHIP_ESTABLISH_FAILED = "Windows process ownership could not be established."
 _OWNERSHIP_RELEASE_FAILED = "Windows process ownership could not be released."
 _OWNERSHIP_UNAVAILABLE = "Windows process ownership is unavailable."
+_JOB_TERMINATION_EXIT_CODE = 1
+_MAX_PROCESS_HANDLE = (1 << (struct.calcsize("P") * 8)) - 1
+_JOB_OBJECT_ABI_SIZES = {
+    4: (48, 48, 112),
+    8: (64, 48, 144),
+}
 
 if os.name == "nt":
     import ctypes
@@ -17,8 +24,6 @@ if os.name == "nt":
 
     _JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000
     _JOB_OBJECT_EXTENDED_LIMIT_INFORMATION_CLASS = 9
-    _PROCESS_TERMINATE = 0x0001
-    _PROCESS_SET_QUOTA = 0x0100
 
     class _JobObjectBasicLimitInformation(ctypes.Structure):
         _fields_ = [
@@ -58,6 +63,24 @@ class WindowsJobError(RuntimeError):
     """Report a finite Windows process ownership failure."""
 
 
+def _validate_job_object_abi(*, pointer_size: int, actual_sizes: tuple[int, int, int]) -> None:
+    if _JOB_OBJECT_ABI_SIZES.get(pointer_size) != actual_sizes:
+        raise WindowsJobError(_OWNERSHIP_ESTABLISH_FAILED)
+
+
+def require_popen_process_handle(process: object) -> int:
+    """Return Popen's stable owned handle after deterministic pointer-width validation."""
+    process_handle = getattr(process, "_handle", None)
+    if (
+        isinstance(process_handle, bool)
+        or not isinstance(process_handle, int)
+        or process_handle <= 0
+        or process_handle > _MAX_PROCESS_HANDLE
+    ):
+        raise WindowsJobError(_OWNERSHIP_ESTABLISH_FAILED)
+    return process_handle
+
+
 class WindowsJobApi(Protocol):
     """Operations required to own one Windows subprocess tree."""
 
@@ -65,7 +88,9 @@ class WindowsJobApi(Protocol):
 
     def configure_kill_on_close(self, job_handle: object) -> None: ...
 
-    def assign_process(self, job_handle: object, pid: int) -> None: ...
+    def assign_process(self, job_handle: object, process_handle: object) -> None: ...
+
+    def terminate_job(self, job_handle: object, exit_code: int) -> None: ...
 
     def close_handle(self, handle: object) -> None: ...
 
@@ -74,6 +99,14 @@ if os.name == "nt":
 
     class _CtypesWindowsJobApi:
         def __init__(self) -> None:
+            _validate_job_object_abi(
+                pointer_size=ctypes.sizeof(ctypes.c_void_p),
+                actual_sizes=(
+                    ctypes.sizeof(_JobObjectBasicLimitInformation),
+                    ctypes.sizeof(_IoCounters),
+                    ctypes.sizeof(_JobObjectExtendedLimitInformation),
+                ),
+            )
             kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
             self._create_job = kernel32.CreateJobObjectW
             self._create_job.argtypes = [ctypes.c_void_p, wintypes.LPCWSTR]
@@ -81,12 +114,12 @@ if os.name == "nt":
             self._set_information = kernel32.SetInformationJobObject
             self._set_information.argtypes = [wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p, wintypes.DWORD]
             self._set_information.restype = wintypes.BOOL
-            self._open_process = kernel32.OpenProcess
-            self._open_process.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
-            self._open_process.restype = wintypes.HANDLE
             self._assign_process = kernel32.AssignProcessToJobObject
             self._assign_process.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
             self._assign_process.restype = wintypes.BOOL
+            self._terminate_job = kernel32.TerminateJobObject
+            self._terminate_job.argtypes = [wintypes.HANDLE, wintypes.UINT]
+            self._terminate_job.restype = wintypes.BOOL
             self._close_handle = kernel32.CloseHandle
             self._close_handle.argtypes = [wintypes.HANDLE]
             self._close_handle.restype = wintypes.BOOL
@@ -109,20 +142,13 @@ if os.name == "nt":
             if not configured:
                 raise WindowsJobError(_OWNERSHIP_ESTABLISH_FAILED)
 
-        def assign_process(self, job_handle: object, pid: int) -> None:
-            process_handle = self._open_process(
-                _PROCESS_SET_QUOTA | _PROCESS_TERMINATE,
-                False,  # noqa: FBT003 - WinAPI positional BOOL parameter.
-                pid,
-            )
-            if not process_handle:
+        def assign_process(self, job_handle: object, process_handle: object) -> None:
+            if not self._assign_process(job_handle, process_handle):
                 raise WindowsJobError(_OWNERSHIP_ESTABLISH_FAILED)
-            try:
-                if not self._assign_process(job_handle, process_handle):
-                    raise WindowsJobError(_OWNERSHIP_ESTABLISH_FAILED)
-            finally:
-                if not self._close_handle(process_handle):
-                    raise WindowsJobError(_OWNERSHIP_ESTABLISH_FAILED) from None
+
+        def terminate_job(self, job_handle: object, exit_code: int) -> None:
+            if not self._terminate_job(job_handle, exit_code):
+                raise WindowsJobError(_OWNERSHIP_RELEASE_FAILED)
 
         def close_handle(self, handle: object) -> None:
             if not self._close_handle(handle):
@@ -152,22 +178,29 @@ class WindowsJobOwner:
             raise WindowsJobError(_OWNERSHIP_ESTABLISH_FAILED) from None
         return cls(_api=api, _handle=handle)
 
-    def assign(self, pid: int) -> None:
+    def assign(self, process_handle: object) -> None:
         handle = self._require_handle()
         try:
-            self._api.assign_process(handle, pid)
+            self._api.assign_process(handle, process_handle)
         except Exception:  # noqa: BLE001 - the adapter emits one finite ownership failure.
             raise WindowsJobError(_OWNERSHIP_ESTABLISH_FAILED) from None
+
+    def terminate(self) -> None:
+        handle = self._require_handle()
+        try:
+            self._api.terminate_job(handle, _JOB_TERMINATION_EXIT_CODE)
+        except Exception:  # noqa: BLE001 - the adapter emits one finite ownership failure.
+            raise WindowsJobError(_OWNERSHIP_RELEASE_FAILED) from None
 
     def close(self) -> None:
         handle = self._handle
         if handle is None:
             return
-        self._handle = None
         try:
             self._api.close_handle(handle)
         except Exception:  # noqa: BLE001 - the adapter emits one finite ownership failure.
             raise WindowsJobError(_OWNERSHIP_RELEASE_FAILED) from None
+        self._handle = None
 
     def _require_handle(self) -> object:
         if self._handle is None:

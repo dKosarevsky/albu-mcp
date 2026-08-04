@@ -13,6 +13,7 @@ import signal
 import stat
 import subprocess
 import sys
+import threading
 import time
 from collections.abc import Callable
 from pathlib import Path
@@ -1163,8 +1164,11 @@ def test_windows_job_owner_configures_assigns_and_closes_idempotently() -> None:
         def configure_kill_on_close(self, job_handle: object) -> None:
             events.append(("configure", job_handle))
 
-        def assign_process(self, job_handle: object, pid: int) -> None:
-            events.append(("assign", (job_handle, pid)))
+        def assign_process(self, job_handle: object, process_handle: object) -> None:
+            events.append(("assign", (job_handle, process_handle)))
+
+        def terminate_job(self, job_handle: object, exit_code: int) -> None:
+            raise AssertionError((job_handle, exit_code))
 
         def close_handle(self, handle: object) -> None:
             events.append(("close", handle))
@@ -1182,6 +1186,125 @@ def test_windows_job_owner_configures_assigns_and_closes_idempotently() -> None:
     ]
 
 
+def test_windows_job_close_failure_retains_handle_for_terminate_and_retry() -> None:
+    assert windows_job is not None
+    events: list[tuple[str, object]] = []
+    close_attempts = 0
+    private_detail = "private native close failure for handle 0x29"
+
+    class FakeWinApi:
+        def create_job(self) -> object:
+            return 41
+
+        def configure_kill_on_close(self, job_handle: object) -> None:
+            assert job_handle == 41
+
+        def assign_process(self, job_handle: object, process_handle: object) -> None:
+            raise AssertionError((job_handle, process_handle))
+
+        def terminate_job(self, job_handle: object, exit_code: int) -> None:
+            events.append(("terminate", (job_handle, exit_code)))
+
+        def close_handle(self, handle: object) -> None:
+            nonlocal close_attempts
+            close_attempts += 1
+            events.append(("close", handle))
+            if close_attempts == 1:
+                raise OSError(private_detail)
+
+    owner = windows_job.WindowsJobOwner.create(api=FakeWinApi())
+
+    with pytest.raises(windows_job.WindowsJobError) as caught:
+        owner.close()
+    owner.terminate()
+    owner.close()
+    owner.close()
+
+    assert caught.value.__cause__ is None
+    assert "private" not in str(caught.value)
+    assert events == [
+        ("close", 41),
+        ("terminate", (41, windows_job._JOB_TERMINATION_EXIT_CODE)),
+        ("close", 41),
+    ]
+
+
+def test_windows_job_terminate_failure_is_finite_and_owner_remains_closeable() -> None:
+    assert windows_job is not None
+    events: list[tuple[str, object]] = []
+    private_detail = r"TerminateJobObject failed for C:\private\probe handle 0x29"
+
+    class FakeWinApi:
+        def create_job(self) -> object:
+            return 41
+
+        def configure_kill_on_close(self, job_handle: object) -> None:
+            assert job_handle == 41
+
+        def assign_process(self, job_handle: object, process_handle: object) -> None:
+            raise AssertionError((job_handle, process_handle))
+
+        def terminate_job(self, job_handle: object, exit_code: int) -> None:
+            events.append(("terminate", (job_handle, exit_code)))
+            raise OSError(private_detail)
+
+        def close_handle(self, handle: object) -> None:
+            events.append(("close", handle))
+
+    owner = windows_job.WindowsJobOwner.create(api=FakeWinApi())
+
+    with pytest.raises(windows_job.WindowsJobError) as caught:
+        owner.terminate()
+    owner.close()
+
+    assert caught.value.__cause__ is None
+    assert private_detail not in str(caught.value)
+    assert events == [
+        ("terminate", (41, windows_job._JOB_TERMINATION_EXIT_CODE)),
+        ("close", 41),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("pointer_size", "actual_sizes"),
+    [
+        (4, (48, 48, 112)),
+        (8, (64, 48, 144)),
+    ],
+)
+def test_windows_job_ctypes_abi_accepts_supported_layouts(
+    pointer_size: int,
+    actual_sizes: tuple[int, int, int],
+) -> None:
+    windows_job._validate_job_object_abi(pointer_size=pointer_size, actual_sizes=actual_sizes)
+
+
+@pytest.mark.parametrize(
+    ("pointer_size", "actual_sizes"),
+    [
+        (2, (48, 48, 112)),
+        (4, (44, 48, 108)),
+        (8, (64, 48, 136)),
+    ],
+)
+def test_windows_job_ctypes_abi_rejects_unknown_layouts(
+    pointer_size: int,
+    actual_sizes: tuple[int, int, int],
+) -> None:
+    with pytest.raises(windows_job.WindowsJobError) as caught:
+        windows_job._validate_job_object_abi(pointer_size=pointer_size, actual_sizes=actual_sizes)
+
+    assert caught.value.__cause__ is None
+    assert str(caught.value) == "Windows process ownership could not be established."
+
+
+def test_windows_job_adapter_never_reopens_worker_by_pid() -> None:
+    source = Path(windows_job.__file__).read_text(encoding="utf-8")
+
+    assert "AssignProcessToJobObject" in source
+    assert "OpenProcess" not in source
+
+
 def test_windows_job_configuration_failure_closes_handle_and_discards_details() -> None:
     assert windows_job is not None
     events: list[tuple[str, object]] = []
@@ -1195,8 +1318,11 @@ def test_windows_job_configuration_failure_closes_handle_and_discards_details() 
             events.append(("configure", job_handle))
             raise OSError(private_detail)
 
-        def assign_process(self, job_handle: object, pid: int) -> None:
-            raise AssertionError((job_handle, pid))
+        def assign_process(self, job_handle: object, process_handle: object) -> None:
+            raise AssertionError((job_handle, process_handle))
+
+        def terminate_job(self, job_handle: object, exit_code: int) -> None:
+            raise AssertionError((job_handle, exit_code))
 
         def close_handle(self, handle: object) -> None:
             events.append(("close", handle))
@@ -1220,8 +1346,11 @@ def test_windows_job_configuration_control_flow_closes_handle_before_propagation
             events.append(("configure", job_handle))
             raise KeyboardInterrupt
 
-        def assign_process(self, job_handle: object, pid: int) -> None:
-            raise AssertionError((job_handle, pid))
+        def assign_process(self, job_handle: object, process_handle: object) -> None:
+            raise AssertionError((job_handle, process_handle))
+
+        def terminate_job(self, job_handle: object, exit_code: int) -> None:
+            raise AssertionError((job_handle, exit_code))
 
         def close_handle(self, handle: object) -> None:
             events.append(("close", handle))
@@ -1243,8 +1372,11 @@ def test_windows_job_creation_failure_discards_details() -> None:
         def configure_kill_on_close(self, job_handle: object) -> None:
             raise AssertionError(job_handle)
 
-        def assign_process(self, job_handle: object, pid: int) -> None:
-            raise AssertionError((job_handle, pid))
+        def assign_process(self, job_handle: object, process_handle: object) -> None:
+            raise AssertionError((job_handle, process_handle))
+
+        def terminate_job(self, job_handle: object, exit_code: int) -> None:
+            raise AssertionError((job_handle, exit_code))
 
         def close_handle(self, handle: object) -> None:
             raise AssertionError(handle)
@@ -1268,9 +1400,12 @@ def test_windows_job_assignment_failure_is_finite_and_owner_remains_closeable() 
         def configure_kill_on_close(self, job_handle: object) -> None:
             del job_handle
 
-        def assign_process(self, job_handle: object, pid: int) -> None:
-            events.append(("assign", (job_handle, pid)))
+        def assign_process(self, job_handle: object, process_handle: object) -> None:
+            events.append(("assign", (job_handle, process_handle)))
             raise OSError(private_detail)
+
+        def terminate_job(self, job_handle: object, exit_code: int) -> None:
+            raise AssertionError((job_handle, exit_code))
 
         def close_handle(self, handle: object) -> None:
             events.append(("close", handle))
@@ -1325,9 +1460,12 @@ def test_windows_probe_launch_orders_job_assignment_before_gate_release() -> Non
             assert job_handle == 41
             events.append("configure")
 
-        def assign_process(self, job_handle: object, pid: int) -> None:
-            assert (job_handle, pid) == (41, 321)
+        def assign_process(self, job_handle: object, process_handle: object) -> None:
+            assert (job_handle, process_handle) == (41, 654)
             events.append("assign")
+
+        def terminate_job(self, job_handle: object, exit_code: int) -> None:
+            raise AssertionError((job_handle, exit_code))
 
         def close_handle(self, handle: object) -> None:
             assert handle == 41
@@ -1347,6 +1485,7 @@ def test_windows_probe_launch_orders_job_assignment_before_gate_release() -> Non
 
     class FakeProcess:
         pid = 321
+        _handle = 654
         stdin = FakeGate()
         stdout = None
 
@@ -1368,6 +1507,101 @@ def test_windows_probe_launch_orders_job_assignment_before_gate_release() -> Non
     assert events == ["create", "configure", "launch", "assign", "release", "flush", "gate_close"]
     managed.close_owner()
     assert events[-1] == "job_close"
+
+
+@pytest.mark.parametrize("native_handle", [None, 0, -1, True, "654", 1 << 256])
+def test_windows_probe_invalid_native_handle_keeps_gate_closed_and_reaps_worker(
+    native_handle: object,
+) -> None:
+    events: list[str] = []
+
+    class FakeWinApi:
+        def create_job(self) -> object:
+            events.append("create")
+            return 41
+
+        def configure_kill_on_close(self, job_handle: object) -> None:
+            assert job_handle == 41
+            events.append("configure")
+
+        def assign_process(self, job_handle: object, process_handle: object) -> None:
+            events.append("assign")
+            raise AssertionError((job_handle, process_handle))
+
+        def terminate_job(self, job_handle: object, exit_code: int) -> None:
+            assert (job_handle, exit_code) == (41, windows_job._JOB_TERMINATION_EXIT_CODE)
+            events.append("job_terminate")
+
+        def close_handle(self, handle: object) -> None:
+            assert handle == 41
+            events.append("job_close")
+
+    class FakeGate:
+        def write(self, _data: bytes) -> int:
+            events.append("release")
+            return 1
+
+        def flush(self) -> None:
+            events.append("flush")
+
+        def close(self) -> None:
+            events.append("gate_close")
+
+    class FakeProcess:
+        pid = 321
+        stdin = FakeGate()
+        stdout = io.BytesIO()
+        returncode: int | None = None
+
+        def __init__(self) -> None:
+            self._handle = native_handle
+
+        def poll(self) -> int | None:
+            return self.returncode
+
+        def terminate(self) -> None:
+            events.append("worker_stop")
+            self.returncode = -15
+
+        def kill(self) -> None:
+            events.append("worker_kill")
+            self.returncode = -9
+
+        def wait(self, *, timeout: float) -> int:
+            assert timeout <= check_published_upgrade._PROCESS_KILL_GRACE_SECONDS
+            events.append("worker_reap")
+            assert self.returncode is not None
+            return self.returncode
+
+    def create_owner() -> windows_job.WindowsJobOwner:
+        return windows_job.create_windows_job_owner(api=FakeWinApi())
+
+    def popen(_command: list[str], **_kwargs: object) -> subprocess.Popen[bytes]:
+        events.append("launch")
+        return cast("subprocess.Popen[bytes]", FakeProcess())
+
+    def launch(request: check_published_upgrade._ProbeRequest) -> check_published_upgrade._ManagedProbe:
+        return check_published_upgrade._launch_windows_probe_process(
+            request,
+            owner_factory=create_owner,
+            popen=popen,
+        )
+
+    with pytest.raises(check_published_upgrade._ProbeExecutorError) as caught:
+        check_published_upgrade._run_probe(_probe_request(), 2.0, launcher=launch)
+
+    assert caught.value.failure["reason"] == "child_start_failed"
+    assert "release" not in events
+    assert events == [
+        "create",
+        "configure",
+        "launch",
+        "gate_close",
+        "job_terminate",
+        "job_close",
+        "worker_stop",
+        "worker_reap",
+    ]
 
 
 @pytest.mark.parametrize("gate_payload", [b"", b"x"])
@@ -1458,13 +1692,18 @@ class _FakeManagedProcess:
 class _RecordingTreeOwner:
     def __init__(self, events: list[str]) -> None:
         self.events = events
+        self.terminate_count = 0
         self.close_count = 0
         self.descendant_owned = True
+
+    def terminate(self) -> None:
+        self.terminate_count += 1
+        self.events.append("owner_terminate")
+        self.descendant_owned = False
 
     def close(self) -> None:
         self.close_count += 1
         self.events.append("owner_close")
-        self.descendant_owned = False
 
 
 def _fake_managed_probe(
@@ -1497,7 +1736,8 @@ def test_probe_closes_tree_owner_after_already_exited_root_on_success() -> None:
     observed = check_published_upgrade._run_probe(_probe_request(), 2.0, launcher=lambda _request: managed)
 
     assert observed == report
-    assert events == ["root_exit", "owner_close"]
+    assert events == ["root_exit", "owner_terminate", "owner_close"]
+    assert owner.terminate_count == 1
     assert owner.close_count == 1
     assert owner.descendant_owned is False
 
@@ -1506,6 +1746,7 @@ def test_probe_closes_tree_owner_after_already_exited_root_on_success() -> None:
     ("payload", "wait_outcome", "returncode", "reason"),
     [
         (b"private malformed child payload", "success", 0, "child_payload_invalid"),
+        (b"", "success", 0, "child_payload_invalid"),
         (b"", "success", 23, "child_process_failed"),
         (b"", "timeout", 0, "timeout"),
         (b"", "error", 0, "child_process_failed"),
@@ -1527,6 +1768,7 @@ def test_probe_closes_tree_owner_on_every_finite_failure(
         check_published_upgrade._run_probe(_probe_request(), 2.0, launcher=lambda _request: managed)
 
     assert caught.value.failure["reason"] == reason
+    assert owner.terminate_count == 1
     assert owner.close_count == 1
     assert "private" not in json.dumps(caught.value.failure)
 
@@ -1537,7 +1779,154 @@ def test_probe_closes_tree_owner_before_propagating_control_flow() -> None:
     with pytest.raises(KeyboardInterrupt):
         check_published_upgrade._run_probe(_probe_request(), 2.0, launcher=lambda _request: managed)
 
+    assert owner.terminate_count == 1
     assert owner.close_count == 1
+
+
+def test_probe_cleanup_retries_retained_owner_after_close_failure() -> None:
+    report = _upgrade_report()
+    events: list[str] = []
+    private_detail = "private close failure"
+
+    class RetryableOwner:
+        def __init__(self) -> None:
+            self.close_count = 0
+
+        def terminate(self) -> None:
+            events.append("owner_terminate")
+
+        def close(self) -> None:
+            self.close_count += 1
+            events.append("owner_close")
+            if self.close_count == 1:
+                raise windows_job.WindowsJobError(private_detail)
+
+    process = _FakeManagedProcess(
+        json.dumps({"kind": "report", "report": report}).encode(),
+        events=events,
+    )
+    owner = RetryableOwner()
+    managed = check_published_upgrade._ManagedProbe(
+        process=cast("subprocess.Popen[bytes]", process),
+        process_group=None,
+        owner=owner,
+    )
+
+    with pytest.raises(check_published_upgrade._ProbeExecutorError) as caught:
+        check_published_upgrade._run_probe(_probe_request(), 2.0, launcher=lambda _request: managed)
+
+    assert caught.value.failure["reason"] == "child_process_failed"
+    assert events == [
+        "root_exit",
+        "owner_terminate",
+        "owner_close",
+        "owner_terminate",
+        "owner_close",
+    ]
+
+
+def test_probe_terminate_failure_still_closes_owner_with_finite_failure() -> None:
+    report = _upgrade_report()
+    events: list[str] = []
+    private_detail = r"private C:\probe termination failure"
+
+    class TerminateFailingOwner:
+        def terminate(self) -> None:
+            events.append("owner_terminate")
+            raise OSError(private_detail)
+
+        def close(self) -> None:
+            events.append("owner_close")
+
+    process = _FakeManagedProcess(
+        json.dumps({"kind": "report", "report": report}).encode(),
+        events=events,
+    )
+    managed = check_published_upgrade._ManagedProbe(
+        process=cast("subprocess.Popen[bytes]", process),
+        process_group=None,
+        owner=TerminateFailingOwner(),
+    )
+
+    with pytest.raises(check_published_upgrade._ProbeExecutorError) as caught:
+        check_published_upgrade._run_probe(_probe_request(), 2.0, launcher=lambda _request: managed)
+
+    assert caught.value.failure["reason"] == "child_process_failed"
+    assert "private" not in json.dumps(caught.value.failure)
+    assert events == ["root_exit", "owner_terminate", "owner_close"]
+
+
+def test_probe_cleanup_base_exception_still_closes_and_reaps_worker() -> None:
+    events: list[str] = []
+
+    class InterruptingOwner:
+        def terminate(self) -> None:
+            events.append("owner_terminate")
+            raise KeyboardInterrupt
+
+        def close(self) -> None:
+            events.append("owner_close")
+
+    process = _FakeManagedProcess(b"", wait_outcome="timeout", events=events)
+    managed = check_published_upgrade._ManagedProbe(
+        process=cast("subprocess.Popen[bytes]", process),
+        process_group=None,
+        owner=InterruptingOwner(),
+    )
+
+    with pytest.raises(KeyboardInterrupt):
+        check_published_upgrade._run_probe(_probe_request(), 0.01, launcher=lambda _request: managed)
+
+    assert events == [
+        "owner_terminate",
+        "owner_close",
+        "worker_terminate",
+    ]
+    assert process.returncode == -15
+
+
+def test_probe_never_taskkills_an_already_exited_pid_after_owner_close_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    report = _upgrade_report()
+    events: list[str] = []
+    private_detail = "private close failure"
+
+    class UncloseableOwner:
+        def terminate(self) -> None:
+            events.append("owner_terminate")
+
+        def close(self) -> None:
+            events.append("owner_close")
+            raise OSError(private_detail)
+
+    process = _FakeManagedProcess(
+        json.dumps({"kind": "report", "report": report}).encode(),
+        events=events,
+    )
+    managed = check_published_upgrade._ManagedProbe(
+        process=cast("subprocess.Popen[bytes]", process),
+        process_group=None,
+        owner=UncloseableOwner(),
+    )
+    monkeypatch.setattr(check_published_upgrade.os, "name", "nt")
+    monkeypatch.setattr(
+        check_published_upgrade,
+        "_kill_windows_process_tree",
+        lambda _pid: events.append("taskkill") or True,
+    )
+
+    with pytest.raises(check_published_upgrade._ProbeExecutorError) as caught:
+        check_published_upgrade._run_probe(_probe_request(), 2.0, launcher=lambda _request: managed)
+
+    assert caught.value.failure["reason"] == "child_process_failed"
+    assert events == [
+        "root_exit",
+        "owner_terminate",
+        "owner_close",
+        "owner_terminate",
+        "owner_close",
+    ]
 
 
 def test_windows_assignment_failure_keeps_gate_closed_and_reaps_worker() -> None:
@@ -1554,10 +1943,14 @@ def test_windows_assignment_failure_keeps_gate_closed_and_reaps_worker() -> None
             assert job_handle == 41
             events.append("configure")
 
-        def assign_process(self, job_handle: object, pid: int) -> None:
-            assert (job_handle, pid) == (41, 321)
+        def assign_process(self, job_handle: object, process_handle: object) -> None:
+            assert (job_handle, process_handle) == (41, 654)
             events.append("assign")
             raise OSError(private_detail)
+
+        def terminate_job(self, job_handle: object, exit_code: int) -> None:
+            assert (job_handle, exit_code) == (41, windows_job._JOB_TERMINATION_EXIT_CODE)
+            events.append("job_terminate")
 
         def close_handle(self, handle: object) -> None:
             assert handle == 41
@@ -1576,6 +1969,7 @@ def test_windows_assignment_failure_keeps_gate_closed_and_reaps_worker() -> None
 
     class FakeProcess:
         pid = 321
+        _handle = 654
         stdin = FakeGate()
         stdout = io.BytesIO()
         returncode: int | None = None
@@ -1623,6 +2017,7 @@ def test_windows_assignment_failure_keeps_gate_closed_and_reaps_worker() -> None
         "launch",
         "assign",
         "gate_close",
+        "job_terminate",
         "job_close",
         "worker_stop",
         "worker_reap",
@@ -1658,13 +2053,14 @@ def test_windows_job_owner_kills_descendant_after_root_exit(tmp_path: Path) -> N
     )
     descendant_pid: int | None = None
     try:
-        owner.assign(process.pid)
+        owner.assign(windows_job.require_popen_process_handle(process))
         assert process.stdin is not None
         process.stdin.write(check_published_upgrade._WINDOWS_GATE_TOKEN)
         process.stdin.close()
         process.wait(timeout=2.0)
         descendant_pid = int(descendant_pid_file.read_text(encoding="utf-8"))
 
+        owner.terminate()
         owner.close()
         time.sleep(1.5)
 
@@ -1717,6 +2113,186 @@ def test_windows_watchdog_attempts_tree_kill_before_worker_fallback(monkeypatch:
     check_published_upgrade._stop_probe_process(process, process_group=None)
 
     assert events == ["tree_kill", "worker_kill", "worker_reap"]
+
+
+def test_windows_job_cleanup_reaps_after_second_kill_before_reader_join(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    events: list[str] = []
+    wait_calls = 0
+
+    class FakeProcess:
+        pid = 321
+        stdin = None
+        stdout = io.BytesIO()
+        returncode: int | None = None
+
+        def poll(self) -> int | None:
+            return self.returncode
+
+        def kill(self) -> None:
+            events.append("worker_kill")
+
+        def wait(self, *, timeout: float) -> int:
+            nonlocal wait_calls
+            assert timeout <= check_published_upgrade._PROCESS_KILL_GRACE_SECONDS
+            wait_calls += 1
+            if wait_calls < 3:
+                events.append("wait_timeout")
+                command = "probe"
+                raise subprocess.TimeoutExpired(command, timeout)
+            events.append("worker_reap")
+            self.returncode = -9
+            return self.returncode
+
+    monkeypatch.setattr(check_published_upgrade.os, "name", "nt")
+    monkeypatch.setattr(
+        check_published_upgrade,
+        "_finish_child_reader",
+        lambda _process, _reader: events.append("reader_join"),
+    )
+    process = cast("subprocess.Popen[bytes]", FakeProcess())
+    managed = check_published_upgrade._ManagedProbe(
+        process=process,
+        process_group=None,
+        owner=check_published_upgrade._NoopProcessTreeOwner(),
+    )
+
+    assert check_published_upgrade._finalize_managed_probe(
+        managed,
+        reader=cast("threading.Thread", object()),
+        stop_worker=True,
+    )
+
+    assert events == [
+        "wait_timeout",
+        "worker_kill",
+        "wait_timeout",
+        "worker_kill",
+        "worker_reap",
+        "reader_join",
+    ]
+
+
+def test_windows_second_kill_base_exception_still_performs_final_reap(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    events: list[str] = []
+    kill_calls = 0
+    wait_calls = 0
+
+    class FakeProcess:
+        pid = 321
+
+        def poll(self) -> None:
+            return None
+
+        def kill(self) -> None:
+            nonlocal kill_calls
+            kill_calls += 1
+            events.append("worker_kill")
+            if kill_calls == 2:
+                raise KeyboardInterrupt
+
+        def wait(self, *, timeout: float) -> int:
+            nonlocal wait_calls
+            wait_calls += 1
+            events.append("worker_wait")
+            if wait_calls < 3:
+                command = "probe"
+                raise subprocess.TimeoutExpired(command, timeout)
+            return -9
+
+    monkeypatch.setattr(check_published_upgrade.os, "name", "nt")
+    process = cast("subprocess.Popen[bytes]", FakeProcess())
+
+    with pytest.raises(KeyboardInterrupt):
+        check_published_upgrade._stop_probe_process(
+            process,
+            process_group=None,
+            windows_tree_fallback=False,
+        )
+
+    assert events == [
+        "worker_wait",
+        "worker_kill",
+        "worker_wait",
+        "worker_kill",
+        "worker_wait",
+    ]
+
+
+def test_windows_pre_kill_wait_base_exception_still_kills_and_reaps(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    events: list[str] = []
+    wait_calls = 0
+
+    class FakeProcess:
+        pid = 321
+        returncode: int | None = None
+
+        def poll(self) -> int | None:
+            return self.returncode
+
+        def kill(self) -> None:
+            events.append("worker_kill")
+
+        def wait(self, *, timeout: float) -> int:
+            nonlocal wait_calls
+            assert timeout > 0
+            wait_calls += 1
+            if wait_calls == 1:
+                events.append("wait_interrupt")
+                raise KeyboardInterrupt
+            events.append("worker_reap")
+            self.returncode = -9
+            return self.returncode
+
+    monkeypatch.setattr(check_published_upgrade.os, "name", "nt")
+    process = cast("subprocess.Popen[bytes]", FakeProcess())
+
+    with pytest.raises(KeyboardInterrupt):
+        check_published_upgrade._stop_probe_process(
+            process,
+            process_group=None,
+            windows_tree_fallback=False,
+        )
+
+    assert events == ["wait_interrupt", "worker_kill", "worker_reap"]
+
+
+def test_reader_join_base_exception_still_closes_pipe_and_retries_join() -> None:
+    events: list[str] = []
+
+    class FakeReader:
+        join_calls = 0
+
+        def join(self, *, timeout: float) -> None:
+            assert timeout == check_published_upgrade._PROCESS_KILL_GRACE_SECONDS
+            self.join_calls += 1
+            events.append("reader_join")
+            if self.join_calls == 1:
+                raise KeyboardInterrupt
+
+        def is_alive(self) -> bool:
+            return self.join_calls < 2
+
+    class FakeStream(io.BytesIO):
+        def close(self) -> None:
+            events.append("pipe_close")
+            super().close()
+
+    class FakeProcess:
+        stdout = FakeStream()
+
+    with pytest.raises(KeyboardInterrupt):
+        check_published_upgrade._finish_child_reader(
+            cast("subprocess.Popen[bytes]", FakeProcess()),
+            cast("threading.Thread", FakeReader()),
+        )
+
+    assert events == ["reader_join", "pipe_close", "reader_join"]
 
 
 def test_python_310_asyncio_timeout_is_classified_once_through_exception_group(
@@ -2220,6 +2796,14 @@ def test_non_posix_fallback_writes_and_rejects_symlink_ancestors(tmp_path: Path)
         check_published_upgrade._write_atomic_fallback(linked_directory / "upgrade.json", "other\n")
 
     assert not (target_directory / "upgrade.json").exists()
+
+
+def test_atomic_write_help_acknowledges_non_posix_race_limitations() -> None:
+    documentation = check_published_upgrade.write_atomic_text.__doc__ or ""
+
+    assert "best-effort" in documentation
+    assert "non-POSIX" in documentation
+    assert "without following output path symlinks" not in documentation
 
 
 def test_non_posix_fallback_rejects_missing_parent_without_creation(tmp_path: Path) -> None:

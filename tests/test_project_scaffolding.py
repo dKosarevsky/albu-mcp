@@ -58,6 +58,26 @@ def test_ci_workflow_runs_core_quality_gates() -> None:
     assert "ClientSession" not in commands
 
 
+def test_ci_runs_native_windows_process_tree_integration_with_pinned_actions() -> None:
+    workflow = yaml.safe_load(Path(".github/workflows/ci.yml").read_text(encoding="utf-8"))
+    job = workflow["jobs"]["windows-process-tree"]
+    steps = job["steps"]
+    actions = {step["name"]: step["uses"] for step in steps if "uses" in step}
+    commands = [step["run"] for step in steps if "run" in step]
+
+    assert job["runs-on"] == "windows-latest"
+    assert job["timeout-minutes"] == 10
+    assert actions == {
+        "Check out repository": "actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09",
+        "Install uv": "astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78",
+        "Set up Python": "actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1",
+    }
+    assert "uv sync --frozen --all-extras --dev" in commands
+    assert (
+        "uv run pytest tests/test_published_upgrade_cli.py::test_windows_job_owner_kills_descendant_after_root_exit -q"
+    ) in commands
+
+
 def test_ci_workflow_builds_and_verifies_the_mcp_app() -> None:
     workflow = yaml.safe_load(Path(".github/workflows/ci.yml").read_text(encoding="utf-8"))
     ui_job = workflow["jobs"]["ui"]

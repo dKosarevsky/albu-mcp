@@ -45,7 +45,7 @@ from scripts.published_upgrade_runtime import (
     build_attested_uvx_server_command,
     run_published_upgrade,
 )
-from scripts.windows_job import WindowsJobOwner, create_windows_job_owner
+from scripts.windows_job import WindowsJobOwner, create_windows_job_owner, require_popen_process_handle
 
 _SCHEMA_VERSION: Final = "albumentationsx-mcp/published-upgrade-proof/v1"
 _EXACT_VERSION: Final = re.compile(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\Z")
@@ -80,6 +80,8 @@ class _PyPIVersionCheck(Protocol):
 
 
 class _ProcessTreeOwner(Protocol):
+    def terminate(self) -> None: ...
+
     def close(self) -> None: ...
 
 
@@ -119,6 +121,9 @@ class _BoundedChildOutput:
 
 
 class _NoopProcessTreeOwner:
+    def terminate(self) -> None:
+        return None
+
     def close(self) -> None:
         return None
 
@@ -154,6 +159,13 @@ class _ManagedProbe:
 
     def close_owner(self) -> None:
         self.owner.close()
+
+
+@dataclass(frozen=True)
+class _OwnerCleanupResult:
+    clean: bool
+    closed: bool
+    error: BaseException | None
 
 
 class _ProbeExecutorError(RuntimeError):
@@ -556,21 +568,67 @@ def _finalize_managed_probe(
     reader: threading.Thread | None,
     stop_worker: bool,
 ) -> bool:
-    managed.close_gate()
-    owner_closed = True
+    cleanup_error: BaseException | None = None
     try:
-        managed.close_owner()
-    except Exception:  # noqa: BLE001 - ownership failures become one finite parent result.
-        owner_closed = False
-    if stop_worker:
-        _stop_probe_process(managed.process, process_group=managed.process_group)
-    elif managed.process_group is not None:
-        _force_kill_process_tree(managed.process, process_group=managed.process_group)
-    elif not owner_closed and os.name == "nt":
-        _kill_windows_process_tree(managed.process.pid)
-    if reader is not None:
-        _finish_child_reader(managed.process, reader)
-    return owner_closed
+        managed.close_gate()
+    except BaseException as error:  # noqa: BLE001 - remaining cleanup must still run.
+        cleanup_error = error
+    owner_result = _cleanup_tree_owner(managed.owner)
+    if cleanup_error is None:
+        cleanup_error = owner_result.error
+    try:
+        if stop_worker:
+            _stop_probe_process(
+                managed.process,
+                process_group=managed.process_group,
+                windows_tree_fallback=not owner_result.closed,
+            )
+        elif managed.process_group is not None:
+            _force_kill_process_tree(managed.process, process_group=managed.process_group)
+        elif not owner_result.closed and os.name == "nt" and managed.process.poll() is None:
+            _kill_windows_process_tree(managed.process.pid)
+    except BaseException as error:  # noqa: BLE001 - reader cleanup remains mandatory.
+        if cleanup_error is None:
+            cleanup_error = error
+    finally:
+        if reader is not None:
+            try:
+                _finish_child_reader(managed.process, reader)
+            except BaseException as error:  # noqa: BLE001 - classify after all cleanup.
+                if cleanup_error is None:
+                    cleanup_error = error
+    if cleanup_error is not None:
+        _raise_control_flow(cleanup_error)
+    return cleanup_error is None and owner_result.clean
+
+
+def _cleanup_tree_owner(owner: _ProcessTreeOwner) -> _OwnerCleanupResult:
+    first_error: BaseException | None = None
+    try:
+        owner.terminate()
+    except BaseException as error:  # noqa: BLE001 - closing the handle is still mandatory.
+        first_error = error
+
+    closed = False
+    try:
+        owner.close()
+        closed = True
+    except BaseException as error:  # noqa: BLE001 - retained handles get one bounded retry.
+        if first_error is None:
+            first_error = error
+        try:
+            owner.terminate()
+        except BaseException as retry_error:  # noqa: BLE001 - close retry must still run.
+            if first_error is None:
+                first_error = retry_error
+        try:
+            owner.close()
+            closed = True
+        except BaseException as retry_error:  # noqa: BLE001 - caller applies bounded fallback.
+            if first_error is None:
+                first_error = retry_error
+
+    return _OwnerCleanupResult(clean=first_error is None and closed, closed=closed, error=first_error)
 
 
 def _launch_probe_process(request: _ProbeRequest) -> _ManagedProbe:
@@ -624,18 +682,33 @@ def _launch_windows_probe_process(
             owner=owner,
             gate=gate,
         )
-        owner.assign(process.pid)
+        owner.assign(require_popen_process_handle(process))
         managed.release_gate()
-    except BaseException:
-        if managed is not None:
-            managed.close_gate()
-        elif process is not None and process.stdin is not None:
-            with contextlib.suppress(OSError, ValueError):
+    except BaseException as launch_error:
+        cleanup_error: BaseException | None = None
+        try:
+            if managed is not None:
+                managed.close_gate()
+            elif process is not None and process.stdin is not None:
                 process.stdin.close()
-        with contextlib.suppress(Exception):
-            owner.close()
+        except BaseException as error:  # noqa: BLE001 - ownership cleanup must still run.
+            cleanup_error = error
+        owner_result = _cleanup_tree_owner(owner)
+        if cleanup_error is None:
+            cleanup_error = owner_result.error
         if process is not None:
-            _stop_probe_process(process, process_group=None)
+            try:
+                _stop_probe_process(
+                    process,
+                    process_group=None,
+                    windows_tree_fallback=not owner_result.closed,
+                )
+            except BaseException as error:  # noqa: BLE001 - preserve launch/control-flow failure.
+                if cleanup_error is None:
+                    cleanup_error = error
+        _raise_control_flow(launch_error)
+        if cleanup_error is not None:
+            _raise_control_flow(cleanup_error)
         raise
     else:
         return managed
@@ -665,30 +738,98 @@ def _read_bounded_child_output(stream: BinaryIO, output: _BoundedChildOutput) ->
 
 
 def _finish_child_reader(process: subprocess.Popen[bytes], reader: threading.Thread) -> None:
-    reader.join(timeout=_PROCESS_KILL_GRACE_SECONDS)
-    if reader.is_alive() and process.stdout is not None:
-        with contextlib.suppress(OSError):
-            process.stdout.close()
+    first_error: BaseException | None = None
+    try:
         reader.join(timeout=_PROCESS_KILL_GRACE_SECONDS)
+    except BaseException as error:  # noqa: BLE001 - pipe close and final join remain mandatory.
+        first_error = error
+    finally:
+        if reader.is_alive() and process.stdout is not None:
+            try:
+                process.stdout.close()
+            except OSError:
+                pass
+            except BaseException as error:  # noqa: BLE001 - final join still remains mandatory.
+                first_error = first_error or error
+            try:
+                reader.join(timeout=_PROCESS_KILL_GRACE_SECONDS)
+            except BaseException as error:  # noqa: BLE001 - propagate after bounded cleanup.
+                first_error = first_error or error
+    if first_error is not None:
+        raise first_error
 
 
-def _stop_probe_process(process: subprocess.Popen[bytes], *, process_group: int | None) -> None:
-    if os.name == "nt" and process_group is None:
-        _kill_windows_process_tree(process.pid)
-    else:
-        if process.poll() is None:
-            _signal_probe_process(process, process_group=process_group, terminate=True)
-            with contextlib.suppress(subprocess.TimeoutExpired):
+def _stop_probe_process(
+    process: subprocess.Popen[bytes],
+    *,
+    process_group: int | None,
+    windows_tree_fallback: bool = True,
+) -> None:
+    windows_probe = os.name == "nt" and process_group is None
+    first_error: BaseException | None = None
+    try:
+        if windows_probe:
+            if windows_tree_fallback and process.poll() is None:
+                _kill_windows_process_tree(process.pid)
+            elif process.poll() is None:
                 process.wait(timeout=_PROCESS_TERMINATE_GRACE_SECONDS)
-        _force_kill_process_tree(process, process_group=process_group)
-    if process.poll() is None:
-        with contextlib.suppress(OSError):
-            process.kill()
+        elif process.poll() is None:
+            _signal_probe_process(process, process_group=process_group, terminate=True)
+            process.wait(timeout=_PROCESS_TERMINATE_GRACE_SECONDS)
+    except subprocess.TimeoutExpired:
+        pass
+    except BaseException as error:  # noqa: BLE001 - force-kill and reaping remain mandatory.
+        first_error = error
+    finally:
+        if not windows_probe:
+            try:
+                _force_kill_process_tree(process, process_group=process_group)
+            except BaseException as error:  # noqa: BLE001 - root reaping still remains mandatory.
+                first_error = first_error or error
+        if process.poll() is None:
+            try:
+                _kill_and_reap_probe_process(process)
+            except BaseException as error:  # noqa: BLE001 - propagate after bounded cleanup.
+                first_error = first_error or error
+    if first_error is not None:
+        raise first_error
+
+
+def _kill_and_reap_probe_process(process: subprocess.Popen[bytes]) -> None:
+    first_error: BaseException | None = None
+    try:
+        process.kill()
+    except OSError:
+        pass
+    except BaseException as error:  # noqa: BLE001 - bounded reaping must still run.
+        first_error = error
+
+    retry = False
+    try:
+        process.wait(timeout=_PROCESS_KILL_GRACE_SECONDS)
+    except subprocess.TimeoutExpired:
+        retry = True
+    except BaseException as error:  # noqa: BLE001 - one final kill/reap attempt remains.
+        first_error = first_error or error
+        retry = True
+
+    if retry:
         try:
-            process.wait(timeout=_PROCESS_KILL_GRACE_SECONDS)
-        except subprocess.TimeoutExpired:
-            with contextlib.suppress(OSError):
-                process.kill()
+            process.kill()
+        except OSError:
+            pass
+        except BaseException as error:  # noqa: BLE001 - final wait remains mandatory.
+            first_error = first_error or error
+        finally:
+            try:
+                process.wait(timeout=_PROCESS_KILL_GRACE_SECONDS)
+            except subprocess.TimeoutExpired:
+                pass
+            except BaseException as error:  # noqa: BLE001 - propagate only after bounded cleanup.
+                first_error = first_error or error
+
+    if first_error is not None:
+        raise first_error
 
 
 def _signal_probe_process(
@@ -1010,7 +1151,7 @@ def _serialize_json(value: object) -> str:
 
 
 def write_atomic_text(path: Path, content: str) -> None:
-    """Write text atomically without following output path symlinks."""
+    """Atomically replace text; non-POSIX race protection is best-effort."""
     _write_atomic(path, content)
 
 
