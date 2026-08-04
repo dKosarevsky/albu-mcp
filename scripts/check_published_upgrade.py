@@ -29,7 +29,11 @@ if not __package__:
 
 from mcp.types.version import LATEST_MODERN_VERSION
 
-from albumentationsx_mcp.upgrade_proof import UpgradeProofReport, validate_upgrade_proof_report
+from albumentationsx_mcp.upgrade_proof import (
+    UpgradeProofReport,
+    serialize_upgrade_proof_report,
+    validate_upgrade_proof_report,
+)
 from scripts.check_published_package_smoke import PyPIVersionResult, PyPIVersionState, check_pypi_version
 from scripts.published_upgrade_runtime import (
     PACKAGE,
@@ -854,11 +858,7 @@ def _serialize_json(value: object) -> str:
 
 
 def _serialize_report(report: UpgradeProofReport) -> str:
-    content = _serialize_json(report)
-    if len(content.encode("utf-8")) > _MAX_SERIALIZED_REPORT_BYTES:
-        message = "published upgrade report exceeds the output bound"
-        raise ValueError(message)
-    return content
+    return serialize_upgrade_proof_report(report)
 
 
 # Durable atomic output

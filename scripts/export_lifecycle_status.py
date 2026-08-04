@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -12,6 +13,7 @@ if not __package__:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from albumentationsx_mcp.lifecycle import build_lifecycle_status, render_lifecycle_status_markdown
+from albumentationsx_mcp.upgrade_proof import parse_upgrade_proof_report
 from scripts.export_adoption_packet import build_adoption_packet
 from scripts.export_v1_launch_report import build_v1_launch_report
 
@@ -21,7 +23,20 @@ _DEFAULT_MANUAL_RUNS_PATH = Path("docs/HOST_MANUAL_RUNS.json")
 _DEFAULT_PYPROJECT_PATH = Path("pyproject.toml")
 _DEFAULT_SERVER_JSON_PATH = Path("server.json")
 _DEFAULT_HOST_PROOF_STATUS_PATH = Path("docs/HOST_PROOF_STATUS.md")
+_DEFAULT_PUBLISHED_UPGRADE_PATH = Path("docs/host-evidence/published-upgrade-1.20.0-to-1.21.0-2026-08-04.json")
 _RELEASE_CHANNEL_IDS = ("pypi", "github_release", "ci", "official_registry")
+_PUBLISHED_UPGRADE_FROM_VERSION = "1.20.0"
+_PUBLISHED_UPGRADE_TO_VERSION = "1.21.0"
+_PUBLISHED_UPGRADE_OBSERVED_ON = "2026-08-04"
+_PUBLISHED_UPGRADE_EVIDENCE_PATH = "host-evidence/published-upgrade-1.20.0-to-1.21.0-2026-08-04.json"
+_PUBLISHED_UPGRADE_STATUS_BASIS = "Published upgrade probe result only; this does not assert provenance."
+_PUBLISHED_UPGRADE_PROVENANCE = (
+    "Local operator-run snapshot. No immutable public run or attestation is available; this evidence is not "
+    "independently attested or provenance-verifiable."
+)
+_PUBLISHED_UPGRADE_SCOPE = (
+    "Streamable HTTP conformance and published-package artifact continuity. This is not real-host UI evidence."
+)
 
 
 def build_committed_lifecycle_status(  # noqa: PLR0913
@@ -32,6 +47,7 @@ def build_committed_lifecycle_status(  # noqa: PLR0913
     pyproject_path: Path = _DEFAULT_PYPROJECT_PATH,
     server_json_path: Path = _DEFAULT_SERVER_JSON_PATH,
     host_proof_status_path: Path = _DEFAULT_HOST_PROOF_STATUS_PATH,
+    published_upgrade_path: Path = _DEFAULT_PUBLISHED_UPGRADE_PATH,
 ) -> dict[str, Any]:
     """Build current lifecycle status from committed project metadata."""
     adoption = build_adoption_packet(server_json_path=server_json_path, pyproject_path=pyproject_path)
@@ -55,7 +71,32 @@ def build_committed_lifecycle_status(  # noqa: PLR0913
         ),
         host_blockers=launch_report["blockers"],
         experiment=experiment,
+        protocol_compatibility=_load_protocol_compatibility(published_upgrade_path),
     )
+
+
+def _load_protocol_compatibility(path: Path) -> dict[str, str]:
+    raw_content = path.read_bytes()
+    report = parse_upgrade_proof_report(
+        raw_content,
+        expected_package="albumentationsx-mcp",
+        expected_from_version=_PUBLISHED_UPGRADE_FROM_VERSION,
+        expected_to_version=_PUBLISHED_UPGRADE_TO_VERSION,
+        expected_observed_on=_PUBLISHED_UPGRADE_OBSERVED_ON,
+    )
+    if report["status"] != "pass":
+        msg = "published upgrade proof report is invalid"
+        raise ValueError(msg)
+    return {
+        "status": "passed",
+        "status_basis": _PUBLISHED_UPGRADE_STATUS_BASIS,
+        "from_version": _PUBLISHED_UPGRADE_FROM_VERSION,
+        "to_version": _PUBLISHED_UPGRADE_TO_VERSION,
+        "evidence_path": _PUBLISHED_UPGRADE_EVIDENCE_PATH,
+        "evidence_sha256": hashlib.sha256(raw_content).hexdigest(),
+        "provenance": _PUBLISHED_UPGRADE_PROVENANCE,
+        "scope": _PUBLISHED_UPGRADE_SCOPE,
+    }
 
 
 def _load_release_channels(

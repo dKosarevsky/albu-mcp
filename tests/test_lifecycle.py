@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
 
 from albumentationsx_mcp.lifecycle import build_lifecycle_status, render_lifecycle_status_markdown
 from scripts.export_lifecycle_status import build_committed_lifecycle_status
+
+_PUBLISHED_UPGRADE_EVIDENCE = Path("docs/host-evidence/published-upgrade-1.20.0-to-1.21.0-2026-08-04.json")
 
 
 def _experiment() -> dict[str, object]:
@@ -43,7 +46,9 @@ def test_lifecycle_status_keeps_release_host_and_adoption_independent() -> None:
         "blockers": [{"code": "manual_host_ui_pending", "summary": "Claude Code was not observed."}],
     }
     assert report["adoption_experiment"]["status"] == "measuring"
-    assert "Ready for v1" not in render_lifecycle_status_markdown(report)
+    rendered = render_lifecycle_status_markdown(report)
+    assert "Ready for v1" not in rendered
+    assert "Protocol Compatibility Evidence" not in rendered
 
 
 def test_lifecycle_release_failure_takes_priority_over_unobserved_channel() -> None:
@@ -94,6 +99,37 @@ def test_committed_lifecycle_status_describes_current_project_state() -> None:
     ]
     assert report["host_evidence"]["status"] == "partial"
     assert report["adoption_experiment"]["campaign_id"] == "classification-robustness"
+    assert report["protocol_compatibility"] == {
+        "status": "passed",
+        "status_basis": "Published upgrade probe result only; this does not assert provenance.",
+        "from_version": "1.20.0",
+        "to_version": "1.21.0",
+        "evidence_path": "host-evidence/published-upgrade-1.20.0-to-1.21.0-2026-08-04.json",
+        "evidence_sha256": "2d6297cd017c118ecc690028fc0140052ea895d89140f32901531753ce3531da",
+        "provenance": (
+            "Local operator-run snapshot. No immutable public run or attestation is available; this evidence is not "
+            "independently attested or provenance-verifiable."
+        ),
+        "scope": (
+            "Streamable HTTP conformance and published-package artifact continuity. This is not real-host UI evidence."
+        ),
+    }
+
+
+@pytest.mark.parametrize("mutation", ["noncanonical", "mismatched"])
+def test_committed_lifecycle_status_rejects_invalid_upgrade_evidence(mutation: str, tmp_path: Path) -> None:
+    raw_evidence = _PUBLISHED_UPGRADE_EVIDENCE.read_bytes()
+    if mutation == "noncanonical":
+        mutated = raw_evidence + b"\n"
+    else:
+        report = json.loads(raw_evidence)
+        report["to_version"] = "1.22.0"
+        mutated = (json.dumps(report, allow_nan=False, indent=2, sort_keys=True) + "\n").encode("utf-8")
+    evidence_path = tmp_path / _PUBLISHED_UPGRADE_EVIDENCE.name
+    evidence_path.write_bytes(mutated)
+
+    with pytest.raises(ValueError, match=r"^published upgrade proof report is invalid$"):
+        build_committed_lifecycle_status(published_upgrade_path=evidence_path)
 
 
 def test_committed_lifecycle_status_does_not_infer_publication_without_evidence(tmp_path: Path) -> None:

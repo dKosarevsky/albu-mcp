@@ -28,6 +28,7 @@ _MAX_SURFACE_COUNT: Final = 4096
 _MAX_FAILURES: Final = 64
 _MAX_FAILURE_SCOPE_LENGTH: Final = 128
 _MAX_REMEDIATION_LENGTH: Final = 512
+_MAX_SERIALIZED_REPORT_BYTES: Final = 1024 * 1024
 _EMPTY_SURFACE_SHA256: Final = hashlib.sha256(b"[]").hexdigest()
 _ValidatedT = TypeVar("_ValidatedT")
 
@@ -407,6 +408,69 @@ def validate_upgrade_proof_report(
     except _PublicationReportInvalid:
         message = "published upgrade proof report is invalid"
         raise ValueError(message) from None
+
+
+def serialize_upgrade_proof_report(report: UpgradeProofReport) -> str:
+    """Serialize a validated upgrade proof in its canonical published form."""
+    content = json.dumps(report, allow_nan=False, indent=2, sort_keys=True) + "\n"
+    if len(content.encode("utf-8")) > _MAX_SERIALIZED_REPORT_BYTES:
+        message = "published upgrade proof report is invalid"
+        raise ValueError(message)
+    return content
+
+
+def parse_upgrade_proof_report(
+    content: bytes,
+    *,
+    expected_package: str,
+    expected_from_version: str,
+    expected_to_version: str,
+    expected_observed_on: str,
+) -> UpgradeProofReport:
+    """Parse canonical published bytes and strictly validate their report context."""
+    try:
+        return _parse_upgrade_proof_report(
+            content,
+            expected_package=expected_package,
+            expected_from_version=expected_from_version,
+            expected_to_version=expected_to_version,
+            expected_observed_on=expected_observed_on,
+        )
+    except (TypeError, UnicodeError, ValueError):
+        message = "published upgrade proof report is invalid"
+        raise ValueError(message) from None
+
+
+def _parse_upgrade_proof_report(
+    content: bytes,
+    *,
+    expected_package: str,
+    expected_from_version: str,
+    expected_to_version: str,
+    expected_observed_on: str,
+) -> UpgradeProofReport:
+    if len(content) > _MAX_SERIALIZED_REPORT_BYTES:
+        raise _PublicationReportInvalid
+    parsed = json.loads(content.decode("utf-8"), object_pairs_hook=_reject_duplicate_object_pairs)
+    validated = validate_upgrade_proof_report(
+        parsed,
+        expected_package=expected_package,
+        expected_from_version=expected_from_version,
+        expected_to_version=expected_to_version,
+        expected_observed_on=expected_observed_on,
+    )
+    if content != serialize_upgrade_proof_report(validated).encode("utf-8"):
+        raise _PublicationReportInvalid
+    return validated
+
+
+def _reject_duplicate_object_pairs(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    parsed: dict[str, object] = {}
+    for key, value in pairs:
+        if key in parsed:
+            raise _PublicationReportInvalid
+        parsed[key] = value
+    return parsed
 
 
 def _validate_upgrade_proof_report(

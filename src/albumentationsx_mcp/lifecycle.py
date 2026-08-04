@@ -21,6 +21,7 @@ def build_lifecycle_status(
     release_channels: Sequence[Mapping[str, str]],
     host_blockers: Sequence[Mapping[str, str]],
     experiment: Mapping[str, Any],
+    protocol_compatibility: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
     """Build independent status dimensions from committed public metadata."""
     if not version.strip():
@@ -33,7 +34,7 @@ def build_lifecycle_status(
 
     normalized_experiment = _validate_experiment(experiment)
     blockers = [dict(blocker) for blocker in host_blockers]
-    return {
+    report = {
         "schema_version": 1,
         "release_health": {
             "status": _release_health_status(channels),
@@ -47,6 +48,9 @@ def build_lifecycle_status(
         },
         "adoption_experiment": normalized_experiment,
     }
+    if protocol_compatibility is not None:
+        report["protocol_compatibility"] = dict(protocol_compatibility)
+    return report
 
 
 def _release_health_status(channels: list[dict[str, str]]) -> str:
@@ -65,12 +69,14 @@ def render_lifecycle_status_markdown(report: Mapping[str, Any]) -> str:
     release = report["release_health"]
     host = report["host_evidence"]
     experiment = report["adoption_experiment"]
+    protocol = report.get("protocol_compatibility")
     channel_lines = "\n".join(
         f"| {channel['id']} | `{channel['status']}` | {channel['url']} |" for channel in release["channels"]
     )
     blocker_lines = (
         "\n".join(f"- `{blocker['code']}`: {blocker['summary']}" for blocker in host["blockers"]) or "- None"
     )
+    protocol_section = "" if protocol is None else _render_protocol_compatibility_markdown(protocol)
     return (
         "# Project Lifecycle Status\n\n"
         "Release publication, host evidence, and adoption measurement are independent dimensions.\n\n"
@@ -78,6 +84,7 @@ def render_lifecycle_status_markdown(report: Mapping[str, Any]) -> str:
         f"Status: `{release['status']}`\n\nVersion: `{release['version']}`\n\n"
         "| Channel | Status | URL |\n| --- | --- | --- |\n"
         f"{channel_lines}\n\n"
+        f"{protocol_section}"
         "## Host Evidence\n\n"
         f"Status: `{host['status']}`\n\nUnresolved observations: `{host['unresolved_count']}`\n\n"
         f"{blocker_lines}\n\n"
@@ -86,6 +93,19 @@ def render_lifecycle_status_markdown(report: Mapping[str, Any]) -> str:
         f"Baseline: `{experiment['baseline_date']}`\n\nMeasurement due: `{experiment['measurement_due']}`\n\n"
         f"Post URL: `{experiment['post_url'] or 'not_recorded'}`\n\n"
         f"Success signal: {experiment['success_signal']}\n"
+    )
+
+
+def _render_protocol_compatibility_markdown(protocol: Mapping[str, str]) -> str:
+    return (
+        "## Protocol Compatibility Evidence\n\n"
+        f"Status: `{protocol['status']}`\n\n"
+        f"Status basis: {protocol['status_basis']}\n\n"
+        f"Published upgrade: `{protocol['from_version']} -> {protocol['to_version']}`\n\n"
+        f"Evidence: [privacy-safe machine report]({protocol['evidence_path']})\n\n"
+        f"Evidence SHA-256: `{protocol['evidence_sha256']}`\n\n"
+        f"Provenance: {protocol['provenance']}\n\n"
+        f"Scope: {protocol['scope']}\n\n"
     )
 
 
