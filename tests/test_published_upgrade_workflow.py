@@ -1,6 +1,8 @@
+import sys
 from pathlib import Path
 from typing import cast
 
+import pytest
 import yaml
 
 _WORKFLOW = Path(".github/workflows/published-upgrade-proof.yml")
@@ -9,6 +11,15 @@ _PROOF_COMMAND = (
     '--to-version "$TO_VERSION" --observed-on "$(date -u +%F)" '
     "--output artifacts/published-upgrade-proof.json"
 )
+_STEP_NAMES = [
+    "Check out repository",
+    "Install uv",
+    "Set up Python",
+    "Install current client and probe dependencies",
+    "Prepare artifact directory",
+    "Prove published upgrade",
+    "Upload privacy-safe evidence",
+]
 
 
 def _load_workflow() -> tuple[str, dict[object, object]]:
@@ -87,9 +98,10 @@ def test_published_upgrade_workflow_has_one_bounded_ubuntu_job() -> None:
     assert "permissions" not in job
 
 
-def test_published_upgrade_workflow_prepares_and_runs_probe_safely() -> None:
+def _assert_published_upgrade_workflow_prepares_and_runs_probe_safely() -> None:
     text, workflow = _load_workflow()
     steps = _steps(workflow)
+    assert [step["name"] for step in steps] == _STEP_NAMES
     named_steps = {step["name"]: step for step in steps}
 
     assert named_steps["Check out repository"] == {
@@ -124,8 +136,57 @@ def test_published_upgrade_workflow_prepares_and_runs_probe_safely() -> None:
     for step in steps:
         run = step.get("run")
         assert run is None or isinstance(run, str)
-        assert "${{ inputs." not in (run or "")
-    assert "${{ inputs." in text
+        assert "${{" not in (run or "")
+    assert [line.strip() for line in text.splitlines() if "${{" in line] == [
+        "FROM_VERSION: ${{ inputs.from_version }}",
+        "TO_VERSION: ${{ inputs.to_version }}",
+    ]
+
+
+def test_published_upgrade_workflow_prepares_and_runs_probe_safely() -> None:
+    _assert_published_upgrade_workflow_prepares_and_runs_probe_safely()
+
+
+def _assert_workflow_variant_is_rejected(
+    unsafe_workflow: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    unsafe_path = tmp_path / "published-upgrade-proof.yml"
+    unsafe_path.write_text(unsafe_workflow, encoding="utf-8")
+    monkeypatch.setattr(sys.modules[__name__], "_WORKFLOW", unsafe_path)
+
+    with pytest.raises(AssertionError):
+        _assert_published_upgrade_workflow_prepares_and_runs_probe_safely()
+
+
+def test_published_upgrade_workflow_contract_rejects_github_expression_in_any_run(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    workflow = _WORKFLOW.read_text(encoding="utf-8")
+    action = "        uses: actions/upload-artifact@v7\n"
+    unsafe_workflow = workflow.replace(
+        action,
+        action + '        run: echo "${{ github.event.inputs.from_version }}"\n',
+        1,
+    )
+    assert unsafe_workflow != workflow
+
+    _assert_workflow_variant_is_rejected(unsafe_workflow, tmp_path, monkeypatch)
+
+
+def test_published_upgrade_workflow_contract_rejects_unreviewed_steps(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    workflow = _WORKFLOW.read_text(encoding="utf-8")
+    marker = "      - name: Upload privacy-safe evidence\n"
+    extra_step = "      - name: Unreviewed action\n        uses: example/unreviewed-action@v1\n\n"
+    unsafe_workflow = workflow.replace(marker, extra_step + marker, 1)
+    assert unsafe_workflow != workflow
+
+    _assert_workflow_variant_is_rejected(unsafe_workflow, tmp_path, monkeypatch)
 
 
 def test_published_upgrade_workflow_uploads_only_successful_evidence() -> None:
