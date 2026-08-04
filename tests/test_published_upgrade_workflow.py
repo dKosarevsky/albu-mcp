@@ -14,6 +14,7 @@ from albumentationsx_mcp.upgrade_proof import validate_upgrade_proof_report
 from scripts.check_published_upgrade import _serialize_report
 
 _EVIDENCE = Path("docs/host-evidence/published-upgrade-1.20.0-to-1.21.0-2026-08-04.json")
+_GIT_ATTRIBUTES = Path(".gitattributes")
 _STATUS = Path("docs/STATUS.md")
 _WORKFLOW = Path(".github/workflows/published-upgrade-proof.yml")
 _PROOF_COMMAND = (
@@ -38,6 +39,7 @@ _NORMALIZED_SENSITIVE_KEYS = frozenset(
         "api_key",
         "auth_token",
         "authorization",
+        "aws_access_key_id",
         "client_secret",
         "computer_name",
         "credential",
@@ -63,6 +65,7 @@ _NORMALIZED_SENSITIVE_KEYS = frozenset(
 )
 _NORMALIZED_CREDENTIAL_SUFFIXES = (
     "_access_key",
+    "_access_key_id",
     "_api_key",
     "_credential",
     "_credentials",
@@ -74,6 +77,7 @@ _NORMALIZED_CREDENTIAL_SUFFIXES = (
 )
 _NORMALIZED_MACHINE_ENV_NAMES = frozenset(
     {
+        "computername",
         "home",
         "homedrive",
         "homepath",
@@ -93,7 +97,7 @@ _NORMALIZED_MACHINE_ENV_NAMES = frozenset(
     }
 )
 _ENV_NAME = re.compile(r"[A-Z][A-Z0-9_]*\Z")
-_ENV_REFERENCE = re.compile(r"(?:\$[A-Z][A-Z0-9_]*|\$\{[A-Z][A-Z0-9_]*\}|%[A-Z][A-Z0-9_]*%)\Z")
+_ENV_REFERENCE = re.compile(r"(?:\$[A-Z][A-Z0-9_]*|\$\{[A-Z][A-Z0-9_]*\}|%[A-Z][A-Z0-9_]*%)")
 
 
 def _load_workflow() -> tuple[str, dict[object, object]]:
@@ -323,7 +327,8 @@ def test_published_upgrade_workflow_uploads_only_successful_evidence() -> None:
 
 
 def _normalize_key(key: str) -> str:
-    separated = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_", key)
+    acronym_separated = re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1_\2", key)
+    separated = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_", acronym_separated)
     return re.sub(r"[^a-zA-Z0-9]+", "_", separated).strip("_").casefold()
 
 
@@ -338,9 +343,10 @@ def _is_sensitive_key(key: str) -> bool:
 
 def _is_private_string(value: str) -> bool:
     candidate = value.strip()
-    if candidate.startswith("/") or PureWindowsPath(candidate).is_absolute():
+    windows_path = PureWindowsPath(candidate)
+    if candidate.startswith("/") or windows_path.root:
         return True
-    if candidate.casefold().startswith("file:") or _ENV_REFERENCE.fullmatch(candidate) is not None:
+    if candidate.casefold().startswith("file:") or _ENV_REFERENCE.search(candidate) is not None:
         return True
     parsed = urlsplit(candidate)
     if parsed.username is not None or parsed.password is not None:
@@ -370,7 +376,8 @@ def _reject_duplicate_keys(pairs: list[tuple[str, object]]) -> dict[str, object]
 
 
 def _assert_committed_upgrade_evidence(path: Path) -> None:
-    content = path.read_text(encoding="utf-8")
+    raw_content = path.read_bytes()
+    content = raw_content.decode("utf-8", errors="strict")
     report = json.loads(content, object_pairs_hook=_reject_duplicate_keys)
     validated = validate_upgrade_proof_report(
         report,
@@ -380,7 +387,7 @@ def _assert_committed_upgrade_evidence(path: Path) -> None:
         expected_observed_on="2026-08-04",
     )
 
-    assert content == _serialize_report(validated)
+    assert raw_content == _serialize_report(validated).encode("utf-8")
     assert validated == report
     assert validated["status"] == "pass"
     assert validated["from_version"] == "1.20.0"
@@ -416,19 +423,28 @@ def test_committed_upgrade_evidence_is_passing_and_privacy_safe() -> None:
     _assert_committed_upgrade_evidence(_EVIDENCE)
 
 
-@pytest.mark.parametrize("mutation", ["duplicate_status", "noncanonical_format"])
+@pytest.mark.parametrize("mutation", ["duplicate_status", "noncanonical_format", "crlf"])
 def test_committed_upgrade_evidence_rejects_noncanonical_json(mutation: str, tmp_path: Path) -> None:
-    content = _EVIDENCE.read_text(encoding="utf-8")
+    content = _EVIDENCE.read_bytes()
     if mutation == "duplicate_status":
-        mutated = content.replace('  "status": "pass",', '  "status": "pass",\n  "status": "pass",', 1)
+        mutated = content.replace(b'  "status": "pass",', b'  "status": "pass",\n  "status": "pass",', 1)
+    elif mutation == "noncanonical_format":
+        mutated = (json.dumps(json.loads(content), sort_keys=True) + "\n").encode()
     else:
-        mutated = json.dumps(json.loads(content), sort_keys=True) + "\n"
+        mutated = content.replace(b"\n", b"\r\n")
     assert mutated != content
     evidence = tmp_path / "published-upgrade.json"
-    evidence.write_text(mutated, encoding="utf-8")
+    evidence.write_bytes(mutated)
 
     with pytest.raises(AssertionError):
         _assert_committed_upgrade_evidence(evidence)
+
+
+def test_committed_upgrade_evidence_is_forced_to_lf_on_checkout() -> None:
+    assert _GIT_ATTRIBUTES.exists()
+    assert _GIT_ATTRIBUTES.read_text(encoding="utf-8") == (
+        "docs/host-evidence/published-upgrade-1.20.0-to-1.21.0-2026-08-04.json text eol=lf\n"
+    )
 
 
 @pytest.mark.parametrize(
@@ -440,10 +456,16 @@ def test_committed_upgrade_evidence_rejects_noncanonical_json(mutation: str, tmp
         pytest.param({"detail": "/srv/runner/proof.json"}, id="generic-posix-path"),
         pytest.param({"detail": r"C:\Users\operator\proof.json"}, id="windows-drive-path"),
         pytest.param({"detail": r"\\server\share\proof.json"}, id="windows-unc-path"),
+        pytest.param({"detail": r"\Users\operator\proof.json"}, id="windows-rooted-path"),
+        pytest.param({"detail": "${HOME}/proof.json"}, id="embedded-posix-env-reference"),
+        pytest.param({"detail": r"%USERPROFILE%\proof.json"}, id="embedded-windows-env-reference"),
         pytest.param({"host-name": "build-host"}, id="hostname-key"),
         pytest.param({"User.Name": "operator"}, id="username-key"),
         pytest.param({"machine-id": "host-123"}, id="machine-id-key"),
+        pytest.param({"COMPUTERNAME": "build-host"}, id="computername-env-key"),
         pytest.param({"API-KEY": "credential"}, id="credential-key"),
+        pytest.param({"APIKey": "credential"}, id="acronym-credential-key"),
+        pytest.param({"AWS_ACCESS_KEY_ID": "credential"}, id="aws-access-key-env-key"),
         pytest.param({"SERVICE_TOKEN": "credential"}, id="credential-env-key"),
         pytest.param({"ALBU_MCP_ALLOWED_ROOT": "relative"}, id="albu-env-key"),
         pytest.param({"HOME": "relative"}, id="machine-env-key"),
