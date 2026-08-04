@@ -1374,6 +1374,23 @@ _ATOMIC_WRITER_CASES = (
 )
 
 
+def test_public_atomic_text_writer_delegates_to_hardened_writer(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[Path, str]] = []
+
+    def record_write(path: Path, content: str) -> None:
+        calls.append((path, content))
+
+    monkeypatch.setattr(check_published_upgrade, "_write_atomic", record_write)
+    output = tmp_path / "upgrade.json"
+
+    check_published_upgrade.write_atomic_text(output, "proof\n")
+
+    assert calls == [(output, "proof\n")]
+
+
 @pytest.mark.parametrize(
     "writer_name",
     _ATOMIC_WRITER_CASES,

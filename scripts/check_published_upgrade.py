@@ -278,7 +278,7 @@ def _publish_report(
         return 0
 
     try:
-        _write_atomic(output, content)
+        write_atomic_text(output, content)
     except BaseException as error:
         _raise_control_flow(error)
         if not isinstance(error, Exception):
@@ -857,6 +857,11 @@ def _serialize_json(value: object) -> str:
 
 
 # Durable atomic output
+
+
+def write_atomic_text(path: Path, content: str) -> None:
+    """Write text atomically without following output path symlinks."""
+    _write_atomic(path, content)
 
 
 def _write_atomic(path: Path, content: str) -> None:
