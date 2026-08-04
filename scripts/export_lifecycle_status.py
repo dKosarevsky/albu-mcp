@@ -11,7 +11,14 @@ from typing import Any
 if not __package__:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from albumentationsx_mcp.lifecycle import build_lifecycle_status, render_lifecycle_status_markdown
+from albumentationsx_mcp.lifecycle import (
+    ProtocolCompatibilityEvidence,
+    PublishedUpgradeExpectation,
+    build_lifecycle_status,
+    load_protocol_compatibility_evidence,
+    render_lifecycle_status_markdown,
+)
+from scripts.check_published_upgrade import write_atomic_text
 from scripts.export_adoption_packet import build_adoption_packet
 from scripts.export_v1_launch_report import build_v1_launch_report
 
@@ -21,7 +28,14 @@ _DEFAULT_MANUAL_RUNS_PATH = Path("docs/HOST_MANUAL_RUNS.json")
 _DEFAULT_PYPROJECT_PATH = Path("pyproject.toml")
 _DEFAULT_SERVER_JSON_PATH = Path("server.json")
 _DEFAULT_HOST_PROOF_STATUS_PATH = Path("docs/HOST_PROOF_STATUS.md")
+_DEFAULT_PUBLISHED_UPGRADE_PATH = Path("docs/host-evidence/published-upgrade-1.20.0-to-1.21.0-2026-08-04.json")
+_DEFAULT_DOCS_ROOT = Path("docs")
+_DEFAULT_STATUS_DOCUMENT_PATH = Path("docs/STATUS.md")
 _RELEASE_CHANNEL_IDS = ("pypi", "github_release", "ci", "official_registry")
+_PUBLISHED_UPGRADE_FROM_VERSION = "1.20.0"
+_PUBLISHED_UPGRADE_OBSERVED_ON = "2026-08-04"
+_PUBLISHED_UPGRADE_EVIDENCE_ERROR = "published upgrade evidence is invalid"
+_EXPORT_ERROR = "lifecycle status export failed"
 
 
 def build_committed_lifecycle_status(  # noqa: PLR0913
@@ -32,6 +46,9 @@ def build_committed_lifecycle_status(  # noqa: PLR0913
     pyproject_path: Path = _DEFAULT_PYPROJECT_PATH,
     server_json_path: Path = _DEFAULT_SERVER_JSON_PATH,
     host_proof_status_path: Path = _DEFAULT_HOST_PROOF_STATUS_PATH,
+    published_upgrade_path: Path = _DEFAULT_PUBLISHED_UPGRADE_PATH,
+    docs_root: Path = _DEFAULT_DOCS_ROOT,
+    document_path: Path = _DEFAULT_STATUS_DOCUMENT_PATH,
 ) -> dict[str, Any]:
     """Build current lifecycle status from committed project metadata."""
     adoption = build_adoption_packet(server_json_path=server_json_path, pyproject_path=pyproject_path)
@@ -55,7 +72,35 @@ def build_committed_lifecycle_status(  # noqa: PLR0913
         ),
         host_blockers=launch_report["blockers"],
         experiment=experiment,
+        protocol_compatibility=_load_protocol_compatibility(
+            published_upgrade_path,
+            docs_root=docs_root,
+            document_path=document_path,
+            expected_to_version=version,
+        ),
     )
+
+
+def _load_protocol_compatibility(
+    path: Path,
+    *,
+    docs_root: Path,
+    document_path: Path,
+    expected_to_version: str,
+) -> ProtocolCompatibilityEvidence:
+    try:
+        return load_protocol_compatibility_evidence(
+            evidence_path=path,
+            trusted_root=docs_root,
+            document_path=document_path,
+            expectation=PublishedUpgradeExpectation(
+                from_version=_PUBLISHED_UPGRADE_FROM_VERSION,
+                to_version=expected_to_version,
+                observed_on=_PUBLISHED_UPGRADE_OBSERVED_ON,
+            ),
+        )
+    except (OSError, RuntimeError, ValueError):
+        raise ValueError(_PUBLISHED_UPGRADE_EVIDENCE_ERROR) from None
 
 
 def _load_release_channels(
@@ -138,12 +183,17 @@ def main() -> None:
     parser.add_argument("--output", type=Path, default=None)
     args = parser.parse_args()
 
-    content = render_lifecycle_status_markdown(build_committed_lifecycle_status())
+    document_path = args.output or _DEFAULT_STATUS_DOCUMENT_PATH
+    try:
+        report = build_committed_lifecycle_status(document_path=document_path)
+        content = render_lifecycle_status_markdown(report)
+        if args.output is not None:
+            write_atomic_text(args.output, content)
+    except (OSError, TypeError, ValueError):
+        sys.stderr.write(f"{_EXPORT_ERROR}\n")
+        raise SystemExit(2) from None
     if args.output is None:
         sys.stdout.write(content)
-        return
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(content, encoding="utf-8")
 
 
 if __name__ == "__main__":
