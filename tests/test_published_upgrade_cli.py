@@ -655,6 +655,7 @@ def test_success_writes_report_atomically_after_fsync(
 ) -> None:
     report = _install_successful_probe(monkeypatch)
     output = tmp_path / "evidence" / "upgrade.json"
+    output.parent.mkdir()
     events: list[str] = []
     original_replace = os.replace
 
@@ -694,6 +695,33 @@ def test_success_writes_report_atomically_after_fsync(
     assert events.index("file_fsync") < events.index("replace")
     assert events[-1] == "dir_fsync"
     assert list(output.parent.iterdir()) == [output]
+
+
+def test_missing_output_parent_fails_without_creating_filesystem(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _install_successful_probe(monkeypatch)
+    output = tmp_path / "missing" / "upgrade.json"
+
+    result = check_published_upgrade.main(
+        [
+            "--from-version",
+            "1.20.0",
+            "--to-version",
+            "1.21.0",
+            "--observed-on",
+            "2026-08-03",
+            "--output",
+            str(output),
+        ]
+    )
+
+    assert result == 1
+    assert not output.parent.exists()
+    assert list(tmp_path.iterdir()) == []
+    assert json.loads(capsys.readouterr().err)["failures"][0]["code"] == "output_write_failed"
 
 
 def test_failed_report_is_printed_but_preexisting_output_is_preserved(
@@ -1336,21 +1364,86 @@ def test_atomic_write_failure_cleans_temp_and_preserves_existing_output(
     assert secret not in encoded
 
 
-@pytest.mark.parametrize("writer_name", ["_write_atomic", "_write_atomic_fallback"])
-@pytest.mark.parametrize("destination_state", ["absent", "existing"])
-def test_post_replace_fsync_failure_rolls_back_destination_and_cleans_sidecars(
+_ATOMIC_WRITER_CASES = (
+    pytest.param(
+        "_write_atomic_posix",
+        id="posix",
+        marks=pytest.mark.skipif(os.name != "posix", reason="POSIX dirfd writer"),
+    ),
+    pytest.param("_write_atomic_fallback", id="fallback"),
+)
+
+
+@pytest.mark.parametrize(
+    "writer_name",
+    _ATOMIC_WRITER_CASES,
+)
+@pytest.mark.parametrize(
+    ("destination_state", "failing_fsync"),
+    [
+        ("absent", 1),
+        ("absent", 2),
+        ("existing", 1),
+        ("existing", 2),
+        ("existing", 3),
+    ],
+)
+def test_fsync_failure_through_commit_rolls_back_and_cleans_sidecars(
     writer_name: str,
     destination_state: str,
+    failing_fsync: int,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     output = tmp_path / "upgrade.json"
     if destination_state == "existing":
         output.write_text("previous evidence\n", encoding="utf-8")
-    original_replace = os.replace
     original_fsync = os.fsync
-    replacement_done = False
-    failure_injected = False
+    fsync_calls = 0
+
+    def fail_selected_fsync(file_descriptor: int) -> None:
+        nonlocal fsync_calls
+        fsync_calls += 1
+        if fsync_calls == failing_fsync:
+            message = "forced pre-commit fsync failure"
+            raise OSError(message)
+        original_fsync(file_descriptor)
+
+    monkeypatch.setattr(check_published_upgrade.os, "fsync", fail_selected_fsync)
+    writer = getattr(check_published_upgrade, writer_name)
+
+    with pytest.raises(OSError, match="pre-commit fsync"):
+        writer(output, "new evidence\n")
+
+    assert fsync_calls >= failing_fsync
+    if destination_state == "existing":
+        assert output.read_text(encoding="utf-8") == "previous evidence\n"
+        assert list(tmp_path.iterdir()) == [output]
+    else:
+        assert not output.exists()
+        assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize(
+    "writer_name",
+    _ATOMIC_WRITER_CASES,
+)
+def test_existing_output_commits_before_best_effort_backup_cleanup(
+    writer_name: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    output = tmp_path / "upgrade.json"
+    output.write_text("previous evidence\n", encoding="utf-8")
+    events: list[str] = []
+    original_fsync = os.fsync
+    original_replace = os.replace
+    original_unlink = os.unlink
+
+    def recording_fsync(file_descriptor: int) -> None:
+        descriptor_kind = "dir_fsync" if stat.S_ISDIR(os.fstat(file_descriptor).st_mode) else "file_fsync"
+        events.append(descriptor_kind)
+        original_fsync(file_descriptor)
 
     def recording_replace(
         source: str | os.PathLike[str],
@@ -1359,34 +1452,64 @@ def test_post_replace_fsync_failure_rolls_back_destination_and_cleans_sidecars(
         src_dir_fd: int | None = None,
         dst_dir_fd: int | None = None,
     ) -> None:
-        nonlocal replacement_done
+        events.append("replace")
         original_replace(source, target, src_dir_fd=src_dir_fd, dst_dir_fd=dst_dir_fd)
-        if not replacement_done and Path(target).name == output.name:
-            replacement_done = True
 
-    def fail_first_directory_fsync_after_replace(file_descriptor: int) -> None:
-        nonlocal failure_injected
-        if replacement_done and not failure_injected and stat.S_ISDIR(os.fstat(file_descriptor).st_mode):
-            failure_injected = True
-            message = "forced post-replace directory fsync failure"
-            raise OSError(message)
-        original_fsync(file_descriptor)
+    def recording_unlink(
+        path: str | bytes | os.PathLike[str] | os.PathLike[bytes],
+        *,
+        dir_fd: int | None = None,
+    ) -> None:
+        if "published-upgrade-backup" in os.fsdecode(path):
+            events.append("backup_unlink")
+        original_unlink(path, dir_fd=dir_fd)
 
+    monkeypatch.setattr(check_published_upgrade.os, "fsync", recording_fsync)
     monkeypatch.setattr(check_published_upgrade.os, "replace", recording_replace)
-    monkeypatch.setattr(check_published_upgrade.os, "fsync", fail_first_directory_fsync_after_replace)
+    monkeypatch.setattr(check_published_upgrade.os, "unlink", recording_unlink)
     writer = getattr(check_published_upgrade, writer_name)
 
-    with pytest.raises(OSError, match="post-replace directory fsync"):
-        writer(output, "new evidence\n")
+    writer(output, "new evidence\n")
 
-    assert replacement_done is True
-    assert failure_injected is True
-    if destination_state == "existing":
-        assert output.read_text(encoding="utf-8") == "previous evidence\n"
-        assert list(tmp_path.iterdir()) == [output]
-    else:
-        assert not output.exists()
-        assert list(tmp_path.iterdir()) == []
+    assert output.read_text(encoding="utf-8") == "new evidence\n"
+    assert events == ["file_fsync", "dir_fsync", "replace", "dir_fsync", "backup_unlink"]
+    assert list(tmp_path.iterdir()) == [output]
+
+
+@pytest.mark.parametrize(
+    "writer_name",
+    _ATOMIC_WRITER_CASES,
+)
+def test_backup_unlink_failure_after_commit_does_not_fail_report(
+    writer_name: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    output = tmp_path / "upgrade.json"
+    output.write_text("previous evidence\n", encoding="utf-8")
+    original_unlink = os.unlink
+    failed_attempts = 0
+
+    def fail_backup_unlink(
+        path: str | bytes | os.PathLike[str] | os.PathLike[bytes],
+        *,
+        dir_fd: int | None = None,
+    ) -> None:
+        nonlocal failed_attempts
+        if "published-upgrade-backup" in os.fsdecode(path):
+            failed_attempts += 1
+            message = "forced post-commit backup cleanup failure"
+            raise OSError(message)
+        original_unlink(path, dir_fd=dir_fd)
+
+    monkeypatch.setattr(check_published_upgrade.os, "unlink", fail_backup_unlink)
+    writer = getattr(check_published_upgrade, writer_name)
+
+    writer(output, "new evidence\n")
+
+    assert failed_attempts >= 1
+    assert output.read_text(encoding="utf-8") == "new evidence\n"
+    assert len(list(tmp_path.glob(".published-upgrade-backup-*.tmp"))) == 1
 
 
 def test_existing_output_symlink_is_rejected_without_touching_target(
@@ -1484,45 +1607,46 @@ def test_posix_writer_is_anchored_when_parent_path_is_swapped(
     assert not (attacker / "upgrade.json").exists()
 
 
-@pytest.mark.skipif(os.name != "posix", reason="POSIX mkdir identity assertion")
-def test_posix_writer_rejects_substituted_new_directory(
+@pytest.mark.skipif(os.name != "posix", reason="POSIX missing-parent race assertion")
+def test_posix_writer_does_not_retry_parent_created_after_missing_open(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     parent = tmp_path / "parent"
     parent.mkdir()
-    created = parent / "created"
-    displaced = parent / "displaced"
-    output = created / "upgrade.json"
+    replacement = parent / "missing"
+    output = replacement / "upgrade.json"
     original_open = os.open
-    created_open_attempts = 0
+    replacement_created = False
 
-    def replace_before_second_open(
+    def create_replacement_after_missing_open(
         path: str | bytes | os.PathLike[str] | os.PathLike[bytes],
         flags: int,
         mode: int = 0o777,
         *,
         dir_fd: int | None = None,
     ) -> int:
-        nonlocal created_open_attempts
-        if path == "created" and dir_fd is not None:
-            created_open_attempts += 1
-            if created_open_attempts == 2:
-                created.rename(displaced)
-                created.mkdir()
-        return original_open(path, flags, mode, dir_fd=dir_fd)
+        nonlocal replacement_created
+        try:
+            return original_open(path, flags, mode, dir_fd=dir_fd)
+        except FileNotFoundError:
+            if path == "missing" and dir_fd is not None and not replacement_created:
+                replacement.mkdir()
+                replacement_created = True
+            raise
 
-    monkeypatch.setattr(check_published_upgrade.os, "open", replace_before_second_open)
+    monkeypatch.setattr(check_published_upgrade.os, "open", create_replacement_after_missing_open)
 
-    with pytest.raises(OSError, match="identity"):
+    with pytest.raises(FileNotFoundError):
         check_published_upgrade._write_atomic_posix(output, "proof\n")
 
-    assert list(created.iterdir()) == []
-    assert list(displaced.iterdir()) == []
+    assert replacement_created is True
+    assert list(replacement.iterdir()) == []
 
 
 def test_non_posix_fallback_writes_and_rejects_symlink_ancestors(tmp_path: Path) -> None:
     output = tmp_path / "evidence" / "upgrade.json"
+    output.parent.mkdir()
     check_published_upgrade._write_atomic_fallback(output, "proof\n")
     assert output.read_text(encoding="utf-8") == "proof\n"
 
@@ -1535,3 +1659,13 @@ def test_non_posix_fallback_writes_and_rejects_symlink_ancestors(tmp_path: Path)
         check_published_upgrade._write_atomic_fallback(linked_directory / "upgrade.json", "other\n")
 
     assert not (target_directory / "upgrade.json").exists()
+
+
+def test_non_posix_fallback_rejects_missing_parent_without_creation(tmp_path: Path) -> None:
+    output = tmp_path / "missing" / "upgrade.json"
+
+    with pytest.raises(OSError, match="parent directory must already exist"):
+        check_published_upgrade._write_atomic_fallback(output, "proof\n")
+
+    assert not output.parent.exists()
+    assert list(tmp_path.iterdir()) == []

@@ -877,7 +877,6 @@ def _supports_posix_dirfd_output() -> bool:
         and bool(getattr(os, "O_DIRECTORY", 0))
         and bool(getattr(os, "O_NOFOLLOW", 0))
         and os.open in os.supports_dir_fd
-        and os.mkdir in os.supports_dir_fd
         and os.link in os.supports_dir_fd
         and os.stat in os.supports_dir_fd
         and os.unlink in os.supports_dir_fd
@@ -909,43 +908,13 @@ def _open_output_parent_posix(path: Path) -> tuple[int, str]:
     current_fd = os.open(anchor or ".", _directory_open_flags())
     try:
         for component in parts[:-1]:
-            next_fd = _open_output_directory_at(current_fd, component)
+            next_fd = os.open(component, _directory_open_flags(), dir_fd=current_fd)
             os.close(current_fd)
             current_fd = next_fd
     except BaseException:
         os.close(current_fd)
         raise
     return current_fd, parts[-1]
-
-
-def _open_output_directory_at(parent_fd: int, component: str) -> int:
-    try:
-        return os.open(component, _directory_open_flags(), dir_fd=parent_fd)
-    except FileNotFoundError:
-        pass
-    try:
-        os.mkdir(component, mode=0o755, dir_fd=parent_fd)
-    except FileExistsError:
-        return os.open(component, _directory_open_flags(), dir_fd=parent_fd)
-
-    created = os.stat(component, dir_fd=parent_fd, follow_symlinks=False)
-    if not stat.S_ISDIR(created.st_mode):
-        message = "new output directory identity is invalid"
-        raise OSError(message)
-    os.fsync(parent_fd)
-    opened_fd = os.open(component, _directory_open_flags(), dir_fd=parent_fd)
-    try:
-        _require_same_directory_identity(created, os.fstat(opened_fd))
-    except BaseException:
-        os.close(opened_fd)
-        raise
-    return opened_fd
-
-
-def _require_same_directory_identity(expected: os.stat_result, observed: os.stat_result) -> None:
-    if not stat.S_ISDIR(observed.st_mode) or observed.st_dev != expected.st_dev or observed.st_ino != expected.st_ino:
-        message = "new output directory identity changed"
-        raise OSError(message)
 
 
 def _regular_destination_at(parent_fd: int, filename: str) -> os.stat_result | None:
@@ -1061,9 +1030,10 @@ def _write_atomic_posix(path: Path, content: str) -> None:
             backup_name = None
             raise
         if backup_name is not None:
-            os.unlink(backup_name, dir_fd=parent_fd)
+            # The report is committed; backup unlink durability is cleanup, not report durability.
+            with contextlib.suppress(OSError):
+                os.unlink(backup_name, dir_fd=parent_fd)
             backup_name = None
-            os.fsync(parent_fd)
     finally:
         if temporary_fd is not None:
             os.close(temporary_fd)
@@ -1071,7 +1041,7 @@ def _write_atomic_posix(path: Path, content: str) -> None:
             with contextlib.suppress(FileNotFoundError):
                 os.unlink(temporary_name, dir_fd=parent_fd)
         if backup_name is not None:
-            with contextlib.suppress(FileNotFoundError):
+            with contextlib.suppress(OSError):
                 os.unlink(backup_name, dir_fd=parent_fd)
         os.close(parent_fd)
 
@@ -1085,8 +1055,8 @@ def _validate_fallback_output_path(path: Path) -> os.stat_result | None:
         try:
             mode = current.lstat().st_mode
         except FileNotFoundError:
-            current.mkdir()
-            mode = current.lstat().st_mode
+            message = "output parent directory must already exist"
+            raise OSError(message) from None
         if not stat.S_ISDIR(mode) or stat.S_ISLNK(mode):
             message = "output parent must be a regular non-symlink directory"
             raise OSError(message)
@@ -1182,14 +1152,16 @@ def _write_atomic_fallback(path: Path, content: str) -> None:
             backup_path = None
             raise
         if backup_path is not None:
-            backup_path.unlink()
+            # The report is committed; backup unlink durability is cleanup, not report durability.
+            with contextlib.suppress(OSError):
+                backup_path.unlink()
             backup_path = None
-            _fsync_directory(path.parent)
     finally:
         if temporary_path is not None:
             temporary_path.unlink(missing_ok=True)
         if backup_path is not None:
-            backup_path.unlink(missing_ok=True)
+            with contextlib.suppress(OSError):
+                backup_path.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":
