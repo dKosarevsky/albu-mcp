@@ -54,6 +54,25 @@ def _is_upload_step(step: dict[object, object]) -> bool:
     return isinstance(uses, str) and uses.startswith("actions/upload-artifact@")
 
 
+def _github_expressions(
+    value: object,
+    path: tuple[object, ...] = (),
+) -> list[tuple[tuple[object, ...], str]]:
+    if isinstance(value, str):
+        return [(path, value)] if "${{" in value else []
+    if isinstance(value, dict):
+        expressions: list[tuple[tuple[object, ...], str]] = []
+        for key, nested_value in cast("dict[object, object]", value).items():
+            expressions.extend(_github_expressions(nested_value, (*path, key)))
+        return expressions
+    if isinstance(value, list):
+        expressions = []
+        for index, nested_value in enumerate(cast("list[object]", value)):
+            expressions.extend(_github_expressions(nested_value, (*path, index)))
+        return expressions
+    return []
+
+
 def test_published_upgrade_workflow_is_manual_and_least_privilege() -> None:
     text, workflow = _load_workflow()
     triggers = workflow.get("on", workflow.get(True))
@@ -99,7 +118,7 @@ def test_published_upgrade_workflow_has_one_bounded_ubuntu_job() -> None:
 
 
 def _assert_published_upgrade_workflow_prepares_and_runs_probe_safely() -> None:
-    text, workflow = _load_workflow()
+    _, workflow = _load_workflow()
     steps = _steps(workflow)
     assert [step["name"] for step in steps] == _STEP_NAMES
     named_steps = {step["name"]: step for step in steps}
@@ -137,9 +156,15 @@ def _assert_published_upgrade_workflow_prepares_and_runs_probe_safely() -> None:
         run = step.get("run")
         assert run is None or isinstance(run, str)
         assert "${{" not in (run or "")
-    assert [line.strip() for line in text.splitlines() if "${{" in line] == [
-        "FROM_VERSION: ${{ inputs.from_version }}",
-        "TO_VERSION: ${{ inputs.to_version }}",
+    assert _github_expressions(workflow) == [
+        (
+            ("jobs", "prove-upgrade", "steps", 5, "env", "FROM_VERSION"),
+            "${{ inputs.from_version }}",
+        ),
+        (
+            ("jobs", "prove-upgrade", "steps", 5, "env", "TO_VERSION"),
+            "${{ inputs.to_version }}",
+        ),
     ]
 
 
@@ -171,6 +196,19 @@ def test_published_upgrade_workflow_contract_rejects_github_expression_in_any_ru
         action + '        run: echo "${{ github.event.inputs.from_version }}"\n',
         1,
     )
+    assert unsafe_workflow != workflow
+
+    _assert_workflow_variant_is_rejected(unsafe_workflow, tmp_path, monkeypatch)
+
+
+def test_published_upgrade_workflow_contract_rejects_encoded_job_expression(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    workflow = _WORKFLOW.read_text(encoding="utf-8")
+    timeout = "    timeout-minutes: 20\n"
+    encoded_env = '    env:\n      BASH_ENV: "\\u0024{{ inputs.from_version }}"\n'
+    unsafe_workflow = workflow.replace(timeout, timeout + encoded_env, 1)
     assert unsafe_workflow != workflow
 
     _assert_workflow_variant_is_rejected(unsafe_workflow, tmp_path, monkeypatch)
