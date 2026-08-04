@@ -21,14 +21,52 @@ _PROOF_COMMAND = (
     '--to-version "$TO_VERSION" --observed-on "$(date -u +%F)" '
     "--output artifacts/published-upgrade-proof.json"
 )
-_STEP_NAMES = [
-    "Check out repository",
-    "Install uv",
-    "Set up Python",
-    "Install current client and probe dependencies",
-    "Prepare artifact directory",
-    "Prove published upgrade",
-    "Upload privacy-safe evidence",
+_CHECKOUT_ACTION = "actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09"
+_SETUP_UV_ACTION = "astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78"
+_SETUP_PYTHON_ACTION = "actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1"
+_UPLOAD_ARTIFACT_ACTION = "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
+_EXPECTED_STEPS = [
+    {
+        "name": "Check out repository",
+        "uses": _CHECKOUT_ACTION,
+        "with": {"persist-credentials": False},
+    },
+    {
+        "name": "Install uv",
+        "uses": _SETUP_UV_ACTION,
+        "with": {"enable-cache": False},
+    },
+    {
+        "name": "Set up Python",
+        "uses": _SETUP_PYTHON_ACTION,
+        "with": {"python-version": "3.13"},
+    },
+    {
+        "name": "Install current client and probe dependencies",
+        "run": "uv sync --frozen --dev",
+    },
+    {
+        "name": "Prepare artifact directory",
+        "run": "install -d -m 700 artifacts",
+    },
+    {
+        "name": "Prove published upgrade",
+        "env": {
+            "FROM_VERSION": "${{ inputs.from_version }}",
+            "TO_VERSION": "${{ inputs.to_version }}",
+        },
+        "run": _PROOF_COMMAND + "\n",
+    },
+    {
+        "name": "Upload privacy-safe evidence",
+        "uses": _UPLOAD_ARTIFACT_ACTION,
+        "with": {
+            "name": "published-upgrade-proof",
+            "path": "artifacts/published-upgrade-proof.json",
+            "if-no-files-found": "error",
+            "retention-days": 30,
+        },
+    },
 ]
 _NORMALIZED_SENSITIVE_KEYS = frozenset(
     {
@@ -197,22 +235,22 @@ def test_published_upgrade_workflow_has_one_bounded_ubuntu_job() -> None:
 def _assert_published_upgrade_workflow_prepares_and_runs_probe_safely() -> None:
     _, workflow = _load_workflow()
     steps = _steps(workflow)
-    assert [step["name"] for step in steps] == _STEP_NAMES
+    assert steps == _EXPECTED_STEPS
     named_steps = {step["name"]: step for step in steps}
 
     assert named_steps["Check out repository"] == {
         "name": "Check out repository",
-        "uses": "actions/checkout@v5",
+        "uses": _CHECKOUT_ACTION,
         "with": {"persist-credentials": False},
     }
     assert named_steps["Install uv"] == {
         "name": "Install uv",
-        "uses": "astral-sh/setup-uv@v7",
+        "uses": _SETUP_UV_ACTION,
         "with": {"enable-cache": False},
     }
     assert named_steps["Set up Python"] == {
         "name": "Set up Python",
-        "uses": "actions/setup-python@v6",
+        "uses": _SETUP_PYTHON_ACTION,
         "with": {"python-version": "3.13"},
     }
     assert named_steps["Install current client and probe dependencies"]["run"] == "uv sync --frozen --dev"
@@ -267,10 +305,10 @@ def test_published_upgrade_workflow_contract_rejects_github_expression_in_any_ru
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     workflow = _WORKFLOW.read_text(encoding="utf-8")
-    action = "        uses: actions/upload-artifact@v7\n"
+    upload_step = "      - name: Upload privacy-safe evidence\n"
     unsafe_workflow = workflow.replace(
-        action,
-        action + '        run: echo "${{ github.event.inputs.from_version }}"\n',
+        upload_step,
+        upload_step + '        run: echo "${{ github.event.inputs.from_version }}"\n',
         1,
     )
     assert unsafe_workflow != workflow
@@ -304,6 +342,28 @@ def test_published_upgrade_workflow_contract_rejects_unreviewed_steps(
     _assert_workflow_variant_is_rejected(unsafe_workflow, tmp_path, monkeypatch)
 
 
+@pytest.mark.parametrize(
+    ("approved_ref", "mutable_ref"),
+    [
+        pytest.param(_CHECKOUT_ACTION, "actions/checkout@v5", id="checkout-v5"),
+        pytest.param(_SETUP_UV_ACTION, "astral-sh/setup-uv@v7", id="setup-uv-v7"),
+        pytest.param(_SETUP_PYTHON_ACTION, "actions/setup-python@v6", id="setup-python-v6"),
+        pytest.param(_UPLOAD_ARTIFACT_ACTION, "actions/upload-artifact@v7", id="upload-artifact-v7"),
+    ],
+)
+def test_published_upgrade_workflow_contract_rejects_mutable_action_tags(
+    approved_ref: str,
+    mutable_ref: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    workflow = _WORKFLOW.read_text(encoding="utf-8")
+    unsafe_workflow = workflow.replace(approved_ref, mutable_ref, 1)
+    assert unsafe_workflow != workflow
+
+    _assert_workflow_variant_is_rejected(unsafe_workflow, tmp_path, monkeypatch)
+
+
 def test_published_upgrade_workflow_uploads_only_successful_evidence() -> None:
     _, workflow = _load_workflow()
     steps = _steps(workflow)
@@ -312,7 +372,7 @@ def test_published_upgrade_workflow_uploads_only_successful_evidence() -> None:
     assert upload_steps == [
         {
             "name": "Upload privacy-safe evidence",
-            "uses": "actions/upload-artifact@v7",
+            "uses": _UPLOAD_ARTIFACT_ACTION,
             "with": {
                 "name": "published-upgrade-proof",
                 "path": "artifacts/published-upgrade-proof.json",
