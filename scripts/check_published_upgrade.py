@@ -30,7 +30,7 @@ if not __package__:
 from mcp.types.version import LATEST_MODERN_VERSION
 
 from albumentationsx_mcp.upgrade_proof import (
-    UpgradeProofReport,
+    MAX_UPGRADE_PROOF_REPORT_BYTES,
     serialize_upgrade_proof_report,
     validate_upgrade_proof_report,
 )
@@ -55,8 +55,7 @@ _MAX_RETRY_DELAY_SECONDS: Final = 300.0
 _MAX_PYPI_TIMEOUT_SECONDS: Final = 120.0
 _MAX_READ_TIMEOUT_SECONDS: Final = 600.0
 _MAX_PROBE_TIMEOUT_SECONDS: Final = 3600.0
-_MAX_SERIALIZED_REPORT_BYTES: Final = 1024 * 1024
-_MAX_CHILD_PAYLOAD_BYTES: Final = _MAX_SERIALIZED_REPORT_BYTES + 4096
+_MAX_CHILD_PAYLOAD_BYTES: Final = MAX_UPGRADE_PROOF_REPORT_BYTES + 4096
 _MAX_ENCODED_REQUEST_LENGTH: Final = 4096
 _PROCESS_TERMINATE_GRACE_SECONDS: Final = 0.25
 _PROCESS_KILL_GRACE_SECONDS: Final = 0.5
@@ -248,7 +247,7 @@ def _validated_serialized_report(
             expected_to_version=context.to_version,
             expected_observed_on=context.observed_on.isoformat(),
         )
-        content = _serialize_report(validated)
+        content = serialize_upgrade_proof_report(validated)
     except (TypeError, ValueError):
         _emit_failure(
             context,
@@ -855,10 +854,6 @@ def _emit_failure(
 
 def _serialize_json(value: object) -> str:
     return json.dumps(value, allow_nan=False, indent=2, sort_keys=True) + "\n"
-
-
-def _serialize_report(report: UpgradeProofReport) -> str:
-    return serialize_upgrade_proof_report(report)
 
 
 # Durable atomic output

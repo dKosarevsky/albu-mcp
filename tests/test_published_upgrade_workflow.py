@@ -10,8 +10,7 @@ from urllib.parse import urlsplit
 import pytest
 import yaml
 
-from albumentationsx_mcp.upgrade_proof import validate_upgrade_proof_report
-from scripts.check_published_upgrade import _serialize_report
+from albumentationsx_mcp.upgrade_proof import parse_upgrade_proof_report, serialize_upgrade_proof_report
 
 _EVIDENCE = Path("docs/host-evidence/published-upgrade-1.20.0-to-1.21.0-2026-08-04.json")
 _GIT_ATTRIBUTES = Path(".gitattributes")
@@ -367,28 +366,17 @@ def _assert_evidence_privacy_safe(value: object) -> None:
         assert not _is_private_string(value)
 
 
-def _reject_duplicate_keys(pairs: list[tuple[str, object]]) -> dict[str, object]:
-    parsed: dict[str, object] = {}
-    for key, value in pairs:
-        assert key not in parsed, f"duplicate JSON key: {key}"
-        parsed[key] = value
-    return parsed
-
-
 def _assert_committed_upgrade_evidence(path: Path) -> None:
     raw_content = path.read_bytes()
-    content = raw_content.decode("utf-8", errors="strict")
-    report = json.loads(content, object_pairs_hook=_reject_duplicate_keys)
-    validated = validate_upgrade_proof_report(
-        report,
+    validated = parse_upgrade_proof_report(
+        raw_content,
         expected_package="albumentationsx-mcp",
         expected_from_version="1.20.0",
         expected_to_version="1.21.0",
         expected_observed_on="2026-08-04",
     )
 
-    assert raw_content == _serialize_report(validated).encode("utf-8")
-    assert validated == report
+    assert raw_content == serialize_upgrade_proof_report(validated).encode("utf-8")
     assert validated["status"] == "pass"
     assert validated["from_version"] == "1.20.0"
     assert validated["to_version"] == "1.21.0"
@@ -416,7 +404,7 @@ def _assert_committed_upgrade_evidence(path: Path) -> None:
         )
     )
     assert validated["failures"] == []
-    _assert_evidence_privacy_safe(report)
+    _assert_evidence_privacy_safe(validated)
 
 
 def test_committed_upgrade_evidence_is_passing_and_privacy_safe() -> None:
@@ -436,7 +424,7 @@ def test_committed_upgrade_evidence_rejects_noncanonical_json(mutation: str, tmp
     evidence = tmp_path / "published-upgrade.json"
     evidence.write_bytes(mutated)
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError, match=r"^published upgrade proof report is invalid$"):
         _assert_committed_upgrade_evidence(evidence)
 
 

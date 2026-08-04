@@ -12,7 +12,11 @@ from typing import Any
 if not __package__:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from albumentationsx_mcp.lifecycle import build_lifecycle_status, render_lifecycle_status_markdown
+from albumentationsx_mcp.lifecycle import (
+    ProtocolCompatibility,
+    build_lifecycle_status,
+    render_lifecycle_status_markdown,
+)
 from albumentationsx_mcp.upgrade_proof import parse_upgrade_proof_report
 from scripts.export_adoption_packet import build_adoption_packet
 from scripts.export_v1_launch_report import build_v1_launch_report
@@ -24,11 +28,12 @@ _DEFAULT_PYPROJECT_PATH = Path("pyproject.toml")
 _DEFAULT_SERVER_JSON_PATH = Path("server.json")
 _DEFAULT_HOST_PROOF_STATUS_PATH = Path("docs/HOST_PROOF_STATUS.md")
 _DEFAULT_PUBLISHED_UPGRADE_PATH = Path("docs/host-evidence/published-upgrade-1.20.0-to-1.21.0-2026-08-04.json")
+_DEFAULT_DOCS_ROOT = Path("docs")
+_DEFAULT_STATUS_DOCUMENT_PATH = Path("docs/STATUS.md")
 _RELEASE_CHANNEL_IDS = ("pypi", "github_release", "ci", "official_registry")
 _PUBLISHED_UPGRADE_FROM_VERSION = "1.20.0"
 _PUBLISHED_UPGRADE_TO_VERSION = "1.21.0"
 _PUBLISHED_UPGRADE_OBSERVED_ON = "2026-08-04"
-_PUBLISHED_UPGRADE_EVIDENCE_PATH = "host-evidence/published-upgrade-1.20.0-to-1.21.0-2026-08-04.json"
 _PUBLISHED_UPGRADE_STATUS_BASIS = "Published upgrade probe result only; this does not assert provenance."
 _PUBLISHED_UPGRADE_PROVENANCE = (
     "Local operator-run snapshot. No immutable public run or attestation is available; this evidence is not "
@@ -37,6 +42,7 @@ _PUBLISHED_UPGRADE_PROVENANCE = (
 _PUBLISHED_UPGRADE_SCOPE = (
     "Streamable HTTP conformance and published-package artifact continuity. This is not real-host UI evidence."
 )
+_PUBLISHED_UPGRADE_EVIDENCE_ERROR = "published upgrade evidence is invalid"
 
 
 def build_committed_lifecycle_status(  # noqa: PLR0913
@@ -48,6 +54,8 @@ def build_committed_lifecycle_status(  # noqa: PLR0913
     server_json_path: Path = _DEFAULT_SERVER_JSON_PATH,
     host_proof_status_path: Path = _DEFAULT_HOST_PROOF_STATUS_PATH,
     published_upgrade_path: Path = _DEFAULT_PUBLISHED_UPGRADE_PATH,
+    docs_root: Path = _DEFAULT_DOCS_ROOT,
+    document_path: Path = _DEFAULT_STATUS_DOCUMENT_PATH,
 ) -> dict[str, Any]:
     """Build current lifecycle status from committed project metadata."""
     adoption = build_adoption_packet(server_json_path=server_json_path, pyproject_path=pyproject_path)
@@ -71,32 +79,69 @@ def build_committed_lifecycle_status(  # noqa: PLR0913
         ),
         host_blockers=launch_report["blockers"],
         experiment=experiment,
-        protocol_compatibility=_load_protocol_compatibility(published_upgrade_path),
+        protocol_compatibility=_load_protocol_compatibility(
+            published_upgrade_path,
+            docs_root=docs_root,
+            document_path=document_path,
+        ),
     )
 
 
-def _load_protocol_compatibility(path: Path) -> dict[str, str]:
-    raw_content = path.read_bytes()
-    report = parse_upgrade_proof_report(
-        raw_content,
-        expected_package="albumentationsx-mcp",
-        expected_from_version=_PUBLISHED_UPGRADE_FROM_VERSION,
-        expected_to_version=_PUBLISHED_UPGRADE_TO_VERSION,
-        expected_observed_on=_PUBLISHED_UPGRADE_OBSERVED_ON,
-    )
-    if report["status"] != "pass":
-        msg = "published upgrade proof report is invalid"
-        raise ValueError(msg)
+def _load_protocol_compatibility(
+    path: Path,
+    *,
+    docs_root: Path,
+    document_path: Path,
+) -> ProtocolCompatibility:
+    try:
+        evidence_path = _relative_evidence_link(
+            path,
+            docs_root=docs_root,
+            document_path=document_path,
+        )
+        raw_content = path.read_bytes()
+        report = parse_upgrade_proof_report(
+            raw_content,
+            expected_package="albumentationsx-mcp",
+            expected_from_version=_PUBLISHED_UPGRADE_FROM_VERSION,
+            expected_to_version=_PUBLISHED_UPGRADE_TO_VERSION,
+            expected_observed_on=_PUBLISHED_UPGRADE_OBSERVED_ON,
+        )
+        _require_passing_upgrade_report(report["status"])
+    except (OSError, RuntimeError, ValueError):
+        raise ValueError(_PUBLISHED_UPGRADE_EVIDENCE_ERROR) from None
     return {
+        "schema_version": 1,
         "status": "passed",
         "status_basis": _PUBLISHED_UPGRADE_STATUS_BASIS,
         "from_version": _PUBLISHED_UPGRADE_FROM_VERSION,
         "to_version": _PUBLISHED_UPGRADE_TO_VERSION,
-        "evidence_path": _PUBLISHED_UPGRADE_EVIDENCE_PATH,
+        "evidence_path": evidence_path,
         "evidence_sha256": hashlib.sha256(raw_content).hexdigest(),
         "provenance": _PUBLISHED_UPGRADE_PROVENANCE,
         "scope": _PUBLISHED_UPGRADE_SCOPE,
     }
+
+
+def _require_passing_upgrade_report(status: str) -> None:
+    if status != "pass":
+        raise ValueError(_PUBLISHED_UPGRADE_EVIDENCE_ERROR)
+
+
+def _relative_evidence_link(
+    evidence_path: Path,
+    *,
+    docs_root: Path,
+    document_path: Path,
+) -> str:
+    root = docs_root.resolve(strict=True)
+    evidence = evidence_path.resolve(strict=True)
+    document = document_path.resolve(strict=False)
+    if not root.is_dir() or not evidence.is_file():
+        raise ValueError(_PUBLISHED_UPGRADE_EVIDENCE_ERROR)
+    evidence.relative_to(root)
+    document.relative_to(root)
+    return evidence.relative_to(document.parent).as_posix()
 
 
 def _load_release_channels(
@@ -179,7 +224,17 @@ def main() -> None:
     parser.add_argument("--output", type=Path, default=None)
     args = parser.parse_args()
 
-    content = render_lifecycle_status_markdown(build_committed_lifecycle_status())
+    document_path = args.output or _DEFAULT_STATUS_DOCUMENT_PATH
+    try:
+        report = build_committed_lifecycle_status(document_path=document_path)
+        content = render_lifecycle_status_markdown(
+            report,
+            docs_root=_DEFAULT_DOCS_ROOT,
+            document_path=document_path,
+        )
+    except ValueError as exc:
+        sys.stderr.write(f"lifecycle status export error: {exc}\n")
+        raise SystemExit(2) from None
     if args.output is None:
         sys.stdout.write(content)
         return

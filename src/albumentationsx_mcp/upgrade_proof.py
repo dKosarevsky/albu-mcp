@@ -28,7 +28,7 @@ _MAX_SURFACE_COUNT: Final = 4096
 _MAX_FAILURES: Final = 64
 _MAX_FAILURE_SCOPE_LENGTH: Final = 128
 _MAX_REMEDIATION_LENGTH: Final = 512
-_MAX_SERIALIZED_REPORT_BYTES: Final = 1024 * 1024
+MAX_UPGRADE_PROOF_REPORT_BYTES: Final = 1024 * 1024
 _EMPTY_SURFACE_SHA256: Final = hashlib.sha256(b"[]").hexdigest()
 _ValidatedT = TypeVar("_ValidatedT")
 
@@ -412,10 +412,17 @@ def validate_upgrade_proof_report(
 
 def serialize_upgrade_proof_report(report: UpgradeProofReport) -> str:
     """Serialize a validated upgrade proof in its canonical published form."""
-    content = json.dumps(report, allow_nan=False, indent=2, sort_keys=True) + "\n"
-    if len(content.encode("utf-8")) > _MAX_SERIALIZED_REPORT_BYTES:
+    try:
+        return _serialize_upgrade_proof_report(report)
+    except (TypeError, ValueError, RecursionError, OverflowError):
         message = "published upgrade proof report is invalid"
-        raise ValueError(message)
+        raise ValueError(message) from None
+
+
+def _serialize_upgrade_proof_report(report: UpgradeProofReport) -> str:
+    content = json.dumps(report, allow_nan=False, indent=2, sort_keys=True) + "\n"
+    if len(content.encode("utf-8")) > MAX_UPGRADE_PROOF_REPORT_BYTES:
+        raise _PublicationReportInvalid
     return content
 
 
@@ -436,7 +443,7 @@ def parse_upgrade_proof_report(
             expected_to_version=expected_to_version,
             expected_observed_on=expected_observed_on,
         )
-    except (TypeError, UnicodeError, ValueError):
+    except (TypeError, ValueError, RecursionError, OverflowError):
         message = "published upgrade proof report is invalid"
         raise ValueError(message) from None
 
@@ -449,7 +456,7 @@ def _parse_upgrade_proof_report(
     expected_to_version: str,
     expected_observed_on: str,
 ) -> UpgradeProofReport:
-    if len(content) > _MAX_SERIALIZED_REPORT_BYTES:
+    if type(content) is not bytes or len(content) > MAX_UPGRADE_PROOF_REPORT_BYTES:
         raise _PublicationReportInvalid
     parsed = json.loads(content.decode("utf-8"), object_pairs_hook=_reject_duplicate_object_pairs)
     validated = validate_upgrade_proof_report(

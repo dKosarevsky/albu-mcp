@@ -13,6 +13,7 @@ import pytest
 
 from albumentationsx_mcp import upgrade_proof
 from albumentationsx_mcp.upgrade_proof import (
+    MAX_UPGRADE_PROOF_REPORT_BYTES,
     ArtifactContinuity,
     ProtocolObservation,
     ProtocolSummary,
@@ -20,6 +21,8 @@ from albumentationsx_mcp.upgrade_proof import (
     SurfaceSummary,
     UpgradeProofReport,
     build_upgrade_proof_report,
+    parse_upgrade_proof_report,
+    serialize_upgrade_proof_report,
     validate_upgrade_proof_report,
 )
 
@@ -213,6 +216,16 @@ def _validate_publication(report: object) -> UpgradeProofReport:
     )
 
 
+def _parse_publication(content: object) -> UpgradeProofReport:
+    return parse_upgrade_proof_report(
+        cast("Any", content),
+        expected_package="albumentationsx-mcp",
+        expected_from_version="1.20.0",
+        expected_to_version="1.21.0",
+        expected_observed_on="2026-08-03",
+    )
+
+
 def _report_with_invalid_set_summary(case: str) -> UpgradeProofReport:
     report = copy.deepcopy(_report())
     empty_digest = _expected_digest()
@@ -260,6 +273,50 @@ def test_publication_validator_returns_detached_canonical_pass_report() -> None:
     assert validated["compatibility"] is not report["compatibility"]
     assert validated["artifact_continuity"] is not report["artifact_continuity"]
     assert validated["failures"] is not report["failures"]
+
+
+@pytest.mark.parametrize("content", [None, "{}", bytearray(b"{}"), memoryview(b"{}"), 1])
+def test_publication_parser_rejects_non_bytes_with_generic_error(content: object) -> None:
+    with pytest.raises(ValueError, match=r"^published upgrade proof report is invalid$") as exc_info:
+        _parse_publication(content)
+
+    assert str(exc_info.value) == "published upgrade proof report is invalid"
+
+
+@pytest.mark.parametrize("case", ["unsupported", "nan", "cycle", "oversize"])
+def test_publication_serializer_normalizes_invalid_runtime_values(case: str) -> None:
+    report = cast("dict[str, Any]", copy.deepcopy(_report()))
+    if case == "unsupported":
+        report["status"] = object()
+    elif case == "nan":
+        report["status"] = float("nan")
+    elif case == "cycle":
+        report["status"] = report
+    else:
+        report["status"] = "x" * MAX_UPGRADE_PROOF_REPORT_BYTES
+
+    with pytest.raises(ValueError, match=r"^published upgrade proof report is invalid$") as exc_info:
+        serialize_upgrade_proof_report(cast("Any", report))
+
+    assert str(exc_info.value) == "published upgrade proof report is invalid"
+
+
+@pytest.mark.parametrize("failure", [UnicodeEncodeError("utf-8", "x", 0, 1, "invalid"), RecursionError()])
+def test_publication_serializer_normalizes_encoding_and_recursion_errors(
+    failure: Exception,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    report = _report()
+
+    def fail_json(*_args: object, **_kwargs: object) -> str:
+        raise failure
+
+    monkeypatch.setattr(upgrade_proof.json, "dumps", fail_json)
+
+    with pytest.raises(ValueError, match=r"^published upgrade proof report is invalid$") as exc_info:
+        serialize_upgrade_proof_report(report)
+
+    assert str(exc_info.value) == "published upgrade proof report is invalid"
 
 
 def test_publication_validator_accepts_consistent_fail_report() -> None:
