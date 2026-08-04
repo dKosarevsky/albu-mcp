@@ -1,0 +1,105 @@
+{
+  "evidence_classification": "machine_proof_only",
+  "profiles": [
+    {
+      "diagnostics_ok": true,
+      "diagnostics_reported_capability_profile": "core",
+      "failures": [],
+      "fallback_matches_resource": true,
+      "preview_ready": false,
+      "profile": "core",
+      "profile_identity_matches": true,
+      "reported_capability_profile": "core",
+      "smoke_ok": true,
+      "status": "passed",
+      "surface": {
+        "prompt_count": 0,
+        "prompts_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "resource_count": 10,
+        "resource_template_count": 1,
+        "resource_templates_sha256": "e5e8a904772cc6d8acaf3a4f1c2013e0e84ddfd0d4581c33a62545afadaa397b",
+        "resources_sha256": "c288ac77fa7018b8c63d994c35f7df03efbdc894e365bc418ffe83277179c1b9",
+        "tool_count": 16,
+        "tools_sha256": "9918eb873d73aa3169d901b97582cb492c305f361613c1ca4b03359eec0b0996"
+      },
+      "surface_matches": true,
+      "surface_mismatches": {}
+    },
+    {
+      "diagnostics_ok": true,
+      "diagnostics_reported_capability_profile": "review",
+      "failures": [],
+      "fallback_matches_resource": true,
+      "preview_ready": true,
+      "profile": "review",
+      "profile_identity_matches": true,
+      "reported_capability_profile": "review",
+      "smoke_ok": true,
+      "status": "passed",
+      "surface": {
+        "prompt_count": 5,
+        "prompts_sha256": "7ab6f3c0587b5dbf087a7024ecf6606e8eec52c7c5d65ba3c84c570929308ed6",
+        "resource_count": 20,
+        "resource_template_count": 2,
+        "resource_templates_sha256": "f9cd0b837af9a8badb057866fe882b79f08562715852d6aaf23094ed961170ed",
+        "resources_sha256": "ba9e6e73d509423f3db9ca62ec606175c9e35c16f4b4551b60660e0daa2ab1e6",
+        "tool_count": 43,
+        "tools_sha256": "79ad392e257fb89e518c2820ed1aff0559dea089d1fd3631038a1e4c0c4b653a"
+      },
+      "surface_matches": true,
+      "surface_mismatches": {}
+    },
+    {
+      "diagnostics_ok": true,
+      "diagnostics_reported_capability_profile": "dataset",
+      "failures": [],
+      "fallback_matches_resource": true,
+      "preview_ready": true,
+      "profile": "dataset",
+      "profile_identity_matches": true,
+      "reported_capability_profile": "dataset",
+      "smoke_ok": true,
+      "status": "passed",
+      "surface": {
+        "prompt_count": 0,
+        "prompts_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "resource_count": 12,
+        "resource_template_count": 2,
+        "resource_templates_sha256": "f9cd0b837af9a8badb057866fe882b79f08562715852d6aaf23094ed961170ed",
+        "resources_sha256": "30ba04851c4be5854eea8ae7fe3f5e354f62204f95751a5afc41aa7f22619505",
+        "tool_count": 27,
+        "tools_sha256": "812a36302b6d0be66f220cec7b0c4b2f67a6a715c464a2652e2a862926e690ae"
+      },
+      "surface_matches": true,
+      "surface_mismatches": {}
+    },
+    {
+      "diagnostics_ok": true,
+      "diagnostics_reported_capability_profile": "full",
+      "failures": [],
+      "fallback_matches_resource": true,
+      "preview_ready": true,
+      "profile": "full",
+      "profile_identity_matches": true,
+      "reported_capability_profile": "full",
+      "smoke_ok": true,
+      "status": "passed",
+      "surface": {
+        "prompt_count": 5,
+        "prompts_sha256": "7ab6f3c0587b5dbf087a7024ecf6606e8eec52c7c5d65ba3c84c570929308ed6",
+        "resource_count": 21,
+        "resource_template_count": 2,
+        "resource_templates_sha256": "f9cd0b837af9a8badb057866fe882b79f08562715852d6aaf23094ed961170ed",
+        "resources_sha256": "068f5b2be34143570d8d7898ac8f8f373484aaa759cf48cf613b140f3d390350",
+        "tool_count": 47,
+        "tools_sha256": "b755fa7978b35e47490a1322e636ac2959f458689eb5c810f10d61fae4515bc6"
+      },
+      "surface_matches": true,
+      "surface_mismatches": {}
+    }
+  ],
+  "schema_version": 2,
+  "source_revision": "07bccc513cfda0ef8eb00e080fe56d341a826cf7",
+  "status": "passed",
+  "transport": "stdio"
+}

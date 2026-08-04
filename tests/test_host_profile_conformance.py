@@ -21,6 +21,9 @@ from scripts.check_host_profile_conformance import (
     render_profile_conformance_report,
 )
 
+_CURRENT_PROFILE_EVIDENCE = Path("docs/host-evidence/profile-conformance-2026-08-04.json")
+_HISTORICAL_PROFILE_EVIDENCE = Path("docs/host-evidence/profile-conformance-2026-07-15.json")
+
 
 @pytest.fixture
 def conformance_config(tmp_path: Path) -> ProfileConformanceConfig:
@@ -118,8 +121,8 @@ def test_profile_conformance_report_is_deterministic_and_privacy_safe(
 
 
 def test_committed_profile_conformance_report_matches_current_contract(tmp_path: Path) -> None:
-    report_path = Path("docs/host-evidence/profile-conformance-2026-07-15.json")
-    committed = json.loads(report_path.read_text(encoding="utf-8"))
+    committed = json.loads(_CURRENT_PROFILE_EVIDENCE.read_text(encoding="utf-8"))
+    historical = json.loads(_HISTORICAL_PROFILE_EVIDENCE.read_text(encoding="utf-8"))
     source_root = Path.cwd().resolve()
     profile_conformance.validate_committed_report_provenance(committed, source_root=source_root)
     current_revision = _git_stdout(source_root, "rev-parse", "HEAD")
@@ -137,7 +140,20 @@ def test_committed_profile_conformance_report_matches_current_contract(tmp_path:
     assert {key: value for key, value in current.items() if key != "source_revision"} == {
         key: value for key, value in committed.items() if key != "source_revision"
     }
+    assert {key: value for key, value in committed.items() if key != "source_revision"} == {
+        key: value for key, value in historical.items() if key != "source_revision"
+    }
     assert current["source_revision"] == current_revision
+
+
+def test_current_profile_conformance_evidence_is_forced_to_lf_on_checkout() -> None:
+    attributes = Path(".gitattributes").read_text(encoding="utf-8").splitlines()
+    raw_report = _CURRENT_PROFILE_EVIDENCE.read_bytes()
+    report = json.loads(raw_report)
+
+    assert "docs/host-evidence/profile-conformance-2026-08-04.json text eol=lf" in attributes
+    assert b"\r" not in raw_report
+    assert raw_report == render_profile_conformance_report(report).encode("utf-8")
 
 
 @pytest.mark.parametrize(

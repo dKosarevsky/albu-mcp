@@ -444,6 +444,7 @@ def test_committed_upgrade_evidence_is_forced_to_lf_on_checkout() -> None:
     assert _GIT_ATTRIBUTES.exists()
     assert _GIT_ATTRIBUTES.read_text(encoding="utf-8") == (
         "docs/host-evidence/published-upgrade-1.20.0-to-1.21.0-2026-08-04.json text eol=lf\n"
+        "docs/host-evidence/profile-conformance-2026-08-04.json text eol=lf\n"
     )
 
 
