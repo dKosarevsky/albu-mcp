@@ -596,8 +596,13 @@ def _finalize_managed_probe(
             )
         elif managed.process_group is not None:
             _force_kill_process_tree(managed.process, process_group=managed.process_group)
-        elif not owner_result.closed and os.name == "nt" and managed.process.poll() is None:
-            _kill_windows_process_tree(managed.process.pid)
+        elif not owner_result.closed and os.name == "nt":
+            process_running, status_error = _cleanup_status_or_assume_active(
+                lambda: managed.process.poll() is None,
+            )
+            cleanup_error = _select_cleanup_error(cleanup_error, status_error)
+            if process_running:
+                _kill_windows_process_tree(managed.process.pid)
     except BaseException as error:  # noqa: BLE001 - reader cleanup remains mandatory.
         cleanup_error = _select_cleanup_error(cleanup_error, error)
     finally:
@@ -747,13 +752,16 @@ def _finish_child_reader(process: subprocess.Popen[bytes], reader: threading.Thr
     except BaseException as error:  # noqa: BLE001 - pipe close and final join remain mandatory.
         first_error = _select_cleanup_error(first_error, error)
     finally:
-        if reader.is_alive() and process.stdout is not None:
-            try:
-                process.stdout.close()
-            except OSError:
-                pass
-            except BaseException as error:  # noqa: BLE001 - final join still remains mandatory.
-                first_error = _select_cleanup_error(first_error, error)
+        reader_alive, status_error = _cleanup_status_or_assume_active(reader.is_alive)
+        first_error = _select_cleanup_error(first_error, status_error)
+        if reader_alive:
+            if process.stdout is not None:
+                try:
+                    process.stdout.close()
+                except OSError:
+                    pass
+                except BaseException as error:  # noqa: BLE001 - final join still remains mandatory.
+                    first_error = _select_cleanup_error(first_error, error)
             try:
                 reader.join(timeout=_PROCESS_KILL_GRACE_SECONDS)
             except BaseException as error:  # noqa: BLE001 - propagate after bounded cleanup.
@@ -770,13 +778,15 @@ def _stop_probe_process(
 ) -> None:
     windows_probe = os.name == "nt" and process_group is None
     first_error: BaseException | None = None
+    process_running, status_error = _cleanup_status_or_assume_active(lambda: process.poll() is None)
+    first_error = _select_cleanup_error(first_error, status_error)
     try:
         if windows_probe:
-            if windows_tree_fallback and process.poll() is None:
+            if windows_tree_fallback and process_running:
                 _kill_windows_process_tree(process.pid)
-            elif process.poll() is None:
+            elif process_running:
                 process.wait(timeout=_PROCESS_TERMINATE_GRACE_SECONDS)
-        elif process.poll() is None:
+        elif process_running:
             _signal_probe_process(process, process_group=process_group, terminate=True)
             process.wait(timeout=_PROCESS_TERMINATE_GRACE_SECONDS)
     except subprocess.TimeoutExpired:
@@ -789,13 +799,22 @@ def _stop_probe_process(
                 _force_kill_process_tree(process, process_group=process_group)
             except BaseException as error:  # noqa: BLE001 - root reaping still remains mandatory.
                 first_error = _select_cleanup_error(first_error, error)
-        if process.poll() is None:
+        process_running, status_error = _cleanup_status_or_assume_active(lambda: process.poll() is None)
+        first_error = _select_cleanup_error(first_error, status_error)
+        if process_running:
             try:
                 _kill_and_reap_probe_process(process)
             except BaseException as error:  # noqa: BLE001 - propagate after bounded cleanup.
                 first_error = _select_cleanup_error(first_error, error)
     if first_error is not None:
         raise first_error
+
+
+def _cleanup_status_or_assume_active(check: Callable[[], bool]) -> tuple[bool, BaseException | None]:
+    try:
+        return check(), None
+    except BaseException as error:  # noqa: BLE001 - unknown status requires conservative cleanup.
+        return True, error
 
 
 def _kill_and_reap_probe_process(process: subprocess.Popen[bytes]) -> None:
