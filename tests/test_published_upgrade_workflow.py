@@ -492,8 +492,8 @@ def _assert_status_links_published_upgrade_evidence(status: str) -> None:
         f"Evidence SHA-256: `{digest}`\n\n"
         "Provenance: Local operator-run snapshot. No immutable public run or attestation is available; "
         "this evidence is not independently attested or provenance-verifiable.\n\n"
-        "Scope: Streamable HTTP conformance and published-package artifact continuity. "
-        "This is not real-host UI evidence.\n"
+        "Scope: Published-package stdio protocol negotiation and artifact continuity. "
+        "This is not Streamable HTTP or real-host UI evidence.\n"
     )
     start = status.index("## Protocol Compatibility Evidence")
     end = status.index("\n## Host Evidence", start)

@@ -29,7 +29,7 @@ Evidence SHA-256: `2d6297cd017c118ecc690028fc0140052ea895d89140f32901531753ce353
 
 Provenance: Local operator-run snapshot. No immutable public run or attestation is available; this evidence is not independently attested or provenance-verifiable.
 
-Scope: Streamable HTTP conformance and published-package artifact continuity. This is not real-host UI evidence.
+Scope: Published-package stdio protocol negotiation and artifact continuity. This is not Streamable HTTP or real-host UI evidence.
 
 ## Host Evidence
 

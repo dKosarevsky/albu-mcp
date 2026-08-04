@@ -37,7 +37,8 @@ _PROTOCOL_PROVENANCE = (
     "independently attested or provenance-verifiable."
 )
 _PROTOCOL_SCOPE = (
-    "Streamable HTTP conformance and published-package artifact continuity. This is not real-host UI evidence."
+    "Published-package stdio protocol negotiation and artifact continuity. "
+    "This is not Streamable HTTP or real-host UI evidence."
 )
 _SAFE_LINK_COMPONENT = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*\Z")
 _MARKDOWN_INLINE_SPECIAL = re.compile(r"([\\`*_{}\[\]<>#!|])")

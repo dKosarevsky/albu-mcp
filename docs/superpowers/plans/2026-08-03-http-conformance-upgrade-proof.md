@@ -1895,7 +1895,7 @@ Published upgrade: `1.20.0 -> 1.21.0`
 
 Evidence: [privacy-safe machine report](host-evidence/published-upgrade-1.20.0-to-1.21.0-2026-08-03.json)
 
-Scope: Streamable HTTP conformance and published-package artifact continuity. This is not real-host UI evidence.
+Scope: Published-package stdio protocol negotiation and artifact continuity. This is not Streamable HTTP or real-host UI evidence.
 ```
 
 - [ ] **Step 4: Verify committed evidence and status**

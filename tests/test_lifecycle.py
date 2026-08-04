@@ -59,7 +59,8 @@ def _forged_protocol_mapping() -> dict[str, object]:
             "independently attested or provenance-verifiable."
         ),
         "scope": (
-            "Streamable HTTP conformance and published-package artifact continuity. This is not real-host UI evidence."
+            "Published-package stdio protocol negotiation and artifact continuity. "
+            "This is not Streamable HTTP or real-host UI evidence."
         ),
     }
 
@@ -144,6 +145,20 @@ def test_protocol_evidence_factory_derives_immutable_claim_from_canonical_file(t
         ProtocolCompatibilityEvidence()
     with pytest.raises(FrozenInstanceError):
         evidence.evidence_sha256 = "0" * 64  # ty: ignore[invalid-assignment]
+
+
+def test_rendered_protocol_scope_is_explicitly_stdio_only(tmp_path: Path) -> None:
+    evidence, _evidence_path, _document_path = _load_protocol_evidence(tmp_path / "docs")
+    rendered = render_lifecycle_status_markdown(_build_with_protocol(evidence))
+    start = rendered.index("## Protocol Compatibility Evidence")
+    end = rendered.index("\n## Host Evidence", start)
+    protocol_section = rendered[start:end]
+
+    assert (
+        "Scope: Published-package stdio protocol negotiation and artifact continuity. "
+        "This is not Streamable HTTP or real-host UI evidence."
+    ) in protocol_section
+    assert "Streamable HTTP conformance" not in protocol_section
 
 
 @pytest.mark.parametrize(
@@ -264,7 +279,8 @@ def test_committed_lifecycle_status_describes_current_project_state() -> None:
         "independently attested or provenance-verifiable."
     )
     assert protocol.scope == (
-        "Streamable HTTP conformance and published-package artifact continuity. This is not real-host UI evidence."
+        "Published-package stdio protocol negotiation and artifact continuity. "
+        "This is not Streamable HTTP or real-host UI evidence."
     )
 
 
