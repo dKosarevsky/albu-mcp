@@ -1,3 +1,4 @@
+import json
 import sys
 from pathlib import Path
 from typing import cast
@@ -5,6 +6,10 @@ from typing import cast
 import pytest
 import yaml
 
+from albumentationsx_mcp.upgrade_proof import validate_upgrade_proof_report
+
+_EVIDENCE = Path("docs/host-evidence/published-upgrade-1.20.0-to-1.21.0-2026-08-04.json")
+_STATUS = Path("docs/STATUS.md")
 _WORKFLOW = Path(".github/workflows/published-upgrade-proof.yml")
 _PROOF_COMMAND = (
     'uv run python scripts/check_published_upgrade.py --from-version "$FROM_VERSION" '
@@ -246,3 +251,79 @@ def test_published_upgrade_workflow_uploads_only_successful_evidence() -> None:
     ]
     prove_index = next(index for index, step in enumerate(steps) if step["name"] == "Prove published upgrade")
     assert steps.index(upload_steps[0]) > prove_index
+
+
+def test_committed_upgrade_evidence_is_passing_and_privacy_safe() -> None:
+    content = _EVIDENCE.read_text(encoding="utf-8")
+    report = json.loads(content)
+    validated = validate_upgrade_proof_report(
+        report,
+        expected_package="albumentationsx-mcp",
+        expected_from_version="1.20.0",
+        expected_to_version="1.21.0",
+        expected_observed_on="2026-08-04",
+    )
+
+    assert validated == report
+    assert validated["status"] == "pass"
+    assert validated["from_version"] == "1.20.0"
+    assert validated["to_version"] == "1.21.0"
+    assert validated["observed_on"] == "2026-08-04"
+    assert [row["role"] for row in validated["matrix"]] == ["from_legacy", "to_legacy", "to_modern"]
+    assert all(row["ok"] and row["protocol_ok"] and row["server_version_ok"] for row in validated["matrix"])
+
+    compatibility = validated["compatibility"]
+    assert compatibility["old_surface_is_subset"] is True
+    assert compatibility["new_modes_equal"] is True
+    assert compatibility["categories"]["prompts"]["ok"] is True
+    assert compatibility["categories"]["resource_templates"]["ok"] is True
+    assert compatibility["categories"]["resources"]["ok"] is True
+    assert compatibility["categories"]["tools"]["ok"] is True
+
+    artifact = validated["artifact_continuity"]
+    assert artifact["ok"] is True
+    assert all(
+        artifact[field] is True
+        for field in (
+            "manifest_readable",
+            "contact_sheet_readable",
+            "manifest_run_id_matches",
+            "content_unchanged",
+        )
+    )
+    assert validated["failures"] == []
+
+    lowered = content.casefold()
+    for private_marker in (
+        "/users/",
+        "/home/",
+        "\\users\\",
+        "albu_mcp_",
+        "token",
+        "authorization",
+        "bearer ",
+        "api_key",
+        "api-key",
+        "password",
+        "passwd",
+        "secret",
+        "private_key",
+        "private-key",
+        "access_key",
+        "access-key",
+        "begin rsa private key",
+        "begin openssh private key",
+    ):
+        assert private_marker not in lowered
+
+
+def test_status_links_the_published_upgrade_evidence_with_machine_only_scope() -> None:
+    status = _STATUS.read_text(encoding="utf-8")
+
+    assert (
+        "Evidence: [privacy-safe machine report](host-evidence/published-upgrade-1.20.0-to-1.21.0-2026-08-04.json)"
+    ) in status
+    assert (
+        "Scope: Streamable HTTP conformance and published-package artifact continuity. "
+        "This is not real-host UI evidence."
+    ) in status
