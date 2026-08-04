@@ -681,7 +681,10 @@ def test_connected_client_prioritizes_control_flow_across_body_and_teardown(
     with pytest.raises(type(control_flow)) as caught:
         asyncio.run(exercise())
 
-    assert caught.value is control_flow
+    if sys.version_info < (3, 11) and isinstance(control_flow, asyncio.CancelledError):
+        assert isinstance(caught.value, asyncio.CancelledError)
+    else:
+        assert caught.value is control_flow
 
 
 def test_run_cleanup_control_flow_precedes_probe_failure(

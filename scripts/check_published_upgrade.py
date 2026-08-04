@@ -22,7 +22,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from pathlib import Path
-from typing import BinaryIO, Final, Protocol, TypeVar
+from typing import BinaryIO, Final, Protocol, TypeVar, cast
 
 if not __package__:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -45,6 +45,7 @@ from scripts.published_upgrade_runtime import (
     build_attested_uvx_server_command,
     run_published_upgrade,
 )
+from scripts.windows_job import WindowsJobOwner, create_windows_job_owner
 
 _SCHEMA_VERSION: Final = "albumentationsx-mcp/published-upgrade-proof/v1"
 _EXACT_VERSION: Final = re.compile(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\Z")
@@ -60,7 +61,10 @@ _MAX_ENCODED_REQUEST_LENGTH: Final = 4096
 _PROCESS_TERMINATE_GRACE_SECONDS: Final = 0.25
 _PROCESS_KILL_GRACE_SECONDS: Final = 0.5
 _CHILD_MODE: Final = "--published-upgrade-child"
+_WINDOWS_GATE_MODE: Final = "--windows-gated"
+_WINDOWS_GATE_TOKEN: Final = b"\x00"
 _CHILD_ARG_COUNT: Final = 3
+_GATED_CHILD_ARG_COUNT: Final = 4
 _MAX_OUTPUT_PATH_LENGTH: Final = 4096
 _MAX_OUTPUT_COMPONENTS: Final = 64
 _MAX_OUTPUT_COMPONENT_LENGTH: Final = 255
@@ -73,6 +77,10 @@ _STDERR_CATEGORY_VALUES: Final = frozenset(item.value for item in StderrCategory
 
 class _PyPIVersionCheck(Protocol):
     def __call__(self, *, package: str, version: str, timeout_seconds: float) -> PyPIVersionResult: ...
+
+
+class _ProcessTreeOwner(Protocol):
+    def close(self) -> None: ...
 
 
 @dataclass(frozen=True)
@@ -110,13 +118,53 @@ class _BoundedChildOutput:
     failed: bool = False
 
 
+class _NoopProcessTreeOwner:
+    def close(self) -> None:
+        return None
+
+
+@dataclass
+class _ManagedProbe:
+    process: subprocess.Popen[bytes]
+    process_group: int | None
+    owner: _ProcessTreeOwner
+    gate: BinaryIO | None = None
+
+    def release_gate(self) -> None:
+        gate = self.gate
+        if gate is None:
+            return
+        self.gate = None
+        try:
+            written = gate.write(_WINDOWS_GATE_TOKEN)
+            if written != len(_WINDOWS_GATE_TOKEN):
+                message = "probe worker gate could not be released"
+                raise OSError(message)
+            gate.flush()
+        finally:
+            gate.close()
+
+    def close_gate(self) -> None:
+        gate = self.gate
+        if gate is None:
+            return
+        self.gate = None
+        with contextlib.suppress(OSError, ValueError):
+            gate.close()
+
+    def close_owner(self) -> None:
+        self.owner.close()
+
+
 class _ProbeExecutorError(RuntimeError):
     def __init__(self, failure: dict[str, str]) -> None:
         self.failure = dict(failure)
         super().__init__("Published upgrade child execution failed.")
 
 
-_ProbeLauncher = Callable[[_ProbeRequest], subprocess.Popen[bytes]]
+_ProbeLauncher = Callable[[_ProbeRequest], _ManagedProbe]
+_WindowsOwnerFactory = Callable[[], WindowsJobOwner]
+_PopenFactory = Callable[..., subprocess.Popen[bytes]]
 _ExceptionT = TypeVar("_ExceptionT", bound=BaseException)
 
 
@@ -465,13 +513,13 @@ def _run_probe(
 ) -> object:
     deadline = time.monotonic() + timeout_seconds
     try:
-        process = (launcher or _launch_probe_process)(request)
+        managed = (launcher or _launch_probe_process)(request)
     except BaseException as error:  # noqa: BLE001 - nested control-flow exceptions must survive test seams.
         _raise_control_flow(error)
         raise _ProbeExecutorError(_child_failure("child_start_failed")) from None
-    process_group = process.pid if os.name == "posix" else None
+    process = managed.process
     if process.stdout is None:
-        _stop_probe_process(process, process_group=process_group)
+        _finalize_managed_probe(managed, reader=None, stop_worker=True)
         raise _ProbeExecutorError(_child_failure("child_start_failed"))
 
     output = _BoundedChildOutput()
@@ -480,22 +528,21 @@ def _run_probe(
         args=(process.stdout, output),
         daemon=True,
     )
-    reader.start()
     try:
+        reader.start()
         remaining = max(0.0, deadline - time.monotonic())
         process.wait(timeout=remaining)
     except subprocess.TimeoutExpired:
-        _stop_probe_process(process, process_group=process_group)
-        _finish_child_reader(process, reader)
+        _finalize_managed_probe(managed, reader=reader if reader.ident is not None else None, stop_worker=True)
         raise _ProbeExecutorError(_child_failure("timeout")) from None
     except BaseException as error:  # noqa: BLE001 - nested control-flow exceptions must survive test seams.
-        _stop_probe_process(process, process_group=process_group)
-        _finish_child_reader(process, reader)
+        _finalize_managed_probe(managed, reader=reader if reader.ident is not None else None, stop_worker=True)
         _raise_control_flow(error)
         raise _ProbeExecutorError(_child_failure("child_process_failed")) from None
-    _force_kill_process_tree(process, process_group=process_group)
-    _finish_child_reader(process, reader)
+    owner_closed = _finalize_managed_probe(managed, reader=reader, stop_worker=False)
 
+    if not owner_closed:
+        raise _ProbeExecutorError(_child_failure("child_process_failed"))
     if output.failed or len(output.data) > _MAX_CHILD_PAYLOAD_BYTES:
         raise _ProbeExecutorError(_child_failure("child_payload_invalid"))
     if process.returncode != 0:
@@ -503,16 +550,102 @@ def _run_probe(
     return _parse_child_payload(output.data)
 
 
-def _launch_probe_process(request: _ProbeRequest) -> subprocess.Popen[bytes]:
+def _finalize_managed_probe(
+    managed: _ManagedProbe,
+    *,
+    reader: threading.Thread | None,
+    stop_worker: bool,
+) -> bool:
+    managed.close_gate()
+    owner_closed = True
+    try:
+        managed.close_owner()
+    except Exception:  # noqa: BLE001 - ownership failures become one finite parent result.
+        owner_closed = False
+    if stop_worker:
+        _stop_probe_process(managed.process, process_group=managed.process_group)
+    elif managed.process_group is not None:
+        _force_kill_process_tree(managed.process, process_group=managed.process_group)
+    elif not owner_closed and os.name == "nt":
+        _kill_windows_process_tree(managed.process.pid)
+    if reader is not None:
+        _finish_child_reader(managed.process, reader)
+    return owner_closed
+
+
+def _launch_probe_process(request: _ProbeRequest) -> _ManagedProbe:
+    if os.name == "nt":
+        return _launch_windows_probe_process(request)
     encoded_request = _encode_probe_request(request)
-    return subprocess.Popen(  # noqa: S603 - fixed interpreter and local script path.
+    process = subprocess.Popen(  # noqa: S603 - fixed interpreter and local script path.
         [sys.executable, str(Path(__file__).resolve()), _CHILD_MODE, encoded_request],
         stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
-        start_new_session=os.name == "posix",
-        creationflags=(getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) if os.name == "nt" else 0),
+        start_new_session=True,
     )
+    return _ManagedProbe(
+        process=process,
+        process_group=process.pid,
+        owner=_NoopProcessTreeOwner(),
+    )
+
+
+def _launch_windows_probe_process(
+    request: _ProbeRequest,
+    *,
+    owner_factory: _WindowsOwnerFactory | None = None,
+    popen: _PopenFactory | None = None,
+) -> _ManagedProbe:
+    create_owner = create_windows_job_owner if owner_factory is None else owner_factory
+    launch = subprocess.Popen if popen is None else popen
+    owner = create_owner()
+    process: subprocess.Popen[bytes] | None = None
+    managed: _ManagedProbe | None = None
+    try:
+        encoded_request = _encode_probe_request(request)
+        process = launch(
+            [
+                sys.executable,
+                str(Path(__file__).resolve()),
+                _CHILD_MODE,
+                _WINDOWS_GATE_MODE,
+                encoded_request,
+            ],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            creationflags=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0),
+        )
+        gate = _require_probe_gate(process)
+        managed = _ManagedProbe(
+            process=process,
+            process_group=None,
+            owner=owner,
+            gate=gate,
+        )
+        owner.assign(process.pid)
+        managed.release_gate()
+    except BaseException:
+        if managed is not None:
+            managed.close_gate()
+        elif process is not None and process.stdin is not None:
+            with contextlib.suppress(OSError, ValueError):
+                process.stdin.close()
+        with contextlib.suppress(Exception):
+            owner.close()
+        if process is not None:
+            _stop_probe_process(process, process_group=None)
+        raise
+    else:
+        return managed
+
+
+def _require_probe_gate(process: subprocess.Popen[bytes]) -> BinaryIO:
+    if process.stdin is None:
+        message = "probe worker gate is unavailable"
+        raise OSError(message)
+    return cast("BinaryIO", process.stdin)
 
 
 def _read_bounded_child_output(stream: BinaryIO, output: _BoundedChildOutput) -> None:
@@ -754,6 +887,23 @@ def _probe_child_main(encoded_request: str) -> int:
         else:
             envelope = {"kind": "error", "reason": "operational_error"}
     return _write_child_envelope(envelope)
+
+
+def _gated_probe_child_main(
+    encoded_request: str,
+    *,
+    gate: BinaryIO | None = None,
+    child_main: Callable[[str], int] | None = None,
+) -> int:
+    gate_stream = sys.stdin.buffer if gate is None else gate
+    run_child = _probe_child_main if child_main is None else child_main
+    try:
+        token = gate_stream.read(len(_WINDOWS_GATE_TOKEN))
+    except Exception:  # noqa: BLE001 - the gated child must fail before starting external work.
+        return 1
+    if token != _WINDOWS_GATE_TOKEN:
+        return 1
+    return run_child(encoded_request)
 
 
 def _write_child_envelope(envelope: dict[str, object]) -> int:
@@ -1047,7 +1197,7 @@ def _write_atomic_posix(path: Path, content: str) -> None:
 
 
 def _validate_fallback_output_path(path: Path) -> os.stat_result | None:
-    """Validate without following links where dirfd/O_NOFOLLOW APIs are unavailable."""
+    """Best-effort reject links observed where handle-anchored traversal is unavailable."""
     anchor, parts = _validated_output_parts(path)
     current = Path(anchor) if anchor else Path.cwd()
     for component in parts[:-1]:
@@ -1115,7 +1265,11 @@ def _rollback_fallback_replacement(path: Path, backup: Path | None) -> None:
 
 
 def _write_atomic_fallback(path: Path, content: str) -> None:
-    """Use a same-directory atomic replace on platforms without secure dirfd traversal."""
+    """Best-effort same-directory replace without a race-free symlink-safety guarantee.
+
+    Path checks and identity rechecks detect links or swaps observed at those points, but
+    concurrent path replacement can still race later operations without handle-anchored APIs.
+    """
     previous = _validate_fallback_output_path(path)
     temporary_path: Path | None = None
     backup_path: Path | None = None
@@ -1154,17 +1308,19 @@ def _write_atomic_fallback(path: Path, content: str) -> None:
         if backup_path is not None:
             # The report is committed; backup unlink durability is cleanup, not report durability.
             with contextlib.suppress(OSError):
-                backup_path.unlink()
+                os.unlink(backup_path)  # noqa: PTH108 - explicit primitive is injected consistently on Python 3.10+.
             backup_path = None
     finally:
         if temporary_path is not None:
             temporary_path.unlink(missing_ok=True)
         if backup_path is not None:
             with contextlib.suppress(OSError):
-                backup_path.unlink(missing_ok=True)
+                os.unlink(backup_path)  # noqa: PTH108 - explicit primitive is injected consistently on Python 3.10+.
 
 
 if __name__ == "__main__":
+    if len(sys.argv) == _GATED_CHILD_ARG_COUNT and sys.argv[1] == _CHILD_MODE and sys.argv[2] == _WINDOWS_GATE_MODE:
+        raise SystemExit(_gated_probe_child_main(sys.argv[3]))
     if len(sys.argv) == _CHILD_ARG_COUNT and sys.argv[1] == _CHILD_MODE:
         raise SystemExit(_probe_child_main(sys.argv[2]))
     raise SystemExit(main())
