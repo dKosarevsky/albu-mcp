@@ -73,6 +73,7 @@ _CHILD_ERROR_REASONS: Final = frozenset({"child_payload_invalid", "child_process
 _RUNTIME_PHASE_VALUES: Final = frozenset(item.value for item in RuntimePhase)
 _RUNTIME_CODE_VALUES: Final = frozenset(item.value for item in RuntimeCode)
 _STDERR_CATEGORY_VALUES: Final = frozenset(item.value for item in StderrCategory)
+_CONTROL_FLOW_EXCEPTION_TYPES: Final = (asyncio.CancelledError, KeyboardInterrupt, SystemExit)
 
 
 class _PyPIVersionCheck(Protocol):
@@ -544,11 +545,21 @@ def _run_probe(
         reader.start()
         remaining = max(0.0, deadline - time.monotonic())
         process.wait(timeout=remaining)
-    except subprocess.TimeoutExpired:
-        _finalize_managed_probe(managed, reader=reader if reader.ident is not None else None, stop_worker=True)
+    except subprocess.TimeoutExpired as error:
+        _finalize_managed_probe(
+            managed,
+            reader=reader if reader.ident is not None else None,
+            stop_worker=True,
+            prior_error=error,
+        )
         raise _ProbeExecutorError(_child_failure("timeout")) from None
     except BaseException as error:  # noqa: BLE001 - nested control-flow exceptions must survive test seams.
-        _finalize_managed_probe(managed, reader=reader if reader.ident is not None else None, stop_worker=True)
+        _finalize_managed_probe(
+            managed,
+            reader=reader if reader.ident is not None else None,
+            stop_worker=True,
+            prior_error=error,
+        )
         _raise_control_flow(error)
         raise _ProbeExecutorError(_child_failure("child_process_failed")) from None
     owner_closed = _finalize_managed_probe(managed, reader=reader, stop_worker=False)
@@ -567,15 +578,15 @@ def _finalize_managed_probe(
     *,
     reader: threading.Thread | None,
     stop_worker: bool,
+    prior_error: BaseException | None = None,
 ) -> bool:
-    cleanup_error: BaseException | None = None
+    cleanup_error = prior_error
     try:
         managed.close_gate()
     except BaseException as error:  # noqa: BLE001 - remaining cleanup must still run.
-        cleanup_error = error
+        cleanup_error = _select_cleanup_error(cleanup_error, error)
     owner_result = _cleanup_tree_owner(managed.owner)
-    if cleanup_error is None:
-        cleanup_error = owner_result.error
+    cleanup_error = _select_cleanup_error(cleanup_error, owner_result.error)
     try:
         if stop_worker:
             _stop_probe_process(
@@ -588,15 +599,13 @@ def _finalize_managed_probe(
         elif not owner_result.closed and os.name == "nt" and managed.process.poll() is None:
             _kill_windows_process_tree(managed.process.pid)
     except BaseException as error:  # noqa: BLE001 - reader cleanup remains mandatory.
-        if cleanup_error is None:
-            cleanup_error = error
+        cleanup_error = _select_cleanup_error(cleanup_error, error)
     finally:
         if reader is not None:
             try:
                 _finish_child_reader(managed.process, reader)
             except BaseException as error:  # noqa: BLE001 - classify after all cleanup.
-                if cleanup_error is None:
-                    cleanup_error = error
+                cleanup_error = _select_cleanup_error(cleanup_error, error)
     if cleanup_error is not None:
         _raise_control_flow(cleanup_error)
     return cleanup_error is None and owner_result.clean
@@ -607,26 +616,23 @@ def _cleanup_tree_owner(owner: _ProcessTreeOwner) -> _OwnerCleanupResult:
     try:
         owner.terminate()
     except BaseException as error:  # noqa: BLE001 - closing the handle is still mandatory.
-        first_error = error
+        first_error = _select_cleanup_error(first_error, error)
 
     closed = False
     try:
         owner.close()
         closed = True
     except BaseException as error:  # noqa: BLE001 - retained handles get one bounded retry.
-        if first_error is None:
-            first_error = error
+        first_error = _select_cleanup_error(first_error, error)
         try:
             owner.terminate()
         except BaseException as retry_error:  # noqa: BLE001 - close retry must still run.
-            if first_error is None:
-                first_error = retry_error
+            first_error = _select_cleanup_error(first_error, retry_error)
         try:
             owner.close()
             closed = True
         except BaseException as retry_error:  # noqa: BLE001 - caller applies bounded fallback.
-            if first_error is None:
-                first_error = retry_error
+            first_error = _select_cleanup_error(first_error, retry_error)
 
     return _OwnerCleanupResult(clean=first_error is None and closed, closed=closed, error=first_error)
 
@@ -685,17 +691,16 @@ def _launch_windows_probe_process(
         owner.assign(require_popen_process_handle(process))
         managed.release_gate()
     except BaseException as launch_error:
-        cleanup_error: BaseException | None = None
+        cleanup_error: BaseException | None = launch_error
         try:
             if managed is not None:
                 managed.close_gate()
             elif process is not None and process.stdin is not None:
                 process.stdin.close()
         except BaseException as error:  # noqa: BLE001 - ownership cleanup must still run.
-            cleanup_error = error
+            cleanup_error = _select_cleanup_error(cleanup_error, error)
         owner_result = _cleanup_tree_owner(owner)
-        if cleanup_error is None:
-            cleanup_error = owner_result.error
+        cleanup_error = _select_cleanup_error(cleanup_error, owner_result.error)
         if process is not None:
             try:
                 _stop_probe_process(
@@ -704,9 +709,7 @@ def _launch_windows_probe_process(
                     windows_tree_fallback=not owner_result.closed,
                 )
             except BaseException as error:  # noqa: BLE001 - preserve launch/control-flow failure.
-                if cleanup_error is None:
-                    cleanup_error = error
-        _raise_control_flow(launch_error)
+                cleanup_error = _select_cleanup_error(cleanup_error, error)
         if cleanup_error is not None:
             _raise_control_flow(cleanup_error)
         raise
@@ -742,7 +745,7 @@ def _finish_child_reader(process: subprocess.Popen[bytes], reader: threading.Thr
     try:
         reader.join(timeout=_PROCESS_KILL_GRACE_SECONDS)
     except BaseException as error:  # noqa: BLE001 - pipe close and final join remain mandatory.
-        first_error = error
+        first_error = _select_cleanup_error(first_error, error)
     finally:
         if reader.is_alive() and process.stdout is not None:
             try:
@@ -750,11 +753,11 @@ def _finish_child_reader(process: subprocess.Popen[bytes], reader: threading.Thr
             except OSError:
                 pass
             except BaseException as error:  # noqa: BLE001 - final join still remains mandatory.
-                first_error = first_error or error
+                first_error = _select_cleanup_error(first_error, error)
             try:
                 reader.join(timeout=_PROCESS_KILL_GRACE_SECONDS)
             except BaseException as error:  # noqa: BLE001 - propagate after bounded cleanup.
-                first_error = first_error or error
+                first_error = _select_cleanup_error(first_error, error)
     if first_error is not None:
         raise first_error
 
@@ -779,18 +782,18 @@ def _stop_probe_process(
     except subprocess.TimeoutExpired:
         pass
     except BaseException as error:  # noqa: BLE001 - force-kill and reaping remain mandatory.
-        first_error = error
+        first_error = _select_cleanup_error(first_error, error)
     finally:
         if not windows_probe:
             try:
                 _force_kill_process_tree(process, process_group=process_group)
             except BaseException as error:  # noqa: BLE001 - root reaping still remains mandatory.
-                first_error = first_error or error
+                first_error = _select_cleanup_error(first_error, error)
         if process.poll() is None:
             try:
                 _kill_and_reap_probe_process(process)
             except BaseException as error:  # noqa: BLE001 - propagate after bounded cleanup.
-                first_error = first_error or error
+                first_error = _select_cleanup_error(first_error, error)
     if first_error is not None:
         raise first_error
 
@@ -802,7 +805,7 @@ def _kill_and_reap_probe_process(process: subprocess.Popen[bytes]) -> None:
     except OSError:
         pass
     except BaseException as error:  # noqa: BLE001 - bounded reaping must still run.
-        first_error = error
+        first_error = _select_cleanup_error(first_error, error)
 
     retry = False
     try:
@@ -810,7 +813,7 @@ def _kill_and_reap_probe_process(process: subprocess.Popen[bytes]) -> None:
     except subprocess.TimeoutExpired:
         retry = True
     except BaseException as error:  # noqa: BLE001 - one final kill/reap attempt remains.
-        first_error = first_error or error
+        first_error = _select_cleanup_error(first_error, error)
         retry = True
 
     if retry:
@@ -819,14 +822,14 @@ def _kill_and_reap_probe_process(process: subprocess.Popen[bytes]) -> None:
         except OSError:
             pass
         except BaseException as error:  # noqa: BLE001 - final wait remains mandatory.
-            first_error = first_error or error
+            first_error = _select_cleanup_error(first_error, error)
         finally:
             try:
                 process.wait(timeout=_PROCESS_KILL_GRACE_SECONDS)
             except subprocess.TimeoutExpired:
                 pass
             except BaseException as error:  # noqa: BLE001 - propagate only after bounded cleanup.
-                first_error = first_error or error
+                first_error = _select_cleanup_error(first_error, error)
 
     if first_error is not None:
         raise first_error
@@ -1087,8 +1090,27 @@ def _find_nested_exception(error: BaseException, exception_type: type[_Exception
     return None
 
 
+def _select_cleanup_error(
+    current: BaseException | None,
+    candidate: BaseException | None,
+) -> BaseException | None:
+    """Prefer control flow by global type order, then preserve first arrival."""
+    if current is None:
+        return candidate
+    if candidate is None:
+        return current
+    for exception_type in _CONTROL_FLOW_EXCEPTION_TYPES:
+        current_control = _find_nested_exception(current, exception_type)
+        if current_control is not None:
+            return current_control
+        candidate_control = _find_nested_exception(candidate, exception_type)
+        if candidate_control is not None:
+            return candidate_control
+    return current
+
+
 def _raise_control_flow(error: BaseException) -> None:
-    for exception_type in (asyncio.CancelledError, KeyboardInterrupt, SystemExit):
+    for exception_type in _CONTROL_FLOW_EXCEPTION_TYPES:
         control_flow = _find_nested_exception(error, exception_type)
         if control_flow is not None:
             raise control_flow from None

@@ -1706,6 +1706,11 @@ class _RecordingTreeOwner:
         self.events.append("owner_close")
 
 
+def _nested_cleanup_control(control_type: type[BaseException]) -> BaseException:
+    message = "private nested cleanup control flow"
+    return RuntimeBaseExceptionGroup(message, [control_type()])
+
+
 def _fake_managed_probe(
     payload: bytes,
     *,
@@ -1825,6 +1830,61 @@ def test_probe_cleanup_retries_retained_owner_after_close_failure() -> None:
     ]
 
 
+@pytest.mark.parametrize("control_type", [asyncio.CancelledError, KeyboardInterrupt, SystemExit])
+def test_owner_cleanup_later_nested_control_flow_outranks_ordinary_error(
+    control_type: type[BaseException],
+) -> None:
+    events: list[str] = []
+    close_calls = 0
+    ordinary_error = windows_job.WindowsJobError("ordinary cleanup failure")
+
+    class Owner:
+        def terminate(self) -> None:
+            events.append("owner_terminate")
+            if events == ["owner_terminate"]:
+                raise ordinary_error
+
+        def close(self) -> None:
+            nonlocal close_calls
+            close_calls += 1
+            events.append("owner_close")
+            if close_calls == 1:
+                raise _nested_cleanup_control(control_type)
+
+    result = check_published_upgrade._cleanup_tree_owner(Owner())
+
+    assert result.closed is True
+    assert result.clean is False
+    assert events == ["owner_terminate", "owner_close", "owner_terminate", "owner_close"]
+    assert result.error is not None
+    with pytest.raises(control_type):
+        check_published_upgrade._raise_control_flow(result.error)
+
+
+@pytest.mark.parametrize(
+    ("earlier_type", "later_type", "expected_type"),
+    [
+        (SystemExit, KeyboardInterrupt, KeyboardInterrupt),
+        (KeyboardInterrupt, SystemExit, KeyboardInterrupt),
+        (SystemExit, asyncio.CancelledError, asyncio.CancelledError),
+        (asyncio.CancelledError, KeyboardInterrupt, asyncio.CancelledError),
+    ],
+)
+def test_cleanup_error_selection_uses_control_flow_type_precedence(
+    earlier_type: type[BaseException],
+    later_type: type[BaseException],
+    expected_type: type[BaseException],
+) -> None:
+    selected = check_published_upgrade._select_cleanup_error(
+        _nested_cleanup_control(earlier_type),
+        _nested_cleanup_control(later_type),
+    )
+
+    assert selected is not None
+    with pytest.raises(expected_type):
+        check_published_upgrade._raise_control_flow(selected)
+
+
 def test_probe_terminate_failure_still_closes_owner_with_finite_failure() -> None:
     report = _upgrade_report()
     events: list[str] = []
@@ -1929,6 +1989,53 @@ def test_probe_never_taskkills_an_already_exited_pid_after_owner_close_failure(
     ]
 
 
+@pytest.mark.parametrize("control_type", [asyncio.CancelledError, KeyboardInterrupt, SystemExit])
+@pytest.mark.parametrize("late_stage", ["stop", "reader"])
+def test_finalizer_later_nested_control_flow_outranks_ordinary_owner_error(
+    monkeypatch: pytest.MonkeyPatch,
+    control_type: type[BaseException],
+    late_stage: str,
+) -> None:
+    events: list[str] = []
+    ordinary_error = windows_job.WindowsJobError("ordinary owner failure")
+
+    class Owner:
+        def terminate(self) -> None:
+            events.append("owner_terminate")
+            raise ordinary_error
+
+        def close(self) -> None:
+            events.append("owner_close")
+
+    def stop_process(*_args: object, **_kwargs: object) -> None:
+        events.append("worker_stop")
+        if late_stage == "stop":
+            raise _nested_cleanup_control(control_type)
+
+    def finish_reader(*_args: object, **_kwargs: object) -> None:
+        events.append("reader_finish")
+        if late_stage == "reader":
+            raise _nested_cleanup_control(control_type)
+
+    monkeypatch.setattr(check_published_upgrade, "_stop_probe_process", stop_process)
+    monkeypatch.setattr(check_published_upgrade, "_finish_child_reader", finish_reader)
+    process = cast("subprocess.Popen[bytes]", _FakeManagedProcess(b""))
+    managed = check_published_upgrade._ManagedProbe(
+        process=process,
+        process_group=None,
+        owner=Owner(),
+    )
+
+    with pytest.raises(control_type):
+        check_published_upgrade._finalize_managed_probe(
+            managed,
+            reader=cast("threading.Thread", object()),
+            stop_worker=True,
+        )
+
+    assert events == ["owner_terminate", "owner_close", "worker_stop", "reader_finish"]
+
+
 def test_windows_assignment_failure_keeps_gate_closed_and_reaps_worker() -> None:
     assert windows_job is not None
     events: list[str] = []
@@ -2027,23 +2134,51 @@ def test_windows_assignment_failure_keeps_gate_closed_and_reaps_worker() -> None
 @pytest.mark.skipif(os.name != "nt", reason="real Windows Job Object descendant assertion")
 def test_windows_job_owner_kills_descendant_after_root_exit(tmp_path: Path) -> None:
     descendant_pid_file = tmp_path / "descendant.pid"
-    escaped_marker = tmp_path / "descendant-escaped.txt"
+    descendant_ready_file = tmp_path / "descendant.ready"
     descendant_code = (
         "import pathlib,time;"
-        "time.sleep(1.0);"
-        f"pathlib.Path({str(escaped_marker)!r}).write_text('escaped',encoding='utf-8')"
+        f"pathlib.Path({str(descendant_ready_file)!r}).write_text('READY',encoding='utf-8');"
+        "time.sleep(30.0)"
     )
     worker_code = "\n".join(
         [
-            "import pathlib,subprocess,sys",
+            "import pathlib,subprocess,sys,time",
             "if sys.stdin.buffer.read(1) != b'\\x00': raise SystemExit(2)",
             (
                 f"child=subprocess.Popen([{sys.executable!r},'-c',{descendant_code!r}],"
                 "stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)"
             ),
+            "deadline=time.monotonic()+5.0",
+            "ready=pathlib.Path(" + repr(str(descendant_ready_file)) + ")",
+            "while time.monotonic()<deadline:",
+            "    try:",
+            "        if ready.read_text(encoding='utf-8')=='READY': break",
+            "    except FileNotFoundError: pass",
+            "    time.sleep(0.01)",
+            "else:",
+            "    child.kill()",
+            "    child.wait(timeout=1.0)",
+            "    raise SystemExit(3)",
             f"pathlib.Path({str(descendant_pid_file)!r}).write_text(str(child.pid),encoding='utf-8')",
         ]
     )
+    import ctypes
+    from ctypes import wintypes
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)  # ty: ignore[unresolved-attribute]
+    open_process = kernel32.OpenProcess
+    open_process.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    open_process.restype = wintypes.HANDLE
+    wait_for_single_object = kernel32.WaitForSingleObject
+    wait_for_single_object.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+    wait_for_single_object.restype = wintypes.DWORD
+    close_handle = kernel32.CloseHandle
+    close_handle.argtypes = [wintypes.HANDLE]
+    close_handle.restype = wintypes.BOOL
+    synchronize = 0x00100000
+    wait_object_0 = 0x00000000
+    wait_timeout = 0x00000102
+
     owner = windows_job.create_windows_job_owner()
     process = subprocess.Popen(  # noqa: S603 - fixed local Windows Job Object integration child.
         [sys.executable, "-c", worker_code],
@@ -2052,28 +2187,40 @@ def test_windows_job_owner_kills_descendant_after_root_exit(tmp_path: Path) -> N
         stderr=subprocess.DEVNULL,
     )
     descendant_pid: int | None = None
+    descendant_handle: object | None = None
     try:
         owner.assign(windows_job.require_popen_process_handle(process))
         assert process.stdin is not None
         process.stdin.write(check_published_upgrade._WINDOWS_GATE_TOKEN)
         process.stdin.close()
-        process.wait(timeout=2.0)
+        process.wait(timeout=7.0)
+        assert process.returncode == 0
+        assert descendant_ready_file.read_text(encoding="utf-8") == "READY"
         descendant_pid = int(descendant_pid_file.read_text(encoding="utf-8"))
+        descendant_handle = open_process(
+            synchronize,
+            False,  # noqa: FBT003 - WinAPI positional BOOL parameter.
+            descendant_pid,
+        )
+        assert descendant_handle
+        assert wait_for_single_object(descendant_handle, 0) == wait_timeout
 
         owner.terminate()
         owner.close()
-        time.sleep(1.5)
 
-        assert process.returncode == 0
-        assert not escaped_marker.exists()
+        assert wait_for_single_object(descendant_handle, 2_000) == wait_object_0
     finally:
         with contextlib.suppress(windows_job.WindowsJobError):
             owner.close()
         if process.poll() is None:
             process.kill()
             process.wait(timeout=1.0)
-        if descendant_pid is not None:
+        if descendant_pid is not None and (
+            descendant_handle is None or wait_for_single_object(descendant_handle, 0) == wait_timeout
+        ):
             check_published_upgrade._kill_windows_process_tree(descendant_pid)
+        if descendant_handle is not None:
+            close_handle(descendant_handle)
 
 
 def test_windows_tree_kill_reports_unavailable_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -2262,6 +2409,75 @@ def test_windows_pre_kill_wait_base_exception_still_kills_and_reaps(
     assert events == ["wait_interrupt", "worker_kill", "worker_reap"]
 
 
+@pytest.mark.parametrize("control_type", [asyncio.CancelledError, KeyboardInterrupt, SystemExit])
+def test_stop_probe_later_nested_control_flow_outranks_ordinary_wait_error(
+    monkeypatch: pytest.MonkeyPatch,
+    control_type: type[BaseException],
+) -> None:
+    events: list[str] = []
+    ordinary_error = OSError("ordinary wait failure")
+
+    class FakeProcess:
+        pid = 321
+
+        def poll(self) -> None:
+            return None
+
+        def wait(self, *, timeout: float) -> int:
+            assert timeout > 0
+            events.append("worker_wait")
+            raise ordinary_error
+
+    def kill_and_reap(_process: subprocess.Popen[bytes]) -> None:
+        events.append("kill_and_reap")
+        raise _nested_cleanup_control(control_type)
+
+    monkeypatch.setattr(check_published_upgrade.os, "name", "nt")
+    monkeypatch.setattr(check_published_upgrade, "_kill_and_reap_probe_process", kill_and_reap)
+    process = cast("subprocess.Popen[bytes]", FakeProcess())
+
+    with pytest.raises(control_type):
+        check_published_upgrade._stop_probe_process(
+            process,
+            process_group=None,
+            windows_tree_fallback=False,
+        )
+
+    assert events == ["worker_wait", "kill_and_reap"]
+
+
+@pytest.mark.parametrize("control_type", [asyncio.CancelledError, KeyboardInterrupt, SystemExit])
+def test_kill_reap_later_nested_control_flow_outranks_ordinary_wait_error(
+    control_type: type[BaseException],
+) -> None:
+    events: list[str] = []
+    kill_calls = 0
+    wait_calls = 0
+    ordinary_error = OSError("ordinary reap failure")
+
+    class FakeProcess:
+        def kill(self) -> None:
+            nonlocal kill_calls
+            kill_calls += 1
+            events.append("worker_kill")
+            if kill_calls == 2:
+                raise _nested_cleanup_control(control_type)
+
+        def wait(self, *, timeout: float) -> int:
+            nonlocal wait_calls
+            assert timeout > 0
+            wait_calls += 1
+            events.append("worker_wait")
+            if wait_calls == 1:
+                raise ordinary_error
+            return -9
+
+    with pytest.raises(control_type):
+        check_published_upgrade._kill_and_reap_probe_process(cast("subprocess.Popen[bytes]", FakeProcess()))
+
+    assert events == ["worker_kill", "worker_wait", "worker_kill", "worker_wait"]
+
+
 def test_reader_join_base_exception_still_closes_pipe_and_retries_join() -> None:
     events: list[str] = []
 
@@ -2287,6 +2503,43 @@ def test_reader_join_base_exception_still_closes_pipe_and_retries_join() -> None
         stdout = FakeStream()
 
     with pytest.raises(KeyboardInterrupt):
+        check_published_upgrade._finish_child_reader(
+            cast("subprocess.Popen[bytes]", FakeProcess()),
+            cast("threading.Thread", FakeReader()),
+        )
+
+    assert events == ["reader_join", "pipe_close", "reader_join"]
+
+
+@pytest.mark.parametrize("control_type", [asyncio.CancelledError, KeyboardInterrupt, SystemExit])
+def test_reader_later_nested_control_flow_outranks_ordinary_join_error(
+    control_type: type[BaseException],
+) -> None:
+    events: list[str] = []
+    ordinary_error = OSError("ordinary reader join failure")
+
+    class FakeReader:
+        join_calls = 0
+
+        def join(self, *, timeout: float) -> None:
+            assert timeout == check_published_upgrade._PROCESS_KILL_GRACE_SECONDS
+            self.join_calls += 1
+            events.append("reader_join")
+            if self.join_calls == 1:
+                raise ordinary_error
+
+        def is_alive(self) -> bool:
+            return self.join_calls < 2
+
+    class FakeStream:
+        def close(self) -> None:
+            events.append("pipe_close")
+            raise _nested_cleanup_control(control_type)
+
+    class FakeProcess:
+        stdout = FakeStream()
+
+    with pytest.raises(control_type):
         check_published_upgrade._finish_child_reader(
             cast("subprocess.Popen[bytes]", FakeProcess()),
             cast("threading.Thread", FakeReader()),
