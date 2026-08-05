@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 
 from tests.support.mcp_http import (
     RoundRobinMcpDispatcher,
+    _stop_loopback_server,
     run_loopback_mcp_cluster,
     sanitize_mcp_headers,
 )
@@ -310,6 +311,50 @@ def test_cluster_preserves_startup_timeout_during_failing_cleanup() -> None:
         return events
 
     assert asyncio.run(exercise()) == ["hang:start", "hang:stop"]
+
+
+def test_stop_loopback_server_bounds_cancellation_resistant_task() -> None:
+    async def exercise() -> tuple[BaseException | None, float, int]:
+        release = asyncio.Event()
+        cancellations = 0
+
+        async def resist_first_cancellation() -> None:
+            nonlocal cancellations
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                cancellations += 1
+                await release.wait()
+
+        async def safety_release() -> None:
+            await asyncio.sleep(0.2)
+            release.set()
+
+        serve_task = asyncio.create_task(resist_first_cancellation())
+        safety_task = asyncio.create_task(safety_release())
+        await asyncio.sleep(0)
+        server = type("ServerState", (), {"started": True, "should_exit": False})()
+        dispatcher = RoundRobinMcpDispatcher([_backend("zero", [])])
+        started = asyncio.get_running_loop().time()
+        error = await _stop_loopback_server(
+            server,  # ty: ignore[invalid-argument-type] - focused task-lifecycle boundary.
+            serve_task,
+            dispatcher,
+            timeout=0.01,
+        )
+        elapsed = asyncio.get_running_loop().time() - started
+        release.set()
+        await serve_task
+        safety_task.cancel()
+        await asyncio.gather(safety_task, return_exceptions=True)
+        return error, elapsed, cancellations
+
+    error, elapsed, cancellations = asyncio.run(exercise())
+
+    assert isinstance(error, RuntimeError)
+    assert str(error) == "loopback MCP cluster did not stop within the timeout"
+    assert elapsed < 0.1
+    assert cancellations == 1
 
 
 def test_loopback_cluster_fans_out_backend_lifespans() -> None:

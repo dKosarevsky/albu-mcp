@@ -72,12 +72,12 @@ and host-specific behavior out of the MCP server. Treat the issue tracker as an 
 - Modify: `tests/support/mcp_http.py`
 - Modify: `tests/test_mcp_http_harness.py`
 
-- [ ] Add a regression test whose serve task suppresses its first cancellation until an independent release signal.
-- [ ] Prove the existing cleanup exceeds the configured bound, with a safety release preventing the test from hanging.
-- [ ] Replace unbounded cancellation gathers with two bounded `asyncio.wait` phases and eventual-result consumption.
-- [ ] Preserve startup errors, caller errors, shutdown errors, listener closure, and clean cooperative teardown.
-- [ ] Run the harness and full Streamable HTTP conformance tests.
-- [ ] Commit the watchdog fix separately.
+- [x] Add a regression test whose serve task suppresses its first cancellation until an independent release signal.
+- [x] Prove the existing cleanup exceeds the configured bound, with a safety release preventing the test from hanging.
+- [x] Replace unbounded cancellation gathers with two bounded `asyncio.wait` phases and eventual-result consumption.
+- [x] Preserve startup errors, caller errors, shutdown errors, listener closure, and clean cooperative teardown.
+- [x] Run the harness and full Streamable HTTP conformance tests.
+- [x] Commit the watchdog fix separately.
 
 ## Task 4: Add The Privacy-Safe First-Preview Feedback Funnel
 
