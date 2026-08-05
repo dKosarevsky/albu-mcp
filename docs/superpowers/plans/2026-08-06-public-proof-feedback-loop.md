@@ -103,9 +103,9 @@ and host-specific behavior out of the MCP server. Treat the issue tracker as an 
 - Modify if required: `.gitattributes`
 - Regenerate if required: `docs/STATUS.md`
 
-- [ ] Generate profile evidence from the final relevant source tree and verify its schema-v3 digest.
-- [ ] Run focused tests, full `uv run pytest`, `uv run ruff check .`, `uv run ruff format --check .`, and `uv run ty check`.
-- [ ] Run contract snapshot freshness, release readiness, golden MCP flows, and privacy scans used by CI.
+- [x] Generate profile evidence from the final relevant source tree and verify its schema-v3 digest.
+- [x] Run focused tests, full `uv run pytest`, `uv run ruff check .`, `uv run ruff format --check .`, and `uv run ty check`.
+- [x] Run contract snapshot freshness, release readiness, golden MCP flows, and privacy scans used by CI.
 - [ ] Review the complete diff for overclaims, local paths, secrets, generated drift, and accidental public-surface changes.
 - [ ] Push `codex/public-proof-feedback-loop`, open a ready PR, wait for every required check, and squash-merge it.
 - [ ] Pull merged `main` and rerun the post-squash profile-provenance regression.

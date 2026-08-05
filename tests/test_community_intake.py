@@ -58,9 +58,7 @@ def test_first_preview_feedback_funnel_is_discoverable_and_privacy_safe() -> Non
     docs_index = Path("docs/INDEX.md").read_text(encoding="utf-8")
     first_ten_minutes = Path("docs/FIRST_10_MINUTES.md").read_text(encoding="utf-8")
     guide = Path("docs/FIRST_PREVIEW_FEEDBACK.md").read_text(encoding="utf-8")
-    workflow_template = yaml.safe_load(
-        Path(".github/ISSUE_TEMPLATE/workflow-feedback.yml").read_text(encoding="utf-8")
-    )
+    workflow_template = yaml.safe_load(Path(".github/ISSUE_TEMPLATE/workflow-feedback.yml").read_text(encoding="utf-8"))
 
     assert "[first-preview feedback](docs/FIRST_PREVIEW_FEEDBACK.md)" in readme
     assert "[FIRST_PREVIEW_FEEDBACK.md](FIRST_PREVIEW_FEEDBACK.md)" in docs_index
