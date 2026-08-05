@@ -10,6 +10,7 @@ Use this page for deeper product, operator, adoption, and release material. New 
 - [INSTALL.md](INSTALL.md): PyPI, MCPB, Claude Desktop, Claude Code, Cursor, Codex, and bounded roots.
 - [CONFIGURATION.md](CONFIGURATION.md): local roots, capability profiles, transport, and resource-read fallback.
 - [FIRST_10_MINUTES.md](FIRST_10_MINUTES.md): shortest path from installation to an accepted preview.
+- [FIRST_PREVIEW_FEEDBACK.md](FIRST_PREVIEW_FEEDBACK.md): voluntary, privacy-safe first-preview outcome report.
 - [USAGE.md](USAGE.md): end-to-end tools, resources, diagnostics, and operator CLI reference.
 - [RECIPES.md](RECIPES.md): classification, detection, segmentation, OCR, and review recipes.
 - [TORCH_CPU_COMPOSE.md](TORCH_CPU_COMPOSE.md): runtime-aware CPU Tensor compatibility and guarded Python export.

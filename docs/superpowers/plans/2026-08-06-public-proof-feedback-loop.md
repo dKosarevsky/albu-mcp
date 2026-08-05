@@ -89,12 +89,12 @@ and host-specific behavior out of the MCP server. Treat the issue tracker as an 
 - Modify: `docs/INDEX.md`
 - Modify: `tests/test_community_intake.py`
 
-- [ ] Add failing tests for discoverable links, lifecycle fields, required privacy attestation, and prohibited-data copy.
-- [ ] Add one concise, copy-ready `render -> reject -> adjust -> accept` report template.
-- [ ] Refine the existing issue form instead of creating a duplicate intake channel.
-- [ ] Link the funnel from the first-preview journey, README, and docs index without making README heavy.
-- [ ] Run focused docs/intake tests and Ruff.
-- [ ] Commit the voluntary feedback funnel separately.
+- [x] Add failing tests for discoverable links, lifecycle fields, required privacy attestation, and prohibited-data copy.
+- [x] Add one concise, copy-ready `render -> reject -> adjust -> accept` report template.
+- [x] Refine the existing issue form instead of creating a duplicate intake channel.
+- [x] Link the funnel from the first-preview journey, README, and docs index without making README heavy.
+- [x] Run focused docs/intake tests and Ruff.
+- [x] Commit the voluntary feedback funnel separately.
 
 ## Task 5: Refresh Evidence, Verify, Publish, And Merge
 
