@@ -14,6 +14,10 @@ from typing import Any, Literal, cast
 
 from typing_extensions import Self
 
+from albumentationsx_mcp.published_provenance import (
+    PublishedUpgradeProvenance,
+    parse_published_upgrade_provenance,
+)
 from albumentationsx_mcp.upgrade_proof import (
     MAX_UPGRADE_PROOF_REPORT_BYTES,
     UpgradeProofReport,
@@ -31,10 +35,22 @@ _PROTOCOL_COMPATIBILITY_ERROR = "protocol compatibility evidence is invalid"
 _PROTOCOL_SCHEMA_VERSION = 1
 _MAX_PROTOCOL_PATH_LENGTH = 512
 _PROTOCOL_PACKAGE = "albumentationsx-mcp"
-_PROTOCOL_STATUS_BASIS = "Published upgrade probe result only; this does not assert provenance."
-_PROTOCOL_PROVENANCE = (
+_PROTOCOL_REPOSITORY = "dKosarevsky/albu-mcp"
+_PROTOCOL_WORKFLOW_PATH = ".github/workflows/published-upgrade-proof.yml"
+_PROTOCOL_ARTIFACT_NAME = "published-upgrade-proof"
+_PROTOCOL_ARTIFACT_FILE = "published-upgrade-proof.json"
+_PROTOCOL_STATUS_BASIS = "Passing published upgrade probe; provenance and scope are reported separately."
+_PROTOCOL_LOCAL_PROVENANCE = (
     "Local operator-run snapshot. No immutable public run or attestation is available; this evidence is not "
     "independently attested or provenance-verifiable."
+)
+_PROTOCOL_PUBLIC_PROVENANCE_DOWNLOADED = (
+    "Exact report bytes verified from a downloaded public GitHub Actions artifact. "
+    "This is not cryptographic attestation."
+)
+_PROTOCOL_PUBLIC_PROVENANCE_WORKFLOW = (
+    "Exact report bytes bound to the public GitHub Actions workflow output. "
+    "This is not independent verification or cryptographic attestation."
 )
 _PROTOCOL_SCOPE = (
     "Published-package stdio protocol negotiation and artifact continuity. "
@@ -60,6 +76,10 @@ class PublishedUpgradeExpectation:
     from_version: str
     to_version: str
     observed_on: str
+    repository: str = _PROTOCOL_REPOSITORY
+    workflow_path: str = _PROTOCOL_WORKFLOW_PATH
+    artifact_name: str = _PROTOCOL_ARTIFACT_NAME
+    artifact_file: str = _PROTOCOL_ARTIFACT_FILE
 
 
 @dataclass(frozen=True, slots=True)
@@ -75,6 +95,8 @@ class _EvidenceBinding:
     path_context: _EvidencePathContext
     observed_on: str
     file_identity: _EvidenceFileIdentity
+    provenance_path_context: _EvidencePathContext | None
+    provenance_file_identity: _EvidenceFileIdentity | None
 
 
 @dataclass(frozen=True, slots=True, init=False)
@@ -89,6 +111,11 @@ class ProtocolCompatibilityEvidence:
     evidence_href: str
     evidence_sha256: str
     provenance: str
+    provenance_href: str | None
+    public_run_url: str | None
+    public_run_head_sha: str | None
+    artifact_retention_days: int | None
+    verification_method: str | None
     scope: str
     binding: _EvidenceBinding = field(repr=False)
 
@@ -104,6 +131,7 @@ class _ProtocolCompatibilityError(ValueError):
 def load_protocol_compatibility_evidence(
     *,
     evidence_path: Path,
+    provenance_path: Path | None = None,
     trusted_root: Path,
     document_path: Path,
     expectation: PublishedUpgradeExpectation,
@@ -134,23 +162,40 @@ def load_protocol_compatibility_evidence(
         )
         if report["status"] != "pass":
             raise _ProtocolCompatibilityError
+        evidence_digest = hashlib.sha256(raw_content).hexdigest()
+        provenance, provenance_context, provenance_identity = _load_public_provenance(
+            provenance_path=provenance_path,
+            trusted_root=context.trusted_root,
+            document_path=context.document_path,
+            expectation=expectation,
+            expected_evidence_sha256=evidence_digest,
+        )
+        if provenance is not None and provenance["verified_on"] != report["observed_on"]:
+            raise _ProtocolCompatibilityError
         return _new_protocol_compatibility_evidence(
             context=context,
             identity=identity,
             report=report,
-            digest=hashlib.sha256(raw_content).hexdigest(),
+            digest=evidence_digest,
+            provenance=provenance,
+            provenance_context=provenance_context,
+            provenance_identity=provenance_identity,
         )
     except (AttributeError, OSError, OverflowError, RecursionError, RuntimeError, TypeError, ValueError):
         raise ValueError(_PROTOCOL_COMPATIBILITY_ERROR) from None
 
 
-def _new_protocol_compatibility_evidence(
+def _new_protocol_compatibility_evidence(  # noqa: PLR0913 - immutable evidence assembly boundary.
     *,
     context: _EvidencePathContext,
     identity: _EvidenceFileIdentity,
     report: UpgradeProofReport,
     digest: str,
+    provenance: PublishedUpgradeProvenance | None,
+    provenance_context: _EvidencePathContext | None,
+    provenance_identity: _EvidenceFileIdentity | None,
 ) -> ProtocolCompatibilityEvidence:
+    public = provenance is not None
     evidence = object.__new__(ProtocolCompatibilityEvidence)
     values: tuple[tuple[str, object], ...] = (
         ("schema_version", _PROTOCOL_SCHEMA_VERSION),
@@ -160,7 +205,15 @@ def _new_protocol_compatibility_evidence(
         ("to_version", report["to_version"]),
         ("evidence_href", context.evidence_href),
         ("evidence_sha256", digest),
-        ("provenance", _PROTOCOL_PROVENANCE),
+        (
+            "provenance",
+            _public_provenance_summary(provenance) if public else _PROTOCOL_LOCAL_PROVENANCE,
+        ),
+        ("provenance_href", None if provenance_context is None else provenance_context.evidence_href),
+        ("public_run_url", None if provenance is None else provenance["run_url"]),
+        ("public_run_head_sha", None if provenance is None else provenance["run_head_sha"]),
+        ("artifact_retention_days", None if provenance is None else provenance["artifact_retention_days"]),
+        ("verification_method", None if provenance is None else provenance["verification_method"]),
         ("scope", _PROTOCOL_SCOPE),
         (
             "binding",
@@ -168,12 +221,49 @@ def _new_protocol_compatibility_evidence(
                 path_context=context,
                 observed_on=cast("str", report["observed_on"]),
                 file_identity=identity,
+                provenance_path_context=provenance_context,
+                provenance_file_identity=provenance_identity,
             ),
         ),
     )
     for attribute, value in values:
         object.__setattr__(evidence, attribute, value)
     return evidence
+
+
+def _public_provenance_summary(provenance: PublishedUpgradeProvenance | None) -> str:
+    if provenance is None:
+        raise _ProtocolCompatibilityError
+    if provenance["verification_method"] == "downloaded_artifact":
+        return _PROTOCOL_PUBLIC_PROVENANCE_DOWNLOADED
+    return _PROTOCOL_PUBLIC_PROVENANCE_WORKFLOW
+
+
+def _load_public_provenance(
+    *,
+    provenance_path: Path | None,
+    trusted_root: Path,
+    document_path: Path,
+    expectation: PublishedUpgradeExpectation,
+    expected_evidence_sha256: str,
+) -> tuple[PublishedUpgradeProvenance | None, _EvidencePathContext | None, _EvidenceFileIdentity | None]:
+    if provenance_path is None:
+        return None, None, None
+    context = _resolve_evidence_path_context(
+        evidence_path=provenance_path,
+        trusted_root=trusted_root,
+        document_path=document_path,
+    )
+    raw_content, identity = _read_stable_evidence(context.evidence_path)
+    provenance = parse_published_upgrade_provenance(
+        raw_content,
+        expected_repository=expectation.repository,
+        expected_workflow_path=expectation.workflow_path,
+        expected_artifact_name=expectation.artifact_name,
+        expected_artifact_file=expectation.artifact_file,
+        expected_evidence_sha256=expected_evidence_sha256,
+    )
+    return provenance, context, identity
 
 
 def build_lifecycle_status(
@@ -274,6 +364,14 @@ def _render_protocol_compatibility_markdown(
     protocol: ProtocolCompatibilityEvidence,
 ) -> str:
     upgrade = f"{protocol.from_version} -> {protocol.to_version}"
+    public_provenance = ""
+    if protocol.public_run_url is not None:
+        public_provenance = (
+            f"Public run: [public GitHub Actions run]({protocol.public_run_url})\n\n"
+            f"Run source: {_markdown_code_span(protocol.public_run_head_sha or '')}\n\n"
+            f"Provenance record: [privacy-safe JSON]({protocol.provenance_href})\n\n"
+            f"Artifact retention: {_markdown_code_span(f'{protocol.artifact_retention_days} days')}\n\n"
+        )
     return (
         "## Protocol Compatibility Evidence\n\n"
         f"Status: {_markdown_code_span(protocol.status)}\n\n"
@@ -282,6 +380,7 @@ def _render_protocol_compatibility_markdown(
         f"Evidence: [privacy-safe machine report]({protocol.evidence_href})\n\n"
         f"Evidence SHA-256: {_markdown_code_span(protocol.evidence_sha256)}\n\n"
         f"Provenance: {_escape_markdown_inline(protocol.provenance)}\n\n"
+        f"{public_provenance}"
         f"Scope: {_escape_markdown_inline(protocol.scope)}\n\n"
     )
 
@@ -309,7 +408,7 @@ def _validated_protocol_compatibility_evidence(
         raise _ProtocolCompatibilityError
     if evidence.status_basis != _PROTOCOL_STATUS_BASIS:
         raise _ProtocolCompatibilityError
-    if evidence.provenance != _PROTOCOL_PROVENANCE or evidence.scope != _PROTOCOL_SCOPE:
+    if evidence.scope != _PROTOCOL_SCOPE:
         raise _ProtocolCompatibilityError
     if type(release_version) is not str or evidence.to_version != release_version:
         raise _ProtocolCompatibilityError
@@ -348,7 +447,56 @@ def _validated_protocol_compatibility_evidence(
         or hashlib.sha256(raw_content).hexdigest() != evidence.evidence_sha256
     ):
         raise _ProtocolCompatibilityError
+    _validate_bound_public_provenance(evidence)
     return evidence
+
+
+def _validate_bound_public_provenance(evidence: ProtocolCompatibilityEvidence) -> None:
+    context = evidence.binding.provenance_path_context
+    identity = evidence.binding.provenance_file_identity
+    public_fields = (
+        evidence.provenance_href,
+        evidence.public_run_url,
+        evidence.public_run_head_sha,
+        evidence.artifact_retention_days,
+        evidence.verification_method,
+    )
+    if context is None or identity is None:
+        if context is not None or identity is not None or any(value is not None for value in public_fields):
+            raise _ProtocolCompatibilityError
+        if evidence.provenance != _PROTOCOL_LOCAL_PROVENANCE:
+            raise _ProtocolCompatibilityError
+        return
+    if any(value is None for value in public_fields):
+        raise _ProtocolCompatibilityError
+
+    resolved_context = _resolve_evidence_path_context(
+        evidence_path=context.evidence_path,
+        trusted_root=context.trusted_root,
+        document_path=context.document_path,
+    )
+    if resolved_context != context or context.evidence_href != evidence.provenance_href:
+        raise _ProtocolCompatibilityError
+    raw_content, current_identity = _read_stable_evidence(context.evidence_path)
+    if current_identity != identity:
+        raise _ProtocolCompatibilityError
+    provenance = parse_published_upgrade_provenance(
+        raw_content,
+        expected_repository=_PROTOCOL_REPOSITORY,
+        expected_workflow_path=_PROTOCOL_WORKFLOW_PATH,
+        expected_artifact_name=_PROTOCOL_ARTIFACT_NAME,
+        expected_artifact_file=_PROTOCOL_ARTIFACT_FILE,
+        expected_evidence_sha256=evidence.evidence_sha256,
+    )
+    if (
+        evidence.provenance != _public_provenance_summary(provenance)
+        or provenance["verified_on"] != evidence.binding.observed_on
+        or provenance["run_url"] != evidence.public_run_url
+        or provenance["run_head_sha"] != evidence.public_run_head_sha
+        or provenance["artifact_retention_days"] != evidence.artifact_retention_days
+        or provenance["verification_method"] != evidence.verification_method
+    ):
+        raise _ProtocolCompatibilityError
 
 
 def _resolve_evidence_path_context(

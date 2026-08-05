@@ -18,9 +18,13 @@ from albumentationsx_mcp.lifecycle import (
     load_protocol_compatibility_evidence,
     render_lifecycle_status_markdown,
 )
+from albumentationsx_mcp.published_provenance import (
+    build_published_upgrade_provenance,
+    serialize_published_upgrade_provenance,
+)
 from scripts.export_lifecycle_status import build_committed_lifecycle_status
 
-_PUBLISHED_UPGRADE_EVIDENCE = Path("docs/host-evidence/published-upgrade-1.20.0-to-1.21.0-2026-08-04.json")
+_PUBLISHED_UPGRADE_EVIDENCE = Path("docs/host-evidence/published-upgrade-1.20.0-to-1.21.0-2026-08-05.json")
 _PROTOCOL_ERROR = "protocol compatibility evidence is invalid"
 _COMMITTED_EVIDENCE_ERROR = "published upgrade evidence is invalid"
 
@@ -49,7 +53,7 @@ def _forged_protocol_mapping() -> dict[str, object]:
     return {
         "schema_version": 1,
         "status": "passed",
-        "status_basis": "Published upgrade probe result only; this does not assert provenance.",
+        "status_basis": "Passing published upgrade probe; provenance and scope are reported separately.",
         "from_version": "1.20.0",
         "to_version": "1.21.0",
         "evidence_path": "host-evidence/published-upgrade-1.20.0-to-1.21.0-2026-08-04.json",
@@ -70,20 +74,39 @@ def _load_protocol_evidence(
     *,
     evidence_relative: str = "proofs/proof.json",
     document_relative: str = "STATUS.md",
+    public_provenance: bool = False,
 ) -> tuple[ProtocolCompatibilityEvidence, Path, Path]:
     evidence_path = docs_root / evidence_relative
     document_path = docs_root / document_relative
     evidence_path.parent.mkdir(parents=True, exist_ok=True)
     document_path.parent.mkdir(parents=True, exist_ok=True)
     evidence_path.write_bytes(_PUBLISHED_UPGRADE_EVIDENCE.read_bytes())
+    provenance_path = None
+    if public_provenance:
+        provenance_path = evidence_path.with_name(f"{evidence_path.stem}.provenance.json")
+        provenance = build_published_upgrade_provenance(
+            evidence=evidence_path.read_bytes(),
+            repository="dKosarevsky/albu-mcp",
+            workflow_path=".github/workflows/published-upgrade-proof.yml",
+            workflow_ref=("dKosarevsky/albu-mcp/.github/workflows/published-upgrade-proof.yml@refs/heads/main"),
+            run_id=31_049_485_055,
+            run_head_sha="8e185cb32a895a31fe3264b313372058fbfcea49",
+            artifact_name="published-upgrade-proof",
+            artifact_file="published-upgrade-proof.json",
+            artifact_retention_days=30,
+            verified_on="2026-08-05",
+            verification_method="downloaded_artifact",
+        )
+        provenance_path.write_text(serialize_published_upgrade_provenance(provenance), encoding="utf-8")
     evidence = load_protocol_compatibility_evidence(
         evidence_path=evidence_path,
+        provenance_path=provenance_path,
         trusted_root=docs_root,
         document_path=document_path,
         expectation=PublishedUpgradeExpectation(
             from_version="1.20.0",
             to_version="1.21.0",
-            observed_on="2026-08-04",
+            observed_on="2026-08-05",
         ),
     )
     return evidence, evidence_path, document_path
@@ -145,6 +168,67 @@ def test_protocol_evidence_factory_derives_immutable_claim_from_canonical_file(t
         ProtocolCompatibilityEvidence()
     with pytest.raises(FrozenInstanceError):
         evidence.evidence_sha256 = "0" * 64  # ty: ignore[invalid-assignment]
+
+
+def test_protocol_evidence_binds_public_run_without_claiming_attestation(tmp_path: Path) -> None:
+    docs_root = tmp_path / "docs"
+    evidence, _evidence_path, _document_path = _load_protocol_evidence(docs_root, public_provenance=True)
+    rendered = render_lifecycle_status_markdown(_build_with_protocol(evidence))
+
+    assert evidence.public_run_url == "https://github.com/dKosarevsky/albu-mcp/actions/runs/31049485055"
+    assert evidence.public_run_head_sha == "8e185cb32a895a31fe3264b313372058fbfcea49"
+    assert evidence.provenance_href == "proofs/proof.provenance.json"
+    assert evidence.artifact_retention_days == 30
+    assert evidence.verification_method == "downloaded_artifact"
+    assert "[public GitHub Actions run](https://github.com/dKosarevsky/albu-mcp/actions/runs/31049485055)" in rendered
+    assert "Artifact retention: `30 days`" in rendered
+    assert "This is not cryptographic attestation." in rendered
+
+
+def test_protocol_evidence_rejects_public_provenance_file_change(tmp_path: Path) -> None:
+    docs_root = tmp_path / "docs"
+    evidence, evidence_path, _document_path = _load_protocol_evidence(docs_root, public_provenance=True)
+    report = _build_with_protocol(evidence)
+    provenance_path = evidence_path.with_name(f"{evidence_path.stem}.provenance.json")
+    provenance_path.write_bytes(provenance_path.read_bytes() + b"\n")
+
+    with pytest.raises(ValueError, match=rf"^{_PROTOCOL_ERROR}$"):
+        render_lifecycle_status_markdown(report)
+
+
+def test_protocol_evidence_rejects_public_provenance_for_different_evidence(tmp_path: Path) -> None:
+    docs_root = tmp_path / "docs"
+    evidence_path = docs_root / "proof.json"
+    provenance_path = docs_root / "proof.provenance.json"
+    docs_root.mkdir()
+    evidence_path.write_bytes(_PUBLISHED_UPGRADE_EVIDENCE.read_bytes())
+    provenance = build_published_upgrade_provenance(
+        evidence=b"different evidence",
+        repository="dKosarevsky/albu-mcp",
+        workflow_path=".github/workflows/published-upgrade-proof.yml",
+        workflow_ref="dKosarevsky/albu-mcp/.github/workflows/published-upgrade-proof.yml@refs/heads/main",
+        run_id=31_049_485_055,
+        run_head_sha="8e185cb32a895a31fe3264b313372058fbfcea49",
+        artifact_name="published-upgrade-proof",
+        artifact_file="published-upgrade-proof.json",
+        artifact_retention_days=30,
+        verified_on="2026-08-05",
+        verification_method="downloaded_artifact",
+    )
+    provenance_path.write_text(serialize_published_upgrade_provenance(provenance), encoding="utf-8")
+
+    with pytest.raises(ValueError, match=rf"^{_PROTOCOL_ERROR}$"):
+        load_protocol_compatibility_evidence(
+            evidence_path=evidence_path,
+            provenance_path=provenance_path,
+            trusted_root=docs_root,
+            document_path=docs_root / "STATUS.md",
+            expectation=PublishedUpgradeExpectation(
+                from_version="1.20.0",
+                to_version="1.21.0",
+                observed_on="2026-08-05",
+            ),
+        )
 
 
 def test_rendered_protocol_scope_is_explicitly_stdio_only(tmp_path: Path) -> None:
@@ -269,15 +353,20 @@ def test_committed_lifecycle_status_describes_current_project_state() -> None:
     assert isinstance(protocol, ProtocolCompatibilityEvidence)
     assert protocol.schema_version == 1
     assert protocol.status == "passed"
-    assert protocol.status_basis == "Published upgrade probe result only; this does not assert provenance."
+    assert protocol.status_basis == "Passing published upgrade probe; provenance and scope are reported separately."
     assert protocol.from_version == "1.20.0"
     assert protocol.to_version == "1.21.0"
-    assert protocol.evidence_href == "host-evidence/published-upgrade-1.20.0-to-1.21.0-2026-08-04.json"
-    assert protocol.evidence_sha256 == "2d6297cd017c118ecc690028fc0140052ea895d89140f32901531753ce3531da"
+    assert protocol.evidence_href == "host-evidence/published-upgrade-1.20.0-to-1.21.0-2026-08-05.json"
+    assert protocol.evidence_sha256 == "42580ac9d9893b748cd10e38f73067402e5e3b639dee84a5efefbe706bcac18c"
     assert protocol.provenance == (
-        "Local operator-run snapshot. No immutable public run or attestation is available; this evidence is not "
-        "independently attested or provenance-verifiable."
+        "Exact report bytes verified from a downloaded public GitHub Actions artifact. "
+        "This is not cryptographic attestation."
     )
+    assert protocol.provenance_href == ("host-evidence/published-upgrade-1.20.0-to-1.21.0-2026-08-05.provenance.json")
+    assert protocol.public_run_url == "https://github.com/dKosarevsky/albu-mcp/actions/runs/31049485055"
+    assert protocol.public_run_head_sha == "8e185cb32a895a31fe3264b313372058fbfcea49"
+    assert protocol.artifact_retention_days == 30
+    assert protocol.verification_method == "downloaded_artifact"
     assert protocol.scope == (
         "Published-package stdio protocol negotiation and artifact continuity. "
         "This is not Streamable HTTP or real-host UI evidence."

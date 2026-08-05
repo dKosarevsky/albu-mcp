@@ -12,7 +12,7 @@ import yaml
 
 from albumentationsx_mcp.upgrade_proof import parse_upgrade_proof_report, serialize_upgrade_proof_report
 
-_EVIDENCE = Path("docs/host-evidence/published-upgrade-1.20.0-to-1.21.0-2026-08-04.json")
+_EVIDENCE = Path("docs/host-evidence/published-upgrade-1.20.0-to-1.21.0-2026-08-05.json")
 _GIT_ATTRIBUTES = Path(".gitattributes")
 _STATUS = Path("docs/STATUS.md")
 _WORKFLOW = Path(".github/workflows/published-upgrade-proof.yml")
@@ -20,6 +20,14 @@ _PROOF_COMMAND = (
     'uv run python scripts/check_published_upgrade.py --from-version "$FROM_VERSION" '
     '--to-version "$TO_VERSION" --observed-on "$(date -u +%F)" '
     "--output artifacts/published-upgrade-proof.json"
+)
+_BIND_COMMAND = (
+    "uv run python scripts/export_published_upgrade_provenance.py "
+    "--evidence artifacts/published-upgrade-proof.json "
+    '--repository "$GITHUB_REPOSITORY" --workflow-ref "$GITHUB_WORKFLOW_REF" '
+    '--run-id "$GITHUB_RUN_ID" --run-head-sha "$GITHUB_SHA" '
+    '--verified-on "$(date -u +%F)" --verification-method workflow_output '
+    "--output artifacts/published-upgrade-provenance.json"
 )
 _CHECKOUT_ACTION = "actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09"
 _SETUP_UV_ACTION = "astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78"
@@ -58,11 +66,15 @@ _EXPECTED_STEPS = [
         "run": _PROOF_COMMAND + "\n",
     },
     {
+        "name": "Bind evidence to public run",
+        "run": _BIND_COMMAND + "\n",
+    },
+    {
         "name": "Upload privacy-safe evidence",
         "uses": _UPLOAD_ARTIFACT_ACTION,
         "with": {
             "name": "published-upgrade-proof",
-            "path": "artifacts/published-upgrade-proof.json",
+            "path": ("artifacts/published-upgrade-proof.json\nartifacts/published-upgrade-provenance.json\n"),
             "if-no-files-found": "error",
             "retention-days": 30,
         },
@@ -257,6 +269,7 @@ def _assert_published_upgrade_workflow_prepares_and_runs_probe_safely() -> None:
 
     prepare = named_steps["Prepare artifact directory"]
     prove = named_steps["Prove published upgrade"]
+    bind = named_steps["Bind evidence to public run"]
     assert prepare["run"] == "install -d -m 700 artifacts"
     assert steps.index(prepare) < steps.index(prove)
     assert prove["env"] == {
@@ -266,6 +279,10 @@ def _assert_published_upgrade_workflow_prepares_and_runs_probe_safely() -> None:
     prove_command = prove["run"]
     assert isinstance(prove_command, str)
     assert " ".join(prove_command.split()) == _PROOF_COMMAND
+    bind_command = bind["run"]
+    assert isinstance(bind_command, str)
+    assert " ".join(bind_command.split()) == _BIND_COMMAND
+    assert steps.index(prove) < steps.index(bind)
     assert "continue-on-error" not in prove
     for step in steps:
         run = step.get("run")
@@ -369,20 +386,10 @@ def test_published_upgrade_workflow_uploads_only_successful_evidence() -> None:
     steps = _steps(workflow)
     upload_steps = [step for step in steps if _is_upload_step(step)]
 
-    assert upload_steps == [
-        {
-            "name": "Upload privacy-safe evidence",
-            "uses": _UPLOAD_ARTIFACT_ACTION,
-            "with": {
-                "name": "published-upgrade-proof",
-                "path": "artifacts/published-upgrade-proof.json",
-                "if-no-files-found": "error",
-                "retention-days": 30,
-            },
-        }
-    ]
+    assert upload_steps == [_EXPECTED_STEPS[-1]]
     prove_index = next(index for index, step in enumerate(steps) if step["name"] == "Prove published upgrade")
-    assert steps.index(upload_steps[0]) > prove_index
+    bind_index = next(index for index, step in enumerate(steps) if step["name"] == "Bind evidence to public run")
+    assert steps.index(upload_steps[0]) > bind_index > prove_index
 
 
 def _normalize_key(key: str) -> str:
@@ -433,14 +440,14 @@ def _assert_committed_upgrade_evidence(path: Path) -> None:
         expected_package="albumentationsx-mcp",
         expected_from_version="1.20.0",
         expected_to_version="1.21.0",
-        expected_observed_on="2026-08-04",
+        expected_observed_on="2026-08-05",
     )
 
     assert raw_content == serialize_upgrade_proof_report(validated).encode("utf-8")
     assert validated["status"] == "pass"
     assert validated["from_version"] == "1.20.0"
     assert validated["to_version"] == "1.21.0"
-    assert validated["observed_on"] == "2026-08-04"
+    assert validated["observed_on"] == "2026-08-05"
     assert [row["role"] for row in validated["matrix"]] == ["from_legacy", "to_legacy", "to_modern"]
     assert all(row["ok"] and row["protocol_ok"] and row["server_version_ok"] for row in validated["matrix"])
 
@@ -492,6 +499,8 @@ def test_committed_upgrade_evidence_is_forced_to_lf_on_checkout() -> None:
     assert _GIT_ATTRIBUTES.exists()
     assert _GIT_ATTRIBUTES.read_text(encoding="utf-8") == (
         "docs/host-evidence/published-upgrade-1.20.0-to-1.21.0-2026-08-04.json text eol=lf\n"
+        "docs/host-evidence/published-upgrade-1.20.0-to-1.21.0-2026-08-05.json text eol=lf\n"
+        "docs/host-evidence/published-upgrade-1.20.0-to-1.21.0-2026-08-05.provenance.json text eol=lf\n"
         "docs/host-evidence/profile-conformance-2026-08-04.json text eol=lf\n"
     )
 
@@ -545,13 +554,19 @@ def _assert_status_links_published_upgrade_evidence(status: str) -> None:
     expected = (
         "## Protocol Compatibility Evidence\n\n"
         "Status: `passed`\n\n"
-        "Status basis: Published upgrade probe result only; this does not assert provenance.\n\n"
+        "Status basis: Passing published upgrade probe; provenance and scope are reported separately.\n\n"
         "Published upgrade: `1.20.0 -> 1.21.0`\n\n"
         "Evidence: [privacy-safe machine report]"
-        "(host-evidence/published-upgrade-1.20.0-to-1.21.0-2026-08-04.json)\n\n"
+        "(host-evidence/published-upgrade-1.20.0-to-1.21.0-2026-08-05.json)\n\n"
         f"Evidence SHA-256: `{digest}`\n\n"
-        "Provenance: Local operator-run snapshot. No immutable public run or attestation is available; "
-        "this evidence is not independently attested or provenance-verifiable.\n\n"
+        "Provenance: Exact report bytes verified from a downloaded public GitHub Actions artifact. "
+        "This is not cryptographic attestation.\n\n"
+        "Public run: [public GitHub Actions run]"
+        "(https://github.com/dKosarevsky/albu-mcp/actions/runs/31049485055)\n\n"
+        "Run source: `8e185cb32a895a31fe3264b313372058fbfcea49`\n\n"
+        "Provenance record: [privacy-safe JSON]"
+        "(host-evidence/published-upgrade-1.20.0-to-1.21.0-2026-08-05.provenance.json)\n\n"
+        "Artifact retention: `30 days`\n\n"
         "Scope: Published-package stdio protocol negotiation and artifact continuity. "
         "This is not Streamable HTTP or real-host UI evidence.\n"
     )

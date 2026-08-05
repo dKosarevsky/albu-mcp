@@ -21,12 +21,12 @@ and host-specific behavior out of the MCP server. Treat the issue tracker as an 
 - Modify: `tests/test_host_profile_conformance.py`
 - Later regenerate: `docs/host-evidence/profile-conformance-2026-08-04.json`
 
-- [ ] Add failing tests for a schema-v3 relevant-tree digest, equivalent non-ancestor commits, an unavailable recorded
+- [x] Add failing tests for a schema-v3 relevant-tree digest, equivalent non-ancestor commits, an unavailable recorded
   revision, malformed digests, and real relevant-source drift.
-- [ ] Implement canonical Git-tree hashing with bounded subprocesses and strict parser validation.
-- [ ] Preserve schema-v2 ancestry validation; validate schema-v3 by current/source tree equivalence.
-- [ ] Run `uv run pytest tests/test_host_profile_conformance.py -q` and Ruff on the changed files.
-- [ ] Commit the validator implementation without refreshing evidence yet, because later source changes may invalidate it.
+- [x] Implement canonical Git-tree hashing with bounded subprocesses and strict parser validation.
+- [x] Preserve schema-v2 ancestry validation; validate schema-v3 by current/source tree equivalence.
+- [x] Run `uv run pytest tests/test_host_profile_conformance.py -q` and Ruff on the changed files.
+- [x] Commit the validator implementation and refresh evidence from the committed relevant tree.
 
 ## Task 1: Produce The Public Published-Upgrade Run
 
@@ -36,12 +36,12 @@ and host-specific behavior out of the MCP server. Treat the issue tracker as an 
 - Wait for completion and inspect the public run metadata and job log.
 - Download the `published-upgrade-proof` artifact to a new private temporary directory.
 
-- [ ] Require a successful workflow conclusion and the expected repository, workflow, inputs, and head branch.
-- [ ] Parse the downloaded report with the repository's strict upgrade-proof parser.
-- [ ] Compare the downloaded report byte-for-byte with the current committed report; replace the committed report only
+- [x] Require a successful workflow conclusion and the expected repository, workflow, inputs, and head branch.
+- [x] Parse the downloaded report with the repository's strict upgrade-proof parser.
+- [x] Compare the downloaded report byte-for-byte with the current committed report; replace the committed report only
   if the successful public run legitimately differs.
-- [ ] Compute and record the artifact report SHA-256 and public run URL.
-- [ ] Do not commit temporary archives, API responses, logs, or local paths.
+- [x] Compute and record the artifact report SHA-256 and public run URL.
+- [x] Do not commit temporary archives, API responses, logs, or local paths.
 
 ## Task 2: Bind Evidence To Public Workflow Provenance
 
@@ -56,15 +56,15 @@ and host-specific behavior out of the MCP server. Treat the issue tracker as an 
 - Create: `docs/host-evidence/published-upgrade-1.20.0-to-1.21.0-2026-08-04.provenance.json`
 - Regenerate: `docs/STATUS.md`
 
-- [ ] Write failing pure tests for the provenance schema, canonical serialization, expected GitHub identity, run URL,
+- [x] Write failing pure tests for the provenance schema, canonical serialization, expected GitHub identity, run URL,
   workflow ref, head SHA, artifact member, retention, and evidence SHA mismatch.
-- [ ] Implement a small provenance exporter that derives the run URL and hashes the exact evidence bytes.
-- [ ] Extend the lifecycle evidence loader to require and bind the sidecar; keep path and stable-file protections.
-- [ ] Render the public run link, finite-retention caveat, and non-attestation statement in generated status Markdown.
-- [ ] Extend the workflow to generate report and provenance files and upload both under the same retained artifact.
-- [ ] Build the committed sidecar from the observed public run, validate it, and regenerate `docs/STATUS.md`.
-- [ ] Run focused lifecycle/workflow/provenance tests, Ruff, and `ty`.
-- [ ] Commit public workflow provenance and generated status together.
+- [x] Implement a small provenance exporter that derives the run URL and hashes the exact evidence bytes.
+- [x] Extend the lifecycle evidence loader to require and bind the sidecar; keep path and stable-file protections.
+- [x] Render the public run link, finite-retention caveat, and non-attestation statement in generated status Markdown.
+- [x] Extend the workflow to generate report and provenance files and upload both under the same retained artifact.
+- [x] Build the committed sidecar from the observed public run, validate it, and regenerate `docs/STATUS.md`.
+- [x] Run focused lifecycle/workflow/provenance tests, Ruff, and `ty`.
+- [x] Commit public workflow provenance and generated status together.
 
 ## Task 3: Hard-Bound HTTP Harness Shutdown
 
