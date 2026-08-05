@@ -26,7 +26,7 @@ _BIND_COMMAND = (
     "--evidence artifacts/published-upgrade-proof.json "
     '--repository "$GITHUB_REPOSITORY" --workflow-ref "$GITHUB_WORKFLOW_REF" '
     '--run-id "$GITHUB_RUN_ID" --run-head-sha "$GITHUB_SHA" '
-    '--verified-on "$(date -u +%F)" --verification-method workflow_output '
+    "--verification-method workflow_output "
     "--output artifacts/published-upgrade-provenance.json"
 )
 _CHECKOUT_ACTION = "actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09"

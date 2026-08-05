@@ -165,3 +165,43 @@ def test_published_upgrade_provenance_cli_writes_verified_sidecar(tmp_path: Path
     assert result.stderr == ""
     assert result.stdout == f"wrote verified provenance to {output_path}\n"
     assert _parse(output_path.read_bytes()) == _provenance()
+
+
+def test_published_upgrade_provenance_cli_derives_date_from_evidence(tmp_path: Path) -> None:
+    evidence = b'{"observed_on":"2026-08-05"}\n'
+    evidence_path = tmp_path / _ARTIFACT_FILE
+    output_path = tmp_path / "provenance.json"
+    evidence_path.write_bytes(evidence)
+
+    result = subprocess.run(  # noqa: S603 - fixed local script with controlled test inputs.
+        [
+            sys.executable,
+            "scripts/export_published_upgrade_provenance.py",
+            "--evidence",
+            str(evidence_path),
+            "--repository",
+            _REPOSITORY,
+            "--workflow-ref",
+            _WORKFLOW_REF,
+            "--run-id",
+            str(_RUN_ID),
+            "--run-head-sha",
+            _RUN_HEAD_SHA,
+            "--verification-method",
+            "workflow_output",
+            "--output",
+            str(output_path),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0
+    assert _parse(
+        output_path.read_bytes(),
+        expected_sha256=hashlib.sha256(evidence).hexdigest(),
+    ) == _provenance(
+        evidence=evidence,
+        verification_method="workflow_output",
+    )

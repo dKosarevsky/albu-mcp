@@ -63,7 +63,6 @@ jobs:
           --workflow-ref "$GITHUB_WORKFLOW_REF"
           --run-id "$GITHUB_RUN_ID"
           --run-head-sha "$GITHUB_SHA"
-          --verified-on "$(date -u +%F)"
           --verification-method workflow_output
           --output artifacts/published-upgrade-provenance.json
 

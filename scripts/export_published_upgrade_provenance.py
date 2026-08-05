@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
+from datetime import date
 from pathlib import Path
 
 if not __package__:
@@ -30,7 +32,7 @@ def main() -> None:
     parser.add_argument("--workflow-ref", required=True)
     parser.add_argument("--run-id", type=int, required=True)
     parser.add_argument("--run-head-sha", required=True)
-    parser.add_argument("--verified-on", required=True)
+    parser.add_argument("--verified-on")
     parser.add_argument(
         "--verification-method",
         choices=("downloaded_artifact", "workflow_output"),
@@ -52,7 +54,7 @@ def main() -> None:
             artifact_name=_ARTIFACT_NAME,
             artifact_file=_ARTIFACT_FILE,
             artifact_retention_days=args.artifact_retention_days,
-            verified_on=args.verified_on,
+            verified_on=args.verified_on or _observed_on(evidence),
             verification_method=args.verification_method,
         )
         write_atomic_text(args.output, serialize_published_upgrade_provenance(provenance))
@@ -69,6 +71,16 @@ def _read_bounded(path: Path) -> bytes:
     if len(content) > MAX_UPGRADE_PROOF_REPORT_BYTES:
         raise ValueError
     return content
+
+
+def _observed_on(evidence: bytes) -> str:
+    payload = json.loads(evidence)
+    if not isinstance(payload, dict):
+        raise TypeError
+    value = payload.get("observed_on")
+    if not isinstance(value, str) or date.fromisoformat(value).isoformat() != value:
+        raise ValueError
+    return value
 
 
 if __name__ == "__main__":
