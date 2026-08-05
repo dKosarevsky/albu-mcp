@@ -98,8 +98,9 @@
       "surface_mismatches": {}
     }
   ],
-  "schema_version": 2,
-  "source_revision": "529de9b8315a2707e59d28b1f980dfbbb31e8851",
+  "relevant_tree_sha256": "7fd2340a31ddb3d1893d205e9d4310608d0ad6090f9d73948652d5662cbc9e57",
+  "schema_version": 3,
+  "source_revision": "26933df59cf6089513ecb0f0cdd88caf3136520f",
   "status": "passed",
   "transport": "stdio"
 }
