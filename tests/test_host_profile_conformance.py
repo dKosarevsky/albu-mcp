@@ -32,7 +32,7 @@ def conformance_config(tmp_path: Path) -> ProfileConformanceConfig:
     return ProfileConformanceConfig(
         server_python=Path(sys.executable).absolute(),
         source_root=Path.cwd().resolve(),
-        source_revision="abc123def456",
+        source_revision=_git_stdout(Path.cwd().resolve(), "rev-parse", "HEAD"),
         allowed_root=allowed_root,
         artifact_root=tmp_path / "artifacts",
     )
@@ -106,9 +106,13 @@ def test_profile_conformance_report_is_deterministic_and_privacy_safe(
     report = asyncio.run(build_profile_conformance_report(conformance_config))
     rendered = render_profile_conformance_report(report)
 
-    assert report["schema_version"] == 2
+    assert report["schema_version"] == 3
     assert report["status"] == "passed"
     assert report["source_revision"] == conformance_config.source_revision
+    assert report["relevant_tree_sha256"] == profile_conformance.relevant_tree_sha256(
+        conformance_config.source_root,
+        conformance_config.source_revision,
+    )
     assert report["transport"] == "stdio"
     assert report["evidence_classification"] == "machine_proof_only"
     assert [item["profile"] for item in report["profiles"]] == [profile.value for profile in CapabilityProfile]
@@ -140,9 +144,10 @@ def test_committed_profile_conformance_report_matches_current_contract(tmp_path:
     assert {key: value for key, value in current.items() if key != "source_revision"} == {
         key: value for key, value in committed.items() if key != "source_revision"
     }
-    assert {key: value for key, value in committed.items() if key != "source_revision"} == {
-        key: value for key, value in historical.items() if key != "source_revision"
-    }
+    assert committed["profiles"] == historical["profiles"]
+    assert committed["status"] == historical["status"]
+    assert committed["transport"] == historical["transport"]
+    assert committed["evidence_classification"] == historical["evidence_classification"]
     assert current["source_revision"] == current_revision
 
 
@@ -205,6 +210,97 @@ def test_committed_profile_conformance_provenance_rejects_relevant_source_drift(
     assert str(exc_info.value) == "profile-conformance-relevant sources changed after evidence revision"
     assert str(source_root) not in str(exc_info.value)
     assert evidence_revision not in str(exc_info.value)
+
+
+def test_profile_conformance_provenance_accepts_equivalent_non_ancestor_tree(tmp_path: Path) -> None:
+    source_root = _profile_source_repository(tmp_path)
+    evidence_revision = _git_stdout(source_root, "rev-parse", "HEAD")
+    evidence_digest = profile_conformance.relevant_tree_sha256(source_root, evidence_revision)
+    tree = _git_stdout(source_root, "rev-parse", "HEAD^{tree}")
+    rewritten_revision = _git_stdout(source_root, "commit-tree", tree, "-m", "test: squash equivalent")
+    _run_git(source_root, "checkout", "--quiet", "--detach", rewritten_revision)
+
+    resolved = profile_conformance.validate_committed_report_provenance(
+        {
+            "schema_version": 3,
+            "source_revision": evidence_revision,
+            "relevant_tree_sha256": evidence_digest,
+        },
+        source_root=source_root,
+    )
+
+    assert resolved == evidence_revision
+    assert (
+        _run_git(
+            source_root,
+            "merge-base",
+            "--is-ancestor",
+            evidence_revision,
+            rewritten_revision,
+            check=False,
+        ).returncode
+        == 1
+    )
+
+
+def test_profile_conformance_provenance_accepts_unavailable_revision_with_matching_tree(tmp_path: Path) -> None:
+    source_root = _profile_source_repository(tmp_path)
+    current_revision = _git_stdout(source_root, "rev-parse", "HEAD")
+    evidence_digest = profile_conformance.relevant_tree_sha256(source_root, current_revision)
+    unavailable_revision = "f" * 40
+
+    resolved = profile_conformance.validate_committed_report_provenance(
+        {
+            "schema_version": 3,
+            "source_revision": unavailable_revision,
+            "relevant_tree_sha256": evidence_digest,
+        },
+        source_root=source_root,
+    )
+
+    assert resolved == unavailable_revision
+
+
+@pytest.mark.parametrize("digest", [None, "", "a" * 63, "g" * 64])
+def test_profile_conformance_provenance_rejects_malformed_tree_digest(
+    tmp_path: Path,
+    digest: object,
+) -> None:
+    source_root = _profile_source_repository(tmp_path)
+    revision = _git_stdout(source_root, "rev-parse", "HEAD")
+
+    with pytest.raises(ValueError, match=r"^relevant_tree_sha256 must be a SHA-256 digest$"):
+        profile_conformance.validate_committed_report_provenance(
+            {
+                "schema_version": 3,
+                "source_revision": revision,
+                "relevant_tree_sha256": digest,
+            },
+            source_root=source_root,
+        )
+
+
+def test_profile_conformance_provenance_rejects_schema_v3_relevant_source_drift(tmp_path: Path) -> None:
+    source_root = _profile_source_repository(tmp_path)
+    evidence_revision = _git_stdout(source_root, "rev-parse", "HEAD")
+    evidence_digest = profile_conformance.relevant_tree_sha256(source_root, evidence_revision)
+    runtime_source = source_root / "src" / "albumentationsx_mcp" / "runtime.py"
+    runtime_source.write_text("STATE = 'after'\n", encoding="utf-8")
+    _run_git(source_root, "add", "--", "src/albumentationsx_mcp/runtime.py")
+    _run_git(source_root, "commit", "--quiet", "-m", "test: relevant drift")
+
+    with pytest.raises(
+        ValueError,
+        match=r"^profile-conformance-relevant sources changed after evidence revision$",
+    ):
+        profile_conformance.validate_committed_report_provenance(
+            {
+                "schema_version": 3,
+                "source_revision": evidence_revision,
+                "relevant_tree_sha256": evidence_digest,
+            },
+            source_root=source_root,
+        )
 
 
 def test_profile_conformance_exit_code_rejects_failed_report() -> None:
@@ -288,10 +384,10 @@ def _surface_digest(values: tuple[str, ...]) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
-def _run_git(source_root: Path, *args: str) -> subprocess.CompletedProcess[str]:
+def _run_git(source_root: Path, *args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
     return subprocess.run(  # noqa: S603 - fixed Git executable with argument-list inputs only.
         ["git", "-C", str(source_root), *args],  # noqa: S607 - test environment Git.
-        check=True,
+        check=check,
         capture_output=True,
         text=True,
         timeout=5,
@@ -300,3 +396,17 @@ def _run_git(source_root: Path, *args: str) -> subprocess.CompletedProcess[str]:
 
 def _git_stdout(source_root: Path, *args: str) -> str:
     return _run_git(source_root, *args).stdout.strip()
+
+
+def _profile_source_repository(tmp_path: Path) -> Path:
+    source_root = tmp_path / "source"
+    source_root.mkdir()
+    _run_git(source_root, "init", "--quiet")
+    _run_git(source_root, "config", "user.name", "Profile Conformance Test")
+    _run_git(source_root, "config", "user.email", "profile-conformance@example.invalid")
+    runtime_source = source_root / "src" / "albumentationsx_mcp" / "runtime.py"
+    runtime_source.parent.mkdir(parents=True)
+    runtime_source.write_text("STATE = 'before'\n", encoding="utf-8")
+    _run_git(source_root, "add", "--", "src/albumentationsx_mcp/runtime.py")
+    _run_git(source_root, "commit", "--quiet", "-m", "test: baseline")
+    return source_root
