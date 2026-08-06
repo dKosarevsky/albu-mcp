@@ -53,5 +53,40 @@ def test_community_feedback_guide_is_linked_and_privacy_safe() -> None:
     assert "albumentationsx://examples/distortion-review" in guide
 
 
+def test_first_preview_feedback_funnel_is_discoverable_and_privacy_safe() -> None:
+    readme = Path("README.md").read_text(encoding="utf-8")
+    docs_index = Path("docs/INDEX.md").read_text(encoding="utf-8")
+    first_ten_minutes = Path("docs/FIRST_10_MINUTES.md").read_text(encoding="utf-8")
+    guide = Path("docs/FIRST_PREVIEW_FEEDBACK.md").read_text(encoding="utf-8")
+    workflow_template = yaml.safe_load(Path(".github/ISSUE_TEMPLATE/workflow-feedback.yml").read_text(encoding="utf-8"))
+
+    assert "[first-preview feedback](docs/FIRST_PREVIEW_FEEDBACK.md)" in readme
+    assert "[FIRST_PREVIEW_FEEDBACK.md](FIRST_PREVIEW_FEEDBACK.md)" in docs_index
+    assert "[first-preview feedback](FIRST_PREVIEW_FEEDBACK.md)" in first_ten_minutes
+    assert "render -> reject -> adjust -> accept" in guide
+    assert "https://github.com/dKosarevsky/albu-mcp/issues/new?template=workflow-feedback.yml" in guide
+    normalized_guide = " ".join(guide.split())
+    for heading in ("## Goal", "## Initial render", "## Rejection", "## Adjustment", "## Outcome"):
+        assert heading in guide
+    for private_data in (
+        "private images",
+        "absolute local paths",
+        "credentials or secrets",
+        "personal data",
+        "proprietary dataset details",
+    ):
+        assert private_data in normalized_guide
+    assert "No telemetry" in normalized_guide
+
+    fields = {item.get("id"): item for item in workflow_template["body"] if "id" in item}
+    assert {"goal", "initial_render", "rejection", "adjustment", "outcome", "privacy"} <= fields.keys()
+    for field in ("goal", "initial_render", "rejection", "adjustment", "outcome"):
+        assert fields[field]["validations"]["required"] is True
+    privacy_options = fields["privacy"]["attributes"]["options"]
+    assert len(privacy_options) == 1
+    assert privacy_options[0]["required"] is True
+    assert "absolute local paths" in privacy_options[0]["label"]
+
+
 def _template_text(template: object) -> str:
     return str(template)

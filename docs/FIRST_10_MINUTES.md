@@ -109,6 +109,9 @@ After tracing the selected result, the host should call:
 Ask for Python when you want code for a training pipeline. Ask for JSON or YAML when you want a reviewable configuration
 artifact.
 
+After accepting a result or reaching a blocker, optionally submit one redacted loop through
+[first-preview feedback](FIRST_PREVIEW_FEEDBACK.md). The server sends nothing automatically.
+
 ### Explicit fallback
 
 Use this sequence in the `review` profile, or when a `full`/`dataset` host must inspect or edit the generated request:

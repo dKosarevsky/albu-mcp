@@ -1,0 +1,17 @@
+{
+  "artifact_file": "published-upgrade-proof.json",
+  "artifact_name": "published-upgrade-proof",
+  "artifact_retention_days": 30,
+  "evidence_classification": "public_workflow_machine_proof",
+  "evidence_sha256": "42580ac9d9893b748cd10e38f73067402e5e3b639dee84a5efefbe706bcac18c",
+  "repository": "dKosarevsky/albu-mcp",
+  "run_head_sha": "8e185cb32a895a31fe3264b313372058fbfcea49",
+  "run_id": 31049485055,
+  "run_url": "https://github.com/dKosarevsky/albu-mcp/actions/runs/31049485055",
+  "schema_version": "albumentationsx-mcp/published-upgrade-provenance/v1",
+  "status": "verified",
+  "verification_method": "downloaded_artifact",
+  "verified_on": "2026-08-05",
+  "workflow_path": ".github/workflows/published-upgrade-proof.yml",
+  "workflow_ref": "dKosarevsky/albu-mcp/.github/workflows/published-upgrade-proof.yml@refs/heads/main"
+}

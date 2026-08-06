@@ -19,15 +19,23 @@ Version: `1.21.0`
 
 Status: `passed`
 
-Status basis: Published upgrade probe result only; this does not assert provenance.
+Status basis: Passing published upgrade probe; provenance and scope are reported separately.
 
 Published upgrade: `1.20.0 -> 1.21.0`
 
-Evidence: [privacy-safe machine report](host-evidence/published-upgrade-1.20.0-to-1.21.0-2026-08-04.json)
+Evidence: [privacy-safe machine report](host-evidence/published-upgrade-1.20.0-to-1.21.0-2026-08-05.json)
 
-Evidence SHA-256: `2d6297cd017c118ecc690028fc0140052ea895d89140f32901531753ce3531da`
+Evidence SHA-256: `42580ac9d9893b748cd10e38f73067402e5e3b639dee84a5efefbe706bcac18c`
 
-Provenance: Local operator-run snapshot. No immutable public run or attestation is available; this evidence is not independently attested or provenance-verifiable.
+Provenance: Exact report bytes verified from a downloaded public GitHub Actions artifact. This is not cryptographic attestation.
+
+Public run: [public GitHub Actions run](https://github.com/dKosarevsky/albu-mcp/actions/runs/31049485055)
+
+Run source: `8e185cb32a895a31fe3264b313372058fbfcea49`
+
+Provenance record: [privacy-safe JSON](host-evidence/published-upgrade-1.20.0-to-1.21.0-2026-08-05.provenance.json)
+
+Artifact retention: `30 days`
 
 Scope: Published-package stdio protocol negotiation and artifact continuity. This is not Streamable HTTP or real-host UI evidence.
 

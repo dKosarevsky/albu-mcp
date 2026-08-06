@@ -5,7 +5,7 @@ import re
 import socket
 from collections import deque
 from collections.abc import AsyncIterator, Iterable, Sequence
-from contextlib import AsyncExitStack, asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager, suppress
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -218,12 +218,12 @@ class RoundRobinMcpDispatcher:
             self._backend_states = tuple({} for _ in self._apps)
             self._lifespan_task = None
 
-    async def _cancel_lifespan(self) -> None:
+    def _cancel_lifespan(self) -> asyncio.Task[None] | None:
         task = self._lifespan_task
         if task is None or task.done() or task is asyncio.current_task():
-            return
+            return None
         task.cancel()
-        await asyncio.gather(task, return_exceptions=True)
+        return task
 
 
 @asynccontextmanager
@@ -293,31 +293,53 @@ async def _stop_loopback_server(
     timeout: float,
 ) -> BaseException | None:
     server.should_exit = True
-    if not server.started:
-        await dispatcher._cancel_lifespan()
-
     task_error: BaseException | None = None
-    completion = asyncio.gather(serve_task, return_exceptions=True)
     try:
-        results = await asyncio.wait_for(asyncio.shield(completion), timeout=timeout)
-    except asyncio.TimeoutError:
-        await dispatcher._cancel_lifespan()
-        serve_task.cancel()
-        await completion
-        await dispatcher._cancel_lifespan()
-        message = "loopback MCP cluster did not stop within the timeout"
-        task_error = RuntimeError(message)
+        if server.started:
+            done, pending = await asyncio.wait({serve_task}, timeout=timeout)
+        else:
+            done, pending = set(), {serve_task}
+        if pending:
+            await _cancel_cluster_tasks(serve_task, dispatcher, timeout=timeout)
+            message = "loopback MCP cluster did not stop within the timeout"
+            task_error = RuntimeError(message)
+        else:
+            task_error = _completed_task_error(done.pop())
     except asyncio.CancelledError as exc:
-        await dispatcher._cancel_lifespan()
-        serve_task.cancel()
-        await completion
+        await _cancel_cluster_tasks(serve_task, dispatcher, timeout=timeout)
         task_error = exc
-    else:
-        result = results[0]
-        if isinstance(result, BaseException):
-            task_error = result
 
     return dispatcher.shutdown_error if dispatcher.shutdown_error is not None else task_error
+
+
+async def _cancel_cluster_tasks(
+    serve_task: asyncio.Task[None],
+    dispatcher: RoundRobinMcpDispatcher,
+    *,
+    timeout: float,
+) -> None:
+    lifespan_task = dispatcher._cancel_lifespan()
+    serve_task.cancel()
+    tasks = {serve_task}
+    if lifespan_task is not None:
+        tasks.add(lifespan_task)
+    done, pending = await asyncio.wait(tasks, timeout=timeout)
+    for task in done:
+        _consume_task_result(task)
+    for task in pending:
+        task.add_done_callback(_consume_task_result)
+
+
+def _completed_task_error(task: asyncio.Task[None]) -> BaseException | None:
+    try:
+        return task.exception()
+    except asyncio.CancelledError as exc:
+        return exc
+
+
+def _consume_task_result(task: asyncio.Task[None]) -> None:
+    with suppress(asyncio.CancelledError):
+        task.exception()
 
 
 def _require_message_type(message: Message, expected: str) -> None:

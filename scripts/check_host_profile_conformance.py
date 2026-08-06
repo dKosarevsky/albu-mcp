@@ -27,7 +27,11 @@ from albumentationsx_mcp.adapters.mcp.registration import surface_for_profile
 from albumentationsx_mcp.capabilities import CapabilityProfile
 
 _FULL_COMMIT_ID = re.compile(r"[0-9a-f]{40}")
+_SHA256_DIGEST = re.compile(r"[0-9a-f]{64}")
+_GIT_TREE_ENTRY = re.compile(rb"(?P<mode>[0-7]{6}) (?P<kind>blob) (?P<object>[0-9a-f]{40}|[0-9a-f]{64})\t(?P<path>.+)")
 _GIT_TIMEOUT_SECONDS = 5
+_LEGACY_PROFILE_CONFORMANCE_SCHEMA_VERSION = 2
+_PROFILE_CONFORMANCE_SCHEMA_VERSION = 3
 _PROFILE_CONFORMANCE_RELEVANT_PATHS = (
     "src/albumentationsx_mcp",
     "scripts/check_host_profile_conformance.py",
@@ -154,7 +158,8 @@ async def build_profile_conformance_report(config: ProfileConformanceConfig) -> 
     return {
         "evidence_classification": "machine_proof_only",
         "profiles": list(profiles),
-        "schema_version": 2,
+        "relevant_tree_sha256": relevant_tree_sha256(config.source_root, config.source_revision),
+        "schema_version": _PROFILE_CONFORMANCE_SCHEMA_VERSION,
         "source_revision": config.source_revision,
         "status": "passed" if all(item["status"] == "passed" for item in profiles) else "failed",
         "transport": "stdio",
@@ -201,6 +206,17 @@ def validate_committed_report_provenance(
 ) -> str:
     """Validate that committed evidence still describes current relevant sources."""
     revision = _validated_source_revision(report.get("source_revision"))
+    schema_version = report.get("schema_version", _LEGACY_PROFILE_CONFORMANCE_SCHEMA_VERSION)
+    if schema_version == _PROFILE_CONFORMANCE_SCHEMA_VERSION:
+        return _validate_tree_bound_provenance(
+            source_root=source_root,
+            revision=revision,
+            expected_digest=_validated_relevant_tree_digest(report.get("relevant_tree_sha256")),
+        )
+    if schema_version != _LEGACY_PROFILE_CONFORMANCE_SCHEMA_VERSION:
+        msg = "unsupported profile conformance schema_version"
+        raise ValueError(msg)
+
     resolved_revision = _resolve_git_commit(source_root, revision)
     if resolved_revision is None:
         msg = "source_revision does not identify a commit in source_root"
@@ -228,6 +244,59 @@ def validate_committed_report_provenance(
     if drift_status != 0:
         raise ValueError(_GIT_PROVENANCE_FAILURE)
     return resolved_revision
+
+
+def relevant_tree_sha256(source_root: Path, revision: str) -> str:
+    """Hash canonical Git entries that can affect the profile-conformance report."""
+    resolved_revision = _resolve_git_commit(source_root, revision)
+    if resolved_revision is None:
+        msg = "source_revision does not identify a commit in source_root"
+        raise ValueError(msg)
+    listing = _git_output(
+        source_root,
+        "ls-tree",
+        "-r",
+        "-z",
+        "--full-tree",
+        resolved_revision,
+        "--",
+        *_PROFILE_CONFORMANCE_RELEVANT_PATHS,
+    )
+    _validate_relevant_tree_listing(listing)
+    return hashlib.sha256(listing).hexdigest()
+
+
+def _validate_tree_bound_provenance(
+    *,
+    source_root: Path,
+    revision: str,
+    expected_digest: str,
+) -> str:
+    head = source_head_revision(source_root)
+    if relevant_tree_sha256(source_root, head) != expected_digest:
+        msg = "profile-conformance-relevant sources changed after evidence revision"
+        raise ValueError(msg)
+
+    resolved_revision = _resolve_git_commit(source_root, revision)
+    if resolved_revision is not None and relevant_tree_sha256(source_root, resolved_revision) != expected_digest:
+        msg = "evidence source_revision does not match relevant_tree_sha256"
+        raise ValueError(msg)
+    return revision
+
+
+def _validate_relevant_tree_listing(listing: bytes) -> None:
+    if not listing or not listing.endswith(b"\0"):
+        raise ValueError(_GIT_PROVENANCE_FAILURE)
+    seen_paths: set[bytes] = set()
+    allowed_paths = tuple(path.encode() for path in _PROFILE_CONFORMANCE_RELEVANT_PATHS)
+    for raw_entry in listing[:-1].split(b"\0"):
+        match = _GIT_TREE_ENTRY.fullmatch(raw_entry)
+        if match is None:
+            raise ValueError(_GIT_PROVENANCE_FAILURE)
+        path = match.group("path")
+        if path in seen_paths or not any(path == root or path.startswith(root + b"/") for root in allowed_paths):
+            raise ValueError(_GIT_PROVENANCE_FAILURE)
+        seen_paths.add(path)
 
 
 def main() -> None:
@@ -303,6 +372,13 @@ def _validated_source_revision(value: Any) -> str:
     return value
 
 
+def _validated_relevant_tree_digest(value: Any) -> str:
+    if not isinstance(value, str) or _SHA256_DIGEST.fullmatch(value) is None:
+        msg = "relevant_tree_sha256 must be a SHA-256 digest"
+        raise ValueError(msg)
+    return value
+
+
 def _resolve_git_commit(source_root: Path, revision: str) -> str | None:
     try:
         result = subprocess.run(  # noqa: S603 - fixed Git executable with argument-list inputs only.
@@ -343,6 +419,22 @@ def _git_status(source_root: Path, *args: str) -> int:
     except (OSError, subprocess.TimeoutExpired):
         raise ValueError(_GIT_PROVENANCE_FAILURE) from None
     return result.returncode
+
+
+def _git_output(source_root: Path, *args: str) -> bytes:
+    try:
+        result = subprocess.run(  # noqa: S603 - fixed Git executable with argument-list inputs only.
+            ["git", "-C", str(source_root), *args],  # noqa: S607 - controlled publication environment.
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            timeout=_GIT_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        raise ValueError(_GIT_PROVENANCE_FAILURE) from None
+    if result.returncode != 0:
+        raise ValueError(_GIT_PROVENANCE_FAILURE)
+    return result.stdout
 
 
 def _surface_mismatches(

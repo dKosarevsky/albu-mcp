@@ -8,8 +8,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        Use this for the "example 8 is too noisy" class of feedback. Share small synthetic/demo images when possible.
-        Do not upload private datasets, proprietary training images, credentials, or unredacted private paths.
+        Share one real render -> reject -> adjust -> accept loop, or the blocker that prevented it.
+        Do not upload private datasets or images, proprietary training data, credentials, personal data, or unredacted paths.
   - type: dropdown
     id: task
     attributes:
@@ -28,6 +28,16 @@ body:
     attributes:
       label: MCP host
       placeholder: "Claude Desktop / Claude Code / Cursor / Codex"
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What should the augmentation make robust, and what would a useful result preserve?
+      placeholder: "Increase classification robustness to lighting and mild sensor noise while keeping objects recognizable."
+    validations:
+      required: true
   - type: textarea
     id: workflow
     attributes:
@@ -37,18 +47,33 @@ body:
     validations:
       required: true
   - type: textarea
-    id: observed
+    id: initial_render
     attributes:
-      label: Observed preview issue
+      label: Initial render
       description: Include feedback tags such as too_noisy, too_blurry, too_distorted, too_dark, or acceptable.
       placeholder: "too_noisy:high on candidate 2; object is no longer recognizable."
     validations:
       required: true
   - type: textarea
-    id: expected
+    id: rejection
     attributes:
-      label: Expected behavior
-      description: What would a useful MCP response, adjustment, ranking, or report include?
+      label: Rejection
+      description: Which result did you reject and why? Write accepted on first render if no rejection was needed.
+    validations:
+      required: true
+  - type: textarea
+    id: adjustment
+    attributes:
+      label: Adjustment
+      description: What did you ask the host to change, and what did the MCP do next?
+      placeholder: "Reduce noise, keep crop/flip behavior, render again, then compare_preview_runs."
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Outcome
+      description: Describe the accepted result or unresolved blocker and the smallest product change that would help.
     validations:
       required: true
   - type: textarea
@@ -61,3 +86,10 @@ body:
     attributes:
       label: Report output
       description: Paste relevant export_preview_report or compare_preview_runs excerpts if they are safe to share.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy check
+      options:
+        - label: I removed private images, absolute local paths, credentials, personal data, and proprietary dataset details.
+          required: true

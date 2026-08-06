@@ -51,7 +51,7 @@ trace_preview_variant before adjusting it.
 Follow the [First 10 Minutes guide](docs/FIRST_10_MINUTES.md). Detailed guided and advanced workflows, including the
 explicit `validate_preview_request` fallback, batch previews, and how to compare preview runs, are in
 [Usage](docs/USAGE.md). Give concrete feedback such as `too_noisy:high` or `exposure_too_weak:medium` before accepting a
-result.
+result. Afterward, optionally share one redacted loop through [first-preview feedback](docs/FIRST_PREVIEW_FEEDBACK.md).
 
 If setup fails, read `albumentationsx://diagnostics/guide` and call `diagnose_environment` for bounded remediation actions.
 
@@ -79,6 +79,7 @@ The server does not execute arbitrary Python, fetch remote images, overwrite dat
 - [Install and host configuration](docs/INSTALL.md)
 - [Runtime settings and capability profiles](docs/CONFIGURATION.md)
 - [First 10 minutes](docs/FIRST_10_MINUTES.md)
+- [First-preview feedback](docs/FIRST_PREVIEW_FEEDBACK.md)
 - [Usage](docs/USAGE.md) and [recipes](docs/RECIPES.md)
 - [CPU Tensor Compose validation and export](docs/TORCH_CPU_COMPOSE.md)
 - [MCP Apps review](docs/MCP_APPS_REVIEW.md) and [compatibility policy](docs/COMPATIBILITY.md)
