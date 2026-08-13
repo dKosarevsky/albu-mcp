@@ -2,7 +2,7 @@
 
 > **Historical status snapshot.** This document preserves a pre-release decision and does not describe the current published release. See [STATUS.md](STATUS.md).
 
-Package: `albumentationsx-mcp==1.21.0`
+Package: `albumentationsx-mcp==1.21.1`
 Stabilization status: `blocked_until_trust_gates_pass`
 Ready for v1: `false`
 Stable v1 allowed: `false`

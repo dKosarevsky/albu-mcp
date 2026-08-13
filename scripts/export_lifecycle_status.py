@@ -36,6 +36,7 @@ _DEFAULT_DOCS_ROOT = Path("docs")
 _DEFAULT_STATUS_DOCUMENT_PATH = Path("docs/STATUS.md")
 _RELEASE_CHANNEL_IDS = ("pypi", "github_release", "ci", "official_registry")
 _PUBLISHED_UPGRADE_FROM_VERSION = "1.20.0"
+_PUBLISHED_UPGRADE_TO_VERSION = "1.21.0"
 _PUBLISHED_UPGRADE_OBSERVED_ON = "2026-08-05"
 _PUBLISHED_UPGRADE_EVIDENCE_ERROR = "published upgrade evidence is invalid"
 _EXPORT_ERROR = "lifecycle status export failed"
@@ -86,7 +87,6 @@ def build_committed_lifecycle_status(  # noqa: PLR0913
             ),
             docs_root=docs_root,
             document_path=document_path,
-            expected_to_version=version,
         ),
     )
 
@@ -97,7 +97,6 @@ def _load_protocol_compatibility(
     provenance_path: Path | None,
     docs_root: Path,
     document_path: Path,
-    expected_to_version: str,
 ) -> ProtocolCompatibilityEvidence:
     try:
         return load_protocol_compatibility_evidence(
@@ -107,7 +106,7 @@ def _load_protocol_compatibility(
             document_path=document_path,
             expectation=PublishedUpgradeExpectation(
                 from_version=_PUBLISHED_UPGRADE_FROM_VERSION,
-                to_version=expected_to_version,
+                to_version=_PUBLISHED_UPGRADE_TO_VERSION,
                 observed_on=_PUBLISHED_UPGRADE_OBSERVED_ON,
             ),
         )

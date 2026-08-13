@@ -86,7 +86,7 @@ GH_TOKEN="$(gh auth token)" uv run python scripts/export_campaign_activation_rep
 
 ## Lifecycle Status
 
-- Release health: `published`
+- Release health: `unknown`
 - Host evidence: `partial`
 - Adoption experiment: `measuring`
 - Details: `docs/STATUS.md`

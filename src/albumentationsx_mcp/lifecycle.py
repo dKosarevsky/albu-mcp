@@ -58,6 +58,7 @@ _PROTOCOL_SCOPE = (
 )
 _SAFE_LINK_COMPONENT = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*\Z")
 _MARKDOWN_INLINE_SPECIAL = re.compile(r"([\\`*_{}\[\]<>#!|])")
+_PUBLIC_RELEASE_VERSION = re.compile(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\Z")
 
 
 @dataclass(frozen=True, slots=True)
@@ -410,7 +411,10 @@ def _validated_protocol_compatibility_evidence(
         raise _ProtocolCompatibilityError
     if evidence.scope != _PROTOCOL_SCOPE:
         raise _ProtocolCompatibilityError
-    if type(release_version) is not str or evidence.to_version != release_version:
+    if not _protocol_evidence_applies_to_release(
+        evidence_version=evidence.to_version,
+        release_version=release_version,
+    ):
         raise _ProtocolCompatibilityError
     bound_context = evidence.binding.path_context
     context = _resolve_evidence_path_context(
@@ -449,6 +453,23 @@ def _validated_protocol_compatibility_evidence(
         raise _ProtocolCompatibilityError
     _validate_bound_public_provenance(evidence)
     return evidence
+
+
+def _protocol_evidence_applies_to_release(*, evidence_version: object, release_version: object) -> bool:
+    evidence_parts = _public_release_parts(evidence_version)
+    release_parts = _public_release_parts(release_version)
+    if evidence_parts is None or release_parts is None:
+        return False
+    return evidence_parts[:2] == release_parts[:2] and release_parts[2] >= evidence_parts[2]
+
+
+def _public_release_parts(value: object) -> tuple[int, int, int] | None:
+    if type(value) is not str:
+        return None
+    match = _PUBLIC_RELEASE_VERSION.fullmatch(value)
+    if match is None:
+        return None
+    return int(match.group(1)), int(match.group(2)), int(match.group(3))
 
 
 def _validate_bound_public_provenance(evidence: ProtocolCompatibilityEvidence) -> None:

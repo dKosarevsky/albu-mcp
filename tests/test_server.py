@@ -18,7 +18,7 @@ def test_create_mcp_server_registers_fastmcp_instance() -> None:
 
     assert server.name == "AlbumentationsX MCP"
     assert server.title == "AlbumentationsX MCP"
-    assert server.version == "1.21.0"
+    assert server.version == "1.21.1"
     assert server.website_url == "https://github.com/dKosarevsky/albu-mcp"
 
 

@@ -4,6 +4,20 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 ## Unreleased
 
+## 1.21.1 - 2026-08-13
+
+- Added a canonical classification-robustness use case that takes users from bounded installation and host smoke
+  through preview rejection, controlled adjustment, comparison, and accepted pipeline export.
+- Added voluntary campaign, discovery-source, install-route, and workflow-outcome fields to preview feedback without
+  adding runtime telemetry or collecting image, path, host-log, or machine identifiers.
+- Added a pure privacy-safe activation analyzer and live/offline report that combine aggregate GitHub, PyPI, MCPB, and
+  deliberately submitted workflow evidence while excluding issue-level data from output.
+- Added a fixed 14-day campaign baseline, explicit reach/conversion/activation targets, and copy-ready Discord, X, and
+  community launch materials with causal-attribution guards.
+- Updated vulnerable transitive MCP App dependencies within their compatible ranges; the production and full npm
+  dependency graphs now pass `npm audit` without findings.
+- Kept the MCP tool, prompt, resource, protocol, and local filesystem contracts unchanged.
+
 ## 1.21.0 - 2026-08-03
 
 - Migrated to MCP Python SDK 2.x with modern `2026-07-28` discovery and retained legacy initialize-handshake support

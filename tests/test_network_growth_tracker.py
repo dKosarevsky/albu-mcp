@@ -29,11 +29,11 @@ def test_network_growth_tracker_contains_channels_and_next_actions() -> None:
     assert "docs/V1_LAUNCH_REPORT.md" not in tracker["proof_assets"]
     assert "dataset-health.yml" in markdown
     assert "export_public_adoption_loop.py" in markdown
-    assert tracker["lifecycle"]["release_health"]["status"] == "published"
+    assert tracker["lifecycle"]["release_health"]["status"] == "unknown"
     assert tracker["lifecycle"]["host_evidence"]["status"] == "partial"
     assert tracker["lifecycle"]["adoption_experiment"]["status"] == "measuring"
     assert "Ready for v1" not in markdown
-    assert "Release health: `published`" in markdown
+    assert "Release health: `unknown`" in markdown
     assert "Adoption experiment: `measuring`" in markdown
 
 
