@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from copy import deepcopy
 from pathlib import Path
 from typing import Any
@@ -11,6 +13,7 @@ from albumentationsx_mcp.campaign_activation import (
     build_campaign_activation_report,
     render_campaign_activation_markdown,
 )
+from scripts import public_metrics_sources
 
 FIXTURE_PATH = Path("tests/fixtures/campaign_activation_input.json")
 PRIVATE_VALUES = {
@@ -36,11 +39,14 @@ def test_campaign_report_counts_only_completed_attributed_loops() -> None:
         "destination_url": (
             "https://github.com/dKosarevsky/albu-mcp/blob/main/docs/use-cases/CLASSIFICATION_ROBUSTNESS.md"
         ),
+        "publications": [],
+        "attribution_ready": False,
     }
     assert report["activation"]["attributed_reports"] == 4
     assert report["activation"]["completed_loops"] == 3
     assert report["activation"]["distinct_submitters"] == 2
     assert report["activation"]["target_met"] is False
+    assert "no publication URL and timestamp are recorded" in report["warnings"]
     assert report["privacy"] == {
         "runtime_telemetry": False,
         "reads_local_data": False,
@@ -82,6 +88,23 @@ def test_campaign_report_never_returns_issue_level_values() -> None:
     assert "Runtime telemetry: `disabled`" in markdown
     assert "Completed adjustment loops: `3`" in markdown
     assert "Distinct submitters: `2`" in markdown
+
+
+def test_campaign_report_preserves_only_public_publication_metadata() -> None:
+    payload = _fixture()
+    payload["config"]["publications"] = [
+        {
+            "channel": "github-release",
+            "url": "https://github.com/dKosarevsky/albu-mcp/releases/tag/v1.21.1",
+            "published_at": "2026-08-13T10:30:00+00:00",
+        }
+    ]
+
+    report = build_campaign_activation_report(**payload)
+
+    assert report["campaign"]["attribution_ready"] is True
+    assert report["campaign"]["publications"] == payload["config"]["publications"]
+    assert "no publication URL and timestamp are recorded" not in report["warnings"]
 
 
 @pytest.mark.parametrize(
@@ -142,6 +165,17 @@ def test_campaign_report_stops_only_after_deadline_with_no_observed_movement() -
         (("config", "ends_on"), "2026-08-26", "14 days"),
         (("config", "targets", "completed_loops"), -1, "non-negative"),
         (("growth_report", "release_assets", "mcpb_downloads_total"), -1, "non-negative"),
+        (
+            ("config", "publications"),
+            [
+                {
+                    "channel": "discord",
+                    "url": "http://example.invalid/post",
+                    "published_at": "2026-08-13T10:30:00+00:00",
+                }
+            ],
+            "publication 0 url",
+        ),
     ],
 )
 def test_campaign_report_rejects_misleading_inputs(path: tuple[str, ...], value: object, message: str) -> None:
@@ -153,6 +187,101 @@ def test_campaign_report_rejects_misleading_inputs(path: tuple[str, ...], value:
 
     with pytest.raises(ValueError, match=message):
         build_campaign_activation_report(**payload)
+
+
+@pytest.mark.parametrize("output_format", ["markdown", "json"])
+def test_activation_cli_supports_reproducible_offline_input(tmp_path: Path, output_format: str) -> None:
+    output_path = tmp_path / f"activation.{'md' if output_format == 'markdown' else 'json'}"
+
+    subprocess.run(  # noqa: S603
+        [
+            sys.executable,
+            "scripts/export_campaign_activation_report.py",
+            "--input",
+            str(FIXTURE_PATH),
+            "--format",
+            output_format,
+            "--output",
+            str(output_path),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    content = output_path.read_text(encoding="utf-8")
+    if output_format == "markdown":
+        assert content.startswith("# Campaign Activation Report\n")
+        assert "Recommendation: `continue`" in content
+    else:
+        report = json.loads(content)
+        assert report["campaign"]["id"] == "classification-robustness"
+        assert report["privacy"]["contains_issue_level_data"] is False
+    for private_value in PRIVATE_VALUES:
+        assert private_value not in content
+
+
+def test_feedback_issue_source_fetches_every_page_without_returning_pull_requests(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pages = [
+        [{"id": index, "body": "body"} for index in range(99)]
+        + [{"id": 99, "body": "body", "pull_request": {"url": "https://example.invalid/pr/99"}}],
+        [{"id": 100, "body": "body"}],
+    ]
+    requested_urls: list[str] = []
+
+    def fake_fetch_json(url: str, *, headers: dict[str, str]) -> object:
+        requested_urls.append(url)
+        assert headers["Authorization"] == "Bearer token"
+        return pages[len(requested_urls) - 1]
+
+    monkeypatch.setattr(public_metrics_sources, "_fetch_json", fake_fetch_json)
+
+    issues = public_metrics_sources.fetch_workflow_feedback_issues(
+        repository="dKosarevsky/albu-mcp",
+        token="token",  # noqa: S106
+    )
+
+    assert len(issues) == 100
+    assert all("pull_request" not in issue for issue in issues)
+    assert requested_urls == [
+        "https://api.github.com/repos/dKosarevsky/albu-mcp/issues?state=all&labels=workflow-feedback&per_page=100&page=1",
+        "https://api.github.com/repos/dKosarevsky/albu-mcp/issues?state=all&labels=workflow-feedback&per_page=100&page=2",
+    ]
+
+
+def test_committed_campaign_config_preserves_the_real_prepublication_baseline() -> None:
+    config = json.loads(Path("docs/campaigns/classification-robustness-2026-08.json").read_text(encoding="utf-8"))
+
+    assert config["baseline_captured_at"] == "2026-08-13T05:10:44.265052+00:00"
+    assert config["baseline_as_of"] == "2026-08-12"
+    assert config["baseline"] == {
+        "github_unique_visitors": 3,
+        "mcpb_downloads_total": 22,
+        "completed_loops": 0,
+        "distinct_submitters": 0,
+        "pypi_last_7_days": 121,
+        "pypi_previous_7_days": 298,
+        "pypi_previous_7_days_complete": False,
+        "release_excluded_median_daily": None,
+    }
+    assert config["targets"] == {
+        "github_unique_visitors": 20,
+        "mcpb_downloads_increment": 5,
+        "completed_loops": 3,
+        "distinct_submitters": 3,
+    }
+    assert config["publications"] == []
+
+
+def test_growth_guide_documents_the_activation_report_boundary() -> None:
+    guide = Path("docs/GROWTH.md").read_text(encoding="utf-8")
+
+    assert "scripts/export_campaign_activation_report.py" in guide
+    assert "classification-robustness-2026-08.json" in guide
+    assert "issue bodies" in guide
+    assert "distinct submitters" in guide
 
 
 def _fixture() -> dict[str, Any]:

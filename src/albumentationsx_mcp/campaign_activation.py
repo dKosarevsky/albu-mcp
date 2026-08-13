@@ -6,7 +6,7 @@ import re
 from collections import Counter
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -67,6 +67,16 @@ class _CampaignConfig:
     target_mcpb_increment: int
     target_completed_loops: int
     target_distinct_submitters: int
+    publications: tuple[_Publication, ...]
+
+
+@dataclass(frozen=True)
+class _Publication:
+    """Public campaign publication metadata safe to include in reports."""
+
+    channel: str
+    url: str
+    published_at: str
 
 
 @dataclass(frozen=True)
@@ -94,6 +104,8 @@ def build_campaign_activation_report(
     phase = _campaign_phase(as_of=as_of, starts_on=campaign.starts_on, ends_on=campaign.ends_on)
     feedback = _summarize_feedback(workflow_feedback_issues, campaign_id=campaign.campaign_id)
     warnings = _parse_warnings(growth_report.get("warnings", []))
+    if not campaign.publications:
+        warnings.append("no publication URL and timestamp are recorded")
 
     github = _required_mapping(growth_report, "github")
     traffic_available = _required_bool(github, "traffic_available")
@@ -162,6 +174,15 @@ def build_campaign_activation_report(
             "as_of": as_of.isoformat(),
             "phase": phase,
             "destination_url": campaign.destination_url,
+            "publications": [
+                {
+                    "channel": publication.channel,
+                    "url": publication.url,
+                    "published_at": publication.published_at,
+                }
+                for publication in campaign.publications
+            ],
+            "attribution_ready": bool(campaign.publications),
         },
         "privacy": {
             "runtime_telemetry": False,
@@ -220,12 +241,16 @@ def render_campaign_activation_markdown(report: Mapping[str, Any]) -> str:
     warning_lines = "\n".join(f"- {warning}" for warning in warning_values) if warning_values else "- None"
     runtime_telemetry = "enabled" if privacy["runtime_telemetry"] else "disabled"
     targets_met = "yes" if report["targets_met"] else "no"
+    publications = campaign.get("publications")
+    publication_lines = _render_publications(publications)
     return (
         "# Campaign Activation Report\n\n"
         f"Campaign: `{campaign['id']}`\n\n"
         f"Window: `{campaign['starts_on']}` to `{campaign['ends_on']}`\n\n"
         f"As of: `{campaign['as_of']}` (`{campaign['phase']}`)\n\n"
         f"Destination: {campaign['destination_url']}\n\n"
+        "## Recorded Publications\n\n"
+        f"{publication_lines}\n\n"
         f"Runtime telemetry: `{runtime_telemetry}`\n\n"
         "This report contains aggregate public distribution metrics and deliberately submitted issue fields only. "
         "It does not include issue bodies, titles, URLs, usernames, datasets, preview artifacts, host logs, or local "
@@ -325,7 +350,36 @@ def _parse_config(value: Mapping[str, Any]) -> _CampaignConfig:
             targets.get("distinct_submitters"),
             field="target distinct_submitters",
         ),
+        publications=_parse_publications(value.get("publications", [])),
     )
+
+
+def _parse_publications(value: Any) -> tuple[_Publication, ...]:
+    if not isinstance(value, list):
+        msg = "campaign publications must be a list"
+        raise TypeError(msg)
+    publications: list[_Publication] = []
+    seen: set[tuple[str, str]] = set()
+    for index, item in enumerate(value):
+        if not isinstance(item, Mapping):
+            msg = f"campaign publication {index} must be an object"
+            raise TypeError(msg)
+        channel = item.get("channel")
+        if not isinstance(channel, str) or _CAMPAIGN_ID_PATTERN.fullmatch(channel) is None:
+            msg = f"campaign publication {index} channel must be a lowercase slug"
+            raise ValueError(msg)
+        url = _https_url(item.get("url"), field=f"campaign publication {index} url")
+        published_at = _iso_datetime(
+            item.get("published_at"),
+            field=f"campaign publication {index} published_at",
+        )
+        identity = (channel, url)
+        if identity in seen:
+            msg = f"campaign publication {index} duplicates an earlier channel URL"
+            raise ValueError(msg)
+        seen.add(identity)
+        publications.append(_Publication(channel=channel, url=url, published_at=published_at))
+    return tuple(publications)
 
 
 def _summarize_feedback(
@@ -521,6 +575,21 @@ def _parse_date(value: Any, *, field: str) -> date:
         raise ValueError(msg) from exc
 
 
+def _iso_datetime(value: Any, *, field: str) -> str:
+    if not isinstance(value, str):
+        msg = f"{field} must be an ISO timestamp with a timezone"
+        raise TypeError(msg)
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as exc:
+        msg = f"{field} must be an ISO timestamp with a timezone"
+        raise ValueError(msg) from exc
+    if parsed.tzinfo is None:
+        msg = f"{field} must be an ISO timestamp with a timezone"
+        raise ValueError(msg)
+    return parsed.isoformat()
+
+
 def _https_url(value: Any, *, field: str) -> str:
     if not isinstance(value, str):
         msg = f"{field} must be an HTTPS URL"
@@ -554,6 +623,21 @@ def _render_counts(value: Any) -> str:
         msg = "aggregate counts must be an object"
         raise TypeError(msg)
     return "\n".join(f"- `{name}`: `{count}`" for name, count in value.items()) if value else "- None reported"
+
+
+def _render_publications(value: Any) -> str:
+    if not isinstance(value, list):
+        msg = "campaign publications must be a list"
+        raise TypeError(msg)
+    if not value:
+        return "- None recorded; do not attribute aggregate movement to this campaign."
+    lines: list[str] = []
+    for item in value:
+        if not isinstance(item, Mapping):
+            msg = "campaign publication must be an object"
+            raise TypeError(msg)
+        lines.append(f"- `{item['channel']}` at `{item['published_at']}`: {item['url']}")
+    return "\n".join(lines)
 
 
 def _optional_metric(value: Any) -> str:

@@ -56,6 +56,8 @@ def test_network_growth_plan_defines_manual_campaign_measurement() -> None:
     assert "segmentation-mask-safety" in plan
     assert "manual" in plan.lower()
     assert "one campaign at a time" in plan
+    assert "unchanged for 14 days" in plan
+    assert "day 7" in plan
 
 
 def test_network_growth_tracker_cli_writes_markdown(tmp_path: Path) -> None:

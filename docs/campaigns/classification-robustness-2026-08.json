@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "id": "classification-robustness",
+  "starts_on": "2026-08-13",
+  "ends_on": "2026-08-27",
+  "destination_url": "https://github.com/dKosarevsky/albu-mcp/blob/main/docs/use-cases/CLASSIFICATION_ROBUSTNESS.md",
+  "baseline_captured_at": "2026-08-13T05:10:44.265052+00:00",
+  "baseline_as_of": "2026-08-12",
+  "baseline": {
+    "github_unique_visitors": 3,
+    "mcpb_downloads_total": 22,
+    "completed_loops": 0,
+    "distinct_submitters": 0,
+    "pypi_last_7_days": 121,
+    "pypi_previous_7_days": 298,
+    "pypi_previous_7_days_complete": false,
+    "release_excluded_median_daily": null
+  },
+  "targets": {
+    "github_unique_visitors": 20,
+    "mcpb_downloads_increment": 5,
+    "completed_loops": 3,
+    "distinct_submitters": 3
+  },
+  "publications": []
+}

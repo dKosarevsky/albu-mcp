@@ -10,7 +10,7 @@ from typing import Any
 import pytest
 
 from albumentationsx_mcp.growth import build_growth_report, render_growth_report_markdown
-from scripts import export_growth_report
+from scripts import public_metrics_sources
 
 FIXTURE_PATH = Path("tests/fixtures/growth_report_input.json")
 
@@ -231,9 +231,9 @@ def test_live_growth_report_fetches_every_github_release_page(monkeypatch: pytes
         assert headers == {"Accept": "application/vnd.github+json"}
         return pages[len(requested_urls) - 1]
 
-    monkeypatch.setattr(export_growth_report, "_fetch_json", fake_fetch_json)
+    monkeypatch.setattr(public_metrics_sources, "_fetch_json", fake_fetch_json)
 
-    releases = export_growth_report._fetch_github_releases(
+    releases = public_metrics_sources._fetch_github_releases(
         "dKosarevsky/albu-mcp",
         headers={"Accept": "application/vnd.github+json"},
     )

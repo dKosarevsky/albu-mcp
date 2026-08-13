@@ -16,7 +16,8 @@
       "mcpb_downloads_increment": 5,
       "completed_loops": 3,
       "distinct_submitters": 3
-    }
+    },
+    "publications": []
   },
   "growth_report": {
     "schema_version": 1,
