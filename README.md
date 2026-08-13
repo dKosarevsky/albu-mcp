@@ -48,11 +48,10 @@ trace_preview_variant before adjusting it.
 `run_host_smoke_check` returns `preview_ready` and a `preview_request_template`. If resource reads are unavailable, call
 `get_workflow_example` with `example_id="client-smoke"`.
 
-Follow the [First 10 Minutes guide](docs/FIRST_10_MINUTES.md). Detailed guided and advanced workflows, including the
-explicit `validate_preview_request` fallback, batch previews, and how to compare preview runs, are in
-[Usage](docs/USAGE.md). Give concrete feedback such as `too_noisy:high` or `exposure_too_weak:medium` before accepting a
-result. Afterward, optionally share one redacted loop through [first-preview feedback](docs/FIRST_PREVIEW_FEEDBACK.md).
-
+Try the [classification robustness use case](docs/use-cases/CLASSIFICATION_ROBUSTNESS.md), or follow the
+[First 10 Minutes guide](docs/FIRST_10_MINUTES.md). The `validate_preview_request` fallback, batch previews, and how to
+compare preview runs are in [Usage](docs/USAGE.md). Use `too_noisy:high` or `exposure_too_weak:medium`, then optionally
+share one redacted loop through [first-preview feedback](docs/FIRST_PREVIEW_FEEDBACK.md).
 If setup fails, read `albumentationsx://diagnostics/guide` and call `diagnose_environment` for bounded remediation actions.
 
 ## Capabilities
