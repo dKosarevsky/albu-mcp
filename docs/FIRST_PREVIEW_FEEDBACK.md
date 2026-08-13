@@ -6,6 +6,15 @@ telemetry, image upload, or background callback is built into AlbumentationsX MC
 [Open the preview workflow feedback form](https://github.com/dKosarevsky/albu-mcp/issues/new?template=workflow-feedback.yml)
 after you finish a first preview or reach a blocker.
 
+## What Is Counted
+
+Choose the campaign, discovery source, install route, and outcome in the form. A `classification-robustness` report
+counts toward the current full-loop goal only when its outcome is `accepted-after-adjustment`; accepted first renders
+and blockers remain useful product evidence but are reported separately.
+
+Published campaign reports contain aggregate counts only. They do not expose issue bodies, titles, URLs, or GitHub
+usernames. No telemetry or background reporting is enabled by these fields.
+
 ## Copy-Ready Report
 
 ```markdown
