@@ -98,9 +98,9 @@
       "surface_mismatches": {}
     }
   ],
-  "relevant_tree_sha256": "93867931327c59079e6b7d32759f365bbc35d7461442aa9e1a220f890cf79f51",
+  "relevant_tree_sha256": "c1057cba0b9a863104205bc14d05b30be03d00803abab67d458415cdab8e851c",
   "schema_version": 3,
-  "source_revision": "03f6ad7ec743b87d7a206fd276797975ef6cf53a",
+  "source_revision": "924901d9900b01c78916a84d7183cd6af9eaeb7d",
   "status": "passed",
   "transport": "stdio"
 }
