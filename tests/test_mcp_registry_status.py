@@ -1,10 +1,12 @@
 import json
 import subprocess
 import sys
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
 import pytest
+from typing_extensions import Self
 
 from scripts import check_mcp_registry_status as registry_status
 from scripts.check_mcp_registry_status import (
@@ -31,6 +33,54 @@ def test_mcp_registry_status_accepts_active_latest_entry(tmp_path: Path) -> None
     assert report.package == "albumentationsx-mcp"
     assert report.status == "active"
     assert report.is_latest is True
+
+
+def test_mcp_registry_status_follows_registry_cursor_pages(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payloads = [
+        {
+            "servers": [_registry_entry(version="1.13.0", is_latest=False)],
+            "metadata": {"count": 1, "nextCursor": "io.github.dKosarevsky/albu-mcp:1.13.0"},
+        },
+        {"servers": [_registry_entry()], "metadata": {"count": 1}},
+    ]
+    requested_urls: list[str] = []
+
+    class FakeResponse:
+        def __init__(self, payload: object) -> None:
+            self._body = json.dumps(payload).encode()
+
+        def __enter__(self) -> Self:
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            return None
+
+        def read(self) -> bytes:
+            return self._body
+
+    def fake_urlopen(url: str, *, timeout: float) -> FakeResponse:
+        assert timeout == 90
+        requested_urls.append(url)
+        return FakeResponse(payloads.pop(0))
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    registry_url = "https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.dKosarevsky%2Falbu-mcp"
+
+    report = validate_mcp_registry_status(
+        server_json_path=_write_server_json(tmp_path),
+        registry_url=registry_url,
+    )
+
+    assert report.version == "1.14.0"
+    assert payloads == []
+    assert requested_urls[0] == registry_url
+    assert urllib.parse.parse_qs(urllib.parse.urlsplit(requested_urls[1]).query) == {
+        "search": ["io.github.dKosarevsky/albu-mcp"],
+        "cursor": ["io.github.dKosarevsky/albu-mcp:1.13.0"],
+    }
 
 
 @pytest.mark.parametrize(

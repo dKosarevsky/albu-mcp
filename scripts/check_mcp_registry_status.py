@@ -16,6 +16,7 @@ from typing import Any
 _DEFAULT_REGISTRY_BASE_URL = "https://registry.modelcontextprotocol.io/v0.1/servers"
 _DEFAULT_TIMEOUT_SECONDS = 90.0
 _OFFICIAL_META_KEY = "io.modelcontextprotocol.registry/official"
+_MAX_REGISTRY_PAGES = 100
 
 
 class McpRegistryRetryableError(ValueError):
@@ -205,6 +206,39 @@ def _fetch_registry_response(registry_url: str, *, timeout: float) -> dict[str, 
     if parsed.scheme != "https":
         msg = f"MCP Registry URL must use https, got {registry_url!r}"
         raise ValueError(msg)
+
+    servers: list[Any] = []
+    seen_cursors: set[str] = set()
+    page_url = registry_url
+    for _page_number in range(1, _MAX_REGISTRY_PAGES + 1):
+        payload = _fetch_registry_page(page_url, timeout=timeout)
+        page_servers = payload.get("servers")
+        if not isinstance(page_servers, list):
+            msg = f"MCP Registry response from {page_url} must contain a servers list"
+            raise McpRegistryFetchError(msg)
+        servers.extend(page_servers)
+
+        metadata = payload.get("metadata", {})
+        if not isinstance(metadata, dict):
+            msg = f"MCP Registry response from {page_url} must contain a metadata object"
+            raise McpRegistryFetchError(msg)
+        cursor = metadata.get("nextCursor")
+        if cursor is None:
+            return {"servers": servers, "metadata": {"count": len(servers)}}
+        if not isinstance(cursor, str) or not cursor:
+            msg = f"MCP Registry response from {page_url} contains an invalid nextCursor"
+            raise McpRegistryFetchError(msg)
+        if cursor in seen_cursors:
+            msg = f"MCP Registry response repeated cursor {cursor!r}"
+            raise McpRegistryFetchError(msg)
+        seen_cursors.add(cursor)
+        page_url = _registry_url_with_cursor(registry_url, cursor)
+
+    msg = f"MCP Registry response exceeded {_MAX_REGISTRY_PAGES} pages"
+    raise McpRegistryFetchError(msg)
+
+
+def _fetch_registry_page(registry_url: str, *, timeout: float) -> dict[str, Any]:
     try:
         with urllib.request.urlopen(registry_url, timeout=timeout) as response:  # noqa: S310
             payload = json.loads(response.read().decode("utf-8"))
@@ -218,6 +252,13 @@ def _fetch_registry_response(registry_url: str, *, timeout: float) -> dict[str, 
         msg = f"MCP Registry response from {registry_url} must be a JSON object"
         raise McpRegistryFetchError(msg)
     return payload
+
+
+def _registry_url_with_cursor(registry_url: str, cursor: str) -> str:
+    parsed = urllib.parse.urlparse(registry_url)
+    query = [(name, value) for name, value in urllib.parse.parse_qsl(parsed.query) if name != "cursor"]
+    query.append(("cursor", cursor))
+    return urllib.parse.urlunparse(parsed._replace(query=urllib.parse.urlencode(query)))
 
 
 def _read_json_object(path: Path) -> dict[str, Any]:
