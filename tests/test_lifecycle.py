@@ -343,7 +343,7 @@ def test_lifecycle_status_rejects_invalid_experiment(field: str, value: str, mes
 def test_committed_lifecycle_status_describes_current_project_state() -> None:
     report = build_committed_lifecycle_status()
 
-    assert report["release_health"]["status"] == "unknown"
+    assert report["release_health"]["status"] == "published"
     assert report["release_health"]["version"] == "1.21.1"
     assert [channel["id"] for channel in report["release_health"]["channels"]] == [
         "pypi",
@@ -352,7 +352,14 @@ def test_committed_lifecycle_status_describes_current_project_state() -> None:
         "official_registry",
     ]
     assert report["host_evidence"]["status"] == "partial"
-    assert report["adoption_experiment"]["campaign_id"] == "classification-robustness"
+    assert report["adoption_experiment"] == {
+        "baseline_date": "2026-08-13",
+        "campaign_id": "classification-robustness",
+        "measurement_due": "2026-08-27",
+        "post_url": "https://github.com/dKosarevsky/albu-mcp/releases/tag/v1.21.1",
+        "status": "measuring",
+        "success_signal": "Three voluntary accepted-after-adjustment reports from three distinct submitters.",
+    }
     protocol = report["protocol_compatibility"]
     assert isinstance(protocol, ProtocolCompatibilityEvidence)
     assert protocol.schema_version == 1
