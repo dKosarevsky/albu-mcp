@@ -1,8 +1,8 @@
 {
-  "baseline_date": "2026-07-14",
+  "baseline_date": "2026-08-13",
   "campaign_id": "classification-robustness",
-  "measurement_due": "2026-07-21",
-  "post_url": null,
+  "measurement_due": "2026-08-27",
+  "post_url": "https://github.com/dKosarevsky/albu-mcp/releases/tag/v1.21.1",
   "status": "measuring",
-  "success_signal": "One voluntary render -> reject -> adjust -> accept report."
+  "success_signal": "Three voluntary accepted-after-adjustment reports from three distinct submitters."
 }

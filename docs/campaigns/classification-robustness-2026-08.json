@@ -22,5 +22,11 @@
     "completed_loops": 3,
     "distinct_submitters": 3
   },
-  "publications": []
+  "publications": [
+    {
+      "channel": "github-release",
+      "url": "https://github.com/dKosarevsky/albu-mcp/releases/tag/v1.21.1",
+      "published_at": "2026-08-14T04:54:03+00:00"
+    }
+  ]
 }

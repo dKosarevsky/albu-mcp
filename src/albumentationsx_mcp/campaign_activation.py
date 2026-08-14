@@ -181,12 +181,16 @@ def build_campaign_activation_report(
         movement_observed=movement_observed,
         reach_observed=reach_observed,
     )
-    next_action = _next_action(
-        phase=phase,
-        recommendation=recommendation,
-        reach_target_met=reach_target_met,
-        mcpb_target_met=mcpb_target_met,
-        activation_target_met=activation_target_met,
+    next_action = (
+        "Wait until aggregate metrics cover the recorded publication before interpreting movement."
+        if campaign.publications and not observed_publications
+        else _next_action(
+            phase=phase,
+            recommendation=recommendation,
+            reach_target_met=reach_target_met,
+            mcpb_target_met=mcpb_target_met,
+            activation_target_met=activation_target_met,
+        )
     )
 
     return {

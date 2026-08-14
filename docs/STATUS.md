@@ -4,16 +4,16 @@ Release publication, host evidence, and adoption measurement are independent dim
 
 ## Release Health
 
-Status: `unknown`
+Status: `published`
 
 Version: `1.21.1`
 
 | Channel | Status | URL |
 | --- | --- | --- |
-| pypi | `unknown` | https://pypi.org/project/albumentationsx-mcp/1.21.1/ |
-| github_release | `unknown` | https://github.com/dKosarevsky/albu-mcp/releases/tag/v1.21.1 |
-| ci | `not_observed` | https://github.com/dKosarevsky/albu-mcp/actions/workflows/ci.yml |
-| official_registry | `unknown` | https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.dKosarevsky/albu-mcp |
+| pypi | `published` | https://pypi.org/project/albumentationsx-mcp/1.21.1/ |
+| github_release | `published` | https://github.com/dKosarevsky/albu-mcp/releases/tag/v1.21.1 |
+| ci | `passed` | https://github.com/dKosarevsky/albu-mcp/actions/runs/31770859088/job/94676327316 |
+| official_registry | `listed` | https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.dKosarevsky/albu-mcp |
 
 ## Protocol Compatibility Evidence
 
@@ -54,10 +54,10 @@ Campaign: `classification-robustness`
 
 Status: `measuring`
 
-Baseline: `2026-07-14`
+Baseline: `2026-08-13`
 
-Measurement due: `2026-07-21`
+Measurement due: `2026-08-27`
 
-Post URL: `not_recorded`
+Post URL: `https://github.com/dKosarevsky/albu-mcp/releases/tag/v1.21.1`
 
-Success signal: One voluntary render -> reject -> adjust -> accept report.
+Success signal: Three voluntary accepted-after-adjustment reports from three distinct submitters.

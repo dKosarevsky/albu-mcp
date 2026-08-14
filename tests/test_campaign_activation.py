@@ -122,6 +122,9 @@ def test_campaign_report_defers_future_publications_until_their_observed_date() 
     assert report["campaign"]["attribution_ready"] is False
     assert report["campaign"]["publications"] == []
     assert "no recorded publication had occurred by report as_of" in report["warnings"]
+    assert report["next_action"] == (
+        "Wait until aggregate metrics cover the recorded publication before interpreting movement."
+    )
 
 
 def test_campaign_report_counts_feedback_only_inside_the_observed_campaign_window() -> None:
@@ -324,7 +327,13 @@ def test_committed_campaign_config_preserves_the_real_prepublication_baseline() 
         "completed_loops": 3,
         "distinct_submitters": 3,
     }
-    assert config["publications"] == []
+    assert config["publications"] == [
+        {
+            "channel": "github-release",
+            "url": "https://github.com/dKosarevsky/albu-mcp/releases/tag/v1.21.1",
+            "published_at": "2026-08-14T04:54:03+00:00",
+        }
+    ]
 
 
 def test_growth_guide_documents_the_activation_report_boundary() -> None:
