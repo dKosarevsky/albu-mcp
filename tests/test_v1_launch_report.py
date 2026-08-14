@@ -126,5 +126,5 @@ def test_committed_v1_launch_report_is_current() -> None:
 
     assert "[V1_LAUNCH_REPORT.md](V1_LAUNCH_REPORT.md)" in Path("docs/ARCHIVE.md").read_text(encoding="utf-8")
     assert "docs/V1_LAUNCH_REPORT.md" in readiness
-    assert "As of 2026-08-13, `v1.21.1`" in readiness
+    assert "As of 2026-08-14, `v1.21.1`" in readiness
     assert report_path.read_text(encoding="utf-8") == render_v1_launch_report_markdown(build_v1_launch_report())

@@ -4,7 +4,7 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 
 ## Unreleased
 
-## 1.21.1 - 2026-08-13
+## 1.21.1 - 2026-08-14
 
 - Added a canonical classification-robustness use case that takes users from bounded installation and host smoke
   through preview rejection, controlled adjustment, comparison, and accepted pipeline export.

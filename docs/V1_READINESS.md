@@ -7,7 +7,7 @@ host proof, and release reproducibility.
 
 ## Current Status
 
-As of 2026-08-13, `v1.21.1` is the current prepared release:
+As of 2026-08-14, `v1.21.1` is the current prepared release:
 
 - PyPI package target: `albumentationsx-mcp==1.21.1`;
 - MCP Registry entry: active/latest for `io.github.dKosarevsky/albu-mcp`;
