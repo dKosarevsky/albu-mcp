@@ -74,3 +74,22 @@ telemetry.
 Reports taken seven days apart have non-overlapping PyPI weekly windows but overlapping GitHub 14-day Traffic windows.
 Use GitHub movement directionally and do not claim campaign attribution without destination analytics or voluntary
 feedback that supports it.
+
+## Classification Activation Sprint
+
+The bounded campaign configuration and real pre-publication baseline are stored in
+`docs/campaigns/classification-robustness-2026-08.json`. Generate a combined live report with:
+
+```bash
+GH_TOKEN="$(gh auth token)" uv run python scripts/export_campaign_activation_report.py \
+  --config docs/campaigns/classification-robustness-2026-08.json \
+  --output /tmp/classification-activation.md
+```
+
+The adapter reads aggregate package/repository metrics plus public issues deliberately submitted through the workflow
+feedback form. It processes issue bodies and GitHub usernames in memory only to extract bounded fields and count
+distinct submitters; neither values nor other issue-level data appear in Markdown or JSON output. Empty
+`publications` means no channel URL or timestamp has been recorded, so movement must not be attributed to this campaign.
+Recorded publications must fall inside the campaign window and activate attribution only once their timestamp is not
+later than the report's `as_of` date. Voluntary feedback is counted only when GitHub's public `created_at` falls inside
+the same observed window; missing, malformed, pre-window, and post-window timestamps are reported as aggregate warnings.

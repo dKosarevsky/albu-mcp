@@ -27,7 +27,7 @@ AlbumentationsX MCP connects MCP hosts to local computer-vision augmentation wor
 
 ## Audience Campaigns
 
-Automated preparation stops at this document. Publication: `manual only`. Run one campaign at a time, keep its destination fixed for seven days, and record only aggregate or voluntarily submitted evidence.
+Automated preparation stops at this document. Publication: `manual only`. Run one campaign at a time, keep its destination fixed for 14 days, and record only aggregate or voluntarily submitted evidence.
 
 ### classification-robustness
 
@@ -35,8 +35,8 @@ Automated preparation stops at this document. Publication: `manual only`. Run on
 - Problem: Random augmentation policies can make objects unrecognizable before anyone reviews them.
 - Prompt: "Inspect a small allowed image folder, render several medium-intensity robustness variants, compare them, reduce any variant tagged too_noisy:high, and export only the accepted pipeline."
 - Artifact: `docs/assets/demo/comparison_contact_sheet.png`
-- Destination: https://albumentations.ai/docs/integrations/mcp/?utm_source=community&utm_medium=manual&utm_campaign=classification-robustness
-- Success signal: One voluntary report of a user rendering, rejecting, adjusting, and accepting a first preview.
+- Destination: https://github.com/dKosarevsky/albu-mcp/blob/main/docs/use-cases/CLASSIFICATION_ROBUSTNESS.md?utm_source=community&utm_medium=manual&utm_campaign=classification-robustness
+- Success signal: Three voluntary accepted-after-adjustment reports from three distinct submitters, plus the bounded qualified-reach and MCPB targets.
 
 ### detection-bbox-safety
 
@@ -58,10 +58,11 @@ Automated preparation stops at this document. Publication: `manual only`. Run on
 
 ## Measurement
 
-Capture the aggregate baseline before publishing and again after seven days. Compare the non-overlapping PyPI weeks directly; treat GitHub's rolling 14-day Traffic window as directional context:
+Capture the aggregate baseline before publishing, at day 7, and at day 14. Compare non-overlapping PyPI weeks directly; treat GitHub's rolling 14-day Traffic window as directional context:
 
 ```bash
 GH_TOKEN="$(gh auth token)" uv run python scripts/export_growth_report.py --output /tmp/albu-growth.md
+GH_TOKEN="$(gh auth token)" uv run python scripts/export_campaign_activation_report.py --config docs/campaigns/classification-robustness-2026-08.json --output /tmp/classification-activation.md
 ```
 
 ## Demo Assets
@@ -85,7 +86,7 @@ GH_TOKEN="$(gh auth token)" uv run python scripts/export_growth_report.py --outp
 
 ## Lifecycle Status
 
-- Release health: `published`
+- Release health: `unknown`
 - Host evidence: `partial`
 - Adoption experiment: `measuring`
 - Details: `docs/STATUS.md`

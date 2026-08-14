@@ -1,0 +1,116 @@
+{
+  "config": {
+    "schema_version": 1,
+    "id": "classification-robustness",
+    "starts_on": "2026-08-13",
+    "ends_on": "2026-08-27",
+    "destination_url": "https://github.com/dKosarevsky/albu-mcp/blob/main/docs/use-cases/CLASSIFICATION_ROBUSTNESS.md",
+    "baseline": {
+      "github_unique_visitors": 3,
+      "mcpb_downloads_total": 22,
+      "completed_loops": 0,
+      "distinct_submitters": 0
+    },
+    "targets": {
+      "github_unique_visitors": 20,
+      "mcpb_downloads_increment": 5,
+      "completed_loops": 3,
+      "distinct_submitters": 3
+    },
+    "publications": []
+  },
+  "growth_report": {
+    "schema_version": 1,
+    "as_of": "2026-08-20",
+    "collected_at": "2026-08-21T08:00:00+00:00",
+    "github": {
+      "traffic_available": true,
+      "traffic_window_days": 14,
+      "views": 24,
+      "unique_visitors": 12,
+      "stars": 7,
+      "top_referrer_visits": 8,
+      "top_referrer_count": 2,
+      "top_referrers": []
+    },
+    "release_assets": {
+      "release_count": 4,
+      "mcpb_downloads_total": 25,
+      "latest_release": "v1.21.1",
+      "latest_release_mcpb_downloads": 3
+    },
+    "pypi": {
+      "metric": "downloads_without_mirrors",
+      "last_7_days": 150,
+      "previous_7_days": 121,
+      "week_over_week_percent": 24.0,
+      "last_7_days_complete": true,
+      "previous_7_days_complete": true,
+      "release_excluded_median_daily": 19.0
+    },
+    "warnings": []
+  },
+  "workflow_feedback_issues": [
+    {
+      "id": 101,
+      "title": "Private customer title",
+      "html_url": "https://example.invalid/issues/101",
+      "created_at": "2026-08-14T09:00:00Z",
+      "state": "open",
+      "labels": [
+        {"name": "workflow-feedback"},
+        {"name": "preview-review"}
+      ],
+      "user": {"login": "alice-private-login"},
+      "body": "### Campaign or use case\n\nclassification-robustness\n\n### Discovery source\n\nalbumentations-discord\n\n### Install route\n\nclaude-desktop-mcpb\n\n### Workflow outcome\n\naccepted-after-adjustment\n\n### Outcome\n\nAccepted /Users/alice/private/image.png"
+    },
+    {
+      "id": 102,
+      "title": "Another private title",
+      "html_url": "https://example.invalid/issues/102",
+      "created_at": "2026-08-15T10:00:00Z",
+      "state": "closed",
+      "labels": [
+        {"name": "workflow-feedback"}
+      ],
+      "user": {"login": "bob-private-login"},
+      "body": "### Campaign or use case\n\nclassification-robustness\n\n### Discovery source\n\nx-twitter\n\n### Install route\n\nuvx\n\n### Workflow outcome\n\naccepted-after-adjustment"
+    },
+    {
+      "id": 103,
+      "title": "Blocked",
+      "html_url": "https://example.invalid/issues/103",
+      "created_at": "2026-08-16T11:00:00Z",
+      "state": "open",
+      "labels": [
+        {"name": "workflow-feedback"}
+      ],
+      "user": {"login": "charlie-private-login"},
+      "body": "### Campaign or use case\n\nclassification-robustness\n\n### Discovery source\n\ngithub\n\n### Install route\n\nuvx\n\n### Workflow outcome\n\nblocked-before-render"
+    },
+    {
+      "id": 104,
+      "title": "Second loop from Alice",
+      "html_url": "https://example.invalid/issues/104",
+      "created_at": "2026-08-18T12:00:00Z",
+      "state": "open",
+      "labels": [
+        {"name": "workflow-feedback"}
+      ],
+      "user": {"login": "alice-private-login"},
+      "body": "### Campaign or use case\n\nclassification-robustness\n\n### Discovery source\n\nalbumentations-discord\n\n### Install route\n\nclaude-desktop-mcpb\n\n### Workflow outcome\n\naccepted-after-adjustment"
+    },
+    {
+      "id": 105,
+      "title": "Different campaign",
+      "html_url": "https://example.invalid/issues/105",
+      "created_at": "2026-08-19T13:00:00Z",
+      "state": "open",
+      "labels": [
+        {"name": "workflow-feedback"}
+      ],
+      "user": {"login": "dana-private-login"},
+      "body": "### Campaign or use case\n\ndetection-bbox-safety\n\n### Discovery source\n\ngithub\n\n### Install route\n\nuvx\n\n### Workflow outcome\n\naccepted-after-adjustment"
+    }
+  ]
+}

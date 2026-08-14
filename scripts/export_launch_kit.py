@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +15,10 @@ from scripts.export_adoption_packet import build_adoption_packet
 from scripts.export_lifecycle_status import build_committed_lifecycle_status
 
 _UPSTREAM_MCP_GUIDE_URL = "https://albumentations.ai/docs/integrations/mcp/"
+_CLASSIFICATION_USE_CASE_URL = (
+    "https://github.com/dKosarevsky/albu-mcp/blob/main/docs/use-cases/CLASSIFICATION_ROBUSTNESS.md"
+)
+_WORKFLOW_FEEDBACK_URL = "https://github.com/dKosarevsky/albu-mcp/issues/new?template=workflow-feedback.yml"
 
 
 def build_launch_kit() -> dict[str, Any]:
@@ -96,16 +101,21 @@ def render_launch_kit_markdown(kit: dict[str, Any]) -> str:
         "## Audience Campaigns",
         "",
         "Automated preparation stops at this document. Publication: `manual only`. Run one campaign at a time, keep "
-        "its destination fixed for seven days, and record only aggregate or voluntarily submitted evidence.",
+        "its destination fixed for 14 days, and record only aggregate or voluntarily submitted evidence.",
         "",
         *_render_campaigns(kit["campaigns"]),
         "## Measurement",
         "",
-        "Capture the aggregate baseline before publishing and again after seven days. Compare the non-overlapping "
-        "PyPI weeks directly; treat GitHub's rolling 14-day Traffic window as directional context:",
+        "Capture the aggregate baseline before publishing, at day 7, and at day 14. Compare non-overlapping PyPI "
+        "weeks directly; treat GitHub's rolling 14-day Traffic window as directional context:",
         "",
         "```bash",
         'GH_TOKEN="$(gh auth token)" uv run python scripts/export_growth_report.py --output /tmp/albu-growth.md',
+        (
+            'GH_TOKEN="$(gh auth token)" uv run python scripts/export_campaign_activation_report.py '
+            "--config docs/campaigns/classification-robustness-2026-08.json "
+            "--output /tmp/classification-activation.md"
+        ),
         "```",
         "",
         "## Demo Assets",
@@ -146,6 +156,126 @@ def render_launch_kit_markdown(kit: dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def build_campaign_launch_pack(campaign_id: str) -> dict[str, Any]:
+    """Build channel-ready copy for one supported activation campaign."""
+    campaign = next((item for item in _build_campaigns() if item["id"] == campaign_id), None)
+    if campaign is None:
+        msg = f"unknown campaign: {campaign_id}"
+        raise ValueError(msg)
+    if campaign_id != "classification-robustness":
+        msg = "focused launch copy is available only for classification-robustness"
+        raise ValueError(msg)
+    posts = [
+        {
+            "channel": "albumentations-discord",
+            "copy": (
+                "AlbumentationsX MCP now has a focused classification-robustness workflow. Connect a bounded local "
+                "image folder, render augmentation candidates, reject an excessive result such as too_noisy:high, "
+                "adjust it, compare both runs, and export only the accepted pipeline. Images stay local and runtime "
+                f"telemetry is disabled. Try it: {_CLASSIFICATION_USE_CASE_URL}"
+            ),
+        },
+        {
+            "channel": "x-twitter",
+            "copy": (
+                "AlbumentationsX MCP: render classification augmentations, reject excessive noise, adjust, compare, "
+                "and export only an accepted pipeline. Local images stay local; no telemetry. "
+                f"{_CLASSIFICATION_USE_CASE_URL}"
+            ),
+        },
+        {
+            "channel": "generic-community",
+            "copy": (
+                "Try the AlbumentationsX MCP classification-robustness review: one local, reproducible path from "
+                "preview to rejection, adjustment, comparison, and accepted pipeline export. No image upload or "
+                f"runtime telemetry. {_CLASSIFICATION_USE_CASE_URL}"
+            ),
+        },
+    ]
+    return {
+        "title": "Classification Robustness Launch Pack",
+        "id": campaign_id,
+        "audience": campaign["audience"],
+        "problem": campaign["problem"],
+        "prompt": campaign["prompt"],
+        "artifact": campaign["artifact"],
+        "use_case_url": _CLASSIFICATION_USE_CASE_URL,
+        "feedback_url": _WORKFLOW_FEEDBACK_URL,
+        "posts": posts,
+        "publication_policy": "manual only",
+        "success_signal": (
+            "Three accepted-after-adjustment reports from three distinct submitters, at least 20 rolling GitHub "
+            "unique visitors, and at least five incremental MCPB downloads."
+        ),
+        "measurement_command": (
+            'GH_TOKEN="$(gh auth token)" uv run python scripts/export_campaign_activation_report.py '
+            "--config docs/campaigns/classification-robustness-2026-08.json "
+            "--output /tmp/classification-activation.md"
+        ),
+    }
+
+
+def render_campaign_launch_pack_markdown(pack: Mapping[str, Any]) -> str:
+    """Render one focused campaign pack with copyable channel posts."""
+    posts = pack.get("posts")
+    if not isinstance(posts, list):
+        msg = "campaign launch posts must be a list"
+        raise TypeError(msg)
+    lines = [
+        f"# {pack['title']}",
+        "",
+        f"Campaign: `{pack['id']}`",
+        "",
+        f"Canonical destination: {pack['use_case_url']}",
+        "",
+        f"Audience: {pack['audience']}",
+        "",
+        f"Problem: {pack['problem']}",
+        "",
+        "No telemetry, image upload, automated callback, or background publication is enabled.",
+        "",
+        "## Channel Copy",
+        "",
+    ]
+    for post in posts:
+        if not isinstance(post, Mapping):
+            msg = "campaign launch post must be an object"
+            raise TypeError(msg)
+        lines.extend(
+            [
+                f"### {post['channel']}",
+                "",
+                "```text",
+                str(post["copy"]),
+                "```",
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "## Feedback CTA",
+            "",
+            f"Ask users to submit only deliberate, redacted feedback: {pack['feedback_url']}",
+            "",
+            "A full campaign loop is recorded only as `accepted-after-adjustment`.",
+            "",
+            "## Publication",
+            "",
+            f"Policy: `{pack['publication_policy']}`. Record the real channel URL and timestamp in the campaign "
+            "configuration after publishing. Do not attribute aggregate movement when that record is absent.",
+            "",
+            "## Measurement",
+            "",
+            f"Success signal: {pack['success_signal']}",
+            "",
+            "```bash",
+            str(pack["measurement_command"]),
+            "```",
+        ]
+    )
+    return "\n".join(lines) + "\n"
+
+
 def _build_campaigns() -> list[dict[str, str]]:
     return [
         {
@@ -157,9 +287,10 @@ def _build_campaigns() -> list[dict[str, str]]:
                 "them, reduce any variant tagged too_noisy:high, and export only the accepted pipeline."
             ),
             "artifact": "docs/assets/demo/comparison_contact_sheet.png",
-            "destination_url": _campaign_destination("classification-robustness"),
+            "destination_url": _classification_campaign_destination(),
             "success_signal": (
-                "One voluntary report of a user rendering, rejecting, adjusting, and accepting a first preview."
+                "Three voluntary accepted-after-adjustment reports from three distinct submitters, plus the bounded "
+                "qualified-reach and MCPB targets."
             ),
         },
         {
@@ -197,6 +328,11 @@ def _campaign_destination(campaign_id: str) -> str:
     return f"{_UPSTREAM_MCP_GUIDE_URL}?utm_source=community&utm_medium=manual&utm_campaign={campaign_id}"
 
 
+def _classification_campaign_destination() -> str:
+    query = "utm_source=community&utm_medium=manual&utm_campaign=classification-robustness"
+    return f"{_CLASSIFICATION_USE_CASE_URL}?{query}"
+
+
 def _render_campaigns(campaigns: list[dict[str, str]]) -> list[str]:
     lines: list[str] = []
     for campaign in campaigns:
@@ -219,10 +355,15 @@ def _render_campaigns(campaigns: list[dict[str, str]]) -> list[str]:
 def main() -> None:
     """CLI entrypoint for launch kit exports."""
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--campaign", choices=["classification-robustness"], default=None)
     parser.add_argument("--output", type=Path, default=None)
     args = parser.parse_args()
 
-    content = render_launch_kit_markdown(build_launch_kit())
+    content = (
+        render_campaign_launch_pack_markdown(build_campaign_launch_pack(args.campaign))
+        if args.campaign is not None
+        else render_launch_kit_markdown(build_launch_kit())
+    )
     if args.output is None:
         sys.stdout.write(content)
         return

@@ -29,7 +29,7 @@ Run one campaign at a time:
 2. Select one campaign and one relevant discussion where its problem is already on topic.
 3. Verify that the referenced artifact is synthetic, redacted, or safe to publish.
 4. Publish manually from an account whose owner has approved the message.
-5. Keep the prompt, destination URL, and success signal unchanged for seven days.
+5. Keep the prompt, destination URL, and success signal unchanged for 14 days; use day 7 only as an intermediate readout.
 6. Capture the report again and record any voluntary workflow feedback separately.
 7. Continue, revise, or stop based on qualified reach and the stated success signal, not raw downloads alone.
 

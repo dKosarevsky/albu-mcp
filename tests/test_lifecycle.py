@@ -289,8 +289,12 @@ def test_lifecycle_render_rejects_evidence_file_change_or_replacement(change: st
         render_lifecycle_status_markdown(report)
 
 
-def test_lifecycle_binds_protocol_evidence_to_release_health_version(tmp_path: Path) -> None:
+def test_lifecycle_reuses_protocol_evidence_only_within_the_same_patch_line(tmp_path: Path) -> None:
     evidence, _evidence_path, _document_path = _load_protocol_evidence(tmp_path / "docs")
+
+    patch_report = _build_with_protocol(evidence, version="1.21.1")
+    assert patch_report["protocol_compatibility"].to_version == "1.21.0"
+    assert "Published upgrade: `1.20.0 -> 1.21.0`" in render_lifecycle_status_markdown(patch_report)
 
     with pytest.raises(ValueError, match=rf"^{_PROTOCOL_ERROR}$"):
         _build_with_protocol(evidence, version="1.22.0")
@@ -339,8 +343,8 @@ def test_lifecycle_status_rejects_invalid_experiment(field: str, value: str, mes
 def test_committed_lifecycle_status_describes_current_project_state() -> None:
     report = build_committed_lifecycle_status()
 
-    assert report["release_health"]["status"] == "published"
-    assert report["release_health"]["version"] == "1.21.0"
+    assert report["release_health"]["status"] == "unknown"
+    assert report["release_health"]["version"] == "1.21.1"
     assert [channel["id"] for channel in report["release_health"]["channels"]] == [
         "pypi",
         "github_release",

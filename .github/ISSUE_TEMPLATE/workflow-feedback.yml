@@ -11,6 +11,43 @@ body:
         Share one real render -> reject -> adjust -> accept loop, or the blocker that prevented it.
         Do not upload private datasets or images, proprietary training data, credentials, personal data, or unredacted paths.
   - type: dropdown
+    id: campaign
+    attributes:
+      label: Campaign or use case
+      description: Choose the workflow you followed; use general-or-not-sure when no campaign applies.
+      options:
+        - classification-robustness
+        - detection-bbox-safety
+        - segmentation-mask-safety
+        - general-or-not-sure
+    validations:
+      required: true
+  - type: dropdown
+    id: discovery_source
+    attributes:
+      label: Discovery source
+      description: Optional aggregate attribution; no tracking identifier is collected.
+      options:
+        - official-albumentations-docs
+        - albumentations-discord
+        - x-twitter
+        - github
+        - mcp-registry
+        - pypi
+        - skills-sh
+        - other-or-not-sure
+  - type: dropdown
+    id: install_route
+    attributes:
+      label: Install route
+      description: Optional package-level conversion context.
+      options:
+        - claude-desktop-mcpb
+        - uvx
+        - pip
+        - source-checkout
+        - other-or-not-sure
+  - type: dropdown
     id: task
     attributes:
       label: Task
@@ -67,6 +104,18 @@ body:
       label: Adjustment
       description: What did you ask the host to change, and what did the MCP do next?
       placeholder: "Reduce noise, keep crop/flip behavior, render again, then compare_preview_runs."
+    validations:
+      required: true
+  - type: dropdown
+    id: workflow_outcome
+    attributes:
+      label: Workflow outcome
+      description: Only accepted-after-adjustment counts as a complete render -> reject -> adjust -> accept loop.
+      options:
+        - accepted-after-adjustment
+        - accepted-first-render
+        - blocked-before-render
+        - unresolved-after-adjustment
     validations:
       required: true
   - type: textarea

@@ -1,6 +1,6 @@
 # Real Host Evidence Execution Pack
 
-Package: `albumentationsx-mcp==1.21.0`
+Package: `albumentationsx-mcp==1.21.1`
 Decision: `hold_v1`
 Ready for v1: `false`
 

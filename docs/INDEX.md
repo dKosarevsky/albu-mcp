@@ -10,6 +10,7 @@ Use this page for deeper product, operator, adoption, and release material. New 
 - [INSTALL.md](INSTALL.md): PyPI, MCPB, Claude Desktop, Claude Code, Cursor, Codex, and bounded roots.
 - [CONFIGURATION.md](CONFIGURATION.md): local roots, capability profiles, transport, and resource-read fallback.
 - [FIRST_10_MINUTES.md](FIRST_10_MINUTES.md): shortest path from installation to an accepted preview.
+- [use-cases/CLASSIFICATION_ROBUSTNESS.md](use-cases/CLASSIFICATION_ROBUSTNESS.md): executable robustness review from first preview to accepted adjustment.
 - [FIRST_PREVIEW_FEEDBACK.md](FIRST_PREVIEW_FEEDBACK.md): voluntary, privacy-safe first-preview outcome report.
 - [USAGE.md](USAGE.md): end-to-end tools, resources, diagnostics, and operator CLI reference.
 - [RECIPES.md](RECIPES.md): classification, detection, segmentation, OCR, and review recipes.
@@ -22,6 +23,7 @@ Use this page for deeper product, operator, adoption, and release material. New 
 
 ## Adoption And Distribution
 
+- [campaigns/CLASSIFICATION_ROBUSTNESS_LAUNCH.md](campaigns/CLASSIFICATION_ROBUSTNESS_LAUNCH.md): copy-ready Discord, X, and community launch packet.
 - [ADOPTION.md](ADOPTION.md), [ADOPTION_PACKET.md](ADOPTION_PACKET.md), and [ADOPTION_TRIAGE_REPORT.md](ADOPTION_TRIAGE_REPORT.md)
 - [GROWTH.md](GROWTH.md), [LAUNCH_KIT.md](LAUNCH_KIT.md), [NETWORK_GROWTH.md](NETWORK_GROWTH.md), [NETWORK_GROWTH_TRACKER.md](NETWORK_GROWTH_TRACKER.md), and [PUBLIC_ADOPTION_LOOP.md](PUBLIC_ADOPTION_LOOP.md)
 - [COMMUNITY_FEEDBACK.md](COMMUNITY_FEEDBACK.md), [BETA_WORKFLOW_PACK.md](BETA_WORKFLOW_PACK.md), [BETA_CAMPAIGN_PACK.md](BETA_CAMPAIGN_PACK.md), and [BETA_CAMPAIGN_EXECUTION.md](BETA_CAMPAIGN_EXECUTION.md)

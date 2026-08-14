@@ -2,7 +2,7 @@
 
 > **Historical status snapshot.** This document preserves a pre-release decision and does not describe the current published release. See [STATUS.md](STATUS.md).
 
-Package: `albumentationsx-mcp==1.21.0`
+Package: `albumentationsx-mcp==1.21.1`
 Release tag: `vX.Y.Z-rc.1`
 Dry-run status: `preflight_only_blocked_publish`
 Gate status: `blocked`
