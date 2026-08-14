@@ -6,7 +6,7 @@ import re
 from collections import Counter
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -76,7 +76,7 @@ class _Publication:
 
     channel: str
     url: str
-    published_at: str
+    published_at: datetime
 
 
 @dataclass(frozen=True)
@@ -87,6 +87,8 @@ class _FeedbackSummary:
     completed_loops: int
     distinct_submitters: int
     completed_without_submitter: int
+    invalid_created_at: int
+    outside_observed_window: int
     discovery_sources: Mapping[str, int]
     install_routes: Mapping[str, int]
     outcomes: Mapping[str, int]
@@ -102,10 +104,24 @@ def build_campaign_activation_report(
     campaign = _parse_config(config)
     as_of = _parse_date(growth_report.get("as_of"), field="growth_report as_of")
     phase = _campaign_phase(as_of=as_of, starts_on=campaign.starts_on, ends_on=campaign.ends_on)
-    feedback = _summarize_feedback(workflow_feedback_issues, campaign_id=campaign.campaign_id)
+    feedback = _summarize_feedback(
+        workflow_feedback_issues,
+        campaign_id=campaign.campaign_id,
+        starts_on=campaign.starts_on,
+        ends_on=campaign.ends_on,
+        as_of=as_of,
+    )
+    observed_publications = tuple(
+        publication for publication in campaign.publications if publication.published_at.date() <= as_of
+    )
     warnings = _parse_warnings(growth_report.get("warnings", []))
     if not campaign.publications:
         warnings.append("no publication URL and timestamp are recorded")
+    elif not observed_publications:
+        warnings.append("no recorded publication had occurred by report as_of")
+    elif len(observed_publications) != len(campaign.publications):
+        future_count = len(campaign.publications) - len(observed_publications)
+        warnings.append(f"{future_count} publication(s) occur after report as_of and were ignored")
 
     github = _required_mapping(growth_report, "github")
     traffic_available = _required_bool(github, "traffic_available")
@@ -137,6 +153,14 @@ def build_campaign_activation_report(
         warnings.append(
             f"{feedback.completed_without_submitter} completed loop(s) had no public submitter and were not "
             "included in the distinct-submitter count"
+        )
+    if feedback.outside_observed_window:
+        warnings.append(
+            f"{feedback.outside_observed_window} workflow feedback issue(s) fell outside the observed campaign window"
+        )
+    if feedback.invalid_created_at:
+        warnings.append(
+            f"{feedback.invalid_created_at} workflow feedback issue(s) had no valid created_at and were ignored"
         )
     activation_target_met = (
         completed_increment >= campaign.target_completed_loops
@@ -178,17 +202,17 @@ def build_campaign_activation_report(
                 {
                     "channel": publication.channel,
                     "url": publication.url,
-                    "published_at": publication.published_at,
+                    "published_at": publication.published_at.isoformat(),
                 }
-                for publication in campaign.publications
+                for publication in observed_publications
             ],
-            "attribution_ready": bool(campaign.publications),
+            "attribution_ready": bool(observed_publications),
         },
         "privacy": {
             "runtime_telemetry": False,
             "reads_local_data": False,
             "contains_issue_level_data": False,
-            "issue_data_usage": "aggregate voluntary public issue fields in memory only",
+            "issue_data_usage": "aggregate voluntary public issue fields and public timestamps in memory only",
         },
         "qualified_reach": {
             "metric": "github_unique_visitors_rolling_window",
@@ -252,9 +276,9 @@ def render_campaign_activation_markdown(report: Mapping[str, Any]) -> str:
         "## Recorded Publications\n\n"
         f"{publication_lines}\n\n"
         f"Runtime telemetry: `{runtime_telemetry}`\n\n"
-        "This report contains aggregate public distribution metrics and deliberately submitted issue fields only. "
-        "It does not include issue bodies, titles, URLs, usernames, datasets, preview artifacts, host logs, or local "
-        "paths.\n\n"
+        "This report is computed from aggregate public distribution metrics, deliberately submitted issue fields, "
+        "and public issue timestamps. It does not include issue bodies, titles, URLs, usernames, individual issue "
+        "timestamps, datasets, preview artifacts, host logs, or local paths.\n\n"
         "## Qualified Reach\n\n"
         f"- GitHub unique visitors (rolling {reach['traffic_window_days']} days): "
         f"`{_optional_metric(reach['current_unique_visitors'])}`\n"
@@ -350,11 +374,20 @@ def _parse_config(value: Mapping[str, Any]) -> _CampaignConfig:
             targets.get("distinct_submitters"),
             field="target distinct_submitters",
         ),
-        publications=_parse_publications(value.get("publications", [])),
+        publications=_parse_publications(
+            value.get("publications", []),
+            starts_on=starts_on,
+            ends_on=ends_on,
+        ),
     )
 
 
-def _parse_publications(value: Any) -> tuple[_Publication, ...]:
+def _parse_publications(
+    value: Any,
+    *,
+    starts_on: date,
+    ends_on: date,
+) -> tuple[_Publication, ...]:
     if not isinstance(value, list):
         msg = "campaign publications must be a list"
         raise TypeError(msg)
@@ -373,6 +406,9 @@ def _parse_publications(value: Any) -> tuple[_Publication, ...]:
             item.get("published_at"),
             field=f"campaign publication {index} published_at",
         )
+        if not starts_on <= published_at.date() < ends_on:
+            msg = f"campaign publication {index} timestamp must fall inside the campaign window"
+            raise ValueError(msg)
         identity = (channel, url)
         if identity in seen:
             msg = f"campaign publication {index} duplicates an earlier channel URL"
@@ -386,6 +422,9 @@ def _summarize_feedback(
     issues: Sequence[Mapping[str, Any]],
     *,
     campaign_id: str,
+    starts_on: date,
+    ends_on: date,
+    as_of: date,
 ) -> _FeedbackSummary:
     sources: Counter[str] = Counter()
     install_routes: Counter[str] = Counter()
@@ -394,6 +433,8 @@ def _summarize_feedback(
     attributed_reports = 0
     completed_loops = 0
     completed_without_submitter = 0
+    invalid_created_at = 0
+    outside_observed_window = 0
     for index, issue in enumerate(issues):
         if not isinstance(issue, Mapping):
             msg = f"workflow feedback issue {index} must be an object"
@@ -405,6 +446,13 @@ def _summarize_feedback(
             continue
         fields = _parse_issue_form(body)
         if fields.get(_CAMPAIGN_FIELD) != campaign_id:
+            continue
+        created_on = _issue_created_on(issue.get("created_at"))
+        if created_on is None:
+            invalid_created_at += 1
+            continue
+        if not starts_on <= created_on < ends_on or created_on > as_of:
+            outside_observed_window += 1
             continue
         attributed_reports += 1
         source = _bounded_value(fields.get(_SOURCE_FIELD), allowed=_DISCOVERY_SOURCES)
@@ -426,6 +474,8 @@ def _summarize_feedback(
         completed_loops=completed_loops,
         distinct_submitters=len(completed_submitters),
         completed_without_submitter=completed_without_submitter,
+        invalid_created_at=invalid_created_at,
+        outside_observed_window=outside_observed_window,
         discovery_sources=dict(sorted(sources.items())),
         install_routes=dict(sorted(install_routes.items())),
         outcomes=dict(sorted(outcomes.items())),
@@ -463,6 +513,18 @@ def _issue_submitter(value: Any) -> str | None:
         return None
     login = value.get("login")
     return login if isinstance(login, str) and login else None
+
+
+def _issue_created_on(value: Any) -> date | None:
+    if not isinstance(value, str):
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return None
+    return parsed.astimezone(timezone.utc).date()
 
 
 def _bounded_value(value: str | None, *, allowed: frozenset[str]) -> str:
@@ -575,7 +637,7 @@ def _parse_date(value: Any, *, field: str) -> date:
         raise ValueError(msg) from exc
 
 
-def _iso_datetime(value: Any, *, field: str) -> str:
+def _iso_datetime(value: Any, *, field: str) -> datetime:
     if not isinstance(value, str):
         msg = f"{field} must be an ISO timestamp with a timezone"
         raise TypeError(msg)
@@ -587,7 +649,7 @@ def _iso_datetime(value: Any, *, field: str) -> str:
     if parsed.tzinfo is None:
         msg = f"{field} must be an ISO timestamp with a timezone"
         raise ValueError(msg)
-    return parsed.isoformat()
+    return parsed.astimezone(timezone.utc)
 
 
 def _https_url(value: Any, *, field: str) -> str:

@@ -55,6 +55,7 @@
       "id": 101,
       "title": "Private customer title",
       "html_url": "https://example.invalid/issues/101",
+      "created_at": "2026-08-14T09:00:00Z",
       "state": "open",
       "labels": [
         {"name": "workflow-feedback"},
@@ -67,6 +68,7 @@
       "id": 102,
       "title": "Another private title",
       "html_url": "https://example.invalid/issues/102",
+      "created_at": "2026-08-15T10:00:00Z",
       "state": "closed",
       "labels": [
         {"name": "workflow-feedback"}
@@ -78,6 +80,7 @@
       "id": 103,
       "title": "Blocked",
       "html_url": "https://example.invalid/issues/103",
+      "created_at": "2026-08-16T11:00:00Z",
       "state": "open",
       "labels": [
         {"name": "workflow-feedback"}
@@ -89,6 +92,7 @@
       "id": 104,
       "title": "Second loop from Alice",
       "html_url": "https://example.invalid/issues/104",
+      "created_at": "2026-08-18T12:00:00Z",
       "state": "open",
       "labels": [
         {"name": "workflow-feedback"}
@@ -100,6 +104,7 @@
       "id": 105,
       "title": "Different campaign",
       "html_url": "https://example.invalid/issues/105",
+      "created_at": "2026-08-19T13:00:00Z",
       "state": "open",
       "labels": [
         {"name": "workflow-feedback"}

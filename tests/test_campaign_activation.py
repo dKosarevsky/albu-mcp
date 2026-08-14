@@ -51,7 +51,7 @@ def test_campaign_report_counts_only_completed_attributed_loops() -> None:
         "runtime_telemetry": False,
         "reads_local_data": False,
         "contains_issue_level_data": False,
-        "issue_data_usage": "aggregate voluntary public issue fields in memory only",
+        "issue_data_usage": "aggregate voluntary public issue fields and public timestamps in memory only",
     }
 
 
@@ -105,6 +105,47 @@ def test_campaign_report_preserves_only_public_publication_metadata() -> None:
     assert report["campaign"]["attribution_ready"] is True
     assert report["campaign"]["publications"] == payload["config"]["publications"]
     assert "no publication URL and timestamp are recorded" not in report["warnings"]
+
+
+def test_campaign_report_defers_future_publications_until_their_observed_date() -> None:
+    payload = _fixture()
+    payload["config"]["publications"] = [
+        {
+            "channel": "github-release",
+            "url": "https://github.com/dKosarevsky/albu-mcp/releases/tag/v1.21.1",
+            "published_at": "2026-08-21T10:30:00+00:00",
+        }
+    ]
+
+    report = build_campaign_activation_report(**payload)
+
+    assert report["campaign"]["attribution_ready"] is False
+    assert report["campaign"]["publications"] == []
+    assert "no recorded publication had occurred by report as_of" in report["warnings"]
+
+
+def test_campaign_report_counts_feedback_only_inside_the_observed_campaign_window() -> None:
+    payload = _fixture()
+    completed = payload["workflow_feedback_issues"][0]
+    for issue_id, created_at in (
+        (106, "2026-08-12T23:59:59Z"),
+        (107, "2026-08-21T00:00:00Z"),
+        (108, "2026-08-27T00:00:00Z"),
+        (109, "not-a-timestamp"),
+    ):
+        issue = deepcopy(completed)
+        issue["id"] = issue_id
+        issue["user"] = {"login": f"excluded-{issue_id}"}
+        issue["created_at"] = created_at
+        payload["workflow_feedback_issues"].append(issue)
+
+    report = build_campaign_activation_report(**payload)
+
+    assert report["activation"]["attributed_reports"] == 4
+    assert report["activation"]["completed_loops"] == 3
+    assert report["activation"]["distinct_submitters"] == 2
+    assert "3 workflow feedback issue(s) fell outside the observed campaign window" in report["warnings"]
+    assert "1 workflow feedback issue(s) had no valid created_at and were ignored" in report["warnings"]
 
 
 @pytest.mark.parametrize(
@@ -175,6 +216,17 @@ def test_campaign_report_stops_only_after_deadline_with_no_observed_movement() -
                 }
             ],
             "publication 0 url",
+        ),
+        (
+            ("config", "publications"),
+            [
+                {
+                    "channel": "github-release",
+                    "url": "https://github.com/dKosarevsky/albu-mcp/releases/tag/v1.21.1",
+                    "published_at": "2026-08-27T00:00:00+00:00",
+                }
+            ],
+            "publication 0 timestamp must fall inside the campaign window",
         ),
     ],
 )

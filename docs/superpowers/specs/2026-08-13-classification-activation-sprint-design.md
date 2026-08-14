@@ -57,8 +57,10 @@ explicit unknown/not-sure choice. A completed campaign loop is counted only when
 
 `albumentationsx_mcp.campaign_activation` is a pure module. It accepts an already-built growth report, a campaign
 configuration, and GitHub issue-shaped mappings. It validates bounded campaign dates and targets, extracts issue-form
-fields, deduplicates public submitters in memory, and returns aggregate counts only. It never performs network access
-or returns issue bodies, titles, URLs, usernames, images, or local paths.
+fields, limits reports to public `created_at` timestamps inside the observed campaign window, deduplicates public
+submitters in memory, and returns aggregate counts only. Publication timestamps outside the campaign window are
+rejected, while future publications relative to `as_of` do not activate attribution. The module never performs network
+access or returns issue bodies, titles, URLs, usernames, issue timestamps, images, or local paths.
 
 The report distinguishes three evidence classes:
 

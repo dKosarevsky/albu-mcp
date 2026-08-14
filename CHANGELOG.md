@@ -11,7 +11,8 @@ All notable public changes to AlbumentationsX MCP are tracked here.
 - Added voluntary campaign, discovery-source, install-route, and workflow-outcome fields to preview feedback without
   adding runtime telemetry or collecting image, path, host-log, or machine identifiers.
 - Added a pure privacy-safe activation analyzer and live/offline report that combine aggregate GitHub, PyPI, MCPB, and
-  deliberately submitted workflow evidence while excluding issue-level data from output.
+  deliberately submitted workflow evidence while excluding issue-level data from output; feedback and publication
+  evidence is bounded to the campaign window and the report's observed date.
 - Added a fixed 14-day campaign baseline, explicit reach/conversion/activation targets, and copy-ready Discord, X, and
   community launch materials with causal-attribution guards.
 - Updated vulnerable transitive MCP App dependencies within their compatible ranges; the production and full npm
