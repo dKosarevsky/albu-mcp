@@ -18,8 +18,16 @@ _DEFAULT_TIMEOUT_SECONDS = 90.0
 _OFFICIAL_META_KEY = "io.modelcontextprotocol.registry/official"
 
 
-class McpRegistryFetchError(ValueError):
+class McpRegistryRetryableError(ValueError):
+    """Raised when a later Registry read may produce a valid result."""
+
+
+class McpRegistryFetchError(McpRegistryRetryableError):
     """Raised when remote Registry metadata could not be read reliably."""
+
+
+class McpRegistryPropagationError(McpRegistryRetryableError):
+    """Raised while a newly published Registry entry is still converging."""
 
 
 @dataclass(frozen=True)
@@ -68,6 +76,9 @@ def validate_mcp_registry_status(
     status = str(official.get("status", ""))
     is_latest = official.get("isLatest")
 
+    if status == "pending":
+        msg = f"MCP Registry entry for {server['name']} {server['version']} has status 'pending'; still converging"
+        raise McpRegistryPropagationError(msg)
     if status != "active":
         msg = f"MCP Registry entry for {server['name']} {server['version']} has status {status!r}, expected 'active'"
         raise ValueError(msg)
@@ -141,12 +152,12 @@ def main() -> None:
 
 def _validate_with_retries(options: McpRegistryCheckOptions) -> McpRegistryStatusReport:
     attempts = max(options.retries, 1)
-    last_error: McpRegistryFetchError | None = None
+    last_error: McpRegistryRetryableError | None = None
     for attempt in range(1, attempts + 1):
         result = _validate_once(options)
         if isinstance(result, McpRegistryStatusReport):
             return result
-        if not isinstance(result, McpRegistryFetchError):
+        if not isinstance(result, McpRegistryRetryableError):
             raise result
         last_error = result
         if attempt < attempts:
@@ -161,7 +172,7 @@ def _validate_with_retries(options: McpRegistryCheckOptions) -> McpRegistryStatu
     raise last_error
 
 
-def _validate_once(options: McpRegistryCheckOptions) -> McpRegistryStatusReport | McpRegistryFetchError:
+def _validate_once(options: McpRegistryCheckOptions) -> McpRegistryStatusReport | McpRegistryRetryableError:
     try:
         return validate_mcp_registry_status(
             server_json_path=options.server_json_path,
@@ -169,7 +180,7 @@ def _validate_once(options: McpRegistryCheckOptions) -> McpRegistryStatusReport 
             registry_url=options.registry_url,
             timeout=options.timeout,
         )
-    except McpRegistryFetchError as exc:
+    except McpRegistryRetryableError as exc:
         return exc
 
 
@@ -227,7 +238,7 @@ def _current_registry_entry(response: dict[str, Any], server: dict[str, Any]) ->
     entries = [entry for entry in response.get("servers", []) if _server_object(entry).get("name") == name]
     if not entries:
         msg = f"MCP Registry response does not include server {name!r}"
-        raise ValueError(msg)
+        raise McpRegistryPropagationError(msg)
 
     latest_entries = [entry for entry in entries if _official_meta(entry).get("isLatest") is True]
     if len(latest_entries) > 1:
@@ -238,12 +249,12 @@ def _current_registry_entry(response: dict[str, Any], server: dict[str, Any]) ->
     if not current_entries:
         versions = ", ".join(sorted(str(_server_object(entry).get("version")) for entry in entries))
         msg = f"MCP Registry response does not include {name} {version}; available versions: {versions}"
-        raise ValueError(msg)
+        raise McpRegistryPropagationError(msg)
     current = current_entries[0]
     if _official_meta(current).get("isLatest") is not True:
         latest_versions = ", ".join(str(_server_object(entry).get("version")) for entry in latest_entries) or "none"
         msg = f"MCP Registry entry for {name} {version} must have isLatest=true; latest versions: {latest_versions}"
-        raise ValueError(msg)
+        raise McpRegistryPropagationError(msg)
     return current
 
 

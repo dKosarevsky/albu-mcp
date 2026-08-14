@@ -133,6 +133,36 @@ def test_mcp_registry_status_reports_retryable_failures(
     assert "retrying in 15 seconds" in captured.err
 
 
+@pytest.mark.parametrize("case", ["missing_current", "stale_latest", "pending_status"])
+def test_mcp_registry_status_retries_propagation_until_current_version_is_ready(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    case: str,
+) -> None:
+    responses = [
+        _registry_payload_for_case(case),
+        {"servers": [_registry_entry()]},
+    ]
+    delays: list[float] = []
+    monkeypatch.setattr(registry_status, "_registry_response", lambda **_kwargs: responses.pop(0))
+    monkeypatch.setattr(registry_status.time, "sleep", delays.append)
+
+    report = registry_status._validate_with_retries(
+        McpRegistryCheckOptions(
+            server_json_path=_write_server_json(tmp_path),
+            registry_response_path=None,
+            registry_url=None,
+            timeout=90,
+            retries=2,
+            retry_delay=15,
+        )
+    )
+
+    assert report.version == "1.14.0"
+    assert responses == []
+    assert delays == [15]
+
+
 def test_mcp_registry_status_does_not_retry_or_mask_semantic_mismatch(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -178,7 +208,7 @@ def test_mcp_registry_status_does_not_retry_or_mask_semantic_mismatch(
 def test_mcp_registry_workflows_allow_slow_reads(workflow_path: Path) -> None:
     workflow = workflow_path.read_text(encoding="utf-8")
 
-    assert "check_mcp_registry_status.py --retries 3 --retry-delay 15 --timeout 90" in workflow
+    assert "check_mcp_registry_status.py --retries 12 --retry-delay 15 --timeout 90" in workflow
 
 
 def _write_server_json(tmp_path: Path) -> Path:
@@ -228,6 +258,8 @@ def _write_registry_response(tmp_path: Path, *, payload: dict[str, object] | Non
 
 
 def _registry_payload_for_case(case: str) -> dict[str, object]:
+    if case == "missing_current":
+        return {"servers": [_registry_entry(version="1.13.0", is_latest=True)]}
     if case == "stale_latest":
         return {
             "servers": [
